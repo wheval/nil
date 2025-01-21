@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"iter"
-	"maps"
-	"slices"
 	"strconv"
 	"time"
 
@@ -15,48 +13,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/google/uuid"
 )
-
-// TaskType Tasks have different types, it affects task input and priority
-type TaskType uint8
-
-const (
-	TaskTypeNone TaskType = iota
-	AggregateProofs
-	ProofBlock
-	PartialProve
-	AggregatedChallenge
-	CombinedQ
-	AggregatedFRI
-	FRIConsistencyChecks
-	MergeProof
-)
-
-var TaskTypes = map[string]TaskType{
-	"AggregateProofs":      AggregateProofs,
-	"ProofBlock":           ProofBlock,
-	"PartialProve":         PartialProve,
-	"AggregatedChallenge":  AggregatedChallenge,
-	"CombinedQ":            CombinedQ,
-	"AggregatedFRI":        AggregatedFRI,
-	"FRIConsistencyChecks": FRIConsistencyChecks,
-	"MergeProof":           MergeProof,
-}
-
-func (t *TaskType) Set(str string) error {
-	if v, ok := TaskTypes[str]; ok {
-		*t = v
-		return nil
-	}
-	return fmt.Errorf("unknown task type: %s", str)
-}
-
-func (*TaskType) Type() string {
-	return "TaskType"
-}
-
-func (*TaskType) PossibleValues() []string {
-	return slices.Collect(maps.Keys(TaskTypes))
-}
 
 type CircuitType uint8
 
@@ -118,29 +74,6 @@ func (*TaskId) Type() string {
 	return "TaskId"
 }
 
-// Task results can have different types
-type ProverResultType uint8
-
-const (
-	_ ProverResultType = iota
-	PartialProof
-	CommitmentState
-	PartialProofChallenges
-	AssignmentTableDescription
-	ThetaPower
-	AggregatedThetaPowers
-	PreprocessedCommonData
-	AggregatedChallenges
-	CombinedQPolynomial
-	AggregatedFRIProof
-	ProofOfWork
-	ConsistencyCheckChallenges
-	LPCConsistencyCheckProof
-	FinalProof
-	BlockProof
-	AggregatedProof
-)
-
 type TaskExecutorId uint32
 
 const UnknownExecutorId TaskExecutorId = 0
@@ -162,8 +95,6 @@ func (*TaskExecutorId) Type() string {
 	return "TaskExecutorId"
 }
 
-type TaskOutputArtifacts map[ProverResultType]string
-
 type TaskIdSet map[TaskId]bool
 
 func NewTaskIdSet() TaskIdSet {
@@ -176,91 +107,6 @@ func (s TaskIdSet) Put(id TaskId) {
 
 // todo: declare separate task types for ProofProvider and Prover
 // https://www.notion.so/nilfoundation/Generic-Tasks-in-SyncCommittee-10ac614852608028b7ffcfd910deeef7?pvs=4
-
-type TaskResultData []byte
-
-// TaskResult represents the result of a task provided via RPC by the executor with id = TaskResult.Sender.
-type TaskResult struct {
-	TaskId          TaskId              `json:"taskId"`
-	IsSuccess       bool                `json:"isSuccess"`
-	ErrorText       string              `json:"errorText,omitempty"`
-	Sender          TaskExecutorId      `json:"sender"`
-	OutputArtifacts TaskOutputArtifacts `json:"dataAddresses,omitempty"`
-	Data            TaskResultData      `json:"binaryData,omitempty"`
-}
-
-func NewSuccessProviderTaskResult(
-	taskId TaskId,
-	proofProviderId TaskExecutorId,
-	outputArtifacts TaskOutputArtifacts,
-	binaryData TaskResultData,
-) *TaskResult {
-	return &TaskResult{
-		TaskId:          taskId,
-		IsSuccess:       true,
-		Sender:          proofProviderId,
-		OutputArtifacts: outputArtifacts,
-		Data:            binaryData,
-	}
-}
-
-func NewFailureProviderTaskResult(
-	taskId TaskId,
-	proofProviderId TaskExecutorId,
-	err error,
-) *TaskResult {
-	return &TaskResult{
-		TaskId:    taskId,
-		IsSuccess: false,
-		Sender:    proofProviderId,
-		ErrorText: fmt.Sprintf("failed to proof block: %v", err),
-	}
-}
-
-func NewSuccessProverTaskResult(
-	taskId TaskId,
-	sender TaskExecutorId,
-	outputArtifacts TaskOutputArtifacts,
-	binaryData TaskResultData,
-) *TaskResult {
-	return &TaskResult{
-		TaskId:          taskId,
-		IsSuccess:       true,
-		Sender:          sender,
-		OutputArtifacts: outputArtifacts,
-		Data:            binaryData,
-	}
-}
-
-func NewFailureProverTaskResult(
-	taskId TaskId,
-	sender TaskExecutorId,
-	err error,
-) *TaskResult {
-	return &TaskResult{
-		TaskId:    taskId,
-		Sender:    sender,
-		IsSuccess: false,
-		ErrorText: fmt.Sprintf("failed to generate proof: %v", err),
-	}
-}
-
-// TaskResultDetails represents the result of a task, extending TaskResult with additional task-specific metadata.
-type TaskResultDetails struct {
-	TaskResult
-	TaskType      TaskType      `json:"type"`
-	CircuitType   CircuitType   `json:"circuitType"`
-	ExecutionTime time.Duration `json:"executionTime"`
-}
-
-func NewTaskResultEntry(result *TaskResult, taskEntry *TaskEntry, currentTime time.Time) *TaskResultDetails {
-	return &TaskResultDetails{
-		TaskResult:    *result,
-		TaskType:      taskEntry.Task.TaskType,
-		CircuitType:   taskEntry.Task.CircuitType,
-		ExecutionTime: *taskEntry.ExecutionTime(currentTime),
-	}
-}
 
 // Task contains all the necessary data for either Prover or ProofProvider to perform computation
 type Task struct {
@@ -275,40 +121,6 @@ type Task struct {
 
 	// DependencyResults tracks the set of task results on which current task depends
 	DependencyResults map[TaskId]TaskResultDetails `json:"dependencyResults"`
-}
-
-type TaskStatus uint8
-
-const (
-	TaskStatusNone TaskStatus = iota
-	WaitingForInput
-	WaitingForExecutor
-	Running
-	Failed
-	Completed
-)
-
-var TaskStatuses = map[string]TaskStatus{
-	"WaitingForInput":    WaitingForInput,
-	"WaitingForExecutor": WaitingForExecutor,
-	"Running":            Running,
-	"Failed":             Failed,
-}
-
-func (t *TaskStatus) Set(str string) error {
-	if v, ok := TaskStatuses[str]; ok {
-		*t = v
-		return nil
-	}
-	return fmt.Errorf("unknown task status: %s", str)
-}
-
-func (*TaskStatus) Type() string {
-	return "TaskStatus"
-}
-
-func (*TaskStatus) PossibleValues() []string {
-	return slices.Collect(maps.Keys(TaskStatuses))
 }
 
 // TaskEntry Wrapper for task to hold metadata like task status and dependencies
@@ -446,6 +258,22 @@ func (t *TaskEntry) ExecutionTime(currentTime time.Time) *time.Duration {
 	return &execTime
 }
 
+// HasHigherPriorityThan determines if the current task has a higher priority than another one.
+func (t *TaskEntry) HasHigherPriorityThan(other *TaskEntry) bool {
+	if other == nil {
+		return true
+	}
+
+	// AggregateProofs task can be created later thant DFRI step tasks for the next batch
+	if t.Task.TaskType != other.Task.TaskType && other.Task.TaskType == AggregateProofs {
+		return true
+	}
+	if t.Created != other.Created {
+		return t.Created.Before(other.Created)
+	}
+	return t.Task.TaskType < other.Task.TaskType
+}
+
 // AsNewChildEntry creates a new TaskEntry with a new TaskId and sets the ParentTaskId to the current task's Id.
 func (t *Task) AsNewChildEntry(currentTime time.Time) *TaskEntry {
 	newTask := common.CopyPtr(t)
@@ -457,18 +285,6 @@ func (t *Task) AsNewChildEntry(currentTime time.Time) *TaskEntry {
 		Status:  WaitingForExecutor,
 		Created: currentTime,
 	}
-}
-
-// HigherPriority Priority comparator for tasks
-func HigherPriority(t1, t2 *TaskEntry) bool {
-	// AggregateProofs task can be created later thant DFRI step tasks for the next batch
-	if t1.Task.TaskType != t2.Task.TaskType && t1.Task.TaskType == AggregateProofs {
-		return true
-	}
-	if t1.Created != t2.Created {
-		return t1.Created.Before(t2.Created)
-	}
-	return t1.Task.TaskType < t2.Task.TaskType
 }
 
 func NewAggregateProofsTaskEntry(

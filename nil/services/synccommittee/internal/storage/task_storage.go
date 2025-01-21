@@ -30,11 +30,9 @@ type TaskViewContainer interface {
 
 // TaskStorage Interface for storing and accessing tasks from DB
 type TaskStorage interface {
-	// AddSingleTaskEntry Store new task entry into DB, if already exist - just update it
-	AddSingleTaskEntry(ctx context.Context, entry types.TaskEntry) error
-
-	// AddTaskEntries Store set of task entries as a single transaction
-	AddTaskEntries(ctx context.Context, tasks []*types.TaskEntry) error
+	// AddTaskEntries Store set of task entries as a single transaction.
+	// If at least one task with a given id already exists, method returns ErrTaskAlreadyExists.
+	AddTaskEntries(ctx context.Context, tasks ...*types.TaskEntry) error
 
 	// TryGetTaskEntry Retrieve a task entry by its id. In case if task does not exist, method returns nil
 	TryGetTaskEntry(ctx context.Context, id types.TaskId) (*types.TaskEntry, error)
@@ -80,7 +78,7 @@ func NewTaskStorage(
 		database: db,
 		retryRunner: badgerRetryRunner(
 			logger,
-			common.DoNotRetryIf(types.ErrTaskWrongExecutor, types.ErrTaskInvalidStatus),
+			common.DoNotRetryIf(types.ErrTaskWrongExecutor, types.ErrTaskInvalidStatus, ErrTaskAlreadyExists),
 		),
 		timer:   timer,
 		metrics: metrics,
@@ -89,7 +87,7 @@ func NewTaskStorage(
 }
 
 // Helper to get and decode task entry from DB
-func extractTaskEntry(tx db.RoTx, id types.TaskId) (*types.TaskEntry, error) {
+func (*taskStorage) extractTaskEntry(tx db.RoTx, id types.TaskId) (*types.TaskEntry, error) {
 	encoded, err := tx.Get(taskEntriesTable, id.Bytes())
 	if err != nil {
 		return nil, err
@@ -103,46 +101,20 @@ func extractTaskEntry(tx db.RoTx, id types.TaskId) (*types.TaskEntry, error) {
 }
 
 // Helper to encode and put task entry into DB
-func putTaskEntry(tx db.RwTx, entry *types.TaskEntry) error {
+func (st *taskStorage) putTaskEntry(tx db.RwTx, entry *types.TaskEntry) error {
 	var inputBuffer bytes.Buffer
 	err := gob.NewEncoder(&inputBuffer).Encode(entry)
 	if err != nil {
 		return fmt.Errorf("%w: failed to encode task with id %s: %w", ErrSerializationFailed, entry.Task.Id, err)
 	}
-	if err := tx.Put(taskEntriesTable, entry.Task.Id.Bytes(), inputBuffer.Bytes()); err != nil {
+	key := st.makeTaskKey(entry)
+	if err := tx.Put(taskEntriesTable, key, inputBuffer.Bytes()); err != nil {
 		return fmt.Errorf("failed to put task with id %s: %w", entry.Task.Id, err)
 	}
 	return nil
 }
 
-func (st *taskStorage) AddSingleTaskEntry(ctx context.Context, entry types.TaskEntry) error {
-	err := st.retryRunner.Do(ctx, func(ctx context.Context) error {
-		return st.addSingleTaskEntryImpl(ctx, entry)
-	})
-	if err != nil {
-		return err
-	}
-
-	st.metrics.RecordTaskAdded(ctx, &entry)
-	return nil
-}
-
-func (st *taskStorage) addSingleTaskEntryImpl(ctx context.Context, entry types.TaskEntry) error {
-	tx, err := st.database.CreateRwTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	err = putTaskEntry(tx, &entry)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
-func (st *taskStorage) AddTaskEntries(ctx context.Context, tasks []*types.TaskEntry) error {
+func (st *taskStorage) AddTaskEntries(ctx context.Context, tasks ...*types.TaskEntry) error {
 	err := st.retryRunner.Do(ctx, func(ctx context.Context) error {
 		return st.addTaskEntriesImpl(ctx, tasks)
 	})
@@ -163,12 +135,27 @@ func (st *taskStorage) addTaskEntriesImpl(ctx context.Context, tasks []*types.Ta
 	}
 	defer tx.Rollback()
 	for _, entry := range tasks {
-		err = putTaskEntry(tx, entry)
-		if err != nil {
+		if entry == nil {
+			return errNilTaskEntry
+		}
+		if err := st.addSingleTaskEntryTx(tx, entry); err != nil {
 			return err
 		}
 	}
 	return tx.Commit()
+}
+
+func (st *taskStorage) addSingleTaskEntryTx(tx db.RwTx, entry *types.TaskEntry) error {
+	key := st.makeTaskKey(entry)
+	exists, err := tx.Exists(taskEntriesTable, key)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("%w: taskId=%s", ErrTaskAlreadyExists, entry.Task.Id)
+	}
+
+	return st.putTaskEntry(tx, entry)
 }
 
 func (st *taskStorage) TryGetTaskEntry(ctx context.Context, id types.TaskId) (*types.TaskEntry, error) {
@@ -177,7 +164,7 @@ func (st *taskStorage) TryGetTaskEntry(ctx context.Context, id types.TaskId) (*t
 		return nil, err
 	}
 	defer tx.Rollback()
-	entry, err := extractTaskEntry(tx, id)
+	entry, err := st.extractTaskEntry(tx, id)
 
 	if errors.Is(err, db.ErrKeyNotFound) {
 		return nil, nil
@@ -195,7 +182,7 @@ func (st *taskStorage) GetTaskViews(ctx context.Context, destination TaskViewCon
 
 	currentTime := st.timer.NowTime()
 
-	err = iterateOverTaskEntries(tx, func(entry *types.TaskEntry) error {
+	err = st.iterateOverTaskEntries(tx, func(entry *types.TaskEntry) error {
 		taskView := public.NewTaskView(entry, currentTime)
 		if predicate(taskView) {
 			destination.Add(taskView)
@@ -231,7 +218,7 @@ func (st *taskStorage) GetTaskTreeView(ctx context.Context, rootTaskId types.Tas
 			return seenTree, nil
 		}
 
-		entry, err := extractTaskEntry(tx, taskId)
+		entry, err := st.extractTaskEntry(tx, taskId)
 
 		if errors.Is(err, db.ErrKeyNotFound) && taskId == rootTaskId {
 			return nil, nil
@@ -264,19 +251,22 @@ func (st *taskStorage) GetTaskTreeView(ctx context.Context, rootTaskId types.Tas
 }
 
 // Helper to find available task with higher priority
-func findHigherPriorityTask(tx db.RoTx) (*types.TaskEntry, error) {
-	var res *types.TaskEntry = nil
+func (st *taskStorage) findTopPriorityTask(tx db.RoTx) (*types.TaskEntry, error) {
+	var topPriorityTask *types.TaskEntry = nil
 
-	err := iterateOverTaskEntries(tx, func(entry *types.TaskEntry) error {
-		if entry.Status == types.WaitingForExecutor {
-			if res == nil || types.HigherPriority(entry, res) {
-				res = entry
-			}
+	err := st.iterateOverTaskEntries(tx, func(entry *types.TaskEntry) error {
+		if entry.Status != types.WaitingForExecutor {
+			return nil
 		}
+
+		if entry.HasHigherPriorityThan(topPriorityTask) {
+			topPriorityTask = entry
+		}
+
 		return nil
 	})
 
-	return res, err
+	return topPriorityTask, err
 }
 
 func (st *taskStorage) RequestTaskToExecute(ctx context.Context, executor types.TaskExecutorId) (*types.Task, error) {
@@ -305,7 +295,7 @@ func (st *taskStorage) requestTaskToExecuteImpl(ctx context.Context, executor ty
 	}
 	defer tx.Rollback()
 
-	taskEntry, err := findHigherPriorityTask(tx)
+	taskEntry, err := st.findTopPriorityTask(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +308,7 @@ func (st *taskStorage) requestTaskToExecuteImpl(ctx context.Context, executor ty
 	if err := taskEntry.Start(executor, currentTime); err != nil {
 		return nil, fmt.Errorf("failed to start task: %w", err)
 	}
-	if err := putTaskEntry(tx, taskEntry); err != nil {
+	if err := st.putTaskEntry(tx, taskEntry); err != nil {
 		return nil, fmt.Errorf("failed to update task entry: %w", err)
 	}
 	if err = tx.Commit(); err != nil {
@@ -341,7 +331,7 @@ func (st *taskStorage) processTaskResultImpl(ctx context.Context, res *types.Tas
 	defer tx.Rollback()
 
 	// First we check the result and set status to failed if unsuccessful
-	entry, err := extractTaskEntry(tx, res.TaskId)
+	entry, err := st.extractTaskEntry(tx, res.TaskId)
 	if err != nil {
 		// ErrKeyNotFound is not considered an error because of possible re-invocations
 		if errors.Is(err, db.ErrKeyNotFound) {
@@ -366,23 +356,23 @@ func (st *taskStorage) processTaskResultImpl(ctx context.Context, res *types.Tas
 		if err := tx.Delete(taskEntriesTable, res.TaskId.Bytes()); err != nil {
 			return err
 		}
-	} else if err := putTaskEntry(tx, entry); err != nil {
+	} else if err := st.putTaskEntry(tx, entry); err != nil {
 		return err
 	}
 
 	// Update all the tasks that are waiting for this result
 	for taskId := range entry.Dependents {
-		depEntry, err := extractTaskEntry(tx, taskId)
+		depEntry, err := st.extractTaskEntry(tx, taskId)
 		if err != nil {
 			return err
 		}
 
-		resultEntry := types.NewTaskResultEntry(res, entry, currentTime)
+		resultEntry := types.NewTaskResultDetails(res, entry, currentTime)
 
 		if err = depEntry.AddDependencyResult(*resultEntry); err != nil {
 			return fmt.Errorf("failed to add dependency result to task with id=%s: %w", depEntry.Task.Id, err)
 		}
-		err = putTaskEntry(tx, depEntry)
+		err = st.putTaskEntry(tx, depEntry)
 		if err != nil {
 			return err
 		}
@@ -411,7 +401,7 @@ func (st *taskStorage) rescheduleHangingTasksImpl(
 	}
 	defer tx.Rollback()
 
-	err = iterateOverTaskEntries(tx, func(entry *types.TaskEntry) error {
+	err = st.iterateOverTaskEntries(tx, func(entry *types.TaskEntry) error {
 		if entry.Status != types.Running {
 			return nil
 		}
@@ -447,10 +437,10 @@ func (st *taskStorage) rescheduleTaskTx(tx db.RwTx, entry *types.TaskEntry, exec
 		return fmt.Errorf("failed to reset task: %w", err)
 	}
 
-	return putTaskEntry(tx, entry)
+	return st.putTaskEntry(tx, entry)
 }
 
-func iterateOverTaskEntries(tx db.RoTx, action func(entry *types.TaskEntry) error) error {
+func (*taskStorage) iterateOverTaskEntries(tx db.RoTx, action func(entry *types.TaskEntry) error) error {
 	iter, err := tx.Range(taskEntriesTable, nil, nil)
 	if err != nil {
 		return err
@@ -473,4 +463,8 @@ func iterateOverTaskEntries(tx db.RoTx, action func(entry *types.TaskEntry) erro
 	}
 
 	return nil
+}
+
+func (*taskStorage) makeTaskKey(entry *types.TaskEntry) []byte {
+	return entry.Task.Id.Bytes()
 }

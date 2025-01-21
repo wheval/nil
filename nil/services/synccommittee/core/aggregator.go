@@ -206,7 +206,7 @@ func (agg *Aggregator) createProofTasks(ctx context.Context, batch *types.BlockB
 		return fmt.Errorf("error creating proof tasks, mainHash=%s: %w", batch.MainShardBlock.Hash, err)
 	}
 
-	if err := agg.taskStorage.AddTaskEntries(ctx, proofTasks); err != nil {
+	if err := agg.taskStorage.AddTaskEntries(ctx, proofTasks...); err != nil {
 		return fmt.Errorf("error adding task entries, mainHash=%s: %w", batch.MainShardBlock.Hash, err)
 	}
 

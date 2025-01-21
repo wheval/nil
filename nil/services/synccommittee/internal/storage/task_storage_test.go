@@ -70,19 +70,19 @@ func (s *TaskStorageSuite) TestRequestAndProcessResult() {
 	dependency2 := testaide.NewTaskEntry(now, types.Running, testaide.RandomExecutorId())
 	higherPriorityEntry.AddDependency(dependency2)
 
-	err := s.ts.AddTaskEntries(s.ctx, []*types.TaskEntry{
+	err := s.ts.AddTaskEntries(s.ctx,
 		lowerPriorityEntry,
 		higherPriorityEntry,
 		dependency1,
 		dependency2,
-	})
+	)
 
 	s.Require().NoError(err)
 
 	// No available tasks for executor at this point
 	task, err := s.ts.RequestTaskToExecute(s.ctx, 88)
 	s.Require().NoError(err)
-	s.Nil(task)
+	s.Require().Nil(task)
 
 	// Make lower priority task ready for execution
 	err = s.ts.ProcessTaskResult(
@@ -92,6 +92,7 @@ func (s *TaskStorageSuite) TestRequestAndProcessResult() {
 	s.Require().NoError(err)
 	task, err = s.ts.RequestTaskToExecute(s.ctx, 88)
 	s.Require().NoError(err)
+	s.Require().NotNil(task)
 	s.Equal(task.Id, lowerPriorityEntry.Task.Id)
 
 	// Make higher priority task ready
@@ -103,6 +104,7 @@ func (s *TaskStorageSuite) TestRequestAndProcessResult() {
 
 	task, err = s.ts.RequestTaskToExecute(s.ctx, 88)
 	s.Require().NoError(err)
+	s.Require().NotNil(task)
 	s.Equal(task.Id, higherPriorityEntry.Task.Id)
 }
 
@@ -125,7 +127,7 @@ func (s *TaskStorageSuite) TestTaskRescheduling_NoActiveTasks() {
 		testaide.NewTaskEntry(now.Add(-time.Hour*24), types.WaitingForExecutor, types.UnknownExecutorId),
 	}
 
-	err := s.ts.AddTaskEntries(s.ctx, entries)
+	err := s.ts.AddTaskEntries(s.ctx, entries...)
 	s.Require().NoError(err)
 
 	err = s.ts.RescheduleHangingTasks(s.ctx, executionTimeout)
@@ -145,7 +147,7 @@ func (s *TaskStorageSuite) TestTaskRescheduling_SingleActiveTask() {
 
 	activeEntry := testaide.NewTaskEntry(now.Add(-time.Second), types.Running, testaide.RandomExecutorId())
 
-	err := s.ts.AddSingleTaskEntry(s.ctx, *activeEntry)
+	err := s.ts.AddTaskEntries(s.ctx, activeEntry)
 	s.Require().NoError(err)
 
 	err = s.ts.RescheduleHangingTasks(s.ctx, executionTimeout)
@@ -163,12 +165,12 @@ func (s *TaskStorageSuite) TestTaskRescheduling_MultipleTasks() {
 
 	outdatedEntry := testaide.NewTaskEntry(now.Add(-executionTimeout*2), types.Running, testaide.RandomExecutorId())
 
-	err := s.ts.AddTaskEntries(s.ctx, []*types.TaskEntry{
+	err := s.ts.AddTaskEntries(s.ctx,
 		outdatedEntry,
 		testaide.NewTaskEntry(now.Add(-time.Second), types.Running, testaide.RandomExecutorId()),
 		testaide.NewTaskEntry(now.Add(-time.Second*2), types.Running, testaide.RandomExecutorId()),
 		testaide.NewTaskEntry(now.Add(-time.Hour*2), types.Failed, testaide.RandomExecutorId()),
-	})
+	)
 	s.Require().NoError(err)
 
 	err = s.ts.RescheduleHangingTasks(s.ctx, executionTimeout)
@@ -196,7 +198,7 @@ func (s *TaskStorageSuite) Test_AddSingleTaskEntry_Concurrently() {
 		go func() {
 			defer waitGroup.Done()
 			entry := testaide.NewTaskEntry(now, types.WaitingForExecutor, types.UnknownExecutorId)
-			err := s.ts.AddSingleTaskEntry(s.ctx, *entry)
+			err := s.ts.AddTaskEntries(s.ctx, entry)
 			s.NoError(err)
 		}()
 	}
@@ -221,7 +223,7 @@ func (s *TaskStorageSuite) Test_AddTaskEntries_Concurrently() {
 				randomEntry := testaide.NewTaskEntry(now, types.WaitingForExecutor, types.UnknownExecutorId)
 				entries = append(entries, randomEntry)
 			}
-			err := s.ts.AddTaskEntries(s.ctx, entries)
+			err := s.ts.AddTaskEntries(s.ctx, entries...)
 			s.NoError(err)
 		}()
 	}
@@ -251,7 +253,7 @@ func (s *TaskStorageSuite) Test_RequestTaskToExecute_Concurrently() {
 	now := s.timer.NowTime()
 
 	entry := testaide.NewTaskEntry(now, types.WaitingForExecutor, types.UnknownExecutorId)
-	err := s.ts.AddSingleTaskEntry(s.ctx, *entry)
+	err := s.ts.AddTaskEntries(s.ctx, entry)
 	s.Require().NoError(err)
 
 	waitGroup := sync.WaitGroup{}
@@ -281,7 +283,7 @@ func (s *TaskStorageSuite) Test_ProcessTaskResult_Concurrently() {
 
 	executorId := testaide.RandomExecutorId()
 	runningEntry := testaide.NewTaskEntry(now, types.Running, executorId)
-	err := s.ts.AddSingleTaskEntry(s.ctx, *runningEntry)
+	err := s.ts.AddTaskEntries(s.ctx, runningEntry)
 	s.Require().NoError(err)
 
 	waitGroup := sync.WaitGroup{}
@@ -346,7 +348,7 @@ func (s *TaskStorageSuite) tryToChangeStatus(
 	now := s.timer.NowTime()
 	executorId := testaide.RandomExecutorId()
 	taskEntry := testaide.NewTaskEntry(now, oldStatus, executorId)
-	err := s.ts.AddSingleTaskEntry(s.ctx, *taskEntry)
+	err := s.ts.AddTaskEntries(s.ctx, taskEntry)
 	s.Require().NoError(err)
 
 	if useDifferentExecutorId {
@@ -362,4 +364,31 @@ func (s *TaskStorageSuite) tryToChangeStatus(
 
 	err = s.ts.ProcessTaskResult(s.ctx, taskResult)
 	s.Require().ErrorIs(err, expectedError)
+}
+
+func (s *TaskStorageSuite) Test_AddSingleTaskEntry_Fail_If_Already_Exists() {
+	now := s.timer.NowTime()
+	entry := testaide.NewTaskEntry(now, types.WaitingForInput, types.UnknownExecutorId)
+	err := s.ts.AddTaskEntries(s.ctx, entry)
+	s.Require().NoError(err)
+
+	err = s.ts.AddTaskEntries(s.ctx, entry)
+	s.Require().ErrorIs(err, ErrTaskAlreadyExists)
+}
+
+func (s *TaskStorageSuite) Test_AddTaskEntries_Fail_If_Already_Exists() {
+	now := s.timer.NowTime()
+	entries := testaide.NewPendingTaskEntries(now, 3)
+
+	err := s.ts.AddTaskEntries(s.ctx, entries...)
+	s.Require().NoError(err)
+
+	newTask := testaide.NewTaskEntry(now, types.WaitingForInput, types.UnknownExecutorId)
+
+	err = s.ts.AddTaskEntries(s.ctx, newTask, entries[0])
+	s.Require().ErrorIs(err, ErrTaskAlreadyExists)
+
+	entryFromStorage, err := s.ts.TryGetTaskEntry(s.ctx, newTask.Task.Id)
+	s.Require().NoError(err)
+	s.Require().Nil(entryFromStorage)
 }

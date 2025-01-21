@@ -42,11 +42,11 @@ func (h *taskHandler) Handle(ctx context.Context, _ types.TaskExecutorId, task *
 			taskEntry.Task.ParentTaskId = &task.Id
 		}
 
-		err = h.taskStorage.AddTaskEntries(ctx, blockTasks)
+		err = h.taskStorage.AddTaskEntries(ctx, blockTasks...)
 	} else {
 		currentTime := h.timer.NowTime()
 		aggregateTaskEntry := task.AsNewChildEntry(currentTime)
-		err = h.taskStorage.AddSingleTaskEntry(ctx, *aggregateTaskEntry)
+		err = h.taskStorage.AddTaskEntries(ctx, aggregateTaskEntry)
 	}
 
 	if err != nil {
