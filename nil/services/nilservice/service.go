@@ -16,6 +16,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/collate"
+	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/consensus/ibft"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -471,6 +472,18 @@ func createShards(
 		return nil, nil, err
 	}
 
+	if !cfg.SplitShards && len(cfg.Validators) == 0 {
+		pubkey, err := cfg.ValidatorKeysManager.GetPublicKey()
+		if err != nil {
+			return nil, nil, err
+		}
+		for i := range cfg.NShards {
+			cfg.Validators[types.ShardId(i)] = []config.ValidatorInfo{
+				{PublicKey: config.Pubkey(pubkey)},
+			}
+		}
+	}
+
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
 
@@ -526,6 +539,7 @@ func createShards(
 				Validator:  collator.Validator(),
 				NetManager: networkManager,
 				PrivateKey: pKey,
+				Validators: cfg.Validators[shardId],
 			})
 			if err := consensus.Init(ctx); err != nil {
 				return nil, nil, err

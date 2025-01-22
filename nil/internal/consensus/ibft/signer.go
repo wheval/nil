@@ -33,10 +33,10 @@ func (s *Signer) Sign(data []byte) (types.Signature, error) {
 }
 
 func (s *Signer) Verify(data []byte, signature types.Signature) bool {
-	return s.verifyWithKey(s.rawPublicKey, data, signature)
+	return s.VerifyWithKey(s.rawPublicKey, data, signature)
 }
 
-func (s *Signer) verifyWithKey(publicKey []byte, data []byte, signature types.Signature) bool {
+func (s *Signer) VerifyWithKey(publicKey []byte, data []byte, signature types.Signature) bool {
 	return len(signature) >= 64 && crypto.VerifySignature(publicKey, getHash(data), signature[:64])
 }
 

@@ -94,6 +94,8 @@ func NewDefaultConfig() *Config {
 		GracefulShutdown: true,
 		Topology:         collate.TrivialShardTopologyId,
 
+		Validators: make(map[types.ShardId][]config.ValidatorInfo),
+
 		Network:   network.NewDefaultConfig(),
 		Telemetry: telemetry.NewDefaultConfig(),
 		Replay:    NewDefaultReplayConfig(),
@@ -171,6 +173,21 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+func (c *Config) loadValidatorKeys() error {
+	if c.ValidatorKeysPath == "" {
+		return nil
+	}
+
+	if c.ValidatorKeysManager == nil {
+		c.ValidatorKeysManager = keys.NewValidatorKeyManager(c.ValidatorKeysPath)
+		if err := c.ValidatorKeysManager.InitKey(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *Config) LoadValidatorPrivateKey() (key *ecdsa.PrivateKey, err error) {
 	defer func() {
 		if err == nil {
@@ -179,17 +196,9 @@ func (c *Config) LoadValidatorPrivateKey() (key *ecdsa.PrivateKey, err error) {
 				Msg("Loaded validator key")
 		}
 	}()
-	if c.ValidatorKeysPath == "" {
-		return execution.MainPrivateKey, nil
+	if err := c.loadValidatorKeys(); err != nil {
+		return nil, err
 	}
-
-	if c.ValidatorKeysManager == nil {
-		c.ValidatorKeysManager = keys.NewValidatorKeyManager(c.ValidatorKeysPath)
-		if err := c.ValidatorKeysManager.InitKey(); err != nil {
-			return nil, err
-		}
-	}
-
 	return c.ValidatorKeysManager.GetKey()
 }
 

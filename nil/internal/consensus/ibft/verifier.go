@@ -2,10 +2,12 @@ package ibft
 
 import (
 	"bytes"
+	"slices"
 
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/go-ibft/messages"
 	protoIBFT "github.com/NilFoundation/nil/nil/go-ibft/messages/proto"
+	"github.com/NilFoundation/nil/nil/internal/config"
 )
 
 func (i *backendIBFT) IsValidProposal(rawProposal []byte) bool {
@@ -24,8 +26,24 @@ func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 		return false
 	}
 
-	if !i.signer.Verify(msgNoSig, msg.Signature) {
-		event := i.logger.Error().Stringer(logging.FieldType, msg.GetType())
+	index := slices.IndexFunc(i.validators, func(v config.ValidatorInfo) bool {
+		return bytes.Equal(v.PublicKey[:], msg.From)
+	})
+	if index == -1 {
+		event := i.logger.Error().
+			Hex("key", msg.From)
+
+		if view := msg.GetView(); view != nil {
+			event = event.Uint64(logging.FieldHeight, view.Height).
+				Uint64(logging.FieldRound, view.Round)
+		}
+		event.Msg("Key not found in validators list")
+		return false
+	}
+
+	validator := i.validators[index]
+	if !i.signer.VerifyWithKey(validator.PublicKey[:], msgNoSig, msg.Signature) {
+		event := i.logger.Error()
 		if view := msg.GetView(); view != nil {
 			event = event.Uint64(logging.FieldHeight, view.Height).
 				Uint64(logging.FieldRound, view.Round)
@@ -38,7 +56,8 @@ func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 }
 
 func (i *backendIBFT) IsProposer(id []byte, height, round uint64) bool {
-	return true
+	proposer := i.calcProposer(height, round)
+	return bytes.Equal(proposer.PublicKey[:], id)
 }
 
 func (i *backendIBFT) IsValidProposalHash(proposal *protoIBFT.Proposal, hash []byte) bool {
@@ -66,7 +85,7 @@ func (i *backendIBFT) IsValidProposalHash(proposal *protoIBFT.Proposal, hash []b
 }
 
 func (i *backendIBFT) IsValidCommittedSeal(
-	proposalHash []byte,
+	_ []byte,
 	committedSeal *messages.CommittedSeal,
 ) bool {
 	return true
