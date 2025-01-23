@@ -10,9 +10,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/NilFoundation/nil/nil/client"
+	"github.com/NilFoundation/nil/nil/client/rpc"
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
@@ -27,7 +26,6 @@ type taskHandler struct {
 	timer         common.Timer
 	logger        zerolog.Logger
 	config        taskHandlerConfig
-	client        client.Client
 }
 
 func newTaskHandler(
@@ -41,7 +39,6 @@ func newTaskHandler(
 		timer:         timer,
 		logger:        logger,
 		config:        config,
-		client:        NewRPCClient(config.NilRpcEndpoint, logging.NewLogger("client")),
 	}
 }
 
@@ -164,8 +161,8 @@ func (h *taskHandler) mapErrToTaskExec(err error) *types.TaskExecError {
 	case errors.As(err, &exitErr):
 		return h.mapCmdExitErrToTaskExec(exitErr)
 
-	case errors.Is(err, types.ErrRpcCallFailed):
-		return types.NewTaskExecErrorf(types.TaskErrIO, "%s", err)
+	case errors.As(err, new(rpc.CallError)):
+		return types.NewTaskExecErrorf(types.TaskErrRpc, "%s", err)
 
 	default:
 		return types.NewTaskErrUnknown(err)

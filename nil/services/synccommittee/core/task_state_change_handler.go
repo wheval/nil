@@ -35,6 +35,8 @@ func (h taskStateChangeHandler) OnTaskTerminated(ctx context.Context, task *type
 	}
 
 	if !result.IsSuccess() {
+		// TODO: handle critical errors here
+
 		log.NewTaskResultEvent(h.logger, zerolog.WarnLevel, result).
 			Msg("block proof task has failed, data won't be sent to the L1")
 		return nil

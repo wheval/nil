@@ -18,8 +18,6 @@ var (
 	ErrTaskWrongExecutor = errors.New("task belongs to another executor")
 )
 
-var ErrRpcCallFailed = errors.New("rpc call failed")
-
 type TaskErrType int8
 
 const (
@@ -28,7 +26,10 @@ const (
 	// TaskErrTimeout indicates that a task failed as it exceeded the specified timeout duration.
 	TaskErrTimeout
 
-	// TaskErrIO indicates an error related to input/output operations (RPC calls / Disk storage access / Network).
+	// TaskErrRpc indicates an error related to remote procedure calls (RPC) during task execution.
+	TaskErrRpc
+
+	// TaskErrIO indicates an error related to input/output operations (Disk storage access / Network).
 	TaskErrIO
 
 	// TaskErrInvalidTask indicates an error caused by an invalid or improperly structured task.
@@ -51,6 +52,8 @@ const (
 )
 
 var RetryableErrors = map[TaskErrType]bool{
+	TaskErrTimeout:    true,
+	TaskErrRpc:        true,
 	TaskErrIO:         true,
 	TaskErrTerminated: true,
 	TaskErrUnknown:    true,
