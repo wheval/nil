@@ -50,8 +50,16 @@ if [ -n "$PKG_NAME" ]; then
 fi
 MOQ_CMD="$MOQ_CMD $SRC_DIR $INTERFACE_NAME"
 
+MOQ_OUTPUT=$($MOQ_CMD)
+MOQ_STATUS=$?
+
+if [ $MOQ_STATUS -ne 0 ]; then
+    echo "Error: moq failed, command was: $MOQ_CMD"
+    exit $MOQ_STATUS
+fi
+
 FILE_CONTENT="//go:build test
-$($MOQ_CMD)"
+$MOQ_OUTPUT"
 
 snake_case() {
     echo "$1" | sed -E 's/([a-z])([A-Z])/\1_\2/g' | tr '[:upper:]' '[:lower:]'

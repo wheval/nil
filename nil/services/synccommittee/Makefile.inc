@@ -45,6 +45,7 @@ $(root_sce)/internal/test_utils/op_context_generated_mock.go: \
 
 $(root_sce)/prover/tracer/storage_getter_setter_generated_mock.go: \
     tracer_constants \
+    pb_synccommittee \
     $(root_sce)/prover/tracer/storage_tracer.go
 	go generate $(root_sce)/prover/tracer
 
