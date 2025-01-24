@@ -122,7 +122,7 @@ func (mt *MPTTracer) SetSlot(addr types.Address, key common.Hash, val common.Has
 }
 
 // GetAccountsStorageUpdatesTraces retrieves storage update traces for all cached accounts
-func (mt *MPTTracer) GetAccountsStorageUpdatesTraces() (map[types.Address][]StorageTrieUpdateTrace, error) {
+func (mt *MPTTracer) getAccountsStorageUpdatesTraces() (map[types.Address][]StorageTrieUpdateTrace, error) {
 	storageTracesByAccount := make(map[types.Address][]StorageTrieUpdateTrace)
 	for addr, acc := range mt.accountsCache {
 		if acc == nil {
@@ -141,12 +141,12 @@ func (mt *MPTTracer) GetAccountsStorageUpdatesTraces() (map[types.Address][]Stor
 
 // GetMPTTraces retrieves all MPT traces including storage and contract trie traces
 func (mt *MPTTracer) GetMPTTraces() (MPTTraces, error) {
-	storageTracesByAccount, err := mt.GetAccountsStorageUpdatesTraces()
+	storageTracesByAccount, err := mt.getAccountsStorageUpdatesTraces()
 	if err != nil {
 		return MPTTraces{}, err
 	}
 
-	contractTrieTraces, err := mt.GetAccountTrieTraces()
+	contractTrieTraces, err := mt.getAccountTrieTraces()
 	if err != nil {
 		return MPTTraces{}, err
 	}
@@ -156,8 +156,9 @@ func (mt *MPTTracer) GetMPTTraces() (MPTTraces, error) {
 	}, nil
 }
 
-// GetAccountTrieTraces retrieves traces for changes in the contract trie
-func (mt *MPTTracer) GetAccountTrieTraces() ([]ContractTrieUpdateTrace, error) {
+// GetAccountTrieTraces retrieves traces for changes in the contract trie. Modifies underlying StorageTrie for each account,
+// thus, should be called after `GetAccountsStorageUpdatesTraces` to not affect `before` values.
+func (mt *MPTTracer) getAccountTrieTraces() ([]ContractTrieUpdateTrace, error) {
 	contractTrie := execution.NewContractTrie(mt.ContractSparseTrie)
 	contractTrieTraces := make([]ContractTrieUpdateTrace, 0, len(mt.accountsCache))
 	for addr, acc := range mt.accountsCache {
@@ -178,20 +179,32 @@ func (mt *MPTTracer) GetAccountTrieTraces() ([]ContractTrieUpdateTrace, error) {
 			continue
 		}
 
+		// ReadMPTOperation plays no role here, could be any
+		proof, err := mpt.BuildProof(contractTrie.Reader, addr.Hash().Bytes(), mpt.ReadMPTOperation)
+		if err != nil {
+			return nil, err
+		}
+
 		trace := ContractTrieUpdateTrace{
+			Key:         addr.Hash(),
 			RootBefore:  contractTrie.RootHash(),
 			ValueBefore: accInTrie,
+			Proof:       proof,
+			PathBefore:  proof.PathToNode,
 		}
+
 		if err := contractTrie.Update(addr.Hash(), commitedAcc); err != nil {
+			return nil, err
+		}
+
+		proof, err = mpt.BuildProof(contractTrie.Reader, addr.Hash().Bytes(), mpt.ReadMPTOperation)
+		if err != nil {
 			return nil, err
 		}
 		trace.RootAfter = contractTrie.RootHash()
 		trace.ValueAfter = commitedAcc
+		trace.PathAfter = proof.PathToNode
 
-		trace.Proof, err = mpt.BuildProof(contractTrie.Reader, addr.Hash().Bytes(), mpt.SetMPTOperation)
-		if err != nil {
-			return nil, err
-		}
 		contractTrieTraces = append(contractTrieTraces, trace)
 	}
 	return contractTrieTraces, nil

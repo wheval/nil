@@ -74,7 +74,8 @@ $(root_sce)/public/taskdebugorder_string.go: $(root_sce)/public/task_debug_api.g
 pb_synccommittee: $(root_sce)/prover/proto/traces.pb.go
 
 $(root_sce)/prover/proto/traces.pb.go: $(root_sce)/prover/proto/traces.proto
-	protoc --go_out=$(root_sce)/prover/ $(root_sce)/prover/proto/traces.proto
+	protoc --proto_path=$(root_sce)/prover/proto --go_out=$(root_sce)/prover/ $(root_sce)/prover/proto/traces.proto $(root_sce)/prover/proto/verbose_mpt.proto
+
 
 .PHONY: generate_contract_from_abi
 generate_contract_from_abi:
@@ -87,4 +88,4 @@ $(root_sce)/prover/tracer/internal/constants/proto_hash_generated.go: \
 	$(root_sce)/prover/tracer/internal/scripts/generate_constants.sh
 	mkdir -p $(root_sce)/prover/tracer/internal/constants \
 		&& cd $(root_sce)/prover/tracer/internal/constants \
-		&& bash ../scripts/generate_constants.sh ProtoHash `sha256sum ../../../proto/traces.proto | cut -d ' ' -f 1` proto_hash_generated.go
+		&& bash ../scripts/generate_constants.sh ProtoHash `cat ../../../proto/*.proto | sha256sum | cut -d ' ' -f 1` proto_hash_generated.go

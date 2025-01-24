@@ -1,6 +1,8 @@
 package mpt
 
 import (
+	"strings"
+
 	ssz "github.com/NilFoundation/fastssz"
 	"github.com/NilFoundation/nil/nil/common/check"
 )
@@ -181,4 +183,18 @@ func CommonPrefix(paths []*Path) *Path {
 	}
 
 	return prefix
+}
+
+func (path *Path) Hex() (hexStr string) {
+	if path.Empty() {
+		return ""
+	}
+
+	var builder strings.Builder
+	builder.Grow(path.Size())
+	for i := range path.Size() {
+		builder.WriteByte(byte(path.At(i)))
+	}
+
+	return builder.String()
 }

@@ -359,8 +359,8 @@ func TestProofEncoding(t *testing.T) {
 
 	require.Equal(t, p.operation, decoded.operation)
 	require.Equal(t, p.key, decoded.key)
-	require.Len(t, decoded.pathToNode, len(p.pathToNode))
-	for i, n := range p.pathToNode {
-		require.Equal(t, n, decoded.pathToNode[i])
+	require.Len(t, decoded.PathToNode, len(p.PathToNode))
+	for i, n := range p.PathToNode {
+		require.Equal(t, n, decoded.PathToNode[i])
 	}
 }

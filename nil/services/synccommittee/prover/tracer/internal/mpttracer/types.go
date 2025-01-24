@@ -27,6 +27,8 @@ type GenericTrieUpdateTrace[T any] struct {
 	ValueBefore T
 	ValueAfter  T
 	Proof       mpt.Proof
+	PathBefore  mpt.ProofPath
+	PathAfter   mpt.ProofPath
 }
 
 // StorageTrieUpdateTrace is a type alias for storage trie updates
