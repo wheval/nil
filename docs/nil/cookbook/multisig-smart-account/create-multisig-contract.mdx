@@ -1,0 +1,69 @@
+# Create the multi-signature smart account contract
+
+The multi-signature smart account needs to do the following:
+
+* Parse multi-signatures sent to it and validate them
+* Store information about valid signers for validation
+* Handle external transactions
+* Transfer default tokens and/or custom tokens
+
+:::info
+
+To validate signatures, the multi-signature smart account needs to use the `Nil.validateSignature(pubkey, hash, authData)` function. The function can only accept `authData` that is 256 bytes or less. As a signatures takes up 65 bytes, the smart account can only support three valid signers at maximum.
+
+:::
+
+## Contract definition
+
+```solidity showLineNumbers
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity ^0.8.9;
+
+import "@nilfoundation/smart-contracts/contracts/SmartAccount.sol";
+import "@nilfoundation/smart-contracts/contracts/Nil.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
+/**
+ * @title MultiSigSmartAccount
+ * @author =nil; Foundation
+ * @notice This contract provides a canonical example of a multi-signature smart account on =nil;.
+ */
+contract MultiSigSmartAccount is NilBase {}
+```
+
+## Constructor and properties
+
+```solidity showLineNumbers file=../../../tests/MultiSigSmartAccount.sol start=startConstructorAndProperties end=endConstructorAndProperties
+```
+
+The contract stores the signers' public keys inside the `pubkeys` array. The constructor checks for the length of the passed `_publicKeys` array and assigns `pubkeys` to this array as long as its length is correct.
+
+## Parsing multi-signatures and validating them
+
+To handle external transactions, the contract uses the `verifyExternal()` function:
+
+```solidity showLineNumbers file=../../../tests/MultiSigSmartAccount.sol start=startVerifyExternal end=endVerifyExternal
+```
+
+The function iterates over all signatures passed in the `signature` calldata using the `offset` counter. Each iteration calls the `parseSignature()` function:
+
+```solidity showLineNumbers file=../../../tests/MultiSigSmartAccount.sol start=startParseSignature end=endParseSignature
+```
+
+The function reconstructs an individual signature when given 65 bytes from the given offset (`_pos`). It does so by extracting r, s, and v components and using `mstore` and `mstore8`.
+
+## Handling cross-shard transfers
+
+The smart account provides a simple 'wrapper' function for handling async transfers of default tokens and custom tokens:
+
+```solidity showLineNumbers file=../../../tests/MultiSigSmartAccount.sol start=startAsyncCall end=endAsyncCall
+```
+
+## Full code
+
+Here is the full code of the multi-signature smart account contract:
+
+```solidity showLineNumbers file=../../../tests/MultiSigSmartAccountPure.sol start=startContract end=endContract
+```
+

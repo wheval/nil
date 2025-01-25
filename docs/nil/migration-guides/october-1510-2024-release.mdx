@@ -1,0 +1,46 @@
+# Release 15.10.2024: migration guide
+
+This release of =nil; adds support of the `onlyResponse` modifier, changes token IDs to be of the `address` type and launches the token faucet service.
+
+## Summary of key changes
+
+* The newly added token faucet service makes it easy to transfer the default token (NIL) as well as various pre-set tokens (e.g., 'mock' implementations BTC or USDT) to any address
+* The `onlyResponse` modifier limits access to callback functions used in `sendRequest()`, making sure they can only be called by the response to a given request
+* `TokenId` is a new alias for the `address` type, fully replacing the previous token IDs which were of the `uin256` type
+
+:::info
+
+[**Read this tutorial**](../getting-started/essentials/tokens.mdx#token-faucet-service) to learn more about the token faucet service.
+
+:::
+
+## Migration of smart contracts
+
+* Replace usage of `uint256` in token IDs with `TokenId`
+
+`TokenId` is an alias for the `address` type which fully replaces the previous system where token IDs were of the `uint256` type. To cast a contract address to a `TokenId`:
+
+```solidity showLineNumbers
+TokenId id = TokenId.wrap(address(this));
+```
+
+This change simplifies the management of custom tokens as there is no longer a need to keep track of separate token addresses and their IDs.
+
+* Mark callback functions with the `onlyResponse` modifier
+
+The `Nil.sol` library now includes [**the `onlyResponse` modifier**](../tools/sol-library/func-modifiers.mdx). After this modifier is applied to a function, said function can only be called by responses that arrive to the requests sent via `sendRequest()`. The modifier protects callback functions from being unfairly executed by malicious parties.
+
+## Migration of the =nil; CLI
+
+No specific changes have to be made to the =nil; CLI commands.
+
+## Migration of Nil.js scripts
+
+The Nil.js client library now supports several useful 'wrappers' designed to simplify work with the faucet service.
+
+[**Read this tutorial**](../getting-started/essentials/tokens.mdx#token-faucet-service) to learn more or access the [**references for Nil.js to learn more.**](../reference/client/index.mdx).
+
+## Migration of Hardhat scripts
+
+No specific changes have to be made to existing Hardhat scripts.
+

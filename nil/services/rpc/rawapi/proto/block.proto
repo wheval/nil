@@ -1,0 +1,48 @@
+syntax = "proto3";
+package rawapi;
+
+option go_package = "/pb";
+
+import "nil/services/rpc/rawapi/proto/common.proto";
+
+message BlockRequest {
+  BlockReference reference = 2;
+}
+
+message BlocksRangeRequest {
+  int64 id = 1;
+  uint32 count = 2;
+}
+
+message RawBlock {
+  bytes blockSSZ = 1;
+}
+
+message RawBlockResponse {
+  oneof result {
+    Error error = 1;
+    RawBlock data = 2;
+  }
+}
+
+message RawFullBlock {
+  bytes blockSSZ = 1;
+
+  repeated bytes inTransactionsSSZ = 2;
+  repeated bytes outTransactionsSSZ = 3;
+  repeated bytes receiptsSSZ = 4;
+  map<string, Error> errors = 5;
+  repeated Hash childBlocks = 6;
+  uint64 dbTimestamp = 7;
+}
+
+message RawFullBlocks {
+  repeated RawFullBlock blocks = 1;
+}
+
+message RawFullBlockResponse {
+  oneof result {
+    Error error = 1;
+    RawFullBlock data = 2;
+  }
+}

@@ -1,0 +1,57 @@
+# Deploy and call a smart contract using Nil.js
+
+These recipes showcase how to use Nil.js to deploy and call a smart contract.
+
+## Create a smart contract
+
+This example uses the standard counter contract:
+
+```solidity showLineNumbers file=../../../tests/Counter.sol start=startContract end=endContract
+```
+
+## Import statements
+
+Import the following components from `@nilfoundation/niljs`:
+
+```ts showLineNumbers file=../../../tests/cookbook-deploy-smart-contract.test.mts start=startImportStatements end=endImportStatements
+```
+
+## Deploy the contract
+
+### Internal deployment
+
+To create a new smart account and deploy the contract internally:
+
+```ts showLineNumbers file=../../../tests/cookbook-deploy-smart-contract.test.mts start=startInternalDeployment end=endInternalDeployment
+```
+
+### External deployment
+
+To deploy the contract externally:
+
+```ts showLineNumbers file=../../../tests/cookbook-deploy-smart-contract.test.mts start=startExternalDeployment end=endExternalDeployment
+```
+
+## Sending a transaction to the contract
+
+### Via the contract factory
+
+`Nil.js` can utilize a special 'contract factory' to interact with smart contracts in a manner similar to a Hardhat task:
+
+```ts showLineNumbers file=../../../tests/cookbook-deploy-smart-contract.test.mts start=startFactoryIncrement end=endFactoryIncrement
+```
+
+
+### Internal transaction
+
+To send a new internal transaction to the `increment()` function:
+
+```ts showLineNumbers file=../../../tests/cookbook-deploy-smart-contract.test.mts start=startInternalTransaction end=endInternalTransaction
+```
+
+### External transaction
+
+To send a new external transaction to the `increment()` function:
+
+```ts showLineNumbers file=../../../tests/cookbook-deploy-smart-contract.test.mts  start=startExternalTransaction end=endExternalTransaction
+```

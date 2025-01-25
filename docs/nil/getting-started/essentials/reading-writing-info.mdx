@@ -1,0 +1,95 @@
+# Reading and writing to =nil;
+
+This tutorial details the different ways that allow for reading and writing information to =nil;. It covers these actions:
+
+1. Reading information from a block
+2. Calling an existing smart contract
+3. Retrieving data about the resulting transaction
+4. Reading the transaction receipt
+
+## Via the =nil; CLI
+
+The =nil; CLI provides several commands that produce data about key cluster entities including blocks, transactions, and logs.
+
+To view the latest block recorded by shard with `shardId = 1`:
+
+```bash file=../../../tests/commands.mjs start=startLatestBlock end=endLatestBlock
+```
+
+To call an existing smart contract via the smart account:
+
+```bash
+nil smart-account send-transaction CONTRACT_ADDRESS METHOD_NAME [ARGS] --abi path/to/contract.abi
+```
+
+To read information about the resulting transaction:
+
+```bash file=../../../tests/reading-and-writing.test.mjs start=startTransactionRead end=endTransactionRead
+```
+
+To read the transaction receipt:
+
+```bash file=../../../tests/reading-and-writing.test.mjs start=startReceiptRead end=endReceiptRead
+```
+
+## Via the client library
+
+The `Nil.js` client library provides several 'helper' methods for reading and writing to =nil;
+
+To retrieve the block with the given hash:
+
+```typescript showLineNumbers
+import { PublicClient } from '@nilfoundation/niljs';
+
+const client = new PublicClient({
+    transport: new HttpTransport({
+        endpoint: "{NIL_ENDPOINT}",
+    }),
+    shardId: 1,
+});
+const block = await client.getBlockByHash(BLOCK_HASH);
+```
+
+To call an existing smart contract after [**initializing a smart account**](./creating-a-smart-account#via-the-client-library):
+
+```typescript showLineNumbers
+import {
+  encodeFunctionData,
+  type Abi,
+} from "viem";
+
+const data = encodeFunctionData({
+    abi: CONTRACT_ABI as Abi,
+    functionName: "{funcName}",
+    args: [],
+    }
+);
+
+const transactionHash = await smartAccount.sendTransaction({
+    to: '{CONTRACT_ADDRESS}',
+    data: data,
+    value: 100_000n,
+    feeCredit: 1_000_000n
+});
+
+await waitTillCompleted(client, transactionHash);
+```
+
+:::tip
+
+The `waitTillCompleted()` function enforces waiting for the results of the execution of the transaction whose hash is passed as an argument. It is crucial for avoiding null-type errors.
+
+:::
+
+To read information about the resulting transaction:
+
+```typescript
+const transaction = await client.getTransactionByHash(transactionHash);
+```
+
+To read the transaction receipt:
+
+
+```typescript
+const receipt = await client.getTransactionReceiptByHash(transactionHash);
+```

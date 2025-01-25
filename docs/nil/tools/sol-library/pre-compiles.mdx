@@ -1,0 +1,141 @@
+# Pre-compiles and Solidity functions
+
+=nil; provides several pre-compiled contracts that abstract over complex operations and provide a quick way to execute computationally-heavy actions.
+
+## `ASYNC_CALL`
+
+`ASYNC_CALL` is the pre-compile used in the `asyncCall()` function, which allows for async execution of contract functions:
+
+```solidity showLineNumbers
+function asyncCall(
+        address dst,
+        address refundTo,
+        address bounceTo,
+        uint feeCredit,
+        uint8 forwardKind,
+        bool deploy,
+        uint value,
+        bytes memory callData
+    ) internal returns(bool)
+```
+
+Alternative signature for calling a contract with custom tokens:
+
+```solidity showLineNumbers
+function asyncCallWithTokens(
+        address dst,
+        address refundTo,
+        address bounceTo,
+        uint feeCredit,
+        uint8 forwardKind,
+        bool deploy,
+        uint value,
+        Token[] memory tokens,
+        bytes memory callData
+    )
+```
+
+A concise signature:
+
+```solidity showLineNumbers
+    function asyncCall(
+        address dst,
+        address bounceTo,
+        uint value,
+        bytes memory callData
+    ) internal returns(bool)
+```
+
+The contract takes a function call and spawns a new transaction. Whenever this transaction is processed, the function call is executed.
+
+[**The 'Core concepts' section contains**](../../core-concepts/shards-parallel-execution##async-execution) a primer on async execution and [**there is also a tutorial**](../../getting-started/essentials/handling-async-execution) on using `asyncCall()`.
+
+## `VERIFY_SIGNATURE`
+
+`VERIFY_SIGNATURE` is the pre-compile used in the `validateSignature()` function. The function has the following signature:
+
+```solidity showLineNumbers
+function validateSignature(
+        bytes memory pubkey,
+        uint256 transactionHash,
+        bytes memory signature
+    ) internal view returns (bool)
+```
+
+The function verifies if the given transaction signature is valid for the provided `pubKey`, `transactionHash` and `signature`.
+
+## `SEND_TRANSACTION`
+
+`SEND_TRANSACTION` is the pre-compile used in the `sendTransaction()` function:
+
+```solidity showLineNumbers
+function sendTransaction(uint g, bytes memory transaction) internal
+```
+
+The function sends a 'raw' transaction via the pre-compile.
+
+## `IS_INTERNAL_TRANSACTION`
+
+`IS_INTERNAL_TRANSACTION` is the pre-compile used in the `isInternalTransaction()` function:
+
+```solidity showLineNumbers
+function isInternalTransaction() internal view returns (bool)
+```
+
+The function is called as part of [**the `onlyInternal` and `onlyExternal` function modifiers**](func-modifiers.mdx) to check if a given transaction is internal.
+
+## `SEND_TOKEN_SYNC`
+
+This precompile is used in the `syncCall()` function:
+
+```solidity showLineNumbers
+function syncCall(
+        address dst,
+        uint gas,
+        uint value,
+        Token[] memory tokens,
+        bytes memory callData
+    ) internal returns(bool, bytes memory)
+```
+
+The function calls a smart contract synchronously and, if needed, sends custom tokens.
+
+## `MINT_TOKEN`
+
+`MINT_TOKEN` is the pre-compile used in the `mintToken()` function:
+
+```solidity showLineNumbers
+function mintToken(uint256 id, uint256 amount) internal returns(bool)
+```
+
+The function mints the custom token with the given `id`.
+
+## `GET_TOKEN_BALANCE`
+
+`GET_TOKEN_BALANCE` is the pre-compile used in the `tokensBalance()` function:
+
+```solidity showLineNumbers
+function tokensBalance(address addr, uint256 id) internal returns(uint256)
+```
+
+The function shows how many tokens with the given `id` are held by the contract at the given `addr`.
+
+## `GET_TRANSACTION_TOKENS`
+
+`GET_TRANSACTION_TOKENS` is the pre-compile used in the `txnTokens()` function.
+
+```solidity showLineNumbers
+function txnTokens() internal returns(Token[] memory)
+```
+
+The function returns the list of tokens for the current transaction.
+
+## `GET_GAS_PRICE`
+
+`GET_GAS_PRICE` is used in the `getGasPrice()` function:
+
+``` showLineNumbers
+function getGasPrice(address addr) internal returns(uint256)
+```
+
+The function returns the current gas price at the shard where the specified address is located.

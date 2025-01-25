@@ -1,0 +1,68 @@
+# Release 17.09.2024: migration guide
+
+This release of =nil; adds several improvements to developer tools and futher simplifies working with custom tokens.
+
+## Summary of key changes
+
+* The =nil; CLI can now be used to estimate gas
+* The cluster supports burning custom tokens
+* The `sendRequest()` function in `Nil.sol` supports sending custom tokens
+* Whenever a contract fails, logs that have been written prior to the failure point are not reverted. This should make debugging easier
+
+## Migration of smart contracts
+
+* Add custom tokens to `sendRequest()`
+
+The `sendRequest()` function now has one more signature:
+
+```solidity showLineNumbers
+function sendRequest(
+      address dst,
+      uint256 value,
+      Token[] memory tokens,
+      bytes memory context,
+      bytes memory callData
+  ) internal {}
+```
+
+If the contract logic permits it, attach custom tokens to `sendRequest()`. On the side of the receiving contract, modify the function being called so that it processes the received tokens.
+
+## Migration of the =nil; CLI
+
+* Estimate fees before sending transactions
+
+The =nil; CLI now includes the `estimate-fee` command whose purpose is to evaluate how much gas would be spent by sending a specific transaction.
+
+Use the command as follows:
+
+```bash
+nil smart-account estimate-fee ADDRESS FUNC_NAME [ARGS] --abi path/to/abi
+```
+
+* Burn custom tokens
+
+The CLI also supports burning custom tokens:
+
+```bash
+nil minter burn-token ADDRESS AMOUNT
+```
+
+If necessary, add this logic to existing scripts using the =nil; CLI to reduce the total supply of a custom token.
+
+## Migration of `Nil.js` scripts
+
+* Burn custom tokens
+
+Inside `Nil.js`, `SmartAccountV1` now exposes a new method for burning custom tokens:
+
+```ts showLineNumbers
+const amount = 50_000n;
+const hashTransaction = await smartAccount.burnToken(amount);
+await waitTillCompleted(client, hashTransaction);
+```
+
+Modify existing `Nil.js` scripts to reduce the total supply of custom tokens owned by various smart accounts.
+
+## Migration of Hardhat scripts
+
+No specific changes have to be made to existing Hardhat scripts.

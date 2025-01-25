@@ -1,0 +1,118 @@
+# Release 03.09.2024: migration guide
+
+The latest release of =nil; introduces several changes to multi-token support and the minting mechanism.
+
+## Summary of key changes
+
+
+* The `Minter` contract no longer exists and cannot be called from other smart contracts
+* The `Nil.sol` extension library now exposes [**the `awaitCall()` function**](getting-started/essentials/handling-async-execution.mdx##retrieving-values) that allows for making an async call to a smart contract and then awaiting the result
+* The JSON-RPC API now includes the `eth_estimateFee` method which can be used for gas estimations. Client tools (`Nil.js` and the =nil; CLI) will support this feature at a later date
+
+## Migration of smart contracts
+
+* Mint tokens directly from smart accounts
+
+All 'out of the box' smart accounts provided by =nil; can now mint tokens without having to refer to the `Minter` contract. As a result, the `Minter` contract has been discontinued. Any calls or transactions sent to this contract should be removed.
+
+A more detailed overview of how to create tokens via smart accounts is provided in [**this tutorial**](getting-started/essentials/tokens.mdx).
+
+* Use `NilTokenBase` to create custom tokens
+
+Instead of using the now non-existant `Minter` contract, create new custom tokens by deriving contracts from `NilTokenBase`:
+
+```solidity showLineNumbers
+import "path/to/NilTokenBase.sol";
+
+contract Example is NilTokenBase {}
+```
+
+`NilTokenBase` base is a template contract that has all the necessary methods for mimicking the behavior of tokens including minting, token creation, and attaining the total token supply.
+
+:::info
+
+Derived contracts can override `virtual` functions inside `NilTokenBase` to change the default minting, transferring, or token creation behaviors.
+
+:::
+
+
+* Adjust the logic of smart contracts to account for `awaitCall()`
+
+The `awaitCall()` function makes it possible to perform async calls between smart contracts while retrieving the returned value.
+
+If necessary, change the logic of existing smart contracts to use `awaitCall()`.
+
+## Migration of =nil; CLI
+
+No specific changes have to be made to existing =nil; CLI commands.
+
+Note that the `nil smart-account call-readonly` command has been added. It allows for performing 'dry runs' of calling contracts via smart account. Provide the `--with-details` flag to see exactly how much fee credit could be spent on performing the operation tested during the 'dry run'.
+
+## Migration of `Nil.js` scripts
+
+* Remove any transactions sent to the `Minter` contract
+
+With the latest release, `Nil.js` changes the logic for creating and minting tokens.
+
+To set the token name:
+
+```js showLineNumbers
+{
+    const hashTransaction = await smartAccount.setTokenName("MY_TOKEN");
+    await waitTillCompleted(client, hashTransaction);
+}
+
+```
+
+To mint the token and withdraw it to its owner:
+
+```js showLineNumbers
+{
+    const hashTransaction = await smartAccount.mintToken(100_000_000n);
+    await waitTillCompleted(client, hashTransaction);
+}
+
+```
+
+To transfer the token to another contract:
+
+```js showLineNumbers
+await smartAccount.sendTransaction({
+    ...
+    tokens: [
+        {
+            id: smartAccountAddress,
+            amount: AMOUNT
+        }
+    ]
+    ...
+});
+```
+
+* Adjust function signatures
+
+* The `PublicClient.call()` function no longer expects a `from` argument in its `CallArgs` and accepts `feeCredit`:
+
+```js showLineNumbers
+await client.call({
+        to: address,
+        feeCredit: 500000n,
+        abi,
+        functionName: "FUNC_NAME",
+    }, "latest")
+```
+
+* The `waitTillCompleted()` function accepts additional options allowing for waiting until the transaction with the given hash is included in a block in the main shard:
+
+```js showLineNumbers
+await waitTillCompleted(CLIENT, SHARD_ID, HASH, {
+    waitTilMainShard: true,
+    interval: INTERVAL
+}
+);
+```
+
+
+## Migration of Hardhat scripts
+
+No specific changes have to be made to existing Hardhat scripts.

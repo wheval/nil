@@ -1,0 +1,80 @@
+import {CookbookCard, CookbookCardSection, CookbookBadges} from '@site/src/components/CookbookCardSection';
+
+# Cookbook
+
+## Deploy and call a smart contract via Nil.js 
+
+These short recipes demonstrate how to use `Nil.js` to deploy and call a smart contract.
+
+<CookbookCardSection>
+  <CookbookCard tag={{
+    label: "7 min read",
+  }} id='simple-deploy1' title='Deploy a smart contract' description='' to='https://docs.nil.foundation/nil/cookbook/niljs-deploy/deploy-call-smart-contract'
+  />
+</CookbookCardSection>
+
+## Use the faucet service 
+
+These recipes demonstrate how to call [**the Faucet service**](../getting-started/essentials/tokens.mdx#token-faucet-service) via `Nil.js`.
+
+<CookbookCardSection>
+  <CookbookCard tag={{
+    label: "5 min read",
+  }} id='faucet-service1' title='Use the faucet service' description='' to='https://docs.nil.foundation/nil/cookbook/faucet-service/use-faucet-service'
+  />
+</CookbookCardSection>
+
+## Use `Nil.js` on the server
+
+It is possible to use `Nil.js` in a Node.js environment, making it possible to perform server-side operations on =nil;. The **Cookbook** provides a simple Node.js project that handles new smart account creation entirely server-side.
+
+<CookbookCardSection>
+  <CookbookCard tag={{
+    label: "3 min read",
+  }} id='nodejs-project' title='Use Nil.js with Node.js' description='' to='https://docs.nil.foundation/nil/cookbook/nodejs-project/write-nodejs-project'
+  />
+</CookbookCardSection>
+
+## Implement an 'English Auction'
+
+The 'English Auction' is a smart contract that allows users to place bids over a certain period of time. When this time elapses, the address that placed the highest bid receives the NFT stored inside the auction contract.
+
+<CookbookCardSection>
+  <CookbookCard tag={{
+    label: "8 min read",
+  }} id='swap1' title='Implement the auction logic' description='' to='https://docs.nil.foundation/nil/cookbook/english-auction/create-eng-auction'
+  />
+  <CookbookCard tag={{
+    label: "7 min read",
+  }} id='swap2' title='Deploy and test the swap contract' description='' to='https://docs.nil.foundation/nil/cookbook/english-auction/test-eng-auction'/>
+</CookbookCardSection>
+
+## Create a swap contract and custom tokens
+
+This series of recipes show how to create a swap contract that can reliably exchange one custom token with another even if the contracts representing these tokens are located on different shards. 
+
+The swap contract adopts order book-like mechanics by matching swap requests from different smart accounts. When requests are matched, the contract processes them and takes care of any excess tokens by sending them back to the request originators.
+
+<CookbookCardSection>
+  <CookbookCard tag={{
+    label: "8 min read",
+  }} id='swap1' title='Design the swap contract' description='' to='https://docs.nil.foundation/nil/cookbook/swap/create-swap-contract'
+  />
+  <CookbookCard tag={{
+    label: "7 min read",
+  }} id='swap2' title='Deploy and test the swap contract' description='' to='https://docs.nil.foundation/nil/cookbook/swap/deploy-test-swap'/>
+</CookbookCardSection>
+
+##  Create a multi-signature smart account
+
+These recipes demonstrate how a multi-signature smart account can work on top of =nil;. The contract has all the usual characteristics of a multi-signature smart account while beign able to send the default token and custom tokens across different shards.
+
+<CookbookCardSection>
+  <CookbookCard tag={{
+    label: "12 min read",
+  }} id='multi-sig1' title='Create the smart account contract' description='' to='https://docs.nil.foundation/nil/cookbook/multisig-smart-account/create-multisig-contract'
+  />
+  <CookbookCard tag={{
+    label: "5 min read",
+  }} id='multi-sig2' title='Deploy and test the smart account' description='' to='https://docs.nil.foundation/nil/cookbook/multisig-smart-account/deploy-test-multisig'/>
+</CookbookCardSection>

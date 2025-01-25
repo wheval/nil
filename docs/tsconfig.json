@@ -1,0 +1,14 @@
+{
+    "extends": "@docusaurus/tsconfig",
+    "esModuleInterlop":"true",
+    "compilerOptions": {
+      "types": [
+        "vitest/globals"
+      ],
+      "baseUrl": ".",
+      "paths": {
+        "modules": ["../node_modules/"]
+      }
+    },
+    "include": ["scripts/**/*", "tests/*"],
+  }

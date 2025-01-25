@@ -1,0 +1,69 @@
+.playgroundButton {
+  line-height: 1.5;
+  min-width: 17rem;
+  max-width: 17rem;
+  min-height: 2rem;
+  max-height: 8rem;
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+[data-theme="light"] .playgroundButton {
+  background-color: #8fc97e;
+  color: #0f0f0f;
+  border-color: #404040;
+  border: 1px solid;
+  border-radius: 5px;
+  padding: 2px 10px 2px 10px;
+  display: flex;
+  width: fit-content;
+  margin-bottom: 15px;
+  cursor: pointer;
+  justify-content: center;
+  vertical-align: middle;
+  align-items: center;
+  transition-property: background-color;
+}
+
+[data-theme="dark"] .playgroundButton {
+  background-color: #8fc97e;
+  color: #0f0f0f;
+  border-color: #404040;
+  border: 1px solid;
+  border-radius: 5px;
+  padding: 2px 10px 2px 10px;
+  display: flex;
+  width: fit-content;
+  margin-bottom: 15px;
+  cursor: pointer;
+  justify-content: center;
+  vertical-align: middle;
+  align-items: center;
+}
+
+.playgroundButton:hover {
+  background-color: #e5e5e5 !important;
+}
+
+.spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spinner > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner svg {
+  height: 1.5em !important;
+  width: 1.5em !important;
+}

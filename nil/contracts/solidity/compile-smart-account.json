@@ -1,0 +1,22 @@
+{
+  "contractName": "SmartAccount.sol:SmartAccount",
+  "compilerVersion": "0.8.28",
+  "settings": {
+    "evmVersion": "cancun",
+    "optimizer": {
+      "enabled": false,
+      "runs": 200
+    }
+  },
+  "sources": {
+    "SmartAccount.sol": {
+      "urls": ["lib/SmartAccount.sol"]
+    },
+    "NilTokenBase.sol": {
+      "urls": ["lib/NilTokenBase.sol"]
+    },
+    "Nil.sol": {
+      "urls": ["lib/Nil.sol"]
+    }
+  }
+}

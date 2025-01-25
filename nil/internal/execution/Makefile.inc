@@ -1,0 +1,7 @@
+.PHONY: ssz_execution
+ssz_execution: nil/internal/execution/block_generator_encoding.go ssz_types
+
+nil/internal/execution/block_generator_encoding.go: nil/internal/execution/block_generator.go
+	cd nil/internal/execution && go run github.com/NilFoundation/fastssz/sszgen --path block_generator.go \
+		-include ../types/bitflags.go,../types/value.go,../types/address.go,../types/code.go,../types/account.go,../types/signature.go,../types/block.go,../types/collator.go,../types/transaction.go,../types/shard.go,../../common/length.go,../../common/hash.go \
+		--objs Proposal

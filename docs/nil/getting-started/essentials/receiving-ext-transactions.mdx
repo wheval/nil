@@ -1,0 +1,36 @@
+import PGButton from '@theme/PGButton';
+
+# Receiving external transactions
+
+This tutorial explains how exactly a contract can accept external transactions.
+
+## `verifyExternal()`
+
+The contract receiving [**an external transaction**](core-concepts/shards-parallel-execution.mdx##internal-vs-external-transactions) must implement an additional function so that this call is processed. Unless this function is present, a contract cannot accept external transactions. The function signature:
+
+```solidity showLineNumbers
+ function validateSignature(
+        bytes memory pubkey,
+        uint256 hash,
+        bytes memory signature
+    ) internal view returns (bool)
+```
+
+The purpose of the function is to limit who can call the receiver contract via an external transaction. Its body can hold any logic for checking the transaction signature.
+
+As the receiving contract is charged with paying for external transactions, the `verifyExternal()` function is needed so that external parties do not accidentally (or maliciously) drain the balance of the receiving contract.
+
+:::info
+
+`verifyExternal()` is executed every time a contract is called via an external transaction.
+
+:::
+
+## Example
+
+This example contains a simple mechanism for verifying `authData`:
+
+```solidity showLineNumbers file=../../../tests/Receiver.sol start=startReceiverContract end=endReceiverContract
+```
+
+<PGButton name="Receiver.sol"/>

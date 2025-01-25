@@ -1,0 +1,72 @@
+# Transaction lifecycle
+
+## Definition
+
+In =nil;, transactions pass the following stages before reaching finality.
+
+1. A user submits a transaction via an external transaction
+2. The transaction is sequenced and placed into the mempool of an execution shard
+3. The transaction is bundled with other transactions and sent for execution
+4. The transaction is executed and placed into a block. If the transaction spawns a cross-shard transaction, this cross-shard transaction is placed into the 'inbox' of its destination shard
+5. The block passes local consensus
+6. The block is placed into local storage and the transaction reaches soft finality
+7. The block hash is sent to the consensus shard
+8. The sync committee collects the block along with blocks from other shards
+9. The block is aggregated into a batch, is compressed, and is sent to the L1 blob storage and to a zkSharding prover
+10. The prover produces a ZKP and sends it to the sync committee
+11. The sync commitee sends a transaction proposing the new state to L1. This transaction contains the ZKP
+12. L1 verifies that the data stored in the blob and the proven data is the same data
+13. L1 verifies the ZKP. If the ZKP is valid, the transaction reaches hard finality once the block containing it is confirmed
+
+:::note
+
+Deposit transactions and transactions that are force-included via L1 will follow a slightly different flow.
+
+:::
+
+Additional remarks about each of the above stages are given below.
+
+## Stages
+
+### Transaction submission and processing
+
+A user submits an external transaction autonomously. Once sequenced, this transaction reaches the mempool of its target execution shard.
+
+In some cases, transactions may also cause the receiving contract to call other smart contracts some of which may be located on other shards. As part of the =nil; protocol, execution shards poll other execution shards about cross-shard transactions. Once a cross-shard transaction is submitted, the destination shard retrieves it and processes it, potentially triggering new cross-shard transactions.
+
+[**Learn more about cross-shard communication**](./shards-parallel-execution#transaction-passing-checks).
+
+### Transaction execution
+
+The collator retrieves transactions (both external and cross-shard) from the mempool and bundles them together for execution. The resulting bundle is executed, and the transaction is included in the new block produced by the execution shard.
+
+At the end of this stage, the block is sent for verification via local consensus. 
+
+[**Learn more about local consensus**](./shards-parallel-execution#consensus-shard).
+
+### Achieving soft finality
+
+After the block is built, its hash is sent to the consensus shard. The block with transactions is persisted in local storage, at which point the transaction reaches soft finality.
+
+:::info
+
+The sync committee collects blocks and the transaction data included in these blocks, aggregates them in a batch, and publishes the batch to L1 blob storage.
+
+At this point, the transactions in the batch achieve a stronger soft finality. This way, the transaction is confirmed to be included in the L2 state.
+
+:::
+
+:::note[State transition proof]
+
+Once the batch has been aggregated by the sync committee, a proving request is sent to the network of proof producers.
+A proof producer generates a ZKP attesting to the correct transition to the new state.
+
+[**Learn more about this process.**] (../specification/finality)
+
+:::
+
+### Achieving hard finality
+
+Once the ZKP is generated, the proof producer sends it back to the sync vcommittee which prepares an L1 state update transaction to the main =nil; L2 contract.
+
+Afterward, L1 compares the data published to blobs and the data claimed for the new state. Finally, a verifier contract validates the ZKP. If valid, the new state is confirmed. When the corresponding Ethereum block is finalized, the transaction achieves hard finality.

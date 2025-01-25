@@ -1,0 +1,13 @@
+dist
+
+.env
+
+generated-types.ts
+
+logs
+*.log
+npm-debug.log*
+
+*.tgz
+
+node_modules

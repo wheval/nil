@@ -1,0 +1,26 @@
+{
+  "result": {
+    "data": [
+      {
+        "time": 605,
+        "value": 17924,
+        "earliest_block": 525481
+      },
+      {
+        "time": 604,
+        "value": 24513,
+        "earliest_block": 524611
+      },
+      {
+        "time": 603,
+        "value": 24391,
+        "earliest_block": 523741
+      },
+      {
+        "time": 602,
+        "value": 23870,
+        "earliest_block": 522871
+      }
+    ]
+  }
+}

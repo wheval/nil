@@ -1,0 +1,103 @@
+import SearchBar from '@site/static/img/nil/block-explorer/search-bar.png'
+import TransactionsCounter from '@site/static/img/nil/block-explorer/transactions-counter.png'
+import ShardCounter from '@site/static/img/nil/block-explorer/shard-counter.png'
+import LatestBlocks from '@site/static/img/nil/block-explorer/latest-blocks.png'
+import AccountScreen from '@site/static/img/nil/block-explorer/account-screen.png'
+import BlockScreen from '@site/static/img/nil/block-explorer/block-screen.png'
+import TransactionScreen from '@site/static/img/nil/block-explorer/transaction-screen.png'
+
+# Block explorer
+
+The =nil; block explorer is a GUI for reading information from the cluster such as block statistics and transaction data.
+
+[**Access the =nil; block explorer**](https://explore.nil.foundation/).
+
+## Home screen
+
+The home screen of the =nil; block explorer includes the following components.
+
+### Search 
+
+<img src={SearchBar} className='roundedImage' />
+
+The search bar allows for retrieving blocks, transactions or accounts by hash, shard ID, and block height.
+
+
+### Transactions counter
+
+<img src={TransactionsCounter} className='roundedImage'/>
+
+The transactions counter shows the total number of transactions recorded during a particular time period. It also contains a bar chart showing how many transactions were recorded during the selected time interval.
+
+### Latest blocks
+
+The latest blocks table shows information about newly generated blocks including their height, shard ID, date, and transaction count.
+
+<img src={LatestBlocks} className='roundedImage'/>
+
+## Account screen
+
+<img src={AccountScreen} className='roundedImage'/>
+
+The account screen contains the details of a particular smart contract.
+
+:::info[Solidity code]
+
+If an account is registered inside [**the Cometa service**](../../guides/cometa-and-debugging.mdx), this screen will also show its Solidity code.
+
+:::
+
+It provides the following information:
+
+| Field | Definition |
+|:--:|:--|
+| Address | The address of the smart contract. |
+| Balance | The balance of the smart contract. |
+| Tokens | The custom tokens possessed by the smart contract. |
+| Code | The contract bytecode. |
+
+## Block screen
+
+<img src={BlockScreen} className='roundedImage'/>
+
+The block screen provides statistics for a specific block.
+
+It contains the following data:
+
+| Field | Definition |
+|:--:|:--|
+| Shard ID | The ID of the shard where the block was generated. |
+| Height | The block height. |
+| Incoming transactions | The incoming transactions included in the block. |
+| Outgoing transactions | The outgoing transactions included in the block. |
+| Time | The time when the block was generated. |
+
+The '**Incoming transactions**' and '**Outgoing transactions**' tabs contain tables listing all incoming and outgoing transactions included in the block.
+
+## Transaction screen
+
+<img src={TransactionScreen} className='roundedImage'/>
+
+The transaction screen details how a particular transaction is structured.
+
+It has the following fields:
+
+| Field | Definition |
+|:--:|:--|
+| Shard + Block height | The ID of the shard where the transaction was recorded and the height of the block where the transaction was included. |
+| Hash | The transaction hash. |
+| Nonce | The transaction nonce. |
+| From | The address from which the transaction was sent. |
+| To | The address to which the transaction was sent. |
+| Tokens | The tokens sent via the transaction. |
+| Value | The transaction value. |
+| Transaction fee | The transaction fee. |
+| Gas used | The gas used for processing the transaction. |
+| Gas price | The gas price. |
+| Transaction payload (bytecode) | The transaction bytecode. |
+
+
+
+
+
+

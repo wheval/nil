@@ -1,0 +1,215 @@
+import PGButton from '@theme/PGButton';
+
+# =nil; 101
+
+This tutorial acts as a 'primer' for working with =nil;. It explains how to perform essential actions with the cluster: creating a new smart account, deploying a contract, and calling a method inside this contract.
+
+:::tip
+
+This tutorial focuses on the =nil; CLI. To learn more about using `Nil.js` to create a smart account, deploy smart contracts, and send transactions to these contracts, refer to the [**Cookbook**](../cookbook/niljs-deploy/deploy-call-smart-contract.mdx).
+
+:::
+
+## Set up the =nil; CLI
+
+The =nil; CLI is an easy-to-use tool for interacting with the cluster.
+
+To install the CLI:
+
+```bash
+curl -fsSL https://github.com/NilFoundation/nil_cli/raw/master/install.sh | bash
+```
+
+To generate a new private key and set inside the CLI config:
+
+```bash file=../../tests/commands.mjs start=startKeygen end=endKeygen
+```
+
+To point the CLI toward the RPC endpoint:
+
+```bash file=../../tests/commands.mjs start=startEndpoint end=endEndpoint
+```
+
+## Create a new smart account
+
+In =nil; a smart account is just a smart contract that can handle payments. There are no other structural differences between a smart account and a smart contract, which means that smart accounts can support any logic that can be expressed inside a smart contract.
+
+### Flow
+
+To create a new smart account:
+
+```bash file=../../tests/commands.mjs start=startSmartAccount end=endSmartAccount
+```
+
+Expected response:
+
+```bash
+Contract SMART_ACCOUNT_ADDRESS balance is topped up by 100000000
+Contract address: SMART_ACCOUNT_ADDRESS
+```
+
+To check the smart account bytecode:
+
+```bash
+nil contract code SMART_ACCOUNT_ADDRESS
+```
+
+To request a 'top up':
+
+```bash file=../../tests/commands.mjs start=startTopup end=endTopup
+```
+
+To see the smart account address and its public key:
+
+```bash file=../../tests/commands.mjs start=startInfo end=endInfo
+```
+
+### Advanced tutorials
+
+* [**Creating a smart account**](essentials/creating-a-smart-account.mdx)
+
+## Deploy a smart contract
+
+In =nil; contracts can be deployed on different execution shards that act as separate blockchains. Contracts can communicate with contracts on other shards, avoiding state fragmentation.
+
+Any smart contract deployed in Ethereum-compatible networks and written in Solidity can be redeployed to =nil;
+
+### Flow
+
+Create a new contract containing this code:
+
+```solidity showLineNumbers file=../../tests/Counter.sol start=startContract end=endContract
+```
+
+<PGButton name="Counter.sol"/>
+
+Compile the contract:
+
+```bash file=../../tests/compilationCommands.js start=startCompilation end=endCompilation
+```
+
+Deploy a contract with the =nil; CLI:
+
+```bash file=../../tests/commands.mjs start=startCounterDeploymentCommand end=endCounterDeploymentCommand
+
+```
+
+Expected output:
+
+```bash
+Contract address: COUNTER_ADDRESS
+Transaction hash: TRANSACTION_HASH (shard 1)
+```
+
+Call the `increment()` function:
+
+```bash file=../../tests/nil-101.test.mjs start=startIncrement end=endIncrement
+```
+
+Retrieve the result:
+
+```bash file=../../tests/nil-101.test.mjs start=start_CallToIncrementer end=end_CallToIncrementer
+```
+
+### Advanced tutorials
+
+* [**Reading and writing to =nil;**](essentials/reading-writing-info.mdx)
+* [**Writing a smart contract**](working-with-smart-contracts/writing-a-contract.mdx)
+* [**Deploying a contract**](working-with-smart-contracts/deploying-a-contract.mdx)
+
+## Make a cross-shard call
+
+When a smart contract makes a call to another smart contract deployed on a separate shard, the destination shard retrieves the resulting transaction and processes it. To make thing simpler, the `Nil.sol` library provides the `async_call()` function: it calls a special precompiled contract that allows for easily passing transactions between shards.
+
+### Flow
+
+Create a new contract with the following code:
+
+
+```solidity showLineNumbers file=../../tests/Caller.sol start=startContract end=endContract
+```
+
+<PGButton name="CallerCounter.sol"/>
+
+Compile it and deploy it to Shard 2:
+
+```bash file=../../tests/compilationCommands.js start=startCallerCompilation end=endCallerCompilation
+```
+
+```bash file=../../tests/commands.mjs start=startCallerDeploy end=endCallerDeploy
+```
+
+Expected output:
+
+```bash
+Contract address: CALLER_ADDRESS
+Transaction hash: TRANSACTION_HASH (shard 1)
+```
+
+Note that `CALLER_ADDRESS` starts with `0x0002`, which indicates that `Caller` is indeed deployed on Shard 2.
+
+Send tokens to `Caller` and call the `call()` function:
+
+```bash file=../../tests/nil-101.test.mjs start=start_SendTokensToCaller end=end_SendTokensToCaller
+```
+
+```bash file=../../tests/nil-101.test.mjs start=startTransactionFromCallerToIncrementer end=endTransactionFromCallerToIncrementer
+```
+
+Retrieve the result:
+
+```bash file=../../tests/nil-101.test.mjs start=start_CallToIncrementer end=end_CallToIncrementer
+```
+
+### Advanced tutorials
+
+* [**Handling async execution**](essentials/handling-async-execution.mdx)
+* [**Calling methods inside a contract**](working-with-smart-contracts/calling-contract-methods.mdx)
+
+:::info[Nil.js]
+
+[**Refer to the Cookbook**](../cookbook/niljs-deploy/deploy-call-smart-contract.mdx) to learn how this flow would look like when using `Nil.js`.
+
+:::
+
+## Tokens
+
+=nil; has base tokens that are used to pay for essential functionalities such as deploying contracts.
+
+However, each contract can also create a custom token. A contract can only be the owner of one custom token. While custom tokens can be transferred between contracts, they cannot be used to pay for operations inside =nil;.
+
+:::info
+
+Non-owners cannot perform any operations with a custom token.
+
+:::
+
+### Flow
+
+Create a new smart account:
+
+```bash file=../../tests/commands.mjs start=startSaltSmartAccountCreation end=endSaltSmartAccountCreation
+```
+
+Create a new token and withdraw it:
+
+```bash file=../../tests/nil-101.test.mjs start=startMintToken end=endMintToken
+```
+
+Check the tokens of the smart account:
+
+```bash file=../../tests/nil-101.test.mjs start=startTokensCheck end=endTokensCheck
+```
+
+Expected output:
+
+```bash
+Contract tokens:
+Balance: 50000 TokenId=Token_ID
+```
+
+### Advanced tutorials
+
+* [**Tokens support**](essentials/tokens.mdx)
+
+

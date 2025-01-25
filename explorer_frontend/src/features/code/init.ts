@@ -1,0 +1,207 @@
+import { redirect } from "atomic-router";
+import dayjs from "dayjs";
+import { combine, sample } from "effector";
+import { persist } from "effector-storage/local";
+import { fetchSolidityCompiler } from "../../services/compiler";
+import type { App } from "../../types";
+import { sandboxRoute, sandboxWithHashRoute } from "../routing/routes/sandboxRoute";
+import { getRuntimeConfigOrThrow } from "../runtime-config";
+import {
+  $code,
+  $codeSnippetHash,
+  $error,
+  $recentProjects,
+  $shareCodeSnippetError,
+  $solidityVersion,
+  changeCode,
+  changeSolidityVersion,
+  compile,
+  compileCodeFx,
+  fetchCodeSnippetEvent,
+  fetchCodeSnippetFx,
+  loadedPage,
+  setCodeSnippetEvent,
+  setCodeSnippetFx,
+  updateRecentProjects,
+} from "./model";
+
+$code.on(changeCode, (_, x) => x);
+
+persist({
+  key: "code",
+  store: $code,
+});
+
+compileCodeFx.use(async ({ version, code }) => {
+  const compiler = await fetchSolidityCompiler(
+    `https://binaries.soliditylang.org/bin/soljson-${version}.js`,
+  );
+  const res = await compiler.compile({
+    code: code,
+  });
+
+  const contracts: App[] = [];
+  if ("contracts" in res && res.contracts !== undefined && "Compiled_Contracts" in res.contracts) {
+    for (const name in res.contracts?.Compiled_Contracts) {
+      const contract = res.contracts.Compiled_Contracts[name];
+
+      contracts.push({
+        name: name,
+        bytecode: `0x${contract.evm.bytecode.object}`,
+        sourcecode: code,
+        abi: contract.abi,
+      });
+    }
+  }
+
+  return contracts;
+});
+
+$solidityVersion.on(changeSolidityVersion, (_, version) => version);
+
+persist({
+  store: $solidityVersion,
+  key: "solidityVersion",
+});
+
+sample({
+  source: combine($code, $solidityVersion, (code, version) => ({
+    code,
+    version,
+  })),
+  clock: compile,
+  target: compileCodeFx,
+});
+$error.reset(changeCode);
+interface SolidityError {
+  type: string; // 'error' or 'warning'
+  line: number; // line number where the error occurred
+  message: string; // error message
+}
+$error.on(compileCodeFx.failData, (_, error) => {
+  function parseSolidityError(errorString: string): SolidityError[] {
+    const errors: SolidityError[] = [];
+    const errorLines = errorString.split("\n");
+
+    for (let i = 0; i < errorLines.length; i++) {
+      const line = errorLines[i].trim();
+
+      if (
+        line.startsWith("ParserError") ||
+        line.startsWith("TypeError") ||
+        line.startsWith("DeclarationError") ||
+        line.startsWith("CompilerError")
+      ) {
+        const [type, ...messageParts] = line.split(":");
+        const message = messageParts.join(":").trim();
+        const locationLine = errorLines[i + 1].trim();
+        const [_, lineNumber] = locationLine.split(":");
+
+        errors.push({
+          type: type.trim(),
+          line: +lineNumber,
+          message: message,
+        });
+
+        i += 2; // Skip the next two lines as they have been processed
+      }
+    }
+
+    return errors;
+  }
+
+  const errors = parseSolidityError(error.message);
+
+  return errors.map((error) => {
+    return {
+      message: error.message,
+      line: error.line,
+    };
+  });
+});
+
+sample({
+  clock: setCodeSnippetEvent,
+  source: $code,
+  target: setCodeSnippetFx,
+});
+
+sample({
+  clock: setCodeSnippetEvent,
+  source: $code,
+  target: $shareCodeSnippetError,
+  fn: () => false,
+});
+
+$codeSnippetHash.on(setCodeSnippetEvent, () => null);
+
+sample({
+  target: $codeSnippetHash,
+  source: setCodeSnippetFx.doneData,
+});
+
+$shareCodeSnippetError.on(setCodeSnippetFx.fail, () => true);
+$shareCodeSnippetError.reset(setCodeSnippetFx.doneData);
+
+sample({
+  clock: sandboxWithHashRoute.navigated,
+  source: sandboxWithHashRoute.$params,
+  fn: (params) => params.snippetHash,
+  filter: (hash) => !!hash,
+  target: fetchCodeSnippetFx,
+});
+
+sample({
+  clock: fetchCodeSnippetFx.doneData,
+  target: changeCode,
+});
+
+sample({
+  clock: loadedPage,
+  filter: $code.map((code) => !(code.trim().length === 0)),
+  target: compile,
+});
+
+$codeSnippetHash.on(fetchCodeSnippetFx.doneData, () => null);
+
+redirect({
+  clock: fetchCodeSnippetFx.doneData,
+  route: sandboxRoute,
+  params: {},
+});
+
+sample({
+  clock: fetchCodeSnippetEvent,
+  source: fetchCodeSnippetEvent,
+  target: fetchCodeSnippetFx,
+});
+
+persist({
+  key: "recentProjects",
+  store: $recentProjects,
+});
+
+sample({
+  clock: updateRecentProjects,
+  source: combine($code, $recentProjects, (code, projects) => ({ code, projects })),
+  target: $recentProjects,
+  fn: ({ code, projects }) => {
+    const limit = Number(getRuntimeConfigOrThrow().RECENT_PROJECTS_STORAGE_LIMIT) || 5;
+    const key = dayjs().format("YYYY-MM-DD HH:mm:ss");
+    const project = { [key]: code };
+
+    if (Object.keys(projects).length >= limit) {
+      const newProjects = { ...projects };
+      delete newProjects[Object.keys(projects)[0]];
+      return {
+        ...newProjects,
+        ...project,
+      };
+    }
+
+    return {
+      ...projects,
+      ...project,
+    };
+  },
+});

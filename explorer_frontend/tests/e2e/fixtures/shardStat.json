@@ -1,0 +1,26 @@
+{
+  "result": {
+    "data": [
+      {
+        "shard_id": 0,
+        "tx_count": 0
+      },
+      {
+        "shard_id": 4,
+        "tx_count": 2278488
+      },
+      {
+        "shard_id": 3,
+        "tx_count": 2283767
+      },
+      {
+        "shard_id": 2,
+        "tx_count": 2283893
+      },
+      {
+        "shard_id": 1,
+        "tx_count": 2301549
+      }
+    ]
+  }
+}

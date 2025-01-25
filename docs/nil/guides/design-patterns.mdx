@@ -1,0 +1,134 @@
+# Adapting common design patterns to the async model
+
+This guide discusses the common design patterns in smart contract development and shows how they can be adapted to the async programming model. 
+
+The design patterns in the guide include:
+
+* [**Checks Effects Interaction**](https://fravoll.github.io/solidity-patterns/checks_effects_interactions.html), a pattern for protecting a contract against re-entrancy attacks
+* [**Guard Check**](https://fravoll.github.io/solidity-patterns/guard_check.html), an essential pattern for ensuring inputs and outputs match expectations and execution ensures atomicity
+* [**Clone Factory**](https://eips.ethereum.org/EIPS/eip-1167), a cost-efficient way to deploy and manage new smart contracts
+
+## Checks Effects Interaction
+
+The Checks Effects Interaction pattern is designed to protect a contract against re-entrancy attacks. Here is its basic implementation on Ethereum:
+
+```solidity showLineNumbers
+mapping(address => uint) balances;
+
+function withdraw(uint amount) public {
+        require(balances[msg.sender] >= amount);
+
+        balances[msg.sender] -= amount;
+
+        msg.sender.transfer(amount);
+    }
+```
+
+In the above snippet, the `require()` statement (the check) is first, followed by updating the `balances` mapping (the effect). The final statement sends funds to another contract (the interaction). An attacker is unable to re-enter inside the `withdraw` function: on re-entry, `balances` is already updated to reflect the new value, and the initial `require()` statement will always fail.
+
+Async calls add one more consideration to the pattern:
+
+```solidity showLineNumbers file=../../tests/CheckEffectsInteraction.sol start=startBadCheckEffectsInteraction end=endBadCheckEffectsInteraction
+```
+
+The example implements the pattern by simply replacing the transfer with `asyncCall()`. This raises an issue: if the async call fails, the contract will not know that the `balances` mapping also has to be reverted to its original state.
+
+The `sendRequest()` function provides a convenient way for implementing Check Effects Interaction correctly:
+
+```solidity showLineNumbers file=../../tests/CheckEffectsInteraction.sol start=startGoodCheckEffectsInteraction end=endGoodCheckEffectsInteraction
+```
+
+The callback function specified inside `context` is always executed once the async call is processed regardless of its results. This makes the callback the ideal place for reverting any changes to the contract state. In the example, the `exampleBalances` mapping is reverted to its pre-request state to reflect that the transfer was unsuccessful.
+
+## Guard Check
+
+The Guard Check pattern helps achieve these goals:
+
+* Only execute certain logic if all necessary conditions are met
+* In case conditions are not met, revert all changes to the contract state 
+
+Typically, the Guard Check pattern is implemented by using the `require()` and `assert()` functions:
+
+```solidity showLineNumbers
+require(addr != address(0));
+
+assert(addr != address(0));      
+```
+
+`require()` is typically used for check for errors in function inputs. `assert()` is used for detecting bugs in the contract logic. `assert()` uses all gas sent with a transaction while `require()` can refund gas that has not been used at the time when an exception was thrown. This means that `require()` is typically used as early as possible while `assert()` checks are done at the end of a function. 
+
+Async programming introduces a complication to conducting such checks: there is no fool-proof method for ensuring an async call is successful.
+
+```solidity showLineNumbers file=../../tests/GuardCheck.sol start=startBadGuardCheck end=endBadGuardCheck
+```
+
+In the above example, the `assert()` check may succeed only for `asyncCall()` to later encounter an error and the transaction value being refunded to the contract. However, since `assert()` has already succeeded, there is no way to reverse changes to the `successfulCallsCounter` property.
+
+Delegating post-`assert` statements to a callback function resolves the issue:
+
+```solidity showLineNumbers file=../../tests/GuardCheck.sol start=startGoodGuardCheck end=endGoodGuardCheck
+```
+
+In the snippet, `successfulCallsCounter` is only increased after the contract receives a response to the transfer and only if the transfer was successful. The callback function can be provided with its own `require()` statement which propagates the pattern.
+
+## Clone Factory
+
+The basic Factory pattern involves deploying a 'master' smart contract and then deploying and managing several 'child' contracts via this 'master'. The Clone Factory is a cost-efficient variation of this pattern:
+
+* A 'special' child contract is deployed first
+* The factory contract is deployed and starts deploying child contracts
+* All child must delegate calls to them to the initial 'special' child
+
+A basic implementation of Clone Factory could look as follows when using the `@optionality.io/clone-factory` package:
+
+```solidity showLineNumbers
+import '@optionality.io/clone-factory/contracts/CloneFactory.sol';
+
+contract Factory is CloneFactory {
+     Child[] public children;
+     address masterContract;
+
+     constructor(address _masterContract){
+         masterContract = _masterContract;
+     }
+
+     function createChild(uint data) external{
+        Child child = Child(createClone(masterContract));
+        child.init(data);
+        children.push(child);
+     }
+
+     function getChildren() external view returns(Child[] memory){
+         return children;
+     }
+}
+
+contract Child{
+    uint public data;
+    
+    function init(uint _data) external {
+        data = _data;
+    }
+}
+```
+
+On =nil;, such an approach would only work within the confines of one execution shard. The `createClone` function uses `delegateCall` which cannot handle cross-shard transactions. The pattern can be re-implemented as follows:
+
+```solidity showLineNumbers file=../../tests/CloneFactory.sol start=startContract end=endContract
+```
+
+The `MasterChild` is a simple 'counter' contract. The `CloneFactory` contract re-implements the `createClone` function as `createCloneBytecode`. It is functionally identical to the `createClone` function from `@optionality.io/clone-factory` except for the fact that it does not deploy a contract. Instead, it returns the deployment bytecode which is later passed to `Nil.asyncDeploy()` in the `createCounterClone` function.
+
+The biggest change to the original pattern is the addition of the `FactoryManager` contract. Because `delegateClone` (whose bytecode is wrapped around the contract address in `createCloneBytecode`) does not support sharding, `CloneFactory`, `MasterChild`, and any 'proxy' clones created by the factory have to be deployed on the same shard. `FactoryManager` gets around that by allowing for deploying new factories and children on different shards:
+
+* `FactoryManager` is deployed first on any shard
+* A `MasterChild` is deployed on any shard via `deployNewMasterChild()`
+* A `CloneFactory` is deployed on the same shard as the `MasterChild`
+* Proxy clones are created by calling `createCounterClone` inside the `CloneFactory`
+* There is only one `CloneFactory` / `MasterChild` pair per shard
+
+:::tip[Additional improvements]
+
+This implementation can be made more secure by restricting functions insde `FactoryManager` to the contract owner.
+
+:::

@@ -1,0 +1,10 @@
+dist
+
+*.env.local
+
+# local runtime config
+runtime-config.local.toml
+
+tests/e2e/screenshots/
+tests/e2e/videos/
+tests/e2e/downloads/

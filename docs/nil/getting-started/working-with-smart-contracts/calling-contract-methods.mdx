@@ -1,0 +1,80 @@
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+
+# Calling methods inside smart contracts
+
+This tutorial outlines how to interact with [**the tutorial smart contracts**](writing-a-contract.mdx) given the developer tools provided by =nil;.
+
+## Prerequisites
+
+Complete the following tutorials before proceeding.
+
+* [**Writing a contract**](writing-a-contract.mdx)
+* [**Deploying a contract**](deploying-a-contract.mdx)
+
+## Via the contract factory
+
+`Nil.js` exposes the contract factory, a Hardhat-like tool for interacting with smart contracts. 
+
+To order a new product via the contract factory:
+
+```ts showLineNumbers file=../../../tests/working-with-smart-contracts-niljs.test.mjs start=startFactoryOrder end=endFactoryOrder
+```
+
+To attain the result:
+
+
+```ts showLineNumbers file=../../../tests/working-with-smart-contracts-niljs.test.mjs start=startFactoryProducts end=endFactoryProducts
+```
+
+
+## Using internal transactions
+
+### Via the =nil; CLI
+
+To call the `orderProduct()` function inside the retailer contract and trigger an async call:
+
+```bash file=../../../tests/working-with-smart-contracts-cli.test.mjs start=startSendTokensCommand end=endSendTokensCommand
+```
+
+```bash file=../../../tests/working-with-smart-contracts-cli.test.mjs start=startRetailerCallManufacturer end=endRetailerCallManufacturer
+```
+
+Make a readonly call to access the value:
+
+```bash file=../../../tests/working-with-smart-contracts-cli.test.mjs start=startCallToManufacturerCommand end=endCallToManufacturerCommand
+```
+
+The CLI should output the decoded values automatically.
+
+### Via the client library
+
+To send funds to the retailer product and call the `orderProduct` function:
+
+```ts showLineNumbers file=../../../tests/working-with-smart-contracts-niljs.test.mjs start=startRetailerSendsTransactionToManufacturer end=endRetailerSendsTransactionToManufacturer
+```
+
+To receive and decode the currently created products:
+
+```ts showLineNumbers file=../../../tests/working-with-smart-contracts-niljs.test.mjs start=startRetailerRetrievesTheResult end=endRetailerRetrievesTheResult 
+```
+
+## Using external transactions
+
+### Via the =nil; CLI
+
+The CLI currently does not support sending external transactions that modify the internal state of smart contracts or spawn internal transactions. As a result, sending an external transaction to a function that performs an async call to another function will fail. 
+
+In the retailer contract, the `orderProduct()` function cannot be called externally as it makes an async call to the manufacturer.
+
+### Via the client library
+
+To order a new product using the retailer:
+
+```ts showLineNumbers file=../../../tests/working-with-smart-contracts-niljs.test.mjs start=startExternalSendTransactionToRetailer end=endExternalSendTransactionToRetailer
+```
+
+To receive and decode the currently created products:
+
+```ts showLineNumbers file=../../../tests/working-with-smart-contracts-niljs.test.mjs start=startRetailerRetrievesTheResult end=endRetailerRetrievesTheResult 
+```

@@ -1,0 +1,36 @@
+{
+  "result": {
+    "data": [
+      {
+        "shard_id": 0,
+        "hash": "00000A279092611051E2CB18CF0B063D595B3B99A1FA49DEDDF26D1DBCE95DF2",
+        "prev_block": "00009B7319CA6743B1F6877D8DC1469DFDEB20D17A475894725D21230B820ACA",
+        "master_chain_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "out_txn_num": "0",
+        "in_txn_num": "0",
+        "timestamp": "0",
+        "id": "509358"
+      },
+      {
+        "shard_id": 1,
+        "hash": "0001065301A9D72718C8EC4639452783DC1630C5DB355ADA51F5AA2737249103",
+        "prev_block": "0001E364A2A3A3F49938395699CD5382D2EADFFDC33D8B9FCF8A34D61C2878F9",
+        "master_chain_hash": "00000A279092611051E2CB18CF0B063D595B3B99A1FA49DEDDF26D1DBCE95DF2",
+        "out_txn_num": "2",
+        "in_txn_num": "2",
+        "timestamp": "0",
+        "id": "509333"
+      },
+      {
+        "shard_id": 2,
+        "hash": "0002E9C75583C8A9767F49EFDE1C10152DDA6F73FD9D6939F19BA9B4135AC0A4",
+        "prev_block": "0002AB4AFBCED47E99317E46749B6953E043CF60E81E3E376F969E624BB73445",
+        "master_chain_hash": "00000A279092611051E2CB18CF0B063D595B3B99A1FA49DEDDF26D1DBCE95DF2",
+        "out_txn_num": "2",
+        "in_txn_num": "3",
+        "timestamp": "0",
+        "id": "509305"
+      }
+    ]
+  }
+}

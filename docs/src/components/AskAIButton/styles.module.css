@@ -1,0 +1,41 @@
+.askAIButton {
+  color: #0f0f0f;
+  background-color: #eff0f2;
+  border-radius: 5px;
+  padding: 2px 5px 2px 5px;
+  display: flex;
+  cursor: pointer;
+  justify-content: center;
+  vertical-align: middle;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.askAIButton:hover {
+  background-color: #e5e5e5;
+}
+
+.closeModalButton {
+  color: #0f0f0f;
+  background-color: #eff0f2;
+  border-radius: 5px;
+  padding: 2px 10px 2px 10px;
+  display: flex;
+  cursor: pointer;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: fit-content;
+}
+
+.closeModalButton:hover {
+  background-color: #e5e5e5;
+}
