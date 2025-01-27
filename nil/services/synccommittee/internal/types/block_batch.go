@@ -118,3 +118,19 @@ func (b *BlockBatch) CreateProofTasks(currentTime time.Time) ([]*TaskEntry, erro
 
 	return taskEntries, nil
 }
+
+type PrunedBatch struct {
+	BatchId BatchId
+	Blocks  []*PrunedBlock
+}
+
+func NewPrunedBatch(batch *BlockBatch) *PrunedBatch {
+	out := &PrunedBatch{
+		BatchId: batch.Id,
+	}
+	for _, blk := range batch.ChildBlocks {
+		out.Blocks = append(out.Blocks, NewPrunedBlock(blk))
+	}
+	out.Blocks = append(out.Blocks, NewPrunedBlock(batch.MainShardBlock))
+	return out
+}
