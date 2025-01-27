@@ -174,6 +174,7 @@ export class SmartAccountV1 implements SmartAccountInterface {
    *
    * @async
    * @param {boolean} [waitTillConfirmation=true] The flag that determines whether the function waits for deployment confirmation before exiting.
+   * @param {bigint} [feeCredit] The fee credit for processing the deployment transaction. If not set, it will be estimated automatically.
    * @returns {Uint8Array} The hash of the deployment transaction.
    * @example
    * import {
@@ -210,7 +211,7 @@ export class SmartAccountV1 implements SmartAccountInterface {
      });
    * await smartAccount.selfDeploy(true);
    */
-  async selfDeploy(waitTillConfirmation = true) {
+  async selfDeploy(waitTillConfirmation = true, feeCredit?: bigint) {
     invariant(
       typeof this.salt !== "undefined",
       "Salt is required for external deployment. Please provide salt for walelt",
@@ -224,8 +225,6 @@ export class SmartAccountV1 implements SmartAccountInterface {
     invariant(code.length === 0, "Contract already deployed");
     invariant(balance > 0n, "Insufficient balance");
 
-    const gasPrice = await this.client.getGasPrice(getShardIdFromAddress(this.address));
-
     const { data } = prepareDeployPart({
       abi: SmartAccount.abi as Abi,
       bytecode: SmartAccountV1.code,
@@ -234,11 +233,32 @@ export class SmartAccountV1 implements SmartAccountInterface {
       shard: this.shardId,
     });
 
+    let refinedCredit = feeCredit;
+
+    if (!refinedCredit) {
+      const { raw } = await this.requestToSmartAccount(
+        {
+          data: data,
+          deploy: true,
+          seqno: 0,
+        },
+        false,
+      );
+
+      refinedCredit = await this.client.estimateGas(
+        {
+          to: this.address,
+          data: raw,
+        },
+        "latest",
+      );
+    }
+
     const { hash } = await this.requestToSmartAccount({
       data: data,
       deploy: true,
       seqno: 0,
-      feeCredit: 500_000n * gasPrice,
+      feeCredit: refinedCredit,
     });
 
     if (waitTillConfirmation) {
@@ -346,14 +366,14 @@ export class SmartAccountV1 implements SmartAccountInterface {
     const hexData = refineFunctionHexData({ data, abi, functionName, args });
     let refinedCredit = feeCredit;
 
+    const callData = encodeFunctionData({
+      abi: SmartAccount.abi,
+      functionName: "asyncCall",
+      args: [hexTo, hexRefundTo, hexBounceTo, tokens ?? [], value ?? 0n, hexData],
+    });
+
     if (!refinedCredit) {
       const balance = await this.getBalance();
-
-      const callData = encodeFunctionData({
-        abi: SmartAccount.abi,
-        functionName: "asyncCall",
-        args: [hexTo, hexRefundTo, hexBounceTo, tokens ?? [], value ?? 0n, hexData],
-      });
 
       refinedCredit = await this.client.estimateGas(
         {
@@ -368,12 +388,6 @@ export class SmartAccountV1 implements SmartAccountInterface {
         throw new Error("Insufficient balance");
       }
     }
-
-    const callData = encodeFunctionData({
-      abi: SmartAccount.abi,
-      functionName: "asyncCall",
-      args: [hexTo, hexRefundTo, hexBounceTo, tokens ?? [], value ?? 0n, hexData],
-    });
 
     const { hash } = await this.requestToSmartAccount({
       data: hexToBytes(callData),
