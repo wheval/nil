@@ -3,10 +3,21 @@ package config
 import (
 	"errors"
 
+	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/types"
 )
 
 const ValidatorPubkeySize = 33
+
+type Pubkey [ValidatorPubkeySize]byte
+
+func (k Pubkey) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(k[:]).MarshalText()
+}
+
+func (k *Pubkey) UnmarshalText(input []byte) error {
+	return hexutil.UnmarshalFixedText("Pubkey", input, k[:])
+}
 
 var ParamsList = []IConfigParam{
 	new(ParamValidators),
@@ -27,8 +38,8 @@ type ParamValidators struct {
 }
 
 type ValidatorInfo struct {
-	PublicKey         [ValidatorPubkeySize]byte `json:"pubKey" yaml:"pubKey" ssz-size:"33"`
-	WithdrawalAddress types.Address             `json:"withdrawalAddress" yaml:"withdrawalAddress"`
+	PublicKey         Pubkey        `json:"pubKey" yaml:"pubKey" ssz-size:"33"`
+	WithdrawalAddress types.Address `json:"withdrawalAddress" yaml:"withdrawalAddress"`
 }
 
 var _ IConfigParam = new(ParamValidators)

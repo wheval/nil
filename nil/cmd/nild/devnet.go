@@ -7,10 +7,12 @@ import (
 	"path/filepath"
 
 	"github.com/NilFoundation/nil/nil/cmd/nild/nildconfig"
+	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
+	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -66,14 +68,16 @@ type server struct {
 	credsDir string
 	workDir  string
 	nodeSpec nodeSpec
+	vkm      *keys.ValidatorKeysManager
 }
 
 type devnet struct {
-	spec       *devnetSpec
-	baseDir    string
-	validators []server
-	archivers  []server
-	rpcNodes   []server
+	spec          *devnetSpec
+	baseDir       string
+	validators    []server
+	archivers     []server
+	rpcNodes      []server
+	validatorKeys map[types.ShardId][]config.ValidatorInfo
 }
 
 func DevnetCommand() *cobra.Command {
@@ -89,13 +93,35 @@ func DevnetCommand() *cobra.Command {
 	return cmd
 }
 
-func (spec *devnetSpec) ValidatorKeysFile() string {
-	return filepath.Join(spec.NildCredentialsDir, "validator-keys.yaml")
+func validatorKeysFile(credsDir string) string {
+	return filepath.Join(credsDir, "validator-keys.yaml")
 }
 
-func (spec *devnetSpec) ensureValidatorKeys() error {
-	vkm := keys.NewValidatorKeyManager(spec.ValidatorKeysFile(), spec.NShards)
-	return vkm.InitKeys()
+func (spec *devnetSpec) ensureValidatorKeys(srv *server) (*keys.ValidatorKeysManager, error) {
+	vkm := keys.NewValidatorKeyManager(validatorKeysFile(srv.credsDir), spec.NShards)
+	if err := vkm.InitKeys(); err != nil {
+		return nil, err
+	}
+	return vkm, nil
+}
+
+func (devnet devnet) collectPublicKeys(servers []server) (map[types.ShardId][]config.ValidatorInfo, error) {
+	validator := make(map[types.ShardId][]config.ValidatorInfo, devnet.spec.NShards)
+	for _, srv := range servers {
+		for _, id := range srv.nodeSpec.Shards {
+			shardId := types.ShardId(id)
+
+			key, err := srv.vkm.GetPublicKey(shardId)
+			if err != nil {
+				return nil, err
+			}
+
+			validator[shardId] = append(validator[shardId], config.ValidatorInfo{
+				PublicKey: config.Pubkey(key),
+			})
+		}
+	}
+	return validator, nil
 }
 
 func genDevnet(cmd *cobra.Command, args []string) error {
@@ -131,13 +157,12 @@ func genDevnet(cmd *cobra.Command, args []string) error {
 	devnet := devnet{spec: spec, baseDir: baseDir, validators: validators}
 
 	archiveBaseP2P := spec.NildP2PBaseTCPPort + len(validators)
-	devnet.archivers, err = spec.makeServers(spec.NilArchiveConfig, archiveBaseP2P, 0, "nil-archive", baseDir)
-	if err != nil {
+
+	if devnet.archivers, err = spec.makeServers(spec.NilArchiveConfig, archiveBaseP2P, 0, "nil-archive", baseDir); err != nil {
 		return fmt.Errorf("failed to setup archive nodes: %w", err)
 	}
 
-	devnet.rpcNodes, err = spec.makeServers(spec.NilRPCConfig, 0, spec.NilRPCPort, "nil-rpc", baseDir)
-	if err != nil {
+	if devnet.rpcNodes, err = spec.makeServers(spec.NilRPCConfig, 0, spec.NilRPCPort, "nil-rpc", baseDir); err != nil {
 		return fmt.Errorf("failed to setup rpc nodes: %w", err)
 	}
 
@@ -146,10 +171,9 @@ func genDevnet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get only flag: %w", err)
 	}
 
-	if err := spec.ensureValidatorKeys(); err != nil {
+	if devnet.validatorKeys, err = devnet.collectPublicKeys(devnet.validators); err != nil {
 		return err
 	}
-
 	if err := devnet.writeConfigs(devnet.validators, "validator", only); err != nil {
 		return err
 	}
@@ -162,6 +186,14 @@ func genDevnet(cmd *cobra.Command, args []string) error {
 
 	os.Exit(0)
 	return nil
+}
+
+func (spec *devnetSpec) EnsureValidatorKeys(srv server) (*keys.ValidatorKeysManager, error) {
+	if err := os.MkdirAll(srv.credsDir, directoryPermissions); err != nil {
+		return nil, err
+	}
+
+	return spec.ensureValidatorKeys(&srv)
 }
 
 func (devnet devnet) writeConfigs(servers []server, name string, only string) error {
@@ -189,6 +221,10 @@ func (spec devnetSpec) makeServers(nodeSpecs []nodeSpec, basePort int, baseHTTPP
 		servers[i].workDir = fmt.Sprintf("%s/%s-%d", baseDir, service, i)
 		var err error
 		servers[i].identity, err = spec.EnsureIdentity(servers[i])
+		if err != nil {
+			return nil, err
+		}
+		servers[i].vkm, err = spec.EnsureValidatorKeys(servers[i])
 		if err != nil {
 			return nil, err
 		}
@@ -229,6 +265,7 @@ func (devnet *devnet) writeServerConfig(instanceId int, srv server, only string)
 	}
 	cfg.RPCPort = srv.rpcPort
 	cfg.Network.TcpPort = srv.port
+	cfg.Validators = devnet.validatorKeys
 
 	var err error
 	cfg.NetworkKeysPath, err = filepath.Abs(srv.NetworkKeysFile())
@@ -236,7 +273,7 @@ func (devnet *devnet) writeServerConfig(instanceId int, srv server, only string)
 		return fmt.Errorf("failed to get absolute path for network keys: %w", err)
 	}
 
-	cfg.ValidatorKeysPath, err = filepath.Abs(devnet.spec.ValidatorKeysFile())
+	cfg.ValidatorKeysPath, err = filepath.Abs(validatorKeysFile(srv.credsDir))
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path for validator keys: %w", err)
 	}

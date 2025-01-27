@@ -79,7 +79,7 @@ func (s *ShardedSuite) createOneShardOneValidatorCfg(
 		pkey, err := km.GetPublicKey(kmShardId)
 		s.Require().NoError(err)
 		validators[kmShardId] = []config.ValidatorInfo{
-			{PublicKey: [33]byte(pkey)},
+			{PublicKey: config.Pubkey(pkey)},
 		}
 	}
 
