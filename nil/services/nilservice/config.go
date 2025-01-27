@@ -9,6 +9,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/collate"
+	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/network"
@@ -64,6 +65,9 @@ type Config struct {
 	CollatorTickPeriodMs uint32 `yaml:"-"`
 	Topology             string `yaml:"-"`
 	ZeroStateYaml        string `yaml:"-"`
+
+	// Consensus
+	Validators map[types.ShardId][]config.ValidatorInfo `yaml:"validators,omitempty"`
 
 	// Sub-configs
 	Network   *network.Config            `yaml:"network,omitempty"`

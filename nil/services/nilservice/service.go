@@ -20,6 +20,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
+	"github.com/NilFoundation/nil/nil/internal/signer"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/admin"
@@ -219,10 +220,7 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 			zeroState = cfg.ZeroStateYaml
 		}
 
-		pKey, err := cfg.LoadValidatorPrivateKey(shardId)
-		if err != nil {
-			return nil, err
-		}
+		blockVerifier := signer.NewBlockVerifier(shardId, cfg.Validators[shardId])
 
 		syncer, err := collate.NewSyncer(collate.SyncerConfig{
 			ShardId:              shardId,
@@ -232,7 +230,7 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 			BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
 			ZeroState:            zeroState,
 			ZeroStateConfig:      zeroStateConfig,
-			ValidatorPublicKey:   &pKey.PublicKey,
+			BlockVerifier:        blockVerifier,
 		}, database, nm)
 		if err != nil {
 			return nil, err
@@ -469,25 +467,27 @@ func createShards(
 	wgFetch.Add(int(cfg.NShards) - len(cfg.GetMyShards()))
 
 	for i := range cfg.NShards {
-		shard := types.ShardId(i)
+		shardId := types.ShardId(i)
 
-		pKey, err := cfg.LoadValidatorPrivateKey(shard)
-		if err != nil {
-			return nil, nil, err
-		}
+		blockVerifier := signer.NewBlockVerifier(shardId, cfg.Validators[shardId])
 
-		if cfg.IsShardActive(shard) {
-			txnPool, err := txnpool.New(ctx, txnpool.NewConfig(shard), networkManager)
+		if cfg.IsShardActive(shardId) {
+			pKey, err := cfg.LoadValidatorPrivateKey(shardId)
 			if err != nil {
 				return nil, nil, err
 			}
-			collator, err := createActiveCollator(shard, cfg, collatorTickPeriod, database, networkManager, txnPool)
+
+			txnPool, err := txnpool.New(ctx, txnpool.NewConfig(shardId), networkManager)
+			if err != nil {
+				return nil, nil, err
+			}
+			collator, err := createActiveCollator(shardId, cfg, collatorTickPeriod, database, networkManager, txnPool)
 			if err != nil {
 				return nil, nil, err
 			}
 
 			consensus := ibft.NewConsensus(&ibft.ConsensusParams{
-				ShardId:    shard,
+				ShardId:    shardId,
 				Db:         database,
 				Scheduler:  collator,
 				NetManager: networkManager,
@@ -497,12 +497,12 @@ func createShards(
 				return nil, nil, err
 			}
 
-			pools[shard] = txnPool
+			pools[shardId] = txnPool
 			funcs[i] = func(ctx context.Context) error {
 				if err := collator.Run(ctx, consensus); err != nil {
 					logger.Error().
 						Err(err).
-						Stringer(logging.FieldShardId, shard).
+						Stringer(logging.FieldShardId, shardId).
 						Msg("Collator goroutine failed")
 					return err
 				}
@@ -516,16 +516,16 @@ func createShards(
 			}
 
 			config := collate.SyncerConfig{
-				ShardId:              shard,
-				ReplayBlocks:         shard.IsMainShard(),
+				ShardId:              shardId,
+				ReplayBlocks:         shardId.IsMainShard(),
 				Timeout:              syncerTimeout,
-				BlockGeneratorParams: cfg.BlockGeneratorParams(shard),
-				ValidatorPublicKey:   &pKey.PublicKey,
+				BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
+				BlockVerifier:        blockVerifier,
 				ZeroState:            zeroState,
 				ZeroStateConfig:      zeroStateConfig,
 			}
-			if int(shard) < len(cfg.BootstrapPeers) {
-				config.BootstrapPeer = &cfg.BootstrapPeers[shard]
+			if int(shardId) < len(cfg.BootstrapPeers) {
+				config.BootstrapPeer = &cfg.BootstrapPeers[shardId]
 			}
 			if networkManager == nil {
 				return nil, nil, errors.New("trying to start syncer without network configuration")
@@ -540,7 +540,7 @@ func createShards(
 				if err := syncer.Run(ctx, &wgFetch); err != nil {
 					logger.Error().
 						Err(err).
-						Stringer(logging.FieldShardId, shard).
+						Stringer(logging.FieldShardId, shardId).
 						Msg("Syncer goroutine failed")
 					return err
 				}

@@ -17,6 +17,11 @@ import (
 
 var Logger = logging.NewLogger("keys")
 
+var (
+	errKeysNotInitialized = errors.New("keys are not initialized")
+	errInvalidShardId     = errors.New("shardId is out of range")
+)
+
 type dumpedValidatorKey struct {
 	PrivateKey hexutil.Bytes `yaml:"privateKey"`
 	PublicKey  hexutil.Bytes `yaml:"publicKey"`
@@ -134,27 +139,31 @@ func (v *ValidatorKeysManager) InitKeys() error {
 
 func (v *ValidatorKeysManager) GetKey(shardId types.ShardId) (*ecdsa.PrivateKey, error) {
 	if !v.init {
-		return nil, errors.New("keys are not initialized")
+		return nil, errKeysNotInitialized
 	}
 	if uint32(shardId) >= v.nShards {
-		return nil, errors.New("shardId is out of range")
+		return nil, errInvalidShardId
 	}
 	return v.keys[shardId], nil
 }
 
 func (v *ValidatorKeysManager) GetPublicKey(shardId types.ShardId) ([]byte, error) {
 	if !v.init {
-		return nil, errors.New("keys are not initialized")
+		return nil, errKeysNotInitialized
 	}
 	if uint32(shardId) >= v.nShards {
-		return nil, errors.New("shardId is out of range")
+		return nil, errInvalidShardId
 	}
 	return gethcrypto.CompressPubkey(&v.keys[shardId].PublicKey), nil
 }
 
 func (v *ValidatorKeysManager) GetKeys() ([]*ecdsa.PrivateKey, error) {
 	if !v.init {
-		return nil, errors.New("keys are not initialized")
+		return nil, errKeysNotInitialized
 	}
 	return v.keys, nil
+}
+
+func (v *ValidatorKeysManager) GetKeysPath() string {
+	return v.validatorKeysPath
 }

@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/tests"
@@ -21,17 +20,12 @@ type SuiteArchiveNode struct {
 func (s *SuiteArchiveNode) SetupTest() {
 	nshards := uint32(5)
 
-	validatorKeysPath := s.T().TempDir() + "/validator-keys.yaml"
-	validatorKeyManager := keys.NewValidatorKeyManager(validatorKeysPath, nshards)
-	s.Require().NoError(validatorKeyManager.InitKeys())
-
 	s.Start(&nilservice.Config{
 		NShards:              nshards,
 		CollatorTickPeriodMs: 200,
-		ValidatorKeysPath:    validatorKeysPath,
 	}, s.port)
 
-	s.DefaultClient, _ = s.StartArchiveNode(s.port+int(nshards), s.withBootstrapPeers, validatorKeysPath)
+	s.DefaultClient, _ = s.StartArchiveNode(s.port+int(nshards), s.withBootstrapPeers)
 }
 
 func (s *SuiteArchiveNode) TearDownTest() {

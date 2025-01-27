@@ -82,7 +82,7 @@ func GetParamValidators(c ConfigAccessor) (*ParamValidators, error) {
 }
 
 func SetParamValidators(c ConfigAccessor, params *ParamValidators) error {
-	return setParamImpl[ParamValidators](c, params)
+	return setParamImpl(c, params)
 }
 
 func GetParamGasPrice(c ConfigAccessor) (*ParamGasPrice, error) {
@@ -90,5 +90,5 @@ func GetParamGasPrice(c ConfigAccessor) (*ParamGasPrice, error) {
 }
 
 func SetParamGasPrice(c ConfigAccessor, params *ParamGasPrice) error {
-	return setParamImpl[ParamGasPrice](c, params)
+	return setParamImpl(c, params)
 }
