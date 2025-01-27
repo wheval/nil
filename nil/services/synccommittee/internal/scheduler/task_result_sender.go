@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/rs/zerolog"
@@ -24,6 +24,8 @@ func MakeDefaultSenderConfig() ResultSenderConfig {
 }
 
 type TaskResultSender struct {
+	srv.WorkerLoop
+
 	requestHandler api.TaskRequestHandler
 	storage        storage.TaskResultStorage
 	logger         zerolog.Logger
@@ -35,25 +37,21 @@ func NewTaskResultSender(
 	storage storage.TaskResultStorage,
 	logger zerolog.Logger,
 ) *TaskResultSender {
-	return &TaskResultSender{
+	sender := &TaskResultSender{
 		requestHandler: requestHandler,
 		storage:        storage,
-		logger:         logger,
 		config:         MakeDefaultSenderConfig(),
 	}
+
+	sender.WorkerLoop = srv.NewWorkerLoop("task_result_sender", sender.config.SendInterval, sender.runIteration)
+	sender.logger = srv.WorkerLogger(logger, sender)
+	return sender
 }
 
-func (s *TaskResultSender) Run(ctx context.Context) error {
-	s.logger.Debug().Msg("starting task result sender worker")
-
-	concurrent.RunTickerLoop(ctx, s.config.SendInterval, func(ctx context.Context) {
-		if err := s.processPendingResult(ctx); err != nil {
-			s.logger.Error().Err(err).Msg("failed to send next task result")
-		}
-	})
-
-	s.logger.Debug().Msg("task result sender worker stopped")
-	return nil
+func (s *TaskResultSender) runIteration(ctx context.Context) {
+	if err := s.processPendingResult(ctx); err != nil {
+		s.logger.Error().Err(err).Msg("failed to send next task result")
+	}
 }
 
 func (s *TaskResultSender) processPendingResult(ctx context.Context) error {

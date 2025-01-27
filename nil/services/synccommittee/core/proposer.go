@@ -12,6 +12,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rollupcontract"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -73,19 +74,23 @@ func NewProposer(
 		return nil, err
 	}
 
-	p := Proposer{
+	p := &Proposer{
 		blockStorage:   blockStorage,
 		rollupContract: rollupContract,
 		params:         params,
 		retryRunner:    retryRunner,
 		metrics:        metrics,
-		logger:         logger,
 	}
 
-	return &p, nil
+	p.logger = srv.WorkerLogger(logger, p)
+	return p, nil
 }
 
-func (p *Proposer) Run(ctx context.Context) error {
+func (*Proposer) Name() string {
+	return "proposer"
+}
+
+func (p *Proposer) Run(ctx context.Context, started chan<- struct{}) error {
 	shouldResetStorage, err := p.initializeProvedStateRoot(ctx)
 	if err != nil {
 		return err
@@ -96,11 +101,13 @@ func (p *Proposer) Run(ctx context.Context) error {
 		// todo: reset TaskStorage and BlockStorage before starting Aggregator, TaskScheduler and TaskListener
 	}
 
+	close(started)
+
 	concurrent.RunTickerLoop(ctx, p.params.ProposingInterval,
 		func(ctx context.Context) {
 			if err := p.proposeNextBlock(ctx); err != nil {
 				p.logger.Error().Err(err).Msg("error during proved blocks proposing")
-				p.metrics.RecordError(ctx, "proposer")
+				p.metrics.RecordError(ctx, p.Name())
 				return
 			}
 		},

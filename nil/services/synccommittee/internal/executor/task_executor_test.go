@@ -60,9 +60,12 @@ func TestTaskExecutorSuite(t *testing.T) {
 }
 
 func (s *TestSuite) Test_TaskExecutor_Executes_Tasks() {
+	started := make(chan struct{})
 	go func() {
-		_ = s.taskExecutor.Run(s.context)
+		_ = s.taskExecutor.Run(s.context, started)
 	}()
+	err := testaide.WaitFor(s.context, started, 10*time.Second)
+	s.Require().NoError(err, "task executor did not start in time")
 
 	expectedTaskRequest := api.NewTaskRequest(s.taskExecutor.Id())
 	const tasksThreshold = 5

@@ -8,6 +8,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/scheduler"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/public"
 	"github.com/rs/zerolog"
 )
@@ -27,14 +28,20 @@ func NewTaskListener(
 	scheduler scheduler.TaskScheduler,
 	logger zerolog.Logger,
 ) *TaskListener {
-	return &TaskListener{
+	listener := &TaskListener{
 		config:    config,
 		scheduler: scheduler,
-		logger:    logger,
 	}
+
+	listener.logger = srv.WorkerLogger(logger, listener)
+	return listener
 }
 
-func (l *TaskListener) Run(context context.Context) error {
+func (*TaskListener) Name() string {
+	return "task_listener"
+}
+
+func (l *TaskListener) Run(context context.Context, started chan<- struct{}) error {
 	httpConfig := &httpcfg.HttpCfg{
 		HttpURL:         l.config.HttpEndpoint,
 		HttpCompression: true,
@@ -58,6 +65,5 @@ func (l *TaskListener) Run(context context.Context) error {
 	}
 
 	l.logger.Info().Msgf("Open task listener endpoint %v", l.config.HttpEndpoint)
-	// TODO: pass `started` channel in https://github.com/NilFoundation/nil/pull/114
-	return rpc.StartRpcServer(context, httpConfig, apiList, l.logger, nil)
+	return rpc.StartRpcServer(context, httpConfig, apiList, l.logger, started)
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/NilFoundation/nil/nil/client"
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
@@ -14,6 +13,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rpc"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/scheduler"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/rs/zerolog"
 )
@@ -35,9 +35,7 @@ func NewDefaultConfig() *Config {
 }
 
 type Prover struct {
-	taskExecutor     executor.TaskExecutor
-	taskResultSender *scheduler.TaskResultSender
-	logger           zerolog.Logger
+	srv.Service
 }
 
 func New(config Config, database db.DB) (*Prover, error) {
@@ -75,24 +73,13 @@ func New(config Config, database db.DB) (*Prover, error) {
 	}
 
 	return &Prover{
-		taskExecutor:     taskExecutor,
-		taskResultSender: taskResultSender,
-		logger:           logger,
+		Service: srv.NewService(
+			logger,
+			taskExecutor, taskResultSender,
+		),
 	}, nil
 }
 
 func NewRPCClient(endpoint string, logger zerolog.Logger) client.Client {
 	return rpc.NewRetryClient(endpoint, logger)
-}
-
-func (p *Prover) Run(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	defer telemetry.Shutdown(ctx)
-
-	return concurrent.Run(
-		ctx,
-		p.taskExecutor.Run,
-		p.taskResultSender.Run,
-	)
 }

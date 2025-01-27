@@ -6,11 +6,11 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/math"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/rs/zerolog"
 )
@@ -30,8 +30,8 @@ func DefaultConfig() *Config {
 }
 
 type TaskExecutor interface {
+	srv.Worker
 	Id() types.TaskExecutorId
-	Run(ctx context.Context) error
 }
 
 type TaskExecutorMetrics interface {
@@ -49,17 +49,23 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	return &taskExecutorImpl{
+
+	executor := &taskExecutorImpl{
 		nonceId:        *nonceId,
 		config:         *config,
 		requestHandler: requestHandler,
 		taskHandler:    taskHandler,
 		metrics:        metrics,
-		logger:         logger,
-	}, nil
+	}
+
+	executor.WorkerLoop = srv.NewWorkerLoop("task_executor", executor.config.TaskPollingInterval, executor.runIteration)
+	executor.logger = srv.WorkerLogger(logger, executor)
+	return executor, nil
 }
 
 type taskExecutorImpl struct {
+	srv.WorkerLoop
+
 	nonceId        types.TaskExecutorId
 	config         Config
 	requestHandler api.TaskRequestHandler
@@ -72,19 +78,11 @@ func (p *taskExecutorImpl) Id() types.TaskExecutorId {
 	return p.nonceId
 }
 
-func (p *taskExecutorImpl) Run(ctx context.Context) error {
-	concurrent.RunTickerLoop(
-		ctx,
-		p.config.TaskPollingInterval,
-		func(ctx context.Context) {
-			if err := p.fetchAndHandleTask(ctx); err != nil {
-				p.logger.Error().Err(err).Msg("failed to fetch and handle next task")
-				p.metrics.RecordError(ctx, "task_executor")
-			}
-		},
-	)
-
-	return nil
+func (p *taskExecutorImpl) runIteration(ctx context.Context) {
+	if err := p.fetchAndHandleTask(ctx); err != nil {
+		p.logger.Error().Err(err).Msg("failed to fetch and handle next task")
+		p.metrics.RecordError(ctx, p.Name())
+	}
 }
 
 func (p *taskExecutorImpl) fetchAndHandleTask(ctx context.Context) error {

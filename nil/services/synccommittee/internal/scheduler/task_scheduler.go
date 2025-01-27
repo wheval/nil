@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/scheduler/heap"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/public"
@@ -33,10 +33,9 @@ func DefaultConfig() Config {
 }
 
 type TaskScheduler interface {
+	srv.Worker
 	api.TaskRequestHandler
 	public.TaskDebugApi
-	// Run Start task scheduler worker which monitors active tasks and reschedules them if necessary
-	Run(ctx context.Context) error
 }
 
 type TaskSchedulerMetrics interface {
@@ -49,21 +48,34 @@ func New(
 	metrics TaskSchedulerMetrics,
 	logger zerolog.Logger,
 ) TaskScheduler {
-	return &taskSchedulerImpl{
+	scheduler := &taskSchedulerImpl{
 		storage:      taskStorage,
 		stateHandler: stateHandler,
 		config:       DefaultConfig(),
 		metrics:      metrics,
-		logger:       logger,
 	}
+
+	scheduler.WorkerLoop = srv.NewWorkerLoop("task_scheduler", scheduler.config.taskCheckInterval, scheduler.runIteration)
+	scheduler.logger = srv.WorkerLogger(logger, scheduler)
+	return scheduler
 }
 
 type taskSchedulerImpl struct {
+	srv.WorkerLoop
+
 	storage      storage.TaskStorage
 	stateHandler api.TaskStateChangeHandler
 	config       Config
 	metrics      TaskSchedulerMetrics
 	logger       zerolog.Logger
+}
+
+func (s *taskSchedulerImpl) runIteration(ctx context.Context) {
+	err := s.storage.RescheduleHangingTasks(ctx, s.config.taskExecutionTimeout)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("failed to reschedule hanging tasks")
+		s.recordError(ctx)
+	}
 }
 
 func (s *taskSchedulerImpl) GetTask(ctx context.Context, request *api.TaskRequest) (*types.Task, error) {
@@ -212,20 +224,6 @@ func (s *taskSchedulerImpl) onTaskResultError(ctx context.Context, cause error, 
 	return fmt.Errorf("%w: %w", ErrFailedToProcessTaskResult, cause)
 }
 
-func (s *taskSchedulerImpl) Run(ctx context.Context) error {
-	s.logger.Info().Msg("starting task scheduler worker")
-
-	concurrent.RunTickerLoop(ctx, s.config.taskCheckInterval, func(ctx context.Context) {
-		err := s.storage.RescheduleHangingTasks(ctx, s.config.taskExecutionTimeout)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("failed to reschedule hanging tasks")
-			s.recordError(ctx)
-		}
-	})
-
-	return nil
-}
-
 func (s *taskSchedulerImpl) recordError(ctx context.Context) {
-	s.metrics.RecordError(ctx, "task_scheduler")
+	s.metrics.RecordError(ctx, s.Name())
 }
