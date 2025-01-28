@@ -53,3 +53,29 @@ func (zc *zstdCompressor) Compress(from io.Reader, to io.Writer) (err error) {
 	_, err = impl.ReadFrom(from)
 	return
 }
+
+type zstdDecompressor struct {
+	logger zerolog.Logger
+}
+
+func NewZstdDecompressor(logger zerolog.Logger) *zstdDecompressor {
+	return &zstdDecompressor{
+		logger: logger,
+	}
+}
+
+func (zd *zstdDecompressor) Decompress(in io.Reader, out io.Writer) error {
+	impl, err := zstd.NewReader(in)
+	if err != nil {
+		return err
+	}
+	defer impl.Close()
+
+	n, err := impl.WriteTo(out)
+	if err != nil {
+		return err
+	}
+
+	zd.logger.Info().Int64("decompressed_size", n).Msg("decomressed zstd batch")
+	return nil
+}

@@ -35,6 +35,14 @@ func (id *BatchId) UnmarshalText(data []byte) error {
 	return nil
 }
 
+func (id *BatchId) Type() string {
+	return "BatchId"
+}
+
+func (id *BatchId) Set(val string) error {
+	return id.UnmarshalText([]byte(val))
+}
+
 type BlockBatch struct {
 	Id             BatchId             `json:"id"`
 	MainShardBlock *jsonrpc.RPCBlock   `json:"mainShardBlock"`
