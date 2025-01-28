@@ -8,6 +8,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/client"
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	coreTypes "github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
@@ -28,8 +29,6 @@ type AggregatorMetrics interface {
 }
 
 type Aggregator struct {
-	srv.WorkerLoop
-
 	logger         zerolog.Logger
 	rpcClient      client.Client
 	blockStorage   storage.BlockStorage
@@ -37,7 +36,7 @@ type Aggregator struct {
 	batchCommitter batches.BatchCommitter
 	timer          common.Timer
 	metrics        AggregatorMetrics
-	pollingDelay   time.Duration
+	workerAction   *concurrent.Suspendable
 }
 
 func NewAggregator(
@@ -49,7 +48,7 @@ func NewAggregator(
 	metrics AggregatorMetrics,
 	pollingDelay time.Duration,
 ) *Aggregator {
-	agg := &Aggregator{
+	aggregator := &Aggregator{
 		rpcClient:    rpcClient,
 		blockStorage: blockStorage,
 		taskStorage:  taskStorage,
@@ -60,14 +59,53 @@ func NewAggregator(
 			logger,
 			batches.DefaultCommitOptions(),
 		),
-		timer:        timer,
-		metrics:      metrics,
-		pollingDelay: pollingDelay,
+		timer:   timer,
+		metrics: metrics,
 	}
 
-	agg.WorkerLoop = srv.NewWorkerLoop("aggregator", pollingDelay, agg.runIteration)
-	agg.logger = srv.WorkerLogger(logger, agg)
-	return agg
+	aggregator.workerAction = concurrent.NewSuspendable(aggregator.runIteration, pollingDelay)
+	aggregator.logger = srv.WorkerLogger(logger, aggregator)
+	return aggregator
+}
+
+func (agg *Aggregator) Name() string {
+	return "aggregator"
+}
+
+func (agg *Aggregator) Run(ctx context.Context, started chan<- struct{}) error {
+	agg.logger.Info().Msg("starting blocks fetching")
+
+	err := agg.workerAction.Run(ctx, started)
+
+	if err == nil || errors.Is(err, context.Canceled) {
+		agg.logger.Info().Msg("blocks fetching stopped")
+	} else {
+		agg.logger.Error().Err(err).Msg("error running aggregator, stopped")
+	}
+
+	return err
+}
+
+func (agg *Aggregator) Pause(ctx context.Context) error {
+	paused, err := agg.workerAction.Pause(ctx)
+	if err != nil {
+		return err
+	}
+	if paused {
+		agg.logger.Info().Msg("blocks fetching paused")
+	}
+	return nil
+}
+
+func (agg *Aggregator) Resume(ctx context.Context) error {
+	resumed, err := agg.workerAction.Resume(ctx)
+	if err != nil {
+		return err
+	}
+	if resumed {
+		agg.logger.Info().Msg("blocks fetching resumed")
+	}
+	return nil
 }
 
 func (agg *Aggregator) runIteration(ctx context.Context) {
