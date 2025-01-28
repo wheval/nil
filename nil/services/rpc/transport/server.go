@@ -21,7 +21,7 @@ import (
 
 const (
 	MetadataApi             = "rpc"
-	defaultBatchConcurrency = 2
+	defaultBatchConcurrency = 1 // trnasactions from batch maust be processed in order
 )
 
 // Server is an RPC server.

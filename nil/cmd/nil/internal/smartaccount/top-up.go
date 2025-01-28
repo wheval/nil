@@ -1,7 +1,7 @@
 package smartaccount
 
 import (
-	"github.com/NilFoundation/nil/nil/cmd/nil/internal/common"
+	"github.com/NilFoundation/nil/nil/cmd/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/spf13/cobra"
 )

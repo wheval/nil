@@ -129,6 +129,60 @@ func (b *BatchRequestImpl) GetDebugBlock(shardId types.ShardId, blockId any, ful
 	return b.getBlock(shardId, blockId, fullTx, true)
 }
 
+func (b *BatchRequestImpl) SendTransactionViaSmartContract(
+	ctx context.Context, walletAddress types.Address, bytecode types.Code, feeCredit, value types.Value,
+	tokens []types.TokenBalance, contractAddress types.Address, pk *ecdsa.PrivateKey,
+) (uint64, error) {
+	id := len(b.requests)
+
+	r, err := b.client.getSendTransactionViaSmartContractRequest(ctx, walletAddress, bytecode, feeCredit, value, tokens, contractAddress, pk, false, id)
+	if err != nil {
+		return 0, err
+	}
+
+	b.requests = append(b.requests, r)
+	return uint64(id), nil
+}
+
+type CallParam struct {
+	Bytecode []byte
+	Address  types.Address
+	Count    int
+}
+
+// RunContractBatch runs bytecodes on the specified contract addresses as one batch
+func RunContractBatch(ctx context.Context, client *Client, smartAccount types.Address, callParams []CallParam, feeCredit, value types.Value,
+	tokens []types.TokenBalance, pk *ecdsa.PrivateKey,
+) (common.Hash, error) {
+	batch := client.CreateBatchRequest()
+
+	for _, p := range callParams {
+		for range p.Count {
+			_, err := batch.SendTransactionViaSmartContract(ctx, smartAccount, p.Bytecode, feeCredit, value, tokens, p.Address, pk)
+			if err != nil {
+				return common.EmptyHash, err
+			}
+		}
+	}
+
+	resp, err := client.BatchCall(ctx, batch)
+	if err != nil {
+		return common.EmptyHash, err
+	}
+
+	// get hash of the latest message
+	rawTxn, ok := resp[len(resp)-1].(json.RawMessage)
+	if !ok {
+		return common.EmptyHash, errors.New("Result is not bytes")
+	}
+
+	var txHash common.Hash
+	if err = json.Unmarshal(rawTxn, &txHash); err != nil {
+		return common.EmptyHash, err
+	}
+	return txHash, nil
+}
+
 func NewClient(endpoint string, logger zerolog.Logger, opts ...Option) *Client {
 	return NewClientWithDefaultHeaders(endpoint, logger, nil, opts...)
 }
@@ -334,6 +388,39 @@ func (c *Client) getBlockRequest(shardId types.ShardId, blockId any, fullTx bool
 		request = c.newRequest(m, shardId, *blockNrOrHash.BlockNumber, fullTx)
 	}
 	check.PanicIfNot(request != nil)
+	return request, nil
+}
+
+func (c *Client) getSendTransactionViaSmartContractRequest(ctx context.Context, smartAccountAddress types.Address,
+	bytecode types.Code, feeCredit, value types.Value, tokens []types.TokenBalance,
+	contractAddress types.Address, pk *ecdsa.PrivateKey, isDeploy bool, id int,
+) (*Request, error) {
+	calldataExt, err := client.CreateInternalTransactionPayload(ctx, bytecode, value, tokens, contractAddress, isDeploy)
+	if err != nil {
+		return nil, err
+	}
+
+	extTxn, err := client.CreateExternalTransaction(ctx, c, calldataExt, smartAccountAddress, feeCredit, isDeploy, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if pk != nil {
+		err = extTxn.Sign(pk)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(extTxn.Data) > types.TransactionMaxDataSize {
+		return nil, ErrTxnDataTooLong
+	}
+	data, err := extTxn.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+
+	request := c.newRequest(Eth_sendRawTransaction, hexutil.Bytes(data))
 	return request, nil
 }
 

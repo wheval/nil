@@ -19,6 +19,8 @@ import (
 type BatchRequest interface {
 	GetBlock(shardId types.ShardId, blockId any, fullTx bool) (uint64, error)
 	GetDebugBlock(shardId types.ShardId, blockId any, fullTx bool) (uint64, error)
+	SendTransactionViaSmartContract(ctx context.Context, smartAccountAddress types.Address, bytecode types.Code, feeCredit, value types.Value,
+		tokens []types.TokenBalance, contractAddress types.Address, pk *ecdsa.PrivateKey) (uint64, error)
 }
 
 // Client defines the interface for a client
@@ -91,10 +93,10 @@ func EstimateFeeExternal(ctx context.Context, c Client, txn *types.ExternalTrans
 	return c.EstimateFee(ctx, args, blockId)
 }
 
-func SendExternalTransaction(
+func CreateExternalTransaction(
 	ctx context.Context, c Client, bytecode types.Code, contractAddress types.Address,
-	pk *ecdsa.PrivateKey, feeCredit types.Value, isDeploy bool, withRetry bool,
-) (common.Hash, error) {
+	feeCredit types.Value, isDeploy bool, id int,
+) (*types.ExternalTransaction, error) {
 	var kind types.TransactionKind
 	if isDeploy {
 		kind = types.DeployTransactionKind
@@ -105,8 +107,9 @@ func SendExternalTransaction(
 	// Get the sequence number for the smart account
 	seqno, err := c.GetTransactionCount(ctx, contractAddress, "pending")
 	if err != nil {
-		return common.EmptyHash, err
+		return nil, err
 	}
+	seqno += types.Seqno(id)
 
 	// Create the transaction with the bytecode to run
 	extTxn := &types.ExternalTransaction{
@@ -120,10 +123,22 @@ func SendExternalTransaction(
 	if feeCredit.IsZero() {
 		var err error
 		if feeCredit, err = EstimateFeeExternal(ctx, c, extTxn, "latest"); err != nil {
-			return common.EmptyHash, err
+			return nil, err
 		}
 	}
 	extTxn.FeeCredit = feeCredit
+
+	return extTxn, nil
+}
+
+func SendExternalTransaction(
+	ctx context.Context, c Client, bytecode types.Code, contractAddress types.Address,
+	pk *ecdsa.PrivateKey, feeCredit types.Value, isDeploy bool, withRetry bool,
+) (common.Hash, error) {
+	extTxn, err := CreateExternalTransaction(ctx, c, bytecode, contractAddress, feeCredit, isDeploy, 0)
+	if err != nil {
+		return common.EmptyHash, err
+	}
 
 	if withRetry {
 		return sendExternalTransactionWithSeqnoRetry(ctx, c, extTxn, pk)
@@ -165,10 +180,9 @@ func sendExternalTransactionWithSeqnoRetry(ctx context.Context, c Client, txn *t
 	return common.EmptyHash, fmt.Errorf("failed to send transaction in 20 retries, getting %w", err)
 }
 
-func SendTransactionViaSmartAccount(
-	ctx context.Context, c Client, smartAccountAddress types.Address, bytecode types.Code, feeCredit, value types.Value,
-	tokens []types.TokenBalance, contractAddress types.Address, pk *ecdsa.PrivateKey, isDeploy bool,
-) (common.Hash, error) {
+func CreateInternalTransactionPayload(ctx context.Context, bytecode types.Code, value types.Value,
+	tokens []types.TokenBalance, contractAddress types.Address, isDeploy bool,
+) (types.Code, error) {
 	var kind types.TransactionKind
 	if isDeploy {
 		kind = types.DeployTransactionKind
@@ -187,13 +201,24 @@ func SendTransactionViaSmartAccount(
 
 	intTxnData, err := intTxn.MarshalSSZ()
 	if err != nil {
-		return common.EmptyHash, err
+		return types.Code{}, err
 	}
 
 	calldataExt, err := contracts.NewCallData(contracts.NameSmartAccount, "send", intTxnData)
 	if err != nil {
-		return common.EmptyHash, err
+		return types.Code{}, err
 	}
 
+	return calldataExt, err
+}
+
+func SendTransactionViaSmartAccount(
+	ctx context.Context, c Client, smartAccountAddress types.Address, bytecode types.Code, feeCredit, value types.Value,
+	tokens []types.TokenBalance, contractAddress types.Address, pk *ecdsa.PrivateKey, isDeploy bool,
+) (common.Hash, error) {
+	calldataExt, err := CreateInternalTransactionPayload(ctx, bytecode, value, tokens, contractAddress, isDeploy)
+	if err != nil {
+		return common.EmptyHash, err
+	}
 	return c.SendExternalTransaction(ctx, calldataExt, smartAccountAddress, pk, feeCredit)
 }
