@@ -89,7 +89,9 @@ func (i *backendIBFT) isActiveValidator() bool {
 
 func NewConsensus(cfg *ConsensusParams) *backendIBFT {
 	logger := logging.NewLogger("consensus").With().Stringer(logging.FieldShardId, cfg.ShardId).Logger()
-	l := &ibftLogger{logger: logger}
+	l := &ibftLogger{
+		logger: logger.With().CallerWithSkipFrameCount(3).Logger(),
+	}
 
 	backend := &backendIBFT{
 		db:        cfg.Db,
