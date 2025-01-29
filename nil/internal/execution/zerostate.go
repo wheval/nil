@@ -84,6 +84,10 @@ contracts:
   address: {{ .BtcFaucetAddress }}
   value: 100000000000000
   contract: FaucetToken
+- name: UsdcFaucet
+  address: {{ .UsdcFaucetAddress }}
+  value: 100000000000000
+  contract: FaucetToken
 - name: L1BlockInfo
   address: {{ .L1BlockInfoAddress }}
   value: 0
@@ -99,6 +103,7 @@ contracts:
 		"EthFaucetAddress":        types.EthFaucetAddress.Hex(),
 		"UsdtFaucetAddress":       types.UsdtFaucetAddress.Hex(),
 		"BtcFaucetAddress":        types.BtcFaucetAddress.Hex(),
+		"UsdcFaucetAddress":       types.UsdcFaucetAddress.Hex(),
 	})
 }
 

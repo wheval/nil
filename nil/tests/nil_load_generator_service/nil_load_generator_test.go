@@ -39,14 +39,14 @@ func (s *NilLoadGeneratorRpc) SetupTest() {
 	s.Wg.Add(1)
 	go func() {
 		defer s.Wg.Done()
-		if err := nil_load_generator.Run(s.Context, nil_load_generator.Config{OwnEndpoint: nilLoadGeneratorSockPath, Endpoint: sockPath, FaucetEndpoint: faucetEndpoint, SwapPerIteration: 1},
+		if err := nil_load_generator.Run(s.Context, nil_load_generator.Config{OwnEndpoint: nilLoadGeneratorSockPath, Endpoint: sockPath, FaucetEndpoint: faucetEndpoint, SwapPerIteration: 1, RpcSwapLimit: "10000000", MintTokenAmount0: "3000000", MintTokenAmount1: "10000", ThresholdAmount: "3000000000", SwapAmount: "1000"},
 			logging.NewLogger("test_nil_load_generator")); err != nil {
 			s.runErrCh <- err
 		} else {
 			s.runErrCh <- nil
 		}
 	}()
-	time.Sleep(time.Second)
+	time.Sleep(3 * time.Second)
 }
 
 func (s *NilLoadGeneratorRpc) TearDownTest() {
@@ -54,6 +54,7 @@ func (s *NilLoadGeneratorRpc) TearDownTest() {
 }
 
 func (s *NilLoadGeneratorRpc) TestSmartAccountBalanceModification() {
+	time.Sleep(20 * time.Second)
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
