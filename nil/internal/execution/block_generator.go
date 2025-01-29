@@ -16,12 +16,13 @@ import (
 )
 
 type BlockGeneratorParams struct {
-	ShardId       types.ShardId
-	NShards       uint32
-	TraceEVM      bool
-	Timer         common.Timer
-	GasBasePrice  types.Value
-	GasPriceScale float64
+	ShardId         types.ShardId
+	NShards         uint32
+	TraceEVM        bool
+	Timer           common.Timer
+	GasBasePrice    types.Value
+	GasPriceScale   float64
+	MainKeysOutPath string
 }
 
 type Proposal struct {

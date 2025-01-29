@@ -2,7 +2,6 @@ package collate
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
@@ -37,7 +36,6 @@ type Params struct {
 
 	ZeroState       string
 	ZeroStateConfig *execution.ZeroStateConfig
-	MainKeysOutPath string
 
 	Topology ShardTopology
 }
@@ -75,14 +73,11 @@ func (s *Scheduler) Validator() *Validator {
 	}
 }
 
-func (s *Scheduler) Run(ctx context.Context, consensus Consensus) error {
+func (s *Scheduler) Run(ctx context.Context, syncer *Syncer, consensus Consensus) error {
+	syncer.WaitComplete()
+
 	s.logger.Info().Msg("Starting collation...")
 	s.consensus = consensus
-
-	// At first generate zero-state if needed
-	if err := s.generateZeroState(ctx); err != nil {
-		return err
-	}
 
 	// Enable handler for snapshot relaying
 	SetBootstrapHandler(ctx, s.networkManager, s.params.ShardId, s.txFabric)
@@ -107,37 +102,6 @@ func (s *Scheduler) Run(ctx context.Context, consensus Consensus) error {
 			return nil
 		}
 	}
-}
-
-func (s *Scheduler) generateZeroState(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, s.params.Timeout)
-	defer cancel()
-
-	if _, err := s.readLastBlockHash(ctx); !errors.Is(err, db.ErrKeyNotFound) {
-		// error or nil if last block found
-		return err
-	}
-
-	if len(s.params.MainKeysOutPath) != 0 && s.params.ShardId == types.BaseShardId {
-		if err := execution.DumpMainKeys(s.params.MainKeysOutPath); err != nil {
-			return err
-		}
-	}
-
-	s.logger.Info().Msg("Generating zero-state...")
-
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric)
-	if err != nil {
-		return err
-	}
-	defer gen.Rollback()
-
-	block, err := gen.GenerateZeroState(s.params.ZeroState, s.params.ZeroStateConfig)
-	if err != nil {
-		return err
-	}
-
-	return PublishBlock(ctx, s.networkManager, s.params.ShardId, &types.BlockWithExtractedData{Block: block})
 }
 
 func (s *Scheduler) doCollate(ctx context.Context) error {

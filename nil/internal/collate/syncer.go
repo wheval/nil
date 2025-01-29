@@ -47,9 +47,14 @@ type Syncer struct {
 
 	lastBlockNumber types.BlockNumber
 	lastBlockHash   common.Hash
+
+	waitForSync *sync.WaitGroup
 }
 
 func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Syncer, error) {
+	var waitForSync sync.WaitGroup
+	waitForSync.Add(1)
+
 	return &Syncer{
 		config:         cfg,
 		topic:          topicShardBlocks(cfg.ShardId),
@@ -59,6 +64,7 @@ func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Sy
 			Stringer(logging.FieldShardId, cfg.ShardId).
 			Logger(),
 		lastBlockNumber: types.BlockNumber(math.MaxUint64),
+		waitForSync:     &waitForSync,
 	}, nil
 }
 
@@ -93,12 +99,18 @@ func (s *Syncer) shardIsEmpty(ctx context.Context) (bool, error) {
 	return err != nil, nil
 }
 
+func (s *Syncer) WaitComplete() {
+	s.waitForSync.Wait()
+}
+
 func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
-	if snapIsRequired, err := s.shardIsEmpty(ctx); err != nil {
-		return err
-	} else if snapIsRequired {
-		if err := FetchSnapshot(ctx, s.networkManager, s.config.BootstrapPeer, s.config.ShardId, s.db); err != nil {
-			return fmt.Errorf("failed to fetch snapshot: %w", err)
+	if s.config.ReplayBlocks {
+		if snapIsRequired, err := s.shardIsEmpty(ctx); err != nil {
+			return err
+		} else if snapIsRequired {
+			if err := FetchSnapshot(ctx, s.networkManager, s.config.BootstrapPeer, s.config.ShardId, s.db); err != nil {
+				return fmt.Errorf("failed to fetch snapshot: %w", err)
+			}
 		}
 	}
 
@@ -107,10 +119,13 @@ func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
 	wgFetch.Done()
 	wgFetch.Wait()
 
-	if s.config.ReplayBlocks {
-		if err := s.generateZerostate(ctx); err != nil {
-			return fmt.Errorf("Failed to generate zerostate for shard %s: %w", s.config.ShardId, err)
-		}
+	if err := s.generateZerostate(ctx); err != nil {
+		return fmt.Errorf("Failed to generate zerostate for shard %s: %w", s.config.ShardId, err)
+	}
+
+	if s.networkManager == nil {
+		s.waitForSync.Done()
+		return nil
 	}
 
 	err := s.readLastBlockNumber(ctx)
@@ -125,9 +140,16 @@ func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
 
 	s.logger.Info().Msg("Starting sync")
 
+	s.fetchBlocks(ctx)
+	s.waitForSync.Done()
+
+	if ctx.Err() != nil {
+		return nil
+	}
+
 	sub, err := s.networkManager.PubSub().Subscribe(s.topic)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to subscribe to %s: %w", s.topic, err)
 	}
 	defer sub.Close()
 
@@ -333,11 +355,22 @@ func (s *Syncer) saveDirectly(ctx context.Context, blocks []*types.BlockWithExtr
 }
 
 func (s *Syncer) generateZerostate(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, s.config.Timeout)
+	defer cancel()
+
 	if empty, err := s.shardIsEmpty(ctx); err != nil {
 		return err
 	} else if !empty {
 		return nil
 	}
+
+	if len(s.config.BlockGeneratorParams.MainKeysOutPath) != 0 && s.config.ShardId == types.BaseShardId {
+		if err := execution.DumpMainKeys(s.config.BlockGeneratorParams.MainKeysOutPath); err != nil {
+			return err
+		}
+	}
+
+	s.logger.Info().Msg("Generating zero-state...")
 
 	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db)
 	if err != nil {
@@ -345,8 +378,12 @@ func (s *Syncer) generateZerostate(ctx context.Context) error {
 	}
 	defer gen.Rollback()
 
-	_, err = gen.GenerateZeroState(s.config.ZeroState, s.config.ZeroStateConfig)
-	return err
+	block, err := gen.GenerateZeroState(s.config.ZeroState, s.config.ZeroStateConfig)
+	if err != nil {
+		return err
+	}
+
+	return PublishBlock(ctx, s.networkManager, s.config.ShardId, &types.BlockWithExtractedData{Block: block})
 }
 
 func validateRepliedBlock(
