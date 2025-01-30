@@ -120,6 +120,21 @@ func (s *BlockStorageTestSuite) TestSetBlockAsProved() {
 	s.Require().NoError(err)
 }
 
+func (s *BlockStorageTestSuite) Test_SetBlockAsProved_Multiple_Times() {
+	batch := testaide.NewBlockBatch(3)
+	mainBlockId := scTypes.IdFromBlock(batch.MainShardBlock)
+	err := s.bs.SetBlockBatch(s.ctx, batch)
+	s.Require().NoError(err)
+
+	for range 3 {
+		err := s.bs.SetBlockAsProved(s.ctx, mainBlockId)
+		s.Require().NoError(err)
+	}
+
+	err = s.bs.SetBlockAsProposed(s.ctx, mainBlockId)
+	s.Require().NoError(err)
+}
+
 func (s *BlockStorageTestSuite) TestSetBlockAsProposed_DoesNotExist() {
 	randomId := testaide.RandomBlockId()
 	err := s.bs.SetBlockAsProposed(s.ctx, randomId)

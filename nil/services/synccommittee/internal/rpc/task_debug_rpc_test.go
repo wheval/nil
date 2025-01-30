@@ -135,7 +135,7 @@ type getTaskTestCase struct {
 
 func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Tasks() {
 	entries := newTaskEntries(s.timer.NowTime())
-	err := s.storage.AddTaskEntries(s.context, entries)
+	err := s.storage.AddTaskEntries(s.context, entries...)
 	s.Require().NoError(err)
 
 	testCases := []getTaskTestCase{
@@ -234,7 +234,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_Empty_Storage() {
 
 func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_Not_Found() {
 	entries := newTaskEntries(s.timer.NowTime())
-	err := s.storage.AddTaskEntries(s.context, entries)
+	err := s.storage.AddTaskEntries(s.context, entries...)
 	s.Require().NoError(err)
 
 	someRootId := types.NewTaskId()
@@ -246,7 +246,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_Not_Found() {
 func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_No_Dependencies() {
 	now := s.timer.NowTime()
 	entry := testaide.NewTaskEntry(now, running, testaide.RandomExecutorId())
-	err := s.storage.AddSingleTaskEntry(s.context, *entry)
+	err := s.storage.AddTaskEntries(s.context, entry)
 	s.Require().NoError(err)
 
 	taskTree, err := s.rpcClient.GetTaskTree(s.context, entry.Task.Id)
@@ -282,7 +282,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_With_Dependencies() 
 	taskE := testaide.NewTaskEntry(now, types.Running, testaide.RandomExecutorId())
 	taskC.AddDependency(taskE)
 
-	err := s.storage.AddTaskEntries(s.context, []*types.TaskEntry{taskA, taskB, taskC, taskD, taskE})
+	err := s.storage.AddTaskEntries(s.context, taskA, taskB, taskC, taskD, taskE)
 	s.Require().NoError(err)
 
 	taskATree, err := s.rpcClient.GetTaskTree(s.context, taskA.Task.Id)
@@ -326,7 +326,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_With_Terminated_Depe
 	taskC := testaide.NewTaskEntry(now.Add(-1*time.Minute), types.WaitingForExecutor, types.UnknownExecutorId)
 	taskA.AddDependency(taskC)
 
-	err := s.storage.AddTaskEntries(s.context, []*types.TaskEntry{taskA, taskB, taskC})
+	err := s.storage.AddTaskEntries(s.context, taskA, taskB, taskC)
 	s.Require().NoError(err)
 
 	executor := testaide.RandomExecutorId()

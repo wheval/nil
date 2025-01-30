@@ -14,6 +14,15 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 )
 
+func NewPendingTaskEntries(modifiedAt time.Time, count int) []*types.TaskEntry {
+	tasks := make([]*types.TaskEntry, 0, count)
+	for range count {
+		task := NewTaskEntry(modifiedAt, types.WaitingForExecutor, types.UnknownExecutorId)
+		tasks = append(tasks, task)
+	}
+	return tasks
+}
+
 func NewTaskEntry(modifiedAt time.Time, status types.TaskStatus, owner types.TaskExecutorId) *types.TaskEntry {
 	return NewTaskEntryOfType(types.PartialProve, modifiedAt, status, owner)
 }

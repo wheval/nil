@@ -258,40 +258,51 @@ func (bs *blockStorage) setProposeParentHash(tx db.RwTx, block *jsonrpc.RPCBlock
 }
 
 func (bs *blockStorage) SetBlockAsProved(ctx context.Context, id scTypes.BlockId) error {
-	if err := bs.setBlockAsProvedImpl(ctx, id); err != nil {
+	wasSet, err := bs.setBlockAsProvedImpl(ctx, id)
+	if err != nil {
 		return err
 	}
-	bs.metrics.RecordMainBlockProved(ctx)
+	if wasSet {
+		bs.metrics.RecordMainBlockProved(ctx)
+	}
 	return nil
 }
 
-func (bs *blockStorage) setBlockAsProvedImpl(ctx context.Context, id scTypes.BlockId) error {
+func (bs *blockStorage) setBlockAsProvedImpl(ctx context.Context, id scTypes.BlockId) (wasSet bool, err error) {
 	tx, err := bs.db.CreateRwTx(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer tx.Rollback()
 
 	entry, err := bs.getBlockEntry(tx, id)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if entry == nil {
-		return fmt.Errorf("block with id=%s is not found", id.String())
+		return false, fmt.Errorf("block with id=%s is not found", id)
+	}
+	if entry.IsProved {
+		bs.logger.Debug().Stringer("blockId", id).Msg("block is already marked as proved")
+		return false, nil
 	}
 
 	entry.IsProved = true
 	value, err := marshallEntry(entry)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if err := tx.Put(blocksTable, id.Bytes(), value); err != nil {
-		return err
+		return false, err
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (bs *blockStorage) TryGetNextProposalData(ctx context.Context) (*scTypes.ProposalData, error) {
@@ -321,7 +332,7 @@ func (bs *blockStorage) TryGetNextProposalData(ctx context.Context) (*scTypes.Pr
 
 	var mainShardEntry *blockEntry
 	err = iterateOverEntries(tx, func(entry *blockEntry) (bool, error) {
-		if isValidProposalCandidate(entry, parentHash) {
+		if isValidProposalCandidate(entry, *parentHash) {
 			mainShardEntry = entry
 			return false, nil
 		}
@@ -413,10 +424,10 @@ func (bs *blockStorage) setBlockAsProposedImpl(ctx context.Context, id scTypes.B
 	return tx.Commit()
 }
 
-func isValidProposalCandidate(entry *blockEntry, parentHash *common.Hash) bool {
+func isValidProposalCandidate(entry *blockEntry, parentHash common.Hash) bool {
 	return entry.Block.ShardId == types.MainShardId &&
 		entry.IsProved &&
-		entry.Block.ParentHash == *parentHash
+		entry.Block.ParentHash == parentHash
 }
 
 // getParentOfNextToPropose retrieves parent's hash of the next block to propose

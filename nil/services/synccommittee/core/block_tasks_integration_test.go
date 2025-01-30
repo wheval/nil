@@ -79,7 +79,7 @@ func (s *BlockTasksIntegrationTestSuite) Test_Provide_Tasks_And_Handle_Success_R
 	proofTasks, err := batch.CreateProofTasks(s.timer.NowTime())
 	s.Require().NoError(err)
 
-	err = s.taskStorage.AddTaskEntries(s.ctx, proofTasks)
+	err = s.taskStorage.AddTaskEntries(s.ctx, proofTasks...)
 	s.Require().NoError(err)
 
 	executorId := testaide.RandomExecutorId()
@@ -131,7 +131,7 @@ func (s *BlockTasksIntegrationTestSuite) Test_Provide_Tasks_And_Handle_Failure_R
 	proofTasks, err := batch.CreateProofTasks(s.timer.NowTime())
 	s.Require().NoError(err)
 
-	err = s.taskStorage.AddTaskEntries(s.ctx, proofTasks)
+	err = s.taskStorage.AddTaskEntries(s.ctx, proofTasks...)
 	s.Require().NoError(err)
 
 	executorId := testaide.RandomExecutorId()
