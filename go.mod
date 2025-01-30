@@ -44,6 +44,10 @@ require (
 	pgregory.net/rapid v1.1.0
 )
 
+replace github.com/libp2p/go-libp2p-kad-dht => github.com/NilFoundation/go-libp2p-kad-dht v0.0.0-20250130122411-6fd4005a3fe6
+
+replace github.com/dgraph-io/badger/v4 => github.com/NilFoundation/badger/v4 v4.0.0-20250130131510-9e58fda915b8
+
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.27.1
 	github.com/NilFoundation/fastssz v0.1.5-0.20241127134502-50c6ef93352f
