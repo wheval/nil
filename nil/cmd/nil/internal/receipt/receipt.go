@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/NilFoundation/nil/nil/cmd/nil/internal/common"
+	"github.com/NilFoundation/nil/nil/cmd/nil/common"
 	libcommon "github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/services/cliservice"

@@ -3,7 +3,7 @@ package keygen
 import (
 	"fmt"
 
-	"github.com/NilFoundation/nil/nil/cmd/nil/internal/common"
+	"github.com/NilFoundation/nil/nil/cmd/nil/common"
 	"github.com/NilFoundation/nil/nil/services/cliservice"
 	"github.com/spf13/cobra"
 )

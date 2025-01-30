@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/NilFoundation/nil/nil/cmd/nil/internal/common"
+	"github.com/NilFoundation/nil/nil/cmd/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/ethereum/go-ethereum/crypto"

@@ -3,7 +3,7 @@ package abi
 import (
 	"fmt"
 
-	"github.com/NilFoundation/nil/nil/cmd/nil/internal/common"
+	"github.com/NilFoundation/nil/nil/cmd/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/spf13/cobra"

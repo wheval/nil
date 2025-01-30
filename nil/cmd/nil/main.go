@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/NilFoundation/nil/nil/cmd/nil/common"
 	"github.com/NilFoundation/nil/nil/cmd/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/cmd/nil/internal/block"
 	"github.com/NilFoundation/nil/nil/cmd/nil/internal/cometa"
-	"github.com/NilFoundation/nil/nil/cmd/nil/internal/common"
 	"github.com/NilFoundation/nil/nil/cmd/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/cmd/nil/internal/contract"
 	"github.com/NilFoundation/nil/nil/cmd/nil/internal/debug"
