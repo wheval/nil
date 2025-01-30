@@ -58,6 +58,7 @@ func (suite *SuiteExecutionState) TestExecState() {
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	suite.Require().NoError(err)
+	es.BaseFee = types.DefaultGasPrice
 
 	suite.Run("CreateAccount", func() {
 		suite.Require().NoError(es.CreateAccount(addr))
@@ -141,6 +142,7 @@ func (suite *SuiteExecutionState) TestDeployAndCall() {
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	suite.Require().NoError(err)
+	es.BaseFee = types.DefaultGasPrice
 
 	suite.Run("Deploy", func() {
 		seqno, err := es.GetSeqno(addrSmartAccount)
@@ -220,6 +222,7 @@ func newState(t *testing.T) *ExecutionState {
 	state, err := NewExecutionState(tx, types.BaseShardId, StateParams{
 		ConfigAccessor: config.GetStubAccessor(),
 	})
+	state.BaseFee = types.DefaultGasPrice
 	require.NoError(t, err)
 
 	err = state.GenerateZeroStateYaml(DefaultZeroStateConfig)
@@ -380,6 +383,7 @@ func (suite *SuiteExecutionState) TestTransactionStatus() {
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	suite.Require().NoError(err)
+	es.BaseFee = types.DefaultGasPrice
 
 	var counterAddr, faucetAddr types.Address
 
@@ -398,6 +402,7 @@ func (suite *SuiteExecutionState) TestTransactionStatus() {
 		txn.Data = contracts.NewCounterAddCallData(suite.T(), 47)
 		txn.Seqno = 1
 		txn.FeeCredit = toGasCredit(0)
+		txn.MaxFeePerGas = types.MaxFeePerGasDefault
 		txn.From = counterAddr
 		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
 		suite.Equal(types.ErrorOutOfGas, res.Error.Code())
@@ -410,6 +415,7 @@ func (suite *SuiteExecutionState) TestTransactionStatus() {
 		txn.Data = []byte("wrong calldata")
 		txn.Seqno = 1
 		txn.FeeCredit = toGasCredit(1_000_000)
+		txn.MaxFeePerGas = types.MaxFeePerGasDefault
 		txn.From = counterAddr
 		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
 		fmt.Println(res.Error.Error())
@@ -424,6 +430,7 @@ func (suite *SuiteExecutionState) TestTransactionStatus() {
 			types.GenerateRandomAddress(types.MainShardId), types.NewValueFromUint64(1_000))
 		txn.Seqno = 1
 		txn.FeeCredit = toGasCredit(100_000)
+		txn.MaxFeePerGas = types.MaxFeePerGasDefault
 		txn.From = faucetAddr
 		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
 		suite.Equal(types.ErrorMessageToMainShard, res.Error.Code())
@@ -459,6 +466,7 @@ func (suite *SuiteExecutionState) TestPrecompiles() {
 	es, err := NewExecutionState(tx, shardId, StateParams{
 		ConfigAccessor: config.GetStubAccessor(),
 	})
+	es.BaseFee = types.DefaultGasPrice
 	suite.Require().NoError(err)
 
 	suite.Run("Deploy", func() {
@@ -476,6 +484,7 @@ func (suite *SuiteExecutionState) TestPrecompiles() {
 	txn.Data = []byte("wrong calldata")
 	txn.Seqno = 1
 	txn.FeeCredit = toGasCredit(1_000_000)
+	txn.MaxFeePerGas = types.MaxFeePerGasDefault
 	txn.From = testAddr
 
 	suite.Run("testAsyncCall: success", func() {
@@ -599,6 +608,7 @@ func (suite *SuiteExecutionState) TestPanic() {
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	suite.Require().NoError(err)
+	es.BaseFee = types.DefaultGasPrice
 
 	// Check normal execution is ok
 	txn := NewExecutionTransaction(types.MainSmartAccountAddress, types.MainSmartAccountAddress, 1,

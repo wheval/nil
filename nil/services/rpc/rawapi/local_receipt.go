@@ -40,7 +40,7 @@ func (api *LocalShardApi) GetInTransactionReceipt(ctx context.Context, hash comm
 		if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
 			return nil, err
 		}
-		gasPrice = block.GasPrice
+		gasPrice = block.BaseFee
 
 		// Check if the transaction is included in the main chain
 		rawMainBlock, err := api.nodeApi.GetFullBlockData(ctx, types.MainShardId, rawapitypes.NamedBlockIdentifierAsBlockReference(rawapitypes.LatestBlock))

@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var defaultNewSmartAccountAmount = types.NewValueFromUint64(100_000_000)
+var defaultNewSmartAccountAmount = types.GasToValue(10_000_000)
 
 func NewCommand(cfg *common.Config) *cobra.Command {
 	serverCmd := &cobra.Command{
@@ -42,7 +42,7 @@ func setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().Var(
-		&params.FeeCredit,
+		&params.Fee.FeeCredit,
 		feeCreditFlag,
 		"The fee credit for smart account creation. If set to 0, it will be estimated automatically",
 	)
@@ -69,7 +69,8 @@ func runNew(cmd *cobra.Command, _ []string, cfg *common.Config) error {
 	}
 	srv := cliservice.NewService(cmd.Context(), common.GetRpcClient(), cfg.PrivateKey, faucet)
 	check.PanicIfNotf(cfg.PrivateKey != nil, "A private key is not set in the config file")
-	smartAccountAddress, err := srv.CreateSmartAccount(params.shardId, &params.salt, amount, params.FeeCredit, &cfg.PrivateKey.PublicKey)
+	smartAccountAddress, err := srv.CreateSmartAccount(params.shardId, &params.salt, amount,
+		types.NewFeePackFromFeeCredit(params.Fee.FeeCredit), &cfg.PrivateKey.PublicKey)
 	if err != nil {
 		return err
 	}

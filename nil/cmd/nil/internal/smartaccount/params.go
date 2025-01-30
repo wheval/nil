@@ -20,6 +20,7 @@ const (
 	withDetailsFlag  = "with-details"
 	asJsonFlag       = "json"
 	compileInput     = "compile-input"
+	priorityFee      = "priority-fee"
 )
 
 var params = &smartAccountParams{
@@ -39,4 +40,5 @@ type smartAccountParams struct {
 	token                 types.Value
 	tokens                []string
 	compileInput          string
+	priorityFee           string
 }

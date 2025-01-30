@@ -185,6 +185,11 @@ func ValidateExternalTransaction(es *ExecutionState, transaction *types.Transact
 		return NewExecutionResult().SetError(types.NewError(types.ErrorInvalidChainId))
 	}
 
+	if transaction.MaxFeePerGas.IsZero() {
+		logger.Error().Msg("MaxFeePerGas is zero")
+		return NewExecutionResult().SetError(types.NewError(types.ErrorMaxFeePerGasIsZero))
+	}
+
 	if account, err := es.GetAccount(transaction.To); err != nil {
 		return NewExecutionResult().SetError(types.KeepOrWrapError(types.ErrorNoAccount, err))
 	} else if account == nil {

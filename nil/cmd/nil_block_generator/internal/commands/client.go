@@ -113,7 +113,7 @@ func CreateNewSmartAccount(logger zerolog.Logger) (string, string, error) {
 
 	salt := types.NewUint256(0)
 	amount := types.NewValueFromUint64(10_000_000_000)
-	feeCredit := types.NewValueFromUint64(0)
+	fee := types.NewFeePackFromFeeCredit(types.Value0)
 
 	srv, err := CreateCliService(hexKey, logger)
 	if err != nil {
@@ -123,7 +123,7 @@ func CreateNewSmartAccount(logger zerolog.Logger) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	smartAccount, err := srv.CreateSmartAccount(types.BaseShardId, salt, amount, feeCredit, &privateKey.PublicKey)
+	smartAccount, err := srv.CreateSmartAccount(types.BaseShardId, salt, amount, fee, &privateKey.PublicKey)
 	if err != nil {
 		return "", "", err
 	}
@@ -142,14 +142,14 @@ func DeployContract(path, hexKey string, logger zerolog.Logger) (string, error) 
 	salt := types.NewUint256(0)
 	payload := types.BuildDeployPayload(bytecode, common.Hash(salt.Bytes32()))
 
-	feeCredit := types.GasToValue(100_000)
+	fee := types.NewFeePackFromGas(100_000)
 
 	srv, err := CreateCliService(hexKey, logger)
 	if err != nil {
 		return "", err
 	}
 
-	_, addr, err := srv.DeployContractExternal(types.BaseShardId, payload, feeCredit)
+	_, addr, err := srv.DeployContractExternal(types.BaseShardId, payload, fee)
 	if err != nil {
 		return "", err
 	}
@@ -175,7 +175,7 @@ func CallContract(samrtAccountAdr, hexKey string, calls []Call, logger zerolog.L
 	}
 
 	amount := types.NewValueFromUint64(0)
-	feeCredit := types.GasToValue(100_000)
+	fee := types.NewFeePackFromGas(100_000)
 
 	ctx := context.Background()
 	client := GetRpcClient(defaultRPCEndpoint, logger)
@@ -205,7 +205,7 @@ func CallContract(samrtAccountAdr, hexKey string, calls []Call, logger zerolog.L
 		callParams[i].Address = address
 		callParams[i].Count = call.Count
 	}
-	transactionHash, err := rpc.RunContractBatch(ctx, client, samrtAccountAddress, callParams, feeCredit, amount, tokens, privateKey)
+	transactionHash, err := rpc.RunContractBatch(ctx, client, samrtAccountAddress, callParams, fee, amount, tokens, privateKey)
 	if err != nil {
 		return "", err
 	}

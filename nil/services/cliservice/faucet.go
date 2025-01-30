@@ -145,7 +145,7 @@ func (s *Service) CreateSmartAccount(
 	shardId types.ShardId,
 	salt *types.Uint256,
 	balance types.Value,
-	feeCredit types.Value,
+	fee types.FeePack,
 	pubKey *ecdsa.PublicKey,
 ) (types.Address, error) {
 	smartAccountCode := contracts.PrepareDefaultSmartAccountForOwnerCode(crypto.CompressPubkey(pubKey))
@@ -167,7 +167,7 @@ func (s *Service) CreateSmartAccount(
 	}
 
 	deployPayload := types.BuildDeployPayload(smartAccountCode, common.Hash(salt.Bytes32()))
-	txnHash, addr, err := s.DeployContractExternal(shardId, deployPayload, feeCredit)
+	txnHash, addr, err := s.DeployContractExternal(shardId, deployPayload, fee)
 	if err != nil {
 		return types.EmptyAddress, err
 	}

@@ -34,7 +34,7 @@ func (f *Factory) CreatePair(ctx context.Context, service *cliservice.Service, c
 		return err
 	}
 	hash, err := client.SendTransactionViaSmartAccount(ctx, smartAccount.Addr, calldata,
-		types.NewZeroValue(), types.NewZeroValue(), []types.TokenBalance{},
+		types.FeePack{}, types.NewZeroValue(), []types.TokenBalance{},
 		f.Addr,
 		smartAccount.PrivateKey)
 	if err != nil {

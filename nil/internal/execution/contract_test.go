@@ -18,6 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var defaultMaxFeePerGas = types.MaxFeePerGasDefault
+
 func deployContract(t *testing.T, contract *compiler.Contract, state *ExecutionState, seqno types.Seqno) types.Address {
 	t.Helper()
 
@@ -88,6 +90,7 @@ func TestPrecompiles(t *testing.T) {
 		callTransaction := types.NewEmptyTransaction()
 		callTransaction.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
 		callTransaction.FeeCredit = toGasCredit(100_000)
+		callTransaction.MaxFeePerGas = defaultMaxFeePerGas
 		state.AddInTransaction(callTransaction)
 
 		addr := fmt.Sprintf("%x", i)
@@ -123,6 +126,7 @@ func TestCall(t *testing.T) {
 	callTransaction := types.NewEmptyTransaction()
 	callTransaction.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
 	callTransaction.FeeCredit = toGasCredit(100_000)
+	callTransaction.MaxFeePerGas = defaultMaxFeePerGas
 	callTransaction.Data = calldata
 	callTransaction.To = addr
 
@@ -139,6 +143,7 @@ func TestCall(t *testing.T) {
 	callTransaction2 := types.NewEmptyTransaction()
 	callTransaction2.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
 	callTransaction2.FeeCredit = toGasCredit(10000)
+	callTransaction2.MaxFeePerGas = defaultMaxFeePerGas
 	callTransaction2.Data = calldata2
 	callTransaction2.To = callerAddr
 
@@ -189,6 +194,7 @@ func TestDelegate(t *testing.T) {
 	callTransaction := types.NewEmptyTransaction()
 	callTransaction.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
 	callTransaction.FeeCredit = toGasCredit(30_000)
+	callTransaction.MaxFeePerGas = defaultMaxFeePerGas
 	callTransaction.Data = calldata
 	callTransaction.To = proxyAddr
 	res := state.HandleTransaction(ctx, callTransaction, dummyPayer{})
@@ -200,6 +206,7 @@ func TestDelegate(t *testing.T) {
 	callTransaction = types.NewEmptyTransaction()
 	callTransaction.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
 	callTransaction.FeeCredit = toGasCredit(10_000)
+	callTransaction.MaxFeePerGas = defaultMaxFeePerGas
 	callTransaction.Data = calldata
 	callTransaction.To = proxyAddr
 	res = state.HandleTransaction(ctx, callTransaction, dummyPayer{})
@@ -213,6 +220,7 @@ func TestDelegate(t *testing.T) {
 	callTransaction = types.NewEmptyTransaction()
 	callTransaction.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
 	callTransaction.FeeCredit = toGasCredit(10_000)
+	callTransaction.MaxFeePerGas = defaultMaxFeePerGas
 	callTransaction.Data = calldata
 	callTransaction.To = proxyAddr
 	res = state.HandleTransaction(ctx, callTransaction, dummyPayer{})
@@ -240,11 +248,12 @@ func TestAsyncCall(t *testing.T) {
 	calldata, err := abi.Pack("call", addrCallee, int32(11))
 	require.NoError(t, err)
 
-	require.NoError(t, state.SetBalance(addrCaller, types.NewValueFromUint64(20_000_000)))
+	require.NoError(t, state.SetBalance(addrCaller, types.NewValueFromUint64(2_000_000_000_000_000)))
 
 	callTransaction := types.NewEmptyTransaction()
 	callTransaction.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
 	callTransaction.FeeCredit = toGasCredit(100_000)
+	callTransaction.MaxFeePerGas = defaultMaxFeePerGas
 	callTransaction.Data = calldata
 	callTransaction.To = addrCaller
 	txnHash := callTransaction.Hash()
@@ -328,6 +337,7 @@ func TestSendTransaction(t *testing.T) {
 	callTransaction := types.NewEmptyTransaction()
 	callTransaction.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
 	callTransaction.FeeCredit = toGasCredit(100_000)
+	callTransaction.MaxFeePerGas = defaultMaxFeePerGas
 	callTransaction.Data = calldata
 	callTransaction.To = addrCaller
 	res := state.HandleTransaction(ctx, callTransaction, dummyPayer{})

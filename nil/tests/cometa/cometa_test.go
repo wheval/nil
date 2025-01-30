@@ -49,7 +49,7 @@ func (s *SuiteCometa) SetupSuite() {
 contracts:
 - name: MainSmartAccount
   address: {{ .SmartAccountAddress }}
-  value: 100000000000000
+  value: 1000000000000000000000
   contract: SmartAccount
   ctorArgs: [{{ .MainPublicKey }}]
 - name: Test

@@ -89,7 +89,7 @@ func (s *SuiteReadThroughDb) TestBasic() {
 	s.Run("Deploy", func() {
 		addrCallee, receipt = s.server.DeployContractViaMainSmartAccount(shardId,
 			contracts.CounterDeployPayload(s.T()),
-			types.NewValueFromUint64(50_000_000))
+			types.GasToValue(50_000_000))
 		s.Require().True(receipt.OutReceipts[0].Success)
 	})
 
@@ -134,7 +134,7 @@ func (s *SuiteReadThroughDb) TestIsolation() {
 	s.Run("Deploy", func() {
 		addrCallee, receipt = s.server.DeployContractViaMainSmartAccount(shardId,
 			contracts.CounterDeployPayload(s.T()),
-			types.NewValueFromUint64(50_000_000))
+			types.GasToValue(50_000_000))
 		s.Require().True(receipt.OutReceipts[0].Success)
 	})
 

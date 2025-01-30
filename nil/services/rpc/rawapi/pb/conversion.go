@@ -558,8 +558,14 @@ func (a *CallArgs) PackProtoMessage(args rpctypes.CallArgs) *CallArgs {
 		a.From = new(Address).PackProtoMessage(*args.From)
 	}
 	a.To = new(Address).PackProtoMessage(args.To)
-	if args.FeeCredit.Uint256 != nil {
-		a.FeeCredit = new(Uint256).PackProtoMessage(*args.FeeCredit.Uint256)
+	if args.Fee.FeeCredit.Uint256 != nil {
+		a.FeeCredit = new(Uint256).PackProtoMessage(*args.Fee.FeeCredit.Uint256)
+	}
+	if args.Fee.MaxFeePerGas.Uint256 != nil {
+		a.MaxFeePerGas = new(Uint256).PackProtoMessage(*args.Fee.MaxFeePerGas.Uint256)
+	}
+	if args.Fee.MaxPriorityFeePerGas.Uint256 != nil {
+		a.MaxPriorityFeePerGas = new(Uint256).PackProtoMessage(*args.Fee.MaxPriorityFeePerGas.Uint256)
 	}
 	if args.Value.Uint256 != nil {
 		a.Value = new(Uint256).PackProtoMessage(*args.Value.Uint256)
@@ -663,7 +669,9 @@ func (cr *CallArgs) UnpackProtoMessage() rpctypes.CallArgs {
 	}
 	args.To = cr.To.UnpackProtoMessage()
 
-	args.FeeCredit = newValueFromUint256(cr.FeeCredit)
+	args.Fee.FeeCredit = newValueFromUint256(cr.FeeCredit)
+	args.Fee.MaxFeePerGas = newValueFromUint256(cr.MaxFeePerGas)
+	args.Fee.MaxPriorityFeePerGas = newValueFromUint256(cr.MaxPriorityFeePerGas)
 	args.Value = newValueFromUint256(cr.Value)
 	args.Seqno = types.Seqno(cr.Seqno)
 
@@ -744,8 +752,8 @@ func (m *OutTransaction) PackProtoMessage(txn *rpctypes.OutTransaction) *OutTran
 	}
 
 	gasPrice := new(Uint256)
-	if txn.GasPrice.Uint256 != nil {
-		gasPrice.PackProtoMessage(*txn.GasPrice.Uint256)
+	if txn.BaseFee.Uint256 != nil {
+		gasPrice.PackProtoMessage(*txn.BaseFee.Uint256)
 	}
 
 	out := &OutTransaction{
@@ -788,7 +796,7 @@ func (m *OutTransaction) UnpackProtoMessage() *rpctypes.OutTransaction {
 	}
 
 	txn.CoinsUsed = newValueFromUint256(m.CoinsUsed)
-	txn.GasPrice = newValueFromUint256(m.GasPrice)
+	txn.BaseFee = newValueFromUint256(m.GasPrice)
 
 	if len(m.OutTransactions) > 0 {
 		txn.OutTransactions = make([]*rpctypes.OutTransaction, len(m.OutTransactions))
@@ -899,8 +907,8 @@ func (cr *CallResponse) PackProtoMessage(args *rpctypes.CallResWithGasPrice, err
 		res.StateOverrides = new(StateOverrides).PackProtoMessage(&args.StateOverrides)
 	}
 
-	if args.GasPrice.Uint256 != nil {
-		res.GasPrice = new(Uint256).PackProtoMessage(*args.GasPrice.Uint256)
+	if args.BaseFee.Uint256 != nil {
+		res.GasPrice = new(Uint256).PackProtoMessage(*args.BaseFee.Uint256)
 	}
 
 	cr.Result = &CallResponse_Data{Data: res}
@@ -913,12 +921,15 @@ func (cr *CallResponse) UnpackProtoMessage() (*rpctypes.CallResWithGasPrice, err
 	}
 
 	data := cr.GetData()
+	if data == nil {
+		return nil, errors.New("unexpected response type")
+	}
 	check.PanicIfNot(data != nil)
 
 	res := &rpctypes.CallResWithGasPrice{}
 	res.Data = data.Data
 	res.CoinsUsed = newValueFromUint256(data.CoinsUsed)
-	res.GasPrice = newValueFromUint256(data.GasPrice)
+	res.BaseFee = newValueFromUint256(data.GasPrice)
 	res.Logs = unpackLogs(data.Logs)
 	res.DebugLogs = unpackDebugLogs(data.DebugLogs)
 

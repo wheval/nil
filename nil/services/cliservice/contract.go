@@ -76,10 +76,10 @@ func (s *Service) GetTokens(contractAddress types.Address) (types.TokensMap, err
 }
 
 // RunContract runs bytecode on the specified contract address
-func (s *Service) RunContract(smartAccount types.Address, bytecode []byte, feeCredit, value types.Value,
+func (s *Service) RunContract(smartAccount types.Address, bytecode []byte, fee types.FeePack, value types.Value,
 	tokens []types.TokenBalance, contract types.Address,
 ) (common.Hash, error) {
-	txHash, err := s.client.SendTransactionViaSmartAccount(s.ctx, smartAccount, bytecode, feeCredit, value, tokens, contract, s.privateKey)
+	txHash, err := s.client.SendTransactionViaSmartAccount(s.ctx, smartAccount, bytecode, fee, value, tokens, contract, s.privateKey)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to send new transaction")
 		return common.EmptyHash, err
@@ -97,7 +97,7 @@ func (s *Service) SendExternalTransaction(bytecode []byte, contract types.Addres
 	if noSign {
 		pk = nil
 	}
-	txHash, err := s.client.SendExternalTransaction(s.ctx, types.Code(bytecode), contract, pk, types.Value{})
+	txHash, err := s.client.SendExternalTransaction(s.ctx, types.Code(bytecode), contract, pk, types.NewFeePackFromGas(0))
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to send external transaction")
 		return common.EmptyHash, err
@@ -110,8 +110,11 @@ func (s *Service) SendExternalTransaction(bytecode []byte, contract types.Addres
 }
 
 // DeployContractViaSmartAccount deploys a new smart contract with the given bytecode via the smart account
-func (s *Service) DeployContractViaSmartAccount(shardId types.ShardId, smartAccount types.Address, deployPayload types.DeployPayload, value types.Value) (common.Hash, types.Address, error) {
-	txHash, contractAddr, err := s.client.DeployContract(s.ctx, shardId, smartAccount, deployPayload, value, s.privateKey)
+func (s *Service) DeployContractViaSmartAccount(shardId types.ShardId, smartAccount types.Address, deployPayload types.DeployPayload,
+	value types.Value,
+) (common.Hash, types.Address, error) {
+	txHash, contractAddr, err := s.client.DeployContract(s.ctx, shardId, smartAccount, deployPayload, value,
+		types.NewFeePackFromGas(100_000), s.privateKey)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to send new transaction")
 		return common.EmptyHash, types.EmptyAddress, err
@@ -125,8 +128,8 @@ func (s *Service) DeployContractViaSmartAccount(shardId types.ShardId, smartAcco
 }
 
 // DeployContractExternal deploys a new smart contract with the given bytecode via external transaction
-func (s *Service) DeployContractExternal(shardId types.ShardId, payload types.DeployPayload, feeCredit types.Value) (common.Hash, types.Address, error) {
-	txHash, contractAddr, err := s.client.DeployExternal(s.ctx, shardId, payload, feeCredit)
+func (s *Service) DeployContractExternal(shardId types.ShardId, payload types.DeployPayload, fee types.FeePack) (common.Hash, types.Address, error) {
+	txHash, contractAddr, err := s.client.DeployExternal(s.ctx, shardId, payload, fee)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to send new transaction")
 		return common.EmptyHash, types.EmptyAddress, err
@@ -141,12 +144,12 @@ func (s *Service) DeployContractExternal(shardId types.ShardId, payload types.De
 
 // CallContract performs read-only call to the contract
 func (s *Service) CallContract(
-	contract types.Address, feeCredit types.Value, calldata []byte, overrides *jsonrpc.StateOverrides,
+	contract types.Address, fee types.FeePack, calldata []byte, overrides *jsonrpc.StateOverrides,
 ) (*jsonrpc.CallRes, error) {
 	callArgs := &jsonrpc.CallArgs{
-		Data:      (*hexutil.Bytes)(&calldata),
-		To:        contract,
-		FeeCredit: feeCredit,
+		Data: (*hexutil.Bytes)(&calldata),
+		To:   contract,
+		Fee:  fee,
 	}
 
 	res, err := s.client.Call(s.ctx, callArgs, "latest", overrides)
@@ -159,7 +162,7 @@ func (s *Service) CallContract(
 // EstimateFee returns recommended fee for the call
 func (s *Service) EstimateFee(
 	contract types.Address, calldata []byte, flags types.TransactionFlags, value types.Value,
-) (types.Value, error) {
+) (*jsonrpc.EstimateFeeRes, error) {
 	callArgs := &jsonrpc.CallArgs{
 		Flags: flags,
 		To:    contract,
@@ -169,7 +172,7 @@ func (s *Service) EstimateFee(
 
 	res, err := s.client.EstimateFee(s.ctx, callArgs, "latest")
 	if err != nil {
-		return types.Value{}, err
+		return nil, err
 	}
 	return res, nil
 }

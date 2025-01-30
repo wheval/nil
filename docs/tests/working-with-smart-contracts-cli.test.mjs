@@ -74,7 +74,7 @@ describe.sequential("CLI deployment tests", async () => {
 
       await exec(RETAILER_SEND_TOKENS_COMMAND);
 
-      const gasPrice = 100n;
+      const gasPrice = 20_000_000n;
       const feeCredit = 200_000n * gasPrice;
 
       //startRetailerCallManufacturer

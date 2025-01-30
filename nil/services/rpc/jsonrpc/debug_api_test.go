@@ -127,6 +127,7 @@ func (suite *SuiteDbgContracts) SetupSuite() {
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	suite.Require().NoError(err)
+	es.BaseFee = types.DefaultGasPrice
 
 	suite.smcAddr = types.GenerateRandomAddress(shardId)
 	suite.Require().NotEmpty(suite.smcAddr)

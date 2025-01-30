@@ -90,7 +90,8 @@ func (s *SuitOpcodes) TestSend() {
 		callData, err := contracts.NewCallData(contracts.NameSender, "send", s.smartAccountAddress1, big.NewInt(100500))
 		s.Require().NoError(err)
 
-		txnHash, err := s.Client.SendExternalTransaction(s.Context, callData, s.senderAddress1, nil, s.GasToValue(100_000))
+		txnHash, err := s.Client.SendExternalTransaction(s.Context, callData, s.senderAddress1, nil,
+			types.NewFeePackFromGas(100_000))
 		s.Require().NoError(err)
 		receipt := s.WaitForReceipt(txnHash)
 		s.Require().NotNil(receipt)
@@ -104,7 +105,8 @@ func (s *SuitOpcodes) TestSend() {
 		callData, err := contracts.NewCallData(contracts.NameSender, "send", s.smartAccountAddress2, big.NewInt(100500))
 		s.Require().NoError(err)
 
-		txnHash, err := s.Client.SendExternalTransaction(s.Context, callData, s.senderAddress1, nil, s.GasToValue(100_000))
+		txnHash, err := s.Client.SendExternalTransaction(s.Context, callData, s.senderAddress1, nil,
+			types.NewFeePackFromGas(100_000))
 		s.Require().NoError(err)
 		receipt := s.WaitForReceipt(txnHash)
 		s.Require().NotNil(receipt)

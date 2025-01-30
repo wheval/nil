@@ -25,7 +25,7 @@ type CallArgs struct {
 	Flags       types.TransactionFlags `json:"flags,omitempty"`
 	From        *types.Address         `json:"from,omitempty"`
 	To          types.Address          `json:"to"`
-	FeeCredit   types.Value            `json:"feeCredit"`
+	Fee         types.FeePack          `json:"fee,omitempty"`
 	Value       types.Value            `json:"value,omitempty"`
 	Seqno       types.Seqno            `json:"seqno"`
 	Data        *hexutil.Bytes         `json:"data,omitempty"`
@@ -57,7 +57,12 @@ func (args CallArgs) ToTransaction() (*types.Transaction, error) {
 			if intTxn.RefundTo.IsEmpty() {
 				return nil, errors.New("refund address is empty")
 			}
-			return intTxn.ToTransaction(fromAddr, args.Seqno), nil
+			tx := intTxn.ToTransaction(fromAddr, args.Seqno)
+
+			// For internal messages, we need to set MaxFeePerGas from the input args.
+			tx.MaxFeePerGas = args.Fee.MaxFeePerGas
+
+			return tx, nil
 		}
 		return nil, ErrInvalidTransaction
 	}
@@ -72,12 +77,14 @@ func (args CallArgs) ToTransaction() (*types.Transaction, error) {
 	}
 	return &types.Transaction{
 		TransactionDigest: types.TransactionDigest{
-			Flags:     args.Flags,
-			ChainId:   types.DefaultChainId,
-			Seqno:     args.Seqno,
-			FeeCredit: args.FeeCredit,
-			To:        args.To,
-			Data:      data,
+			Flags:                args.Flags,
+			ChainId:              types.DefaultChainId,
+			Seqno:                args.Seqno,
+			FeeCredit:            args.Fee.FeeCredit,
+			To:                   args.To,
+			Data:                 data,
+			MaxPriorityFeePerGas: args.Fee.MaxPriorityFeePerGas,
+			MaxFeePerGas:         args.Fee.MaxFeePerGas,
 		},
 		From:  txnFrom,
 		Value: args.Value,
@@ -90,7 +97,7 @@ type OutTransaction struct {
 	Data            []byte
 	CoinsUsed       types.Value
 	OutTransactions []*OutTransaction
-	GasPrice        types.Value
+	BaseFee         types.Value
 	Error           string
 	Logs            []*types.Log
 	DebugLogs       []*types.DebugLog
@@ -102,7 +109,7 @@ type CallResWithGasPrice struct {
 	OutTransactions []*OutTransaction
 	Error           string
 	StateOverrides  StateOverrides
-	GasPrice        types.Value
+	BaseFee         types.Value
 	Logs            []*types.Log
 	DebugLogs       []*types.DebugLog
 }

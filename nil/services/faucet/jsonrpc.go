@@ -78,11 +78,12 @@ func (c *APIImpl) TopUpViaFaucet(ctx context.Context, faucetAddress, contractAdd
 		return common.EmptyHash, err
 	}
 	extTxn := &types.ExternalTransaction{
-		To:        faucetAddress,
-		Data:      callData,
-		Seqno:     seqno,
-		Kind:      types.ExecutionTransactionKind,
-		FeeCredit: types.GasToValue(100_000),
+		To:           faucetAddress,
+		Data:         callData,
+		Seqno:        seqno,
+		Kind:         types.ExecutionTransactionKind,
+		FeeCredit:    types.GasToValue(100_000),
+		MaxFeePerGas: types.MaxFeePerGasDefault,
 	}
 
 	data, err := extTxn.MarshalSSZ()

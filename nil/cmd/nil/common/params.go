@@ -6,7 +6,7 @@ type Params struct {
 	AbiPath          string
 	WithDetails      bool
 	AsJson           bool
-	FeeCredit        types.Value
+	Fee              types.FeePack
 	InOverridesPath  string
 	OutOverridesPath string
 }

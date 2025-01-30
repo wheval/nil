@@ -61,7 +61,7 @@ func (c *Token) MintAndSend(ctx context.Context, client client.Client, service *
 }
 
 func sendExternalTransaction(ctx context.Context, client client.Client, service *cliservice.Service, calldata types.Code, contractAddr types.Address, pk *ecdsa.PrivateKey) error {
-	hash, err := client.SendExternalTransaction(ctx, calldata, contractAddr, pk, types.NewZeroValue())
+	hash, err := client.SendExternalTransaction(ctx, calldata, contractAddr, pk, types.FeePack{})
 	if err != nil {
 		return err
 	}

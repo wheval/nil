@@ -17,6 +17,8 @@ export type ProcessedTransaction = {
   from: Address;
   gasUsed: bigint;
   feeCredit: bigint;
+  maxPriorityFeePerGas: bigint;
+  maxFeePerGas: bigint;
   hash: Hex;
   seqno: bigint;
   to: Address;

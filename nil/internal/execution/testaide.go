@@ -21,7 +21,7 @@ const (
 var (
 	DefaultGasCredit = types.Gas(DefaultGasLimit).ToValue(types.DefaultGasPrice)
 
-	DefaultSendValue = types.NewValueFromUint64(20_000_000)
+	DefaultSendValue = types.GasToValue(200_000_000)
 )
 
 func GenerateZeroState(t *testing.T, ctx context.Context,
@@ -72,6 +72,7 @@ func generateBlockFromTransactions(t *testing.T, ctx context.Context, execute bo
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)
+	es.BaseFee = types.DefaultGasPrice
 
 	for _, txn := range txns {
 		es.AddInTransaction(txn)
@@ -82,18 +83,13 @@ func generateBlockFromTransactions(t *testing.T, ctx context.Context, execute bo
 		}
 
 		var execResult *ExecutionResult
-		switch {
-		case txn.IsDeploy():
-			execResult = es.handleDeployTransaction(ctx, txn)
-			require.False(t, execResult.Failed())
-		case txn.IsRefund():
+		if txn.IsRefund() {
 			execResult = NewExecutionResult()
 			execResult.SetFatal(es.handleRefundTransaction(ctx, txn))
-			require.False(t, execResult.Failed())
-		default:
-			execResult = es.handleExecutionTransaction(ctx, txn)
-			require.False(t, execResult.Failed())
+		} else {
+			execResult = es.HandleTransaction(ctx, txn, dummyPayer{})
 		}
+		require.False(t, execResult.Failed())
 
 		es.AddReceipt(execResult)
 	}
@@ -119,11 +115,12 @@ func NewDeployTransaction(payload types.DeployPayload,
 ) *types.Transaction {
 	return &types.Transaction{
 		TransactionDigest: types.TransactionDigest{
-			Flags:     types.NewTransactionFlags(types.TransactionFlagInternal, types.TransactionFlagDeploy),
-			Data:      payload.Bytes(),
-			Seqno:     seqno,
-			FeeCredit: DefaultGasCredit,
-			To:        types.CreateAddress(shardId, payload),
+			Flags:        types.NewTransactionFlags(types.TransactionFlagInternal, types.TransactionFlagDeploy),
+			Data:         payload.Bytes(),
+			Seqno:        seqno,
+			FeeCredit:    DefaultGasCredit,
+			To:           types.CreateAddress(shardId, payload),
+			MaxFeePerGas: types.MaxFeePerGasDefault,
 		},
 		From:  from,
 		Value: value,
@@ -133,10 +130,11 @@ func NewDeployTransaction(payload types.DeployPayload,
 func NewExecutionTransaction(from, to types.Address, seqno types.Seqno, callData []byte) *types.Transaction {
 	return &types.Transaction{
 		TransactionDigest: types.TransactionDigest{
-			To:        to,
-			Data:      callData,
-			Seqno:     seqno,
-			FeeCredit: DefaultGasCredit,
+			To:           to,
+			Data:         callData,
+			Seqno:        seqno,
+			FeeCredit:    DefaultGasCredit,
+			MaxFeePerGas: types.MaxFeePerGasDefault,
 		},
 		From: from,
 	}
@@ -161,7 +159,7 @@ func Deploy(t *testing.T, ctx context.Context, es *ExecutionState,
 
 	txn := NewDeployTransaction(payload, shardId, from, seqno, types.Value{})
 	es.AddInTransaction(txn)
-	execResult := es.handleDeployTransaction(ctx, txn)
+	execResult := es.HandleTransaction(ctx, txn, dummyPayer{})
 	require.False(t, execResult.Failed())
 	es.AddReceipt(execResult)
 

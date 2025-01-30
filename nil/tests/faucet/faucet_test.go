@@ -46,7 +46,7 @@ func (s *SuiteFaucet) createSmartAccountViaFaucet(ownerPrivateKey *ecdsa.Private
 	callData, err := contracts.NewCallData(contracts.NameFaucet, "createSmartAccount", ownerPublicKey, salt, big.NewInt(value))
 	s.Require().NoError(err)
 
-	resHash, err := s.DefaultClient.SendExternalTransaction(s.Context, callData, types.FaucetAddress, nil, types.Value{})
+	resHash, err := s.DefaultClient.SendExternalTransaction(s.Context, callData, types.FaucetAddress, nil, types.FeePack{})
 	s.Require().NoError(err)
 
 	res := s.WaitForReceipt(resHash)
@@ -67,7 +67,8 @@ func (s *SuiteFaucet) TestCreateSmartAccountViaFaucet() {
 	smartAccountAddress := s.createSmartAccountViaFaucet(userPrivateKey, value)
 
 	blockNumber := transport.LatestBlockNumber
-	balance, err := s.DefaultClient.GetBalance(s.Context, smartAccountAddress, transport.BlockNumberOrHash{BlockNumber: &blockNumber})
+	balance, err := s.DefaultClient.GetBalance(s.Context, smartAccountAddress,
+		transport.BlockNumberOrHash{BlockNumber: &blockNumber})
 	s.Require().NoError(err)
 
 	s.Require().NoError(err)
@@ -79,7 +80,7 @@ func (s *SuiteFaucet) TestDeployContractViaFaucet() {
 	s.Require().NoError(err)
 	userPublicKey := crypto.CompressPubkey(&userPrivateKey.PublicKey)
 
-	value := types.NewValueFromUint64(123_456_789)
+	value := types.GasToValue(123_456_789)
 	smartAccountCode := contracts.PrepareDefaultSmartAccountForOwnerCode(userPublicKey)
 
 	code := types.BuildDeployPayload(smartAccountCode, common.EmptyHash)
@@ -92,7 +93,8 @@ func (s *SuiteFaucet) TestDeployContractViaFaucet() {
 		s.Require().True(r.Success)
 	}
 
-	txnHash, receiptContractAddress, err := s.DefaultClient.DeployExternal(s.Context, smartAccountAddr.ShardId(), code, types.GasToValue(100_000))
+	txnHash, receiptContractAddress, err := s.DefaultClient.DeployExternal(s.Context, smartAccountAddr.ShardId(), code,
+		types.NewFeePackFromGas(100_000))
 	s.Require().NoError(err)
 	s.Require().Equal(smartAccountAddr, receiptContractAddress)
 	receipt = s.WaitForReceipt(txnHash)

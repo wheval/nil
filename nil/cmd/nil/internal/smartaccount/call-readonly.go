@@ -31,9 +31,9 @@ func CallReadonlyCommand(cfg *common.Config) *cobra.Command {
 		"The path to the ABI file",
 	)
 
-	params.FeeCredit = types.GasToValue(100_000)
+	params.Fee.FeeCredit = types.GasToValue(100_000)
 	cmd.Flags().Var(
-		&params.FeeCredit,
+		&params.Fee.FeeCredit,
 		feeCreditFlag,
 		"The fee credit for the read-only call",
 	)
@@ -96,7 +96,7 @@ func runCallReadonly(cmd *cobra.Command, args []string, cfg *common.Config) erro
 	intTxn := &types.InternalTransactionPayload{
 		Data:        contractCalldata,
 		To:          address,
-		FeeCredit:   params.FeeCredit,
+		FeeCredit:   params.Fee.FeeCredit,
 		ForwardKind: types.ForwardKindNone,
 		Kind:        types.ExecutionTransactionKind,
 	}

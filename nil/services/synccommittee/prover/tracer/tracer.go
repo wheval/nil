@@ -98,7 +98,7 @@ func (rt *RemoteTracerImpl) GetBlockTraces(
 		return err
 	}
 
-	stateDB.GasPrice = decodedDbgBlock.GasPrice
+	stateDB.GasPrice = decodedDbgBlock.BaseFee
 	for _, inTxn := range decodedDbgBlock.InTransactions {
 		_, txnHadErr := decodedDbgBlock.Errors[inTxn.Hash()]
 		if txnHadErr {

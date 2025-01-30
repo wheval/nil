@@ -267,7 +267,7 @@ type EthAPIRo interface {
 		@param mainBlockNrOrHash BlockNumberOrHash
 		@returns feeEstimation Value
 	*/
-	EstimateFee(ctx context.Context, args CallArgs, mainBlockNrOrHash transport.BlockNumberOrHash) (types.Value, error)
+	EstimateFee(ctx context.Context, args CallArgs, mainBlockNrOrHash transport.BlockNumberOrHash) (*EstimateFeeRes, error)
 
 	/*
 		@name ChainId

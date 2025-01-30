@@ -32,7 +32,7 @@ func (s *SuiteRegression) SetupSuite() {
 contracts:
 - name: MainSmartAccount
   address: {{ .MainSmartAccountAddress }}
-  value: 100000000000000
+  value: 10000000000000000000
   contract: SmartAccount
   ctorArgs: [{{ .MainPublicKey }}]
 - name: Test
@@ -66,14 +66,14 @@ func (s *SuiteRegression) TestStaticCall() {
 	s.Require().NoError(err)
 	payload := types.BuildDeployPayload(code, common.EmptyHash)
 
-	addrSource, receipt := s.DeployContractViaMainSmartAccount(types.BaseShardId, payload, types.NewValueFromUint64(1_000_000_000))
+	addrSource, receipt := s.DeployContractViaMainSmartAccount(types.BaseShardId, payload, types.GasToValue(10_000_000))
 	s.Require().True(receipt.AllSuccess())
 
 	code, err = contracts.GetCode("tests/StaticCallQuery")
 	s.Require().NoError(err)
 	payload = types.BuildDeployPayload(code, common.EmptyHash)
 
-	addrQuery, receipt := s.DeployContractViaMainSmartAccount(types.BaseShardId, payload, types.NewValueFromUint64(1_000_000_000))
+	addrQuery, receipt := s.DeployContractViaMainSmartAccount(types.BaseShardId, payload, types.GasToValue(10_000_000))
 	s.Require().True(receipt.AllSuccess())
 
 	abiQuery, err := contracts.GetAbi("tests/StaticCallQuery")
@@ -81,17 +81,17 @@ func (s *SuiteRegression) TestStaticCall() {
 
 	data := s.AbiPack(abiQuery, "checkValue", addrSource, types.NewUint256(42))
 	receipt = s.SendTransactionViaSmartAccountNoCheck(types.MainSmartAccountAddress, addrQuery, execution.MainPrivateKey, data,
-		s.GasToValue(500_000), types.NewZeroValue(), nil)
+		types.NewFeePackFromGas(200_000), types.NewZeroValue(), nil)
 	s.Require().True(receipt.AllSuccess())
 
 	data = s.AbiPack(abiQuery, "querySyncIncrement", addrSource)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(types.MainSmartAccountAddress, addrQuery, execution.MainPrivateKey, data,
-		s.GasToValue(500_000), types.NewZeroValue(), nil)
+		types.NewFeePackFromGas(200_000), types.NewZeroValue(), nil)
 	s.Require().True(receipt.AllSuccess())
 
 	data = s.AbiPack(abiQuery, "checkValue", addrSource, types.NewUint256(43))
 	receipt = s.SendTransactionViaSmartAccountNoCheck(types.MainSmartAccountAddress, addrQuery, execution.MainPrivateKey, data,
-		s.GasToValue(500_000), types.NewZeroValue(), nil)
+		types.NewFeePackFromGas(200_000), types.NewZeroValue(), nil)
 	s.Require().True(receipt.AllSuccess())
 }
 

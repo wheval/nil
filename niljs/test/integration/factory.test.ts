@@ -127,7 +127,7 @@ test("Contract Factory", async ({ expect }) => {
 
   const hash11 = await smartAccount.sendTransaction({
     to: incrementerAddress,
-    value: 100000000n,
+    value: 100_000_000_000_000n,
   });
   const receipts11 = await waitTillCompleted(client, hash11);
   expect(receipts11.some((receipt) => !receipt.success)).toBe(false);

@@ -30,6 +30,8 @@ const gasPrice = await client.getGasPrice(1);
 const hashTransaction = await smartAccount.sendTransaction({
   to: smartAccountAddress,
   feeCredit: 1_000_000n * gasPrice,
+  maxPriorityFeePerGas: 10n,
+  maxFeePerGas: gasPrice * 2n,
   value: 0n,
   data: encodeFunctionData({
     abi: SmartAccountV1.abi,
@@ -43,6 +45,8 @@ await waitTillCompleted(client, hashTransaction);
 const hashTransaction2 = await smartAccount.sendTransaction({
   to: smartAccountAddress,
   feeCredit: 1_000_000n * gasPrice,
+  maxPriorityFeePerGas: 10n,
+  maxFeePerGas: gasPrice * 2n,
   value: 0n,
   data: encodeFunctionData({
     abi: SmartAccountV1.abi,
@@ -63,6 +67,8 @@ const sendHash = await smartAccount.sendTransaction({
   to: anotherAddress,
   value: 10_000_000n,
   feeCredit: 100_000n * gasPrice,
+  maxPriorityFeePerGas: 10n,
+  maxFeePerGas: gasPrice * 2n,
   tokens: [
     {
       id: smartAccountAddress,

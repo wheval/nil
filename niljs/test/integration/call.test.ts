@@ -84,6 +84,8 @@ test("Call counter status", async () => {
     args: [100],
     value: 0n,
     gas: 1000000n,
+    maxPriorityFeePerGas: 10n,
+    maxFeePerGas: 1_000_000_000_000n,
   });
 
   const receipts = await waitTillCompleted(client, syncTransactionHash);

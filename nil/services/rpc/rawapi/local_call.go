@@ -110,7 +110,7 @@ func (api *LocalShardApi) handleOutTransactions(
 			Data:            res.Data,
 			CoinsUsed:       res.CoinsUsed,
 			OutTransactions: res.OutTransactions,
-			GasPrice:        res.GasPrice,
+			BaseFee:         res.BaseFee,
 			Error:           res.Error,
 			Logs:            res.Logs,
 		}
@@ -261,6 +261,6 @@ func (api *LocalShardApi) Call(
 
 	result.OutTransactions = outTransactions
 	result.StateOverrides = stateOverrides
-	result.GasPrice = es.GasPrice
+	result.BaseFee = es.BaseFee
 	return result, nil
 }

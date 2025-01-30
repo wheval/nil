@@ -19,7 +19,7 @@ import (
 type BatchRequest interface {
 	GetBlock(shardId types.ShardId, blockId any, fullTx bool) (uint64, error)
 	GetDebugBlock(shardId types.ShardId, blockId any, fullTx bool) (uint64, error)
-	SendTransactionViaSmartContract(ctx context.Context, smartAccountAddress types.Address, bytecode types.Code, feeCredit, value types.Value,
+	SendTransactionViaSmartContract(ctx context.Context, smartAccountAddress types.Address, bytecode types.Code, fee types.FeePack, value types.Value,
 		tokens []types.TokenBalance, contractAddress types.Address, pk *ecdsa.PrivateKey) (uint64, error)
 }
 
@@ -34,7 +34,7 @@ type Client interface {
 	CreateBatchRequest() BatchRequest
 	BatchCall(ctx context.Context, req BatchRequest) ([]any, error)
 
-	EstimateFee(ctx context.Context, args *jsonrpc.CallArgs, blockId any) (types.Value, error)
+	EstimateFee(ctx context.Context, args *jsonrpc.CallArgs, blockId any) (*jsonrpc.EstimateFeeRes, error)
 	Call(ctx context.Context, args *jsonrpc.CallArgs, blockId any, stateOverride *jsonrpc.StateOverrides) (*jsonrpc.CallRes, error)
 	GetCode(ctx context.Context, addr types.Address, blockId any) (types.Code, error)
 	GetBlock(ctx context.Context, shardId types.ShardId, blockId any, fullTx bool) (*jsonrpc.RPCBlock, error)
@@ -53,15 +53,16 @@ type Client interface {
 	ChainId(ctx context.Context) (types.ChainId, error)
 
 	DeployContract(
-		ctx context.Context, shardId types.ShardId, smartAccountAddress types.Address, payload types.DeployPayload, value types.Value, pk *ecdsa.PrivateKey,
+		ctx context.Context, shardId types.ShardId, smartAccountAddress types.Address, payload types.DeployPayload,
+		value types.Value, fee types.FeePack, pk *ecdsa.PrivateKey,
 	) (common.Hash, types.Address, error)
-	DeployExternal(ctx context.Context, shardId types.ShardId, deployPayload types.DeployPayload, feeCredit types.Value) (common.Hash, types.Address, error)
+	DeployExternal(ctx context.Context, shardId types.ShardId, deployPayload types.DeployPayload, fee types.FeePack) (common.Hash, types.Address, error)
 	SendTransactionViaSmartAccount(
-		ctx context.Context, smartAccountAddress types.Address, bytecode types.Code, feeCredit, value types.Value,
+		ctx context.Context, smartAccountAddress types.Address, bytecode types.Code, fee types.FeePack, value types.Value,
 		tokens []types.TokenBalance, contractAddress types.Address, pk *ecdsa.PrivateKey,
 	) (common.Hash, error)
 	SendExternalTransaction(
-		ctx context.Context, bytecode types.Code, contractAddress types.Address, pk *ecdsa.PrivateKey, feeCredit types.Value,
+		ctx context.Context, bytecode types.Code, contractAddress types.Address, pk *ecdsa.PrivateKey, fee types.FeePack,
 	) (common.Hash, error)
 
 	// GetTokens retrieves the contract tokens at the given address
@@ -77,7 +78,7 @@ type Client interface {
 	GetDebugContract(ctx context.Context, contractAddr types.Address, blockId any) (*jsonrpc.DebugRPCContract, error)
 }
 
-func EstimateFeeExternal(ctx context.Context, c Client, txn *types.ExternalTransaction, blockId any) (types.Value, error) {
+func EstimateFeeExternal(ctx context.Context, c Client, txn *types.ExternalTransaction, blockId any) (*jsonrpc.EstimateFeeRes, error) {
 	var flags types.TransactionFlags
 	if txn.Kind == types.DeployTransactionKind {
 		flags = types.NewTransactionFlags(types.TransactionFlagDeploy)
@@ -95,7 +96,7 @@ func EstimateFeeExternal(ctx context.Context, c Client, txn *types.ExternalTrans
 
 func CreateExternalTransaction(
 	ctx context.Context, c Client, bytecode types.Code, contractAddress types.Address,
-	feeCredit types.Value, isDeploy bool, id int,
+	fee types.FeePack, isDeploy bool, id int,
 ) (*types.ExternalTransaction, error) {
 	var kind types.TransactionKind
 	if isDeploy {
@@ -113,29 +114,35 @@ func CreateExternalTransaction(
 
 	// Create the transaction with the bytecode to run
 	extTxn := &types.ExternalTransaction{
-		To:        contractAddress,
-		Data:      bytecode,
-		Seqno:     seqno,
-		Kind:      kind,
-		FeeCredit: feeCredit,
+		To:                   contractAddress,
+		Data:                 bytecode,
+		Seqno:                seqno,
+		Kind:                 kind,
+		FeeCredit:            fee.FeeCredit,
+		MaxPriorityFeePerGas: fee.MaxPriorityFeePerGas,
+		MaxFeePerGas:         fee.MaxFeePerGas,
 	}
 
-	if feeCredit.IsZero() {
+	if fee.FeeCredit.IsZero() {
 		var err error
-		if feeCredit, err = EstimateFeeExternal(ctx, c, extTxn, "latest"); err != nil {
+		var estimatedFee *jsonrpc.EstimateFeeRes
+		if estimatedFee, err = EstimateFeeExternal(ctx, c, extTxn, "latest"); err != nil {
 			return nil, err
 		}
+		fee.FeeCredit = estimatedFee.FeeCredit
+		extTxn.MaxFeePerGas = estimatedFee.MaxBasFee.Add(estimatedFee.AveragePriorityFee)
+		extTxn.MaxPriorityFeePerGas = estimatedFee.AveragePriorityFee
 	}
-	extTxn.FeeCredit = feeCredit
+	extTxn.FeeCredit = fee.FeeCredit
 
 	return extTxn, nil
 }
 
 func SendExternalTransaction(
 	ctx context.Context, c Client, bytecode types.Code, contractAddress types.Address,
-	pk *ecdsa.PrivateKey, feeCredit types.Value, isDeploy bool, withRetry bool,
+	pk *ecdsa.PrivateKey, fee types.FeePack, isDeploy bool, withRetry bool,
 ) (common.Hash, error) {
-	extTxn, err := CreateExternalTransaction(ctx, c, bytecode, contractAddress, feeCredit, isDeploy, 0)
+	extTxn, err := CreateExternalTransaction(ctx, c, bytecode, contractAddress, fee, isDeploy, 0)
 	if err != nil {
 		return common.EmptyHash, err
 	}
@@ -213,12 +220,12 @@ func CreateInternalTransactionPayload(ctx context.Context, bytecode types.Code, 
 }
 
 func SendTransactionViaSmartAccount(
-	ctx context.Context, c Client, smartAccountAddress types.Address, bytecode types.Code, feeCredit, value types.Value,
+	ctx context.Context, c Client, smartAccountAddress types.Address, bytecode types.Code, fee types.FeePack, value types.Value,
 	tokens []types.TokenBalance, contractAddress types.Address, pk *ecdsa.PrivateKey, isDeploy bool,
 ) (common.Hash, error) {
 	calldataExt, err := CreateInternalTransactionPayload(ctx, bytecode, value, tokens, contractAddress, isDeploy)
 	if err != nil {
 		return common.EmptyHash, err
 	}
-	return c.SendExternalTransaction(ctx, calldataExt, smartAccountAddress, pk, feeCredit)
+	return c.SendExternalTransaction(ctx, calldataExt, smartAccountAddress, pk, fee)
 }

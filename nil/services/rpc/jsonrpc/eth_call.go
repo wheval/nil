@@ -16,6 +16,9 @@ import (
 // Call implements eth_call. Executes a new transaction call immediately without creating a transaction on the block chain.
 func (api *APIImplRo) Call(ctx context.Context, args CallArgs, mainBlockNrOrHash transport.BlockNumberOrHash, overrides *StateOverrides) (*CallRes, error) {
 	blockRef := rawapitypes.BlockReferenceAsBlockReferenceOrHashWithChildren(toBlockReference(mainBlockNrOrHash))
+	if args.Fee.FeeCredit.IsZero() {
+		args.Fee = types.NewFeePackFromGas(1_000_000_000_000_000_000)
+	}
 	res, err := api.rawapi.Call(ctx, args, blockRef, overrides)
 	if err != nil {
 		return nil, err
@@ -43,14 +46,14 @@ func refineOutTxnResult(txns []*rpctypes.OutTransaction) types.Value {
 	for _, txn := range txns {
 		result = result.
 			Add(txn.CoinsUsed).
-			Add(SstoreSentryGas.ToValue(txn.GasPrice)).
+			Add(SstoreSentryGas.ToValue(txn.BaseFee)).
 			Add(refineOutTxnResult(txn.OutTransactions))
 	}
 	return result
 }
 
 // Call implements eth_estimateGas.
-func (api *APIImplRo) EstimateFee(ctx context.Context, args CallArgs, mainBlockNrOrHash transport.BlockNumberOrHash) (types.Value, error) {
+func (api *APIImplRo) EstimateFee(ctx context.Context, args CallArgs, mainBlockNrOrHash transport.BlockNumberOrHash) (*EstimateFeeRes, error) {
 	balanceCap, err := types.NewValueFromDecimal("1000000000000000000000000") // 1 MEther
 	check.PanicIfErr(err)
 	feeCreditCap, err := types.NewValueFromDecimal("500000000000000000000000") // 0.5 MEther
@@ -58,7 +61,7 @@ func (api *APIImplRo) EstimateFee(ctx context.Context, args CallArgs, mainBlockN
 
 	blockRef := rawapitypes.BlockReferenceAsBlockReferenceOrHashWithChildren(toBlockReference(mainBlockNrOrHash))
 	execute := func(balance, feeCredit types.Value) (*rpctypes.CallResWithGasPrice, error) {
-		args.FeeCredit = feeCredit
+		args.Fee = types.NewFeePackFromFeeCredit(feeCredit)
 
 		stateOverrides := &StateOverrides{
 			args.To: Contract{
@@ -81,18 +84,28 @@ func (api *APIImplRo) EstimateFee(ctx context.Context, args CallArgs, mainBlockN
 	// Check that it's possible to run transaction with Max balance and feeCredit
 	res, err := execute(balanceCap, feeCreditCap)
 	if err != nil {
-		return types.Value{}, err
+		return nil, err
 	}
 
 	result := res.CoinsUsed.
 		Add(args.Value).
-		Add(SstoreSentryGas.ToValue(res.GasPrice)).
+		Add(SstoreSentryGas.ToValue(res.BaseFee)).
 		Add(refineOutTxnResult(res.OutTransactions))
 
 	if !args.Flags.GetBit(types.TransactionFlagInternal) {
 		// Heuristic price for external transaction verification for the smart account.
 		const externalVerificationGas = types.Gas(10_000)
-		result = result.Add(externalVerificationGas.ToValue(res.GasPrice))
+		result = result.Add(externalVerificationGas.ToValue(res.BaseFee))
 	}
-	return refineResult(result), nil
+	maxBaseFee := res.BaseFee
+	for _, txn := range res.OutTransactions {
+		if txn.BaseFee.Cmp(maxBaseFee) > 0 {
+			maxBaseFee = txn.BaseFee
+		}
+	}
+	return &EstimateFeeRes{
+		FeeCredit:          refineResult(result),
+		AveragePriorityFee: types.Value0,
+		MaxBasFee:          maxBaseFee,
+	}, nil
 }

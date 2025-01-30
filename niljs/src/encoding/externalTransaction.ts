@@ -53,11 +53,23 @@ export class ExternalTransactionEnvelope {
    */
   authData: Uint8Array;
   /**
-   * The auth data attached to the transaction.
+   * The amount of tokens the user is willing to pay for the transaction.
    *
    * @type {BigInt}
    */
   feeCredit: bigint;
+  /**
+   * The max tip the user is willing to pay for the transaction.
+   *
+   * @type {BigInt}
+   */
+  maxPriorityFeePerGas: bigint;
+  /**
+   * The max fee per gas the user is willing to spend for the transaction.
+   *
+   * @type {BigInt}
+   */
+  maxFeePerGas: bigint;
   /**
    * Creates an instance of ExternalTransactionEnvelope.
    *
@@ -78,7 +90,10 @@ export class ExternalTransactionEnvelope {
     seqno,
     data,
     authData,
-    feeCredit = 5_000_000n,
+    // TODO: feeCredit should not be a constant, it should be calculated based on the gas price
+    feeCredit = 5_000_000n * 1_000_000n,
+    maxPriorityFeePerGas = 0n,
+    maxFeePerGas = feeCredit,
   }: ExternalTransaction) {
     this.isDeploy = isDeploy;
     this.to = to;
@@ -87,6 +102,8 @@ export class ExternalTransactionEnvelope {
     this.data = data;
     this.authData = authData;
     this.feeCredit = feeCredit;
+    this.maxPriorityFeePerGas = maxPriorityFeePerGas;
+    this.maxFeePerGas = maxFeePerGas;
   }
   /**
    * Encodes the external transaction into a Uint8Array.
@@ -97,6 +114,8 @@ export class ExternalTransactionEnvelope {
   public encode(): Uint8Array {
     return SszSignedTransactionSchema.serialize({
       feeCredit: this.feeCredit,
+      maxPriorityFeePerGas: this.maxPriorityFeePerGas,
+      maxFeePerGas: this.maxFeePerGas,
       seqno: this.seqno,
       chainId: this.chainId,
       to: this.to,
@@ -127,6 +146,8 @@ export class ExternalTransactionEnvelope {
     // print all the fields
     const raw = SszTransactionSchema.serialize({
       feeCredit: this.feeCredit,
+      maxPriorityFeePerGas: this.maxPriorityFeePerGas,
+      maxFeePerGas: this.maxFeePerGas,
       seqno: this.seqno,
       chainId: this.chainId,
       to: this.to,
@@ -153,6 +174,8 @@ export class ExternalTransactionEnvelope {
     const signature = await this.sign(signer);
     const raw = SszSignedTransactionSchema.serialize({
       feeCredit: this.feeCredit,
+      maxPriorityFeePerGas: this.maxPriorityFeePerGas,
+      maxFeePerGas: this.maxFeePerGas,
       seqno: this.seqno,
       chainId: this.chainId,
       to: this.to,
@@ -267,7 +290,7 @@ export const externalDeploymentTransaction = (
     seqno: 0,
     data: deployData,
     authData: new Uint8Array(0),
-    feeCredit: data.feeCredit ?? 5_000_000n,
+    feeCredit: data.feeCredit ?? 5_000_000_000_000n,
   });
 };
 

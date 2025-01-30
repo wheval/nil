@@ -23,6 +23,8 @@ await smartAccount.syncSendTransaction({
   to: anotherAddress,
   value: 10n,
   gas: 100_000n * 10n,
+  maxPriorityFeePerGas: 10n,
+  maxFeePerGas: 1_000_000_000_000n,
 });
 
 while (true) {

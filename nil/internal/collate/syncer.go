@@ -332,7 +332,7 @@ func (s *Syncer) saveDirectly(ctx context.Context, blocks []*types.BlockWithExtr
 				block.Block.OutTransactionsRoot, txnRoot)
 		}
 
-		_, err = execution.PostprocessBlock(tx, s.config.ShardId, block.Block.GasPrice, blockHash)
+		_, err = execution.PostprocessBlock(tx, s.config.ShardId, block.Block.BaseFee, blockHash)
 		if err != nil {
 			return err
 		}
