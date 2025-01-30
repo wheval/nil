@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/NilFoundation/badger/v4"
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/dgraph-io/badger/v4"
 )
 
 type StorageBadger struct {
