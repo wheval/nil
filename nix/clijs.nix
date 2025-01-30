@@ -8,6 +8,9 @@
 , enableTesting ? false
 }:
 
+let
+  sigtool = callPackage ./sigtool.nix { };
+in
 stdenv.mkDerivation rec {
   name = "clijs";
   pname = "clijs";
@@ -28,7 +31,9 @@ stdenv.mkDerivation rec {
     pkgs.pkgsStatic.nodejs_22
     npmHooks.npmConfigHook
     biome
-  ] ++ (if enableTesting then [ nil ] else [ ]);
+  ]
+  ++ lib.optionals stdenv.buildPlatform.isDarwin [ sigtool ]
+  ++ (if enableTesting then [ nil ] else [ ]);
 
   dontConfigure = true;
 
