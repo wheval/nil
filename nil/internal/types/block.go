@@ -48,7 +48,8 @@ type BlockData struct {
 	ConfigRoot          common.Hash      `json:"configRoot" ch:"config_root"`
 	LogsBloom           Bloom            `json:"logsBloom" ch:"logs_bloom"`
 	Timestamp           uint64           `json:"timestamp" ch:"timestamp"`
-	GasPrice            Value            `json:"gasPrice" ch:"gas_price"`
+	BaseFee             Value            `json:"gasPrice" ch:"gas_price"`
+	GasUsed             Gas              `json:"gasUsed" ch:"gas_used"`
 }
 
 type Block struct {
@@ -163,4 +164,4 @@ func (b *Block) Sign(prv *ecdsa.PrivateKey, shardId ShardId) error {
 
 const InvalidDbTimestamp uint64 = math.MaxUint64
 
-//go:generate go run github.com/NilFoundation/fastssz/sszgen --path block.go -include ../../common/length.go,signature.go,address.go,code.go,shard.go,bloom.go,log.go,value.go,transaction.go,../../common/hash.go --objs BlockData,Block
+//go:generate go run github.com/NilFoundation/fastssz/sszgen --path block.go -include ../../common/length.go,signature.go,address.go,code.go,shard.go,bloom.go,log.go,value.go,transaction.go,gas.go,../../common/hash.go --objs BlockData,Block

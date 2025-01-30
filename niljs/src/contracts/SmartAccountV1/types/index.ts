@@ -74,6 +74,8 @@ export type SendSyncBaseTransactionParams = {
   to: Address | Uint8Array;
   value: bigint;
   gas: bigint;
+  maxPriorityFeePerGas: bigint;
+  maxFeePerGas: bigint;
   seqno?: number;
 };
 
@@ -108,6 +110,8 @@ export type RequestParams = {
   seqno?: number;
   chainId?: number;
   feeCredit?: bigint;
+  maxPriorityFeePerGas?: bigint;
+  maxFeePerGas?: bigint;
 };
 
 /**
@@ -122,6 +126,8 @@ export type DeployParams = {
   salt: Uint8Array | bigint;
   shardId: number;
   feeCredit?: bigint;
+  maxPriorityFeePerGas?: bigint;
+  maxFeePerGas?: bigint;
   value?: bigint;
   seqno?: number;
   chainId?: number;

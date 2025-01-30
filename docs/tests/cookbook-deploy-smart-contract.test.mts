@@ -63,6 +63,8 @@ describe.sequential("Nil.js passes the deployment and calling flow", async () =>
         shardId: 1,
       });
 
+      const gasPrice = await client.getGasPrice(1);
+
       const smartAccount = await generateSmartAccount({
         shardId: 1,
         rpcEndpoint: RPC_ENDPOINT,
@@ -73,7 +75,7 @@ describe.sequential("Nil.js passes the deployment and calling flow", async () =>
         bytecode: COUNTER_BYTECODE,
         abi: COUNTER_ABI,
         args: [],
-        feeCredit: 50_000_000n,
+        feeCredit: 1_000_000n * gasPrice,
         salt: SALT,
         shardId: 1,
       });
@@ -104,6 +106,8 @@ describe.sequential("Nil.js passes the deployment and calling flow", async () =>
       shardId: 1,
     });
 
+    const gasPrice = await client.getGasPrice(1);
+
     const chainId = await client.chainId();
 
     const deploymentTransaction = externalDeploymentTransaction(
@@ -113,6 +117,7 @@ describe.sequential("Nil.js passes the deployment and calling flow", async () =>
         bytecode: COUNTER_BYTECODE,
         abi: COUNTER_ABI,
         args: [],
+        feeCredit: 1000000n * gasPrice,
       },
       chainId,
     );

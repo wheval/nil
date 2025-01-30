@@ -49,7 +49,7 @@ func getCallArgs() rpctypes.CallArgs {
 		Flags:       types.NewTransactionFlags(types.TransactionFlagInternal),
 		From:        nil,
 		To:          types.GenerateRandomAddress(123),
-		FeeCredit:   types.NewValueFromUint64(321),
+		Fee:         types.NewFeePackFromGas(321),
 		Value:       types.NewValueFromUint64(1111),
 		Seqno:       9999,
 		Data:        &hexutil.Bytes{0x1, 0x2, 0x3},
@@ -164,7 +164,7 @@ func TestOutTransaction_PackUnpack(t *testing.T) {
 		Data:            hexutil.Bytes{0x22},
 		CoinsUsed:       value,
 		OutTransactions: nil,
-		GasPrice:        types.NewValueFromUint64(1),
+		BaseFee:         types.NewValueFromUint64(1),
 		Error:           "test message",
 	}
 
@@ -174,7 +174,7 @@ func TestOutTransaction_PackUnpack(t *testing.T) {
 		Data:            hexutil.Bytes{0x2},
 		CoinsUsed:       value,
 		OutTransactions: []*rpctypes.OutTransaction{nestedTransaction},
-		GasPrice:        types.NewValueFromUint64(2),
+		BaseFee:         types.NewValueFromUint64(2),
 	}
 
 	callArgs := new(OutTransaction).PackProtoMessage(args)
@@ -200,14 +200,14 @@ func TestCallResponse_PackUnpack(t *testing.T) {
 		Data:            hexutil.Bytes{0x2},
 		CoinsUsed:       value,
 		OutTransactions: nil,
-		GasPrice:        gp,
+		BaseFee:         gp,
 	}
 
 	args := &rpctypes.CallResWithGasPrice{
 		Data:            hexutil.Bytes{0x1},
 		CoinsUsed:       value,
 		OutTransactions: []*rpctypes.OutTransaction{outTxn},
-		GasPrice:        gp,
+		BaseFee:         gp,
 	}
 
 	callResp := &CallResponse{}

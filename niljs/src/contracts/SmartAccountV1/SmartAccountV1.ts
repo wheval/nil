@@ -234,24 +234,26 @@ export class SmartAccountV1 implements SmartAccountInterface {
     });
 
     let refinedCredit = feeCredit;
+    // TODO: remove hardcoded value
+    let maxPriorityFeePerGas = 0n;
+    // TODO: remove hardcoded value
+    let maxFeePerGas = 1_000_000_000_000_000n;
 
     if (!refinedCredit) {
-      const { raw } = await this.requestToSmartAccount(
-        {
-          data: data,
-          deploy: true,
-          seqno: 0,
-        },
-        false,
-      );
+      const balance = await this.getBalance();
 
-      refinedCredit = await this.client.estimateGas(
+      const estimatedFee = await this.client.estimateGas(
         {
+          flags: ["Deploy"],
           to: this.address,
-          data: raw,
+          data: data,
         },
         "latest",
       );
+
+      refinedCredit = estimatedFee.feeCredit;
+      maxPriorityFeePerGas = estimatedFee.averagePriorityFee;
+      maxFeePerGas = estimatedFee.maxBaseFee;
     }
 
     const { hash } = await this.requestToSmartAccount({
@@ -259,6 +261,8 @@ export class SmartAccountV1 implements SmartAccountInterface {
       deploy: true,
       seqno: 0,
       feeCredit: refinedCredit,
+      maxPriorityFeePerGas: maxPriorityFeePerGas,
+      maxFeePerGas: maxFeePerGas,
     });
 
     if (waitTillConfirmation) {
@@ -307,7 +311,9 @@ export class SmartAccountV1 implements SmartAccountInterface {
         chainId: chainId,
         seqno,
         data: requestParams.data,
-        feeCredit: requestParams.feeCredit ?? 5_000_000n,
+        feeCredit: requestParams.feeCredit,
+        maxPriorityFeePerGas: requestParams.maxPriorityFeePerGas,
+        maxFeePerGas: requestParams.maxFeePerGas,
       },
       this.signer,
     );
@@ -356,6 +362,8 @@ export class SmartAccountV1 implements SmartAccountInterface {
     args,
     seqno,
     feeCredit,
+    maxPriorityFeePerGas,
+    maxFeePerGas,
     value,
     tokens,
     chainId,
@@ -372,10 +380,16 @@ export class SmartAccountV1 implements SmartAccountInterface {
       args: [hexTo, hexRefundTo, hexBounceTo, tokens ?? [], value ?? 0n, hexData],
     });
 
-    if (!refinedCredit) {
+    if (!refinedCredit || !maxFeePerGas || maxPriorityFeePerGas === undefined) {
       const balance = await this.getBalance();
 
-      refinedCredit = await this.client.estimateGas(
+      const callData = encodeFunctionData({
+        abi: SmartAccount.abi,
+        functionName: "asyncCall",
+        args: [hexTo, hexRefundTo, hexBounceTo, tokens ?? [], value ?? 0n, hexData],
+      });
+
+      const estimatedFee = await this.client.estimateGas(
         {
           to: this.address,
           from: this.address,
@@ -384,9 +398,10 @@ export class SmartAccountV1 implements SmartAccountInterface {
         "latest",
       );
 
-      if (refinedCredit > balance) {
-        throw new Error("Insufficient balance");
-      }
+      refinedCredit = estimatedFee.feeCredit;
+      maxPriorityFeePerGas =
+        maxPriorityFeePerGas === undefined ? estimatedFee.averagePriorityFee : maxPriorityFeePerGas;
+      maxFeePerGas = maxFeePerGas || estimatedFee.maxBaseFee;
     }
 
     const { hash } = await this.requestToSmartAccount({
@@ -395,6 +410,8 @@ export class SmartAccountV1 implements SmartAccountInterface {
       seqno: seqno,
       chainId: chainId,
       feeCredit: refinedCredit,
+      maxPriorityFeePerGas: maxPriorityFeePerGas,
+      maxFeePerGas: maxFeePerGas,
     });
 
     return bytesToHex(hash);
@@ -514,6 +531,8 @@ export class SmartAccountV1 implements SmartAccountInterface {
     salt,
     value,
     feeCredit,
+    maxPriorityFeePerGas,
+    maxFeePerGas,
     seqno,
     chainId,
   }: DeployParams) {
@@ -569,10 +588,10 @@ export class SmartAccountV1 implements SmartAccountInterface {
 
     let refinedCredit = feeCredit;
 
-    if (!refinedCredit) {
+    if (!refinedCredit || !maxFeePerGas || maxPriorityFeePerGas === undefined) {
       const balance = await this.getBalance();
 
-      refinedCredit = await this.client.estimateGas(
+      const estimatedFee = await this.client.estimateGas(
         {
           to: this.address,
           from: this.address,
@@ -580,9 +599,11 @@ export class SmartAccountV1 implements SmartAccountInterface {
         },
         "latest",
       );
-      if (refinedCredit > balance) {
-        throw new Error("Insufficient balance");
-      }
+
+      refinedCredit = estimatedFee.feeCredit;
+      maxPriorityFeePerGas =
+        maxPriorityFeePerGas === undefined ? estimatedFee.averagePriorityFee : maxPriorityFeePerGas;
+      maxFeePerGas = maxFeePerGas || estimatedFee.maxBaseFee;
     }
 
     const { hash } = await this.requestToSmartAccount({
@@ -591,6 +612,8 @@ export class SmartAccountV1 implements SmartAccountInterface {
       seqno,
       chainId,
       feeCredit: refinedCredit,
+      maxPriorityFeePerGas: maxPriorityFeePerGas,
+      maxFeePerGas: maxFeePerGas,
     });
 
     return {
@@ -633,6 +656,8 @@ export class SmartAccountV1 implements SmartAccountInterface {
     args,
     seqno,
     gas,
+    maxPriorityFeePerGas,
+    maxFeePerGas,
     value,
   }: SendSyncTransactionParams) {
     const hexTo = refineAddress(to);
@@ -648,6 +673,8 @@ export class SmartAccountV1 implements SmartAccountInterface {
       data: hexToBytes(callData),
       deploy: false,
       seqno,
+      maxPriorityFeePerGas: maxPriorityFeePerGas,
+      maxFeePerGas: maxFeePerGas,
     });
 
     return bytesToHex(hash);

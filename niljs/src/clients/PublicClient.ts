@@ -12,6 +12,7 @@ import type { RPCTransaction } from "../types/RPCTransaction.js";
 import { addHexPrefix } from "../utils/hex.js";
 import { BaseClient } from "./BaseClient.js";
 import type { IPublicClientConfig } from "./types/Configs.js";
+import type { EstimateFeeResult } from "./types/EstimateFeeResult.js";
 
 /**
  * PublicClient is a class that allows for interacting with the network via the JSON-RPC API.
@@ -245,6 +246,8 @@ class PublicClient extends BaseClient {
       ...res,
       value: BigInt(res.value),
       feeCredit: BigInt(res.feeCredit || 0),
+      maxPriorityFeePerGas: BigInt(res.maxPriorityFeePerGas || 0),
+      maxFeePerGas: BigInt(res.maxFeePerGas || 0),
       gasUsed: hexToBigInt(res.gasUsed),
       seqno: hexToBigInt(res.seqno),
       index: res.index ? hexToNumber(res.index) : 0,
@@ -455,7 +458,10 @@ class PublicClient extends BaseClient {
    * @param callArgs.feeCredit The fee credit.
    * @param blockNumberOrHash The number/hash of the block.
    */
-  public async estimateGas(callArgs: CallArgs, blockNumberOrHash: Hex | BlockTag) {
+  public async estimateGas(
+    callArgs: CallArgs,
+    blockNumberOrHash: Hex | BlockTag,
+  ): Promise<EstimateFeeResult> {
     let data: Hex;
     if (callArgs.abi) {
       data = encodeFunctionData({
@@ -468,6 +474,7 @@ class PublicClient extends BaseClient {
         typeof callArgs.data === "string" ? callArgs.data : addHexPrefix(bytesToHex(callArgs.data));
     }
     const sendData = {
+      flags: callArgs.flags || [""],
       from: callArgs.from || undefined,
       to: callArgs.to,
       data: data,
@@ -477,12 +484,20 @@ class PublicClient extends BaseClient {
 
     const params: unknown[] = [sendData, blockNumberOrHash];
 
-    const res = await this.request<`0x${string}`>({
-      method: "eth_estimateFee",
-      params,
-    });
+    const resStr = await this.request<{ feeCredit: Hex; averagePriorityFee: Hex; maxBaseFee: Hex }>(
+      {
+        method: "eth_estimateFee",
+        params,
+      },
+    );
 
-    return hexToBigInt(res);
+    const res = {
+      feeCredit: BigInt(resStr.feeCredit),
+      averagePriorityFee: BigInt(resStr.averagePriorityFee),
+      maxBaseFee: BigInt(resStr.maxBaseFee),
+    };
+
+    return res;
   }
 }
 

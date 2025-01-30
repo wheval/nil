@@ -203,10 +203,11 @@ func (c *DirectClient) GetShardIdList(ctx context.Context) ([]types.ShardId, err
 }
 
 func (c *DirectClient) DeployContract(
-	ctx context.Context, shardId types.ShardId, smartAccountAddress types.Address, payload types.DeployPayload, value types.Value, pk *ecdsa.PrivateKey,
+	ctx context.Context, shardId types.ShardId, smartAccountAddress types.Address, payload types.DeployPayload,
+	value types.Value, fee types.FeePack, pk *ecdsa.PrivateKey,
 ) (common.Hash, types.Address, error) {
 	contractAddr := types.CreateAddress(shardId, payload)
-	txnHash, err := SendTransactionViaSmartAccount(ctx, c, smartAccountAddress, payload.Bytes(), types.GasToValue(100_000), value,
+	txnHash, err := SendTransactionViaSmartAccount(ctx, c, smartAccountAddress, payload.Bytes(), fee, value,
 		[]types.TokenBalance{}, contractAddr, pk, true)
 	if err != nil {
 		return common.EmptyHash, types.EmptyAddress, err
@@ -214,23 +215,25 @@ func (c *DirectClient) DeployContract(
 	return txnHash, contractAddr, nil
 }
 
-func (c *DirectClient) DeployExternal(ctx context.Context, shardId types.ShardId, deployPayload types.DeployPayload, feeCredit types.Value) (common.Hash, types.Address, error) {
+func (c *DirectClient) DeployExternal(ctx context.Context, shardId types.ShardId, deployPayload types.DeployPayload,
+	fee types.FeePack,
+) (common.Hash, types.Address, error) {
 	address := types.CreateAddress(shardId, deployPayload)
-	txnHash, err := SendExternalTransaction(ctx, c, deployPayload.Bytes(), address, nil, feeCredit, true, false)
+	txnHash, err := SendExternalTransaction(ctx, c, deployPayload.Bytes(), address, nil, fee, true, false)
 	return txnHash, address, err
 }
 
 func (c *DirectClient) SendTransactionViaSmartAccount(
-	ctx context.Context, smartAccountAddress types.Address, bytecode types.Code, feeCredit, value types.Value,
+	ctx context.Context, smartAccountAddress types.Address, bytecode types.Code, fee types.FeePack, value types.Value,
 	tokens []types.TokenBalance, contractAddress types.Address, pk *ecdsa.PrivateKey,
 ) (common.Hash, error) {
-	return SendTransactionViaSmartAccount(ctx, c, smartAccountAddress, bytecode, feeCredit, value, tokens, contractAddress, pk, false)
+	return SendTransactionViaSmartAccount(ctx, c, smartAccountAddress, bytecode, fee, value, tokens, contractAddress, pk, false)
 }
 
 func (c *DirectClient) SendExternalTransaction(
-	ctx context.Context, bytecode types.Code, contractAddress types.Address, pk *ecdsa.PrivateKey, feeCredit types.Value,
+	ctx context.Context, bytecode types.Code, contractAddress types.Address, pk *ecdsa.PrivateKey, fee types.FeePack,
 ) (common.Hash, error) {
-	return SendExternalTransaction(ctx, c, bytecode, contractAddress, pk, feeCredit, false, false)
+	return SendExternalTransaction(ctx, c, bytecode, contractAddress, pk, fee, false, false)
 }
 
 func (c *DirectClient) Call(ctx context.Context, args *jsonrpc.CallArgs, blockId any, stateOverride *jsonrpc.StateOverrides) (*jsonrpc.CallRes, error) {
@@ -241,10 +244,10 @@ func (c *DirectClient) Call(ctx context.Context, args *jsonrpc.CallArgs, blockId
 	return c.ethApi.Call(ctx, *args, transport.BlockNumberOrHash(blockNrOrHash), stateOverride)
 }
 
-func (c *DirectClient) EstimateFee(ctx context.Context, args *jsonrpc.CallArgs, blockId any) (types.Value, error) {
+func (c *DirectClient) EstimateFee(ctx context.Context, args *jsonrpc.CallArgs, blockId any) (*jsonrpc.EstimateFeeRes, error) {
 	blockNrOrHash, err := transport.AsBlockReference(blockId)
 	if err != nil {
-		return types.Value{}, err
+		return nil, err
 	}
 	return c.ethApi.EstimateFee(ctx, *args, transport.BlockNumberOrHash(blockNrOrHash))
 }
@@ -259,7 +262,7 @@ func (c *DirectClient) SetTokenName(ctx context.Context, contractAddr types.Addr
 		return common.EmptyHash, err
 	}
 
-	return c.SendExternalTransaction(ctx, data, contractAddr, pk, types.GasToValue(100_000))
+	return c.SendExternalTransaction(ctx, data, contractAddr, pk, types.NewFeePackFromGas(100_000))
 }
 
 func (c *DirectClient) ChangeTokenAmount(ctx context.Context, contractAddr types.Address, amount types.Value, pk *ecdsa.PrivateKey, mint bool) (common.Hash, error) {
@@ -272,7 +275,7 @@ func (c *DirectClient) ChangeTokenAmount(ctx context.Context, contractAddr types
 		return common.EmptyHash, err
 	}
 
-	return c.SendExternalTransaction(ctx, data, contractAddr, pk, types.GasToValue(100_000))
+	return c.SendExternalTransaction(ctx, data, contractAddr, pk, types.NewFeePackFromGas(100_000))
 }
 
 func (c *DirectClient) DbInitTimestamp(ctx context.Context, ts uint64) error {

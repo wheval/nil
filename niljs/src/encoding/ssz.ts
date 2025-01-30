@@ -59,6 +59,8 @@ const Bytes20 = new ByteVectorType(20);
 const SszTransactionSchema = new ContainerType({
   deploy: basicTypes.Bool,
   feeCredit: basicTypes.UintBn256,
+  maxPriorityFeePerGas: basicTypes.UintBn256,
+  maxFeePerGas: basicTypes.UintBn256,
   to: Bytes20,
   chainId: basicTypes.Uint64,
   seqno: basicTypes.Uint64,

@@ -39,7 +39,7 @@ func (s *SuiteSmartAccountRpc) TestSmartAccount() {
 		var receipt *jsonrpc.RPCReceipt
 		addrCallee, receipt = s.DeployContractViaMainSmartAccount(3,
 			contracts.CounterDeployPayload(s.T()),
-			types.NewValueFromUint64(50_000_000))
+			types.GasToValue(50_000_000))
 		s.Require().True(receipt.OutReceipts[0].Success)
 	})
 
@@ -58,7 +58,7 @@ func (s *SuiteSmartAccountRpc) TestSmartAccount() {
 			contracts.NewCounterGetCallData(s.T()),
 			addrCallee,
 			nil,
-			types.Value{},
+			types.NewFeePackFromGas(500_000),
 		)
 		s.Require().NoError(err)
 
@@ -76,7 +76,7 @@ func (s *SuiteSmartAccountRpc) TestDeployWithValueNonPayableConstructor() {
 
 	hash, addr, err := s.Client.DeployContract(s.Context, 2, smartAccount,
 		contracts.CounterDeployPayload(s.T()),
-		types.NewValueFromUint64(500_000), execution.MainPrivateKey)
+		types.NewValueFromUint64(500_000), types.NewFeePackFromGas(500_000), execution.MainPrivateKey)
 	s.Require().NoError(err)
 
 	receipt := s.WaitForReceipt(hash)
@@ -101,7 +101,8 @@ func (s *SuiteSmartAccountRpc) TestDeploySmartAccountWithValue() {
 	deployCode := types.BuildDeployPayload(smartAccountCode, common.EmptyHash)
 
 	hash, address, err := s.Client.DeployContract(
-		s.Context, types.BaseShardId, types.MainSmartAccountAddress, deployCode, types.NewValueFromUint64(500_000), execution.MainPrivateKey,
+		s.Context, types.BaseShardId, types.MainSmartAccountAddress, deployCode, types.NewValueFromUint64(500_000),
+		types.NewFeePackFromGas(500_000), execution.MainPrivateKey,
 	)
 	s.Require().NoError(err)
 

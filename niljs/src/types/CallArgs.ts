@@ -9,6 +9,7 @@ import type { Hex } from "./Hex.js";
  * @typedef {BaseCallArgs}
  */
 export type BaseCallArgs = {
+  flags?: string[];
   from?: Address;
   to: Address;
   feeCredit?: bigint;

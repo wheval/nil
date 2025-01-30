@@ -34,6 +34,8 @@ test("sync call same shard send value", async () => {
     to: anotherAddress,
     value: 10n,
     gas: 100000n,
+    maxPriorityFeePerGas: 10n,
+    maxFeePerGas: 1_000_000_000_000n,
   });
 
   const receipts = await waitTillCompleted(client, hash);

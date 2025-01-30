@@ -54,7 +54,7 @@ func (s *SuiteEthCall) SetupSuite() {
 	mainBlockHash := execution.GenerateZeroState(s.T(), ctx, types.MainShardId, s.db)
 
 	m1 := execution.NewDeployTransaction(types.BuildDeployPayload(hexutil.FromHex(s.contracts["Caller"].Code), common.EmptyHash),
-		shardId, types.GenerateRandomAddress(shardId), 0, types.NewValueFromUint64(100_000_000))
+		shardId, types.GenerateRandomAddress(shardId), 0, types.GasToValue(100_000_000))
 
 	s.from = m1.To
 
@@ -85,11 +85,11 @@ func (s *SuiteEthCall) TestSmcCall() {
 	to := s.simple
 	callArgsData := hexutil.Bytes(calldata)
 	args := CallArgs{
-		Flags:     types.NewTransactionFlags(types.TransactionFlagInternal),
-		From:      &s.from,
-		Data:      &callArgsData,
-		To:        to,
-		FeeCredit: types.GasToValue(10_000),
+		Flags: types.NewTransactionFlags(types.TransactionFlagInternal),
+		From:  &s.from,
+		Data:  &callArgsData,
+		To:    to,
+		Fee:   types.NewFeePackFromGas(10_000),
 	}
 	res, err := s.api.Call(ctx, args, latestBlockId, nil)
 	s.Require().NoError(err)
@@ -102,13 +102,13 @@ func (s *SuiteEthCall) TestSmcCall() {
 	s.EqualValues(0x2a, s.unpackGetValue(res.Data))
 
 	// Out of gas
-	args.FeeCredit = types.GasToValue(0)
+	args.Fee = types.NewFeePackFromGas(1)
 	res, err = s.api.Call(ctx, args, transport.BlockNumberOrHash{BlockNumber: &num}, nil)
 	s.Require().NoError(err)
 	s.Require().Contains(res.Error, vm.ErrOutOfGas.Error())
 
 	// Unknown "to"
-	args.FeeCredit = types.GasToValue(10_000)
+	args.Fee = types.NewFeePackFromGas(10_000)
 	args.To = types.GenerateRandomAddress(types.BaseShardId)
 	res, err = s.api.Call(ctx, args, transport.BlockNumberOrHash{BlockNumber: &num}, nil)
 	s.Require().NoError(err)
@@ -130,9 +130,9 @@ func (s *SuiteEthCall) TestChainCall() {
 	getData := hexutil.Bytes(getCalldata)
 	setData := hexutil.Bytes(setCalldata)
 	args := CallArgs{
-		Data:      &getData,
-		To:        to,
-		FeeCredit: types.GasToValue(10_000),
+		Data: &getData,
+		To:   to,
+		Fee:  types.NewFeePackFromGas(10_000),
 	}
 	res, err := s.api.Call(ctx, args, latestBlockId, nil)
 	s.Require().NoError(err)

@@ -25,6 +25,8 @@ type (
 // @componentprop ChainId chainId integer true "The number of the chain containing the transaction."
 // @componentprop From from string true "The address from where the transaction was sent."
 // @componentprop FeeCredit feeCredit string true "The fee credit for the transaction."
+// @componentprop MaxPriorityFeePerGas maxPriorityFeePerGas string true "Priority fee for the transaction."
+// @componentprop MaxFeePerGas maxFeePerGas string true "Maximum fee per gas for the transaction."
 // @componentprop GasUsed gasUsed string true "The amount of gas spent on the transaction."
 // @componentprop Hash hash string true "The transaction hash."
 // @componentprop Index index string true "The transaction index."
@@ -36,25 +38,27 @@ type (
 // @componentprop Value value string true "The transaction value."
 // @componentprop Token value array true "Token values."
 type RPCInTransaction struct {
-	Flags       types.TransactionFlags `json:"flags"`
-	Success     bool                   `json:"success"`
-	RequestId   uint64                 `json:"requestId"`
-	Data        hexutil.Bytes          `json:"data"`
-	BlockHash   common.Hash            `json:"blockHash"`
-	BlockNumber types.BlockNumber      `json:"blockNumber"`
-	From        types.Address          `json:"from"`
-	GasUsed     types.Gas              `json:"gasUsed"`
-	FeeCredit   types.Value            `json:"feeCredit,omitempty"`
-	Hash        common.Hash            `json:"hash"`
-	Seqno       hexutil.Uint64         `json:"seqno"`
-	To          types.Address          `json:"to"`
-	RefundTo    types.Address          `json:"refundTo"`
-	BounceTo    types.Address          `json:"bounceTo"`
-	Index       hexutil.Uint64         `json:"index"`
-	Value       types.Value            `json:"value"`
-	Token       []types.TokenBalance   `json:"token,omitempty"`
-	ChainID     types.ChainId          `json:"chainId,omitempty"`
-	Signature   types.Signature        `json:"signature"`
+	Flags                types.TransactionFlags `json:"flags"`
+	Success              bool                   `json:"success"`
+	RequestId            uint64                 `json:"requestId"`
+	Data                 hexutil.Bytes          `json:"data"`
+	BlockHash            common.Hash            `json:"blockHash"`
+	BlockNumber          types.BlockNumber      `json:"blockNumber"`
+	From                 types.Address          `json:"from"`
+	GasUsed              types.Gas              `json:"gasUsed"`
+	FeeCredit            types.Value            `json:"feeCredit,omitempty"`
+	MaxPriorityFeePerGas types.Value            `json:"maxPriorityFeePerGas,omitempty"`
+	MaxFeePerGas         types.Value            `json:"maxFeePerGas,omitempty"`
+	Hash                 common.Hash            `json:"hash"`
+	Seqno                hexutil.Uint64         `json:"seqno"`
+	To                   types.Address          `json:"to"`
+	RefundTo             types.Address          `json:"refundTo"`
+	BounceTo             types.Address          `json:"bounceTo"`
+	Index                hexutil.Uint64         `json:"index"`
+	Value                types.Value            `json:"value"`
+	Token                []types.TokenBalance   `json:"token,omitempty"`
+	ChainID              types.ChainId          `json:"chainId,omitempty"`
+	Signature            types.Signature        `json:"signature"`
 }
 
 // @component RPCBlock rpcBlock object "The block whose information was requested."
@@ -78,7 +82,7 @@ type RPCBlock struct {
 	ChildBlocks         []common.Hash       `json:"childBlocks"`
 	MainChainHash       common.Hash         `json:"mainChainHash"`
 	DbTimestamp         uint64              `json:"dbTimestamp"`
-	GasPrice            types.Value         `json:"gasPrice"`
+	BaseFee             types.Value         `json:"baseFee"`
 	LogsBloom           hexutil.Bytes       `json:"logsBloom,omitempty"`
 }
 
@@ -230,24 +234,26 @@ func NewRPCInTransaction(
 	}
 
 	result := &RPCInTransaction{
-		Flags:       transaction.Flags,
-		Success:     receipt.Success,
-		RequestId:   transaction.RequestId,
-		Data:        hexutil.Bytes(transaction.Data),
-		BlockHash:   blockHash,
-		BlockNumber: blockId,
-		From:        transaction.From,
-		GasUsed:     receipt.GasUsed,
-		FeeCredit:   transaction.FeeCredit,
-		Hash:        hash,
-		Seqno:       hexutil.Uint64(transaction.Seqno),
-		To:          transaction.To,
-		RefundTo:    transaction.RefundTo,
-		BounceTo:    transaction.BounceTo,
-		Index:       hexutil.Uint64(index),
-		Value:       transaction.Value,
-		ChainID:     transaction.ChainId,
-		Signature:   transaction.Signature,
+		Flags:                transaction.Flags,
+		Success:              receipt.Success,
+		RequestId:            transaction.RequestId,
+		Data:                 hexutil.Bytes(transaction.Data),
+		BlockHash:            blockHash,
+		BlockNumber:          blockId,
+		From:                 transaction.From,
+		GasUsed:              receipt.GasUsed,
+		FeeCredit:            transaction.FeeCredit,
+		MaxPriorityFeePerGas: transaction.MaxPriorityFeePerGas,
+		MaxFeePerGas:         transaction.MaxFeePerGas,
+		Hash:                 hash,
+		Seqno:                hexutil.Uint64(transaction.Seqno),
+		To:                   transaction.To,
+		RefundTo:             transaction.RefundTo,
+		BounceTo:             transaction.BounceTo,
+		Index:                hexutil.Uint64(index),
+		Value:                transaction.Value,
+		ChainID:              transaction.ChainId,
+		Signature:            transaction.Signature,
 	}
 
 	return result, nil
@@ -304,7 +310,7 @@ func NewRPCBlock(shardId types.ShardId, data *BlockWithEntities, fullTx bool) (*
 		ChildBlocks:         childBlocks,
 		MainChainHash:       block.MainChainHash,
 		DbTimestamp:         dbTimestamp,
-		GasPrice:            block.GasPrice,
+		BaseFee:             block.BaseFee,
 		LogsBloom:           bloom,
 	}, nil
 }
@@ -477,4 +483,10 @@ func toCallRes(input *rpctypes.CallResWithGasPrice) (*CallRes, error) {
 	}
 
 	return output, err
+}
+
+type EstimateFeeRes struct {
+	FeeCredit          types.Value `json:"feeCredit"`
+	AveragePriorityFee types.Value `json:"averagePriorityFee"`
+	MaxBasFee          types.Value `json:"maxBaseFee"`
 }

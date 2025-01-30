@@ -94,7 +94,7 @@ describe.sequential("Nil.js can fully tests the CloneFactory", async () => {
         bytecode: FACTORY_MANAGER_BYTECODE,
         abi: FACTORY_MANAGER_ABI,
         args: [],
-        feeCredit: 50_000_000n * gasPrice,
+        feeCredit: 1_000_000n * gasPrice,
         salt: SALT,
         shardId: 1,
       });
@@ -105,7 +105,7 @@ describe.sequential("Nil.js can fully tests the CloneFactory", async () => {
 
     const createMasterChildHash = await smartAccount.sendTransaction({
       to: factoryManagerAddress,
-      feeCredit: 10_000_000n * gasPrice,
+      feeCredit: 1_000_000n * gasPrice,
       abi: FACTORY_MANAGER_ABI,
       functionName: "deployNewMasterChild",
       args: [2, SALT],
@@ -121,7 +121,7 @@ describe.sequential("Nil.js can fully tests the CloneFactory", async () => {
 
     const createFactoryHash = await smartAccount.sendTransaction({
       to: factoryManagerAddress,
-      feeCredit: 10_000_000n * gasPrice,
+      feeCredit: 1_000_000n * gasPrice,
       abi: FACTORY_MANAGER_ABI,
       functionName: "deployNewFactory",
       args: [2, SALT],
@@ -154,7 +154,7 @@ describe.sequential("Nil.js can fully tests the CloneFactory", async () => {
       abi: MASTER_CHILD_ABI,
       functionName: "increment",
       args: [],
-      feeCredit: 3_000_000n,
+      feeCredit: 3_000_000n * gasPrice,
     });
 
     console.log(cloneAddress);
@@ -168,7 +168,7 @@ describe.sequential("Nil.js can fully tests the CloneFactory", async () => {
         to: cloneAddress,
         functionName: "getValue",
         abi: MASTER_CHILD_ABI,
-        feeCredit: 1_000_000n,
+        feeCredit: 1_000_000n * gasPrice,
       },
       "latest",
     );

@@ -88,7 +88,9 @@ func (c *collator) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 		return nil, err
 	}
 
-	c.executionState.UpdateGasPrice()
+	if err = c.executionState.UpdateBaseFee(); err != nil {
+		return nil, fmt.Errorf("failed to update gas price: %w", err)
+	}
 
 	c.logger.Trace().Msg("Collating...")
 
@@ -196,6 +198,8 @@ func (c *collator) handleTransactionsFromPool() error {
 		if res := execution.ValidateExternalTransaction(c.executionState, txn); res.FatalError != nil {
 			return false, res.FatalError
 		} else if res.Failed() {
+			c.logger.Error().Stringer(logging.FieldTransactionHash, hash).
+				Err(res.Error).Msg("External message validation failed")
 			execution.AddFailureReceipt(hash, txn.To, res)
 			return false, nil
 		}

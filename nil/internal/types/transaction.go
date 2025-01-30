@@ -148,12 +148,14 @@ func (k ForwardKind) Type() string {
 }
 
 type TransactionDigest struct {
-	Flags     TransactionFlags `json:"flags" ch:"flags"`
-	FeeCredit Value            `json:"feeCredit,omitempty" ch:"fee_credit" ssz-size:"32"`
-	To        Address          `json:"to,omitempty" ch:"to"`
-	ChainId   ChainId          `json:"chainId" ch:"chainId"`
-	Seqno     Seqno            `json:"seqno,omitempty" ch:"seqno"`
-	Data      Code             `json:"data,omitempty" ch:"data" ssz-max:"24576"`
+	Flags                TransactionFlags `json:"flags" ch:"flags"`
+	FeeCredit            Value            `json:"feeCredit,omitempty" ch:"fee_credit" ssz-size:"32"`
+	MaxPriorityFeePerGas Value            `json:"maxPriorityFeePerGas,omitempty" ch:"max_priority_fee_per_gas" ssz-size:"32"`
+	MaxFeePerGas         Value            `json:"maxFeePerGas,omitempty" ch:"max_fee_per_gas" ssz-size:"32"`
+	To                   Address          `json:"to,omitempty" ch:"to"`
+	ChainId              ChainId          `json:"chainId" ch:"chainId"`
+	Seqno                Seqno            `json:"seqno,omitempty" ch:"seqno"`
+	Data                 Code             `json:"data,omitempty" ch:"data" ssz-max:"24576"`
 }
 
 type Transaction struct {
@@ -178,13 +180,15 @@ type OutboundTransaction struct {
 }
 
 type ExternalTransaction struct {
-	Kind      TransactionKind `json:"kind,omitempty" ch:"kind"`
-	FeeCredit Value           `json:"feeCredit,omitempty" ch:"fee_credit" ssz-size:"32"`
-	To        Address         `json:"to,omitempty" ch:"to"`
-	ChainId   ChainId         `json:"chainId" ch:"chainId"`
-	Seqno     Seqno           `json:"seqno,omitempty" ch:"seqno"`
-	Data      Code            `json:"data,omitempty" ch:"data" ssz-max:"24576"`
-	AuthData  Signature       `json:"authData,omitempty" ch:"auth_data" ssz-max:"256"`
+	Kind                 TransactionKind `json:"kind,omitempty" ch:"kind"`
+	FeeCredit            Value           `json:"feeCredit,omitempty" ch:"fee_credit" ssz-size:"32"`
+	MaxPriorityFeePerGas Value           `json:"maxPriorityFeePerGas,omitempty" ch:"max_priority_fee_per_gas" ssz-size:"32"`
+	MaxFeePerGas         Value           `json:"maxFeePerGas,omitempty" ch:"max_fee_per_gas" ssz-size:"32"`
+	To                   Address         `json:"to,omitempty" ch:"to"`
+	ChainId              ChainId         `json:"chainId" ch:"chainId"`
+	Seqno                Seqno           `json:"seqno,omitempty" ch:"seqno"`
+	Data                 Code            `json:"data,omitempty" ch:"data" ssz-max:"24576"`
+	AuthData             Signature       `json:"authData,omitempty" ch:"auth_data" ssz-max:"256"`
 }
 
 type InternalTransactionPayload struct {
@@ -200,6 +204,20 @@ type InternalTransactionPayload struct {
 	Data           Code            `json:"data,omitempty" ch:"data" ssz-max:"24576"`
 	RequestId      uint64          `json:"requestId,omitempty" ch:"request_id"`
 	RequestContext Code            `json:"context,omitempty" ch:"context" ssz-max:"24576"`
+}
+
+type FeePack struct {
+	FeeCredit            Value `json:"feeCredit,omitempty" ch:"fee_credit" ssz-size:"32"`
+	MaxPriorityFeePerGas Value `json:"maxPriorityFeePerGas,omitempty" ch:"max_priority_fee_per_gas" ssz-size:"32"`
+	MaxFeePerGas         Value `json:"maxFeePerGas,omitempty" ch:"max_fee_per_gas" ssz-size:"32"`
+}
+
+func NewFeePackFromGas(gas Gas) FeePack {
+	return FeePack{FeeCredit: GasToValue(uint64(gas)), MaxPriorityFeePerGas: NewZeroValue(), MaxFeePerGas: MaxFeePerGasDefault}
+}
+
+func NewFeePackFromFeeCredit(feeCredit Value) FeePack {
+	return FeePack{FeeCredit: feeCredit, MaxPriorityFeePerGas: NewZeroValue(), MaxFeePerGas: MaxFeePerGasDefault}
 }
 
 // EvmState contains EVM data to be saved/restored during await request.
@@ -241,7 +259,9 @@ var (
 func NewEmptyTransaction() *Transaction {
 	return &Transaction{
 		TransactionDigest: TransactionDigest{
-			FeeCredit: NewZeroValue(),
+			FeeCredit:            NewZeroValue(),
+			MaxPriorityFeePerGas: NewZeroValue(),
+			MaxFeePerGas:         NewZeroValue(),
 		},
 		Value:        NewZeroValue(),
 		Token:        make([]TokenBalance, 0),
@@ -280,13 +300,15 @@ func (m *Transaction) toExternal() *ExternalTransaction {
 		kind = ExecutionTransactionKind
 	}
 	return &ExternalTransaction{
-		Kind:      kind,
-		FeeCredit: m.FeeCredit,
-		To:        m.To,
-		ChainId:   m.ChainId,
-		Seqno:     m.Seqno,
-		Data:      m.Data,
-		AuthData:  m.Signature,
+		Kind:                 kind,
+		FeeCredit:            m.FeeCredit,
+		To:                   m.To,
+		ChainId:              m.ChainId,
+		Seqno:                m.Seqno,
+		Data:                 m.Data,
+		AuthData:             m.Signature,
+		MaxFeePerGas:         m.MaxFeePerGas,
+		MaxPriorityFeePerGas: m.MaxPriorityFeePerGas,
 	}
 }
 
@@ -350,6 +372,18 @@ func (m *Transaction) IsRequestOrResponse() bool {
 	return m.RequestId != 0
 }
 
+func (m *Transaction) TransactionGasPrice(baseFeePerGas Value) (Value, error) {
+	gasPrice := baseFeePerGas.Add(m.MaxPriorityFeePerGas)
+	// Zero MaxFeePerGas means no limit
+	if !m.MaxFeePerGas.IsZero() && gasPrice.Cmp(m.MaxFeePerGas) > 0 {
+		if baseFeePerGas.Cmp(m.MaxFeePerGas) > 0 {
+			return Value0, fmt.Errorf("max fee per gas is less than base fee per gas: %s < %s", m.MaxFeePerGas, baseFeePerGas)
+		}
+		gasPrice = m.MaxFeePerGas
+	}
+	return gasPrice, nil
+}
+
 func (m *InternalTransactionPayload) ToTransaction(from Address, seqno Seqno) *Transaction {
 	txn := &Transaction{
 		TransactionDigest: TransactionDigest{
@@ -379,12 +413,14 @@ func (m *ExternalTransaction) Hash() common.Hash {
 
 func (m *ExternalTransaction) SigningHash() (common.Hash, error) {
 	transactionDigest := TransactionDigest{
-		Flags:     TransactionFlagsFromKind(false, m.Kind),
-		FeeCredit: m.FeeCredit,
-		Seqno:     m.Seqno,
-		To:        m.To,
-		Data:      m.Data,
-		ChainId:   m.ChainId,
+		Flags:                TransactionFlagsFromKind(false, m.Kind),
+		FeeCredit:            m.FeeCredit,
+		Seqno:                m.Seqno,
+		To:                   m.To,
+		Data:                 m.Data,
+		ChainId:              m.ChainId,
+		MaxPriorityFeePerGas: m.MaxPriorityFeePerGas,
+		MaxFeePerGas:         m.MaxFeePerGas,
 	}
 
 	return common.PoseidonSSZ(&transactionDigest)
@@ -393,12 +429,14 @@ func (m *ExternalTransaction) SigningHash() (common.Hash, error) {
 func (m ExternalTransaction) ToTransaction() *Transaction {
 	return &Transaction{
 		TransactionDigest: TransactionDigest{
-			Flags:     TransactionFlagsFromKind(false, m.Kind),
-			To:        m.To,
-			ChainId:   m.ChainId,
-			Seqno:     m.Seqno,
-			Data:      m.Data,
-			FeeCredit: m.FeeCredit,
+			Flags:                TransactionFlagsFromKind(false, m.Kind),
+			To:                   m.To,
+			ChainId:              m.ChainId,
+			Seqno:                m.Seqno,
+			Data:                 m.Data,
+			FeeCredit:            m.FeeCredit,
+			MaxPriorityFeePerGas: m.MaxPriorityFeePerGas,
+			MaxFeePerGas:         m.MaxFeePerGas,
 		},
 		From:      m.To,
 		Signature: m.AuthData,

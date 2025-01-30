@@ -275,7 +275,7 @@ describe.sequential("the multisig smart account performs all operations internal
           abi: MULTISIG_SMART_ACCOUNT_ABI,
           args: [hexKeys],
           value: convertEthToWei(0.001),
-          feeCredit: 10_000_000n * gasPrice,
+          feeCredit: 1_000_000n * gasPrice,
           salt: SALT,
           shardId: 1,
         });
@@ -301,7 +301,7 @@ describe.sequential("the multisig smart account performs all operations internal
       const withdrawalHash = await multiSmartAccount.sendTransaction({
         to: dstAddress,
         value: convertEthToWei(0.000001),
-        feeCredit: 10_000_000n * gasPrice,
+        feeCredit: 1_000_000n * gasPrice,
       });
 
       await waitTillCompleted(client, withdrawalHash);

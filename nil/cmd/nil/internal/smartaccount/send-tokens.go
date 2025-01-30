@@ -29,7 +29,7 @@ func SendTokensCommand(cfg *common.Config) *cobra.Command {
 	)
 
 	cmd.Flags().Var(
-		&params.FeeCredit,
+		&params.Fee.FeeCredit,
 		feeCreditFlag,
 		"The fee credit for processing the transfer",
 	)
@@ -61,7 +61,7 @@ func runTransfer(cmd *cobra.Command, args []string, cfg *common.Config) error {
 		return err
 	}
 
-	txnHash, err := service.RunContract(cfg.Address, nil, params.FeeCredit, amount, tokens, address)
+	txnHash, err := service.RunContract(cfg.Address, nil, types.NewFeePackFromFeeCredit(params.Fee.FeeCredit), amount, tokens, address)
 	if err != nil {
 		return err
 	}

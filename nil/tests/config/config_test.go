@@ -83,13 +83,13 @@ func (s *SuiteConfigParams) TestConfigReadWriteValidators() {
 			{
 				Name:     "TestConfig",
 				Address:  &s.testAddressMain,
-				Value:    types.NewValueFromUint64(10_000_000_000_000),
+				Value:    types.GasToValue(10_000_000_000),
 				Contract: contracts.NameConfigTest,
 			},
 			{
 				Name:     "TestConfig",
 				Address:  &s.testAddress,
-				Value:    types.NewValueFromUint64(10_000_000_000_000),
+				Value:    types.GasToValue(10_000_000_000),
 				Contract: contracts.NameConfigTest,
 			},
 		},
@@ -161,13 +161,13 @@ func (s *SuiteConfigParams) TestConfigReadWriteGasPrice() {
 			{
 				Name:     "TestConfig",
 				Address:  &s.testAddressMain,
-				Value:    types.NewValueFromUint64(10_000_000_000_000),
+				Value:    types.GasToValue(10_000_000_000),
 				Contract: contracts.NameConfigTest,
 			},
 			{
 				Name:     "TestConfig",
 				Address:  &s.testAddress,
-				Value:    types.NewValueFromUint64(10_000_000_000_000),
+				Value:    types.GasToValue(10_000_000_000),
 				Contract: contracts.NameConfigTest,
 			},
 		},

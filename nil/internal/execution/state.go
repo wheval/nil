@@ -58,8 +58,8 @@ type ExecutionState struct {
 	MainChainHash      common.Hash
 	ShardId            types.ShardId
 	ChildChainBlocks   map[types.ShardId]common.Hash
-	// Current gas price.
-	GasPrice types.Value
+	GasPrice           types.Value // Current gas price including priority fee
+	BaseFee            types.Value
 
 	InTransactionHash common.Hash
 	Logs              map[common.Hash][]*types.Log
@@ -98,8 +98,6 @@ type ExecutionState struct {
 	// Pointer to currently executed VM
 	evm *vm.EVM
 
-	gasPriceScale float64
-
 	// wasSentRequest is true if the VM execution ended with sending a request transaction
 	wasSentRequest bool
 
@@ -108,6 +106,9 @@ type ExecutionState struct {
 	// txnFeeCredit holds the total fee credit for the inbound transaction. It can be changed during execution, thus we
 	// use this separate variable instead of the one in the transaction.
 	txnFeeCredit types.Value
+
+	// isReadOnly is true if the state is in read-only mode. This mode is used for eth_call and eth_estimateGas.
+	isReadOnly bool
 }
 
 type ExecutionResult struct {
@@ -238,9 +239,11 @@ type StateParams struct {
 func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*ExecutionState, error) {
 	var resTx db.RwTx
 	var err error
+	isReadOnly := false
 	if rwTx, ok := tx.(db.RwTx); ok {
 		resTx = rwTx
 	} else if roTx, ok := tx.(db.RoTx); ok {
+		isReadOnly = true
 		resTx = &db.RwWrapper{RoTx: roTx}
 	} else {
 		return nil, errors.New("invalid tx type")
@@ -255,17 +258,13 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 		}
 	}
 
-	var gasPrice types.Value
+	var baseFeePerGas types.Value
 	if params.BlockHash != common.EmptyHash {
 		block, err := accessor.GetBlock().ByHash(params.BlockHash)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed getting previous block by hash: %w", err)
 		}
-		if gasPrice = block.Block().GasPrice; gasPrice.IsZero() {
-			return nil, errors.New("gas price is zero")
-		}
-	} else {
-		gasPrice = types.DefaultGasPrice
+		baseFeePerGas = calculateBaseFee(block.Block().BaseFee, block.Block().GasUsed)
 	}
 
 	if params.ConfigAccessor == nil {
@@ -283,15 +282,18 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 		Logs:             map[common.Hash][]*types.Log{},
 		DebugLogs:        map[common.Hash][]*types.DebugLog{},
 		Errors:           map[common.Hash]error{},
-		GasPrice:         gasPrice,
 
 		journal:          newJournal(),
 		transientStorage: newTransientStorage(),
 
 		shardAccessor: accessor,
 
-		gasPriceScale:  params.GasPriceScale,
 		configAccessor: params.ConfigAccessor,
+
+		BaseFee:  baseFeePerGas,
+		GasPrice: types.NewZeroValue(),
+
+		isReadOnly: isReadOnly,
 	}
 
 	return res, res.initTries()
@@ -760,6 +762,24 @@ func (es *ExecutionState) DropInTransaction() {
 	}
 }
 
+func (es *ExecutionState) updateGasPrice(txn *types.Transaction) error {
+	es.GasPrice = es.BaseFee.Add(txn.MaxPriorityFeePerGas)
+
+	// For read-only execution, there is no need to validate MaxFeePerGas.
+	if !es.isReadOnly && es.GasPrice.Cmp(txn.MaxFeePerGas) > 0 {
+		if es.BaseFee.Cmp(txn.MaxFeePerGas) > 0 {
+			es.GasPrice = types.Value0
+			logger.Error().
+				Stringer("MaxFeePerGas", txn.MaxFeePerGas).
+				Stringer("BaseFee", es.BaseFee).
+				Msg("MaxFeePerGas is less than BaseFee")
+			return types.NewError(types.ErrorBaseFeeTooHigh)
+		}
+		es.GasPrice = txn.MaxFeePerGas
+	}
+	return nil
+}
+
 func (es *ExecutionState) AppendOutTransactionForTx(txId common.Hash, txn *types.Transaction) {
 	outTxn := &types.OutboundTransaction{Transaction: txn, ForwardKind: types.ForwardKindNone}
 	es.OutTransactions[txId] = append(es.OutTransactions[txId], outTxn)
@@ -830,6 +850,10 @@ func (es *ExecutionState) AddOutTransaction(caller types.Address, payload *types
 	}
 
 	txn := payload.ToTransaction(caller, seqno)
+
+	// Propagate fee settings from the inbound message
+	txn.MaxPriorityFeePerGas = es.GetInTransaction().MaxPriorityFeePerGas
+	txn.MaxFeePerGas = es.GetInTransaction().MaxFeePerGas
 
 	// In case of bounce transaction, we don't debit token from account
 	// In case of refund transaction, we don't transfer tokens
@@ -959,6 +983,14 @@ func (es *ExecutionState) HandleTransaction(ctx context.Context, txn *types.Tran
 	}()
 
 	es.txnFeeCredit = txn.FeeCredit
+
+	if err := es.updateGasPrice(txn); err != nil {
+		return NewExecutionResult().SetError(types.KeepOrWrapError(types.ErrorBaseFeeTooHigh, err))
+	}
+
+	if es.GasPrice.IsZero() {
+		return NewExecutionResult().SetError(types.NewError(types.ErrorMaxFeePerGasIsZero))
+	}
 
 	if err := buyGas(payer, txn); err != nil {
 		return NewExecutionResult().SetError(types.KeepOrWrapError(types.ErrorBuyGas, err))
@@ -1355,7 +1387,8 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*types.Block, [
 			ReceiptsRoot:        es.ReceiptTree.RootHash(),
 			ChildBlocksRootHash: treeShardsRootHash,
 			MainChainHash:       es.MainChainHash,
-			GasPrice:            es.GasPrice,
+			BaseFee:             es.BaseFee,
+			GasUsed:             es.GasUsed,
 			LogsBloom:           types.CreateBloom(es.Receipts),
 			// TODO(@klonD90): remove this field after changing explorer
 			Timestamp: 0,
@@ -1493,6 +1526,11 @@ func (es *ExecutionState) CallVerifyExternal(transaction *types.Transaction, acc
 		logger.Error().Err(err).Msg("failed to pack arguments")
 		return NewExecutionResult().SetFatal(err)
 	}
+
+	if err := es.updateGasPrice(transaction); err != nil {
+		return NewExecutionResult().SetError(types.KeepOrWrapError(types.ErrorBaseFeeTooHigh, err))
+	}
+
 	calldata := append(methodSelector, argData...) //nolint:gocritic
 
 	if err := es.newVm(transaction.IsInternal(), transaction.From, nil); err != nil {
@@ -1509,6 +1547,11 @@ func (es *ExecutionState) CallVerifyExternal(transaction *types.Transaction, acc
 
 	ret, leftOverGas, err := es.evm.StaticCall((vm.AccountRef)(account.address), account.address, calldata, gasCreditLimit.Uint64())
 	if err != nil {
+		if errors.Is(err, vm.ErrOutOfGas) && gasCreditLimit.Lt(ExternalTransactionVerificationMaxGas) {
+			// This condition means that account has not enough balance even to execute the verification.
+			// So it will be clearer to return `InsufficientBalance` error instead of `OutOfGas`.
+			return NewExecutionResult().SetError(types.NewError(types.ErrorInsufficientBalance))
+		}
 		txnErr := types.KeepOrWrapError(types.ErrorExternalVerificationFailed, err)
 		return NewExecutionResult().SetError(txnErr)
 	}
@@ -1659,35 +1702,6 @@ func (es *ExecutionState) resetVm() {
 	es.evm = nil
 }
 
-func (es *ExecutionState) UpdateGasPrice() {
-	data, err := es.shardAccessor.GetBlock().ByHash(es.PrevBlock)
-	if err != nil {
-		// If we can't read the previous block, we don't change the gas price
-		es.GasPrice = types.DefaultGasPrice
-		logger.Error().Err(err).Msg("failed to read previous block, gas price won't be changed")
-		return
-	}
-
-	es.GasPrice = data.Block().GasPrice
-
-	decreasePerBlock := types.NewValueFromUint64(1)
-	maxGasPrice := types.NewValueFromUint64(1000)
-
-	gasIncrease := uint64(math.Ceil(float64(data.Block().OutTransactionsNum) * es.gasPriceScale))
-	var overflow bool
-	es.GasPrice, overflow = es.GasPrice.AddOverflow(types.NewValueFromUint64(gasIncrease))
-	// Check if new gas price is lower than the current one (overflow case) or greater than the max allowed
-	if overflow || es.GasPrice.Cmp(maxGasPrice) > 0 {
-		es.GasPrice = maxGasPrice
-	}
-	if es.GasPrice.Cmp(decreasePerBlock) >= 0 {
-		es.GasPrice = es.GasPrice.Sub(decreasePerBlock)
-	}
-	if es.GasPrice.Cmp(types.DefaultGasPrice) < 0 {
-		es.GasPrice = types.DefaultGasPrice
-	}
-}
-
 func (es *ExecutionState) MarshalJSON() ([]byte, error) {
 	data := struct {
 		ContractTreeRoot       common.Hash                                  `json:"contractTreeRoot"`
@@ -1704,7 +1718,6 @@ func (es *ExecutionState) MarshalJSON() ([]byte, error) {
 		OutTransactions        map[common.Hash][]*types.OutboundTransaction `json:"outTransactions"`
 		Receipts               []*types.Receipt                             `json:"receipts"`
 		Errors                 map[common.Hash]error                        `json:"errors"`
-		GasPriceScale          float64                                      `json:"gasPriceScale"`
 	}{
 		ContractTreeRoot:       es.ContractTree.RootHash(),
 		InTransactionTreeRoot:  es.InTransactionTree.RootHash(),
@@ -1720,7 +1733,6 @@ func (es *ExecutionState) MarshalJSON() ([]byte, error) {
 		OutTransactions:        es.OutTransactions,
 		Receipts:               es.Receipts,
 		Errors:                 es.Errors,
-		GasPriceScale:          es.gasPriceScale,
 	}
 
 	return json.Marshal(data)

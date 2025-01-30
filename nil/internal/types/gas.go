@@ -8,7 +8,16 @@ import (
 	"github.com/NilFoundation/nil/nil/common/check"
 )
 
-var DefaultGasPrice = NewValueFromUint64(100)
+const (
+	OperationCosts       = 10_000_000 // 0.01 gwei transformed into wei
+	ProofGenerationCosts = 10_000_000 // 0.01 gwei transformed into wei
+	DefaultGasLimit      = Gas(30_000_000)
+)
+
+var (
+	DefaultGasPrice     = NewValueFromUint64(OperationCosts + ProofGenerationCosts)
+	MaxFeePerGasDefault = DefaultGasPrice.Mul(DefaultGasPrice)
+)
 
 type Gas uint64
 

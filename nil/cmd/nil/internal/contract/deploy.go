@@ -56,7 +56,7 @@ func setDeployFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().Var(
-		&params.FeeCredit,
+		&params.Fee.FeeCredit,
 		feeCreditFlag,
 		"The deployment fee credit. If  set to 0, it will be estimated automatically",
 	)
@@ -79,7 +79,7 @@ func runDeploy(cmd *cobra.Command, cmdArgs []string, cfg *common.Config) error {
 
 	payload := types.BuildDeployPayload(bytecode, libcommon.Hash(params.salt.Bytes32()))
 
-	txnHash, addr, err := service.DeployContractExternal(params.shardId, payload, params.FeeCredit)
+	txnHash, addr, err := service.DeployContractExternal(params.shardId, payload, params.Fee)
 	if err != nil {
 		return err
 	}

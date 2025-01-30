@@ -119,7 +119,7 @@ func (g *BlockGenerator) Rollback() {
 	g.rwTx.Rollback()
 }
 
-func (g *BlockGenerator) updateGasPrices(prevBlockHash common.Hash, shards []common.Hash) error {
+func (g *BlockGenerator) collectGasPrices(prevBlockHash common.Hash, shards []common.Hash) error {
 	if g.params.ShardId.IsMainShard() {
 		// In main shard we collect gas prices from all shards. Gas price for the main shard is not required.
 		gasPrice, err := config.GetParamGasPrice(g.executionState.GetConfigAccessor())
@@ -150,7 +150,7 @@ func (g *BlockGenerator) updateGasPrices(prevBlockHash common.Hash, shards []com
 						Msg("Get gas price from shard: failed to read last block")
 					gasPrice.Shards[shardId] = *types.DefaultGasPrice.Uint256
 				} else {
-					gasPrice.Shards[shardId] = *block.GasPrice.Uint256
+					gasPrice.Shards[shardId] = *block.BaseFee.Uint256
 				}
 			}
 			if err = config.SetParamGasPrice(g.executionState.GetConfigAccessor(), gasPrice); err != nil {
@@ -161,15 +161,15 @@ func (g *BlockGenerator) updateGasPrices(prevBlockHash common.Hash, shards []com
 		if err != nil {
 			return fmt.Errorf("failed to read gas prices from shards: %w", err)
 		}
-	} else {
-		// In regular shards, we calculate new gas price for the current block.
-		g.executionState.UpdateGasPrice()
+		// In main shard we don't need to update base fee.
+		g.executionState.BaseFee = types.DefaultGasPrice
 	}
 	return nil
 }
 
 func (g *BlockGenerator) GenerateZeroState(zeroStateYaml string, config *ZeroStateConfig) (*types.Block, error) {
 	g.logger.Info().Msg("Generating zero-state...")
+	g.executionState.BaseFee = types.DefaultGasPrice
 
 	if config != nil {
 		if err := g.executionState.GenerateZeroState(config); err != nil {
@@ -183,6 +183,7 @@ func (g *BlockGenerator) GenerateZeroState(zeroStateYaml string, config *ZeroSta
 	if err != nil {
 		return nil, err
 	}
+	g.logger.Info().Msg("Zero-state generated")
 	return res.Block, nil
 }
 
@@ -212,7 +213,7 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, counters *Blo
 			g.executionState.PrevBlock, proposal.PrevBlockHash)
 	}
 
-	if err := g.updateGasPrices(proposal.PrevBlockHash, proposal.ShardHashes); err != nil {
+	if err := g.collectGasPrices(proposal.PrevBlockHash, proposal.ShardHashes); err != nil {
 		return fmt.Errorf("failed to update gas prices: %w", err)
 	}
 

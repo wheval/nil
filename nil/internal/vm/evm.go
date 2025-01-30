@@ -386,7 +386,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash types.Code, gas uint64, v
 		if evm.Config.Tracer != nil && evm.Config.Tracer.OnGasChange != nil {
 			evm.Config.Tracer.OnGasChange(gas, 0, tracing.GasChangeCallFailedExecution)
 		}
-		return nil, types.Address{}, 0, ErrContractAddressCollision
+		return nil, types.Address{}, gas, ErrContractAddressCollision
 	}
 
 	// bump nonce only for sync calls

@@ -44,12 +44,12 @@ func (s *SuiteModifiersRpc) SetupSuite() {
 contracts:
 - name: SmartAccount
   address: %s
-  value: 1000000000000
+  value: 100000000000000000
   contract: SmartAccount
   ctorArgs: [%s]
 - name: TransactionCheck
   address: %s
-  value: 1000000000000
+  value: 100000000000000000
   contract: tests/TransactionCheck
 `, s.smartAccountAddr.Hex(), hexutil.Encode(s.smartAccountPublicKey), s.testAddr)
 
@@ -73,10 +73,11 @@ func (s *SuiteModifiersRpc) TestInternalIncorrect() {
 	s.Require().NoError(err)
 
 	transactionToSend := &types.ExternalTransaction{
-		Seqno:     seqno,
-		Data:      internalFuncCalldata,
-		To:        s.testAddr,
-		FeeCredit: s.GasToValue(100_000),
+		Seqno:        seqno,
+		Data:         internalFuncCalldata,
+		To:           s.testAddr,
+		FeeCredit:    s.GasToValue(100_000),
+		MaxFeePerGas: types.MaxFeePerGasDefault,
 	}
 	s.Require().NoError(transactionToSend.Sign(s.smartAccountPrivateKey))
 	txnHash, err := s.Client.SendTransaction(s.Context, transactionToSend)
@@ -102,10 +103,11 @@ func (s *SuiteModifiersRpc) TestExternalCorrect() {
 	s.Require().NoError(err)
 
 	transactionToSend := &types.ExternalTransaction{
-		Seqno:     seqno,
-		Data:      internalFuncCalldata,
-		To:        s.testAddr,
-		FeeCredit: s.GasToValue(100_000),
+		Seqno:        seqno,
+		Data:         internalFuncCalldata,
+		To:           s.testAddr,
+		FeeCredit:    s.GasToValue(100_000),
+		MaxFeePerGas: types.MaxFeePerGasDefault,
 	}
 	s.Require().NoError(transactionToSend.Sign(s.smartAccountPrivateKey))
 	txnHash, err := s.Client.SendTransaction(s.Context, transactionToSend)
@@ -131,10 +133,11 @@ func (s *SuiteModifiersRpc) TestExternalSyncCall() {
 	s.Require().NoError(err)
 
 	transactionToSend := &types.ExternalTransaction{
-		Seqno:     seqno,
-		Data:      internalFuncCalldata,
-		To:        s.testAddr,
-		FeeCredit: s.GasToValue(100_000),
+		Seqno:        seqno,
+		Data:         internalFuncCalldata,
+		To:           s.testAddr,
+		FeeCredit:    s.GasToValue(100_000),
+		MaxFeePerGas: types.MaxFeePerGasDefault,
 	}
 	txnHash, err := s.Client.SendTransaction(s.Context, transactionToSend)
 	s.Require().NoError(err)
@@ -151,10 +154,11 @@ func (s *SuiteModifiersRpc) TestInternalSyncCall() {
 	s.Require().NoError(err)
 
 	transactionToSend := &types.ExternalTransaction{
-		Seqno:     seqno,
-		Data:      internalFuncCalldata,
-		To:        s.testAddr,
-		FeeCredit: s.GasToValue(100_000),
+		Seqno:        seqno,
+		Data:         internalFuncCalldata,
+		To:           s.testAddr,
+		FeeCredit:    s.GasToValue(100_000),
+		MaxFeePerGas: types.MaxFeePerGasDefault,
 	}
 	txnHash, err := s.Client.SendTransaction(s.Context, transactionToSend)
 	s.Require().NoError(err)

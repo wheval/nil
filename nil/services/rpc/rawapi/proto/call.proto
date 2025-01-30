@@ -16,6 +16,8 @@ message CallArgs {
   optional bytes data = 7;
   optional bytes transaction = 8;
   uint64 chainId = 9;
+  Uint256 maxFeePerGas = 10;
+  Uint256 maxPriorityFeePerGas = 11;
 }
 
 message Contract {

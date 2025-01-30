@@ -9,7 +9,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/NilFoundation/nil/nil/internal/vm"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -45,6 +44,8 @@ func (s *TransactionsSuite) TestValidateExternalTransaction() {
 	})
 	s.Require().NoError(err)
 	s.Require().NotNil(es)
+	es.BaseFee = types.DefaultGasPrice
+	es.GasPrice = es.BaseFee
 
 	validate := func(txn *types.Transaction) types.ExecError {
 		res := ValidateExternalTransaction(es, txn)
@@ -61,6 +62,7 @@ func (s *TransactionsSuite) TestValidateExternalTransaction() {
 		txn.Flags = types.NewTransactionFlags(types.TransactionFlagDeploy)
 		txn.To = types.GenerateRandomAddress(types.BaseShardId)
 		txn.Data = types.BuildDeployPayload(code, common.EmptyHash).Bytes()
+		txn.MaxFeePerGas = types.MaxFeePerGasDefault
 
 		s.Run("NoAccount", func() {
 			s.Require().Equal(types.ErrorDestinationContractDoesNotExist, validate(txn).Code())
@@ -90,6 +92,7 @@ func (s *TransactionsSuite) TestValidateExternalTransaction() {
 		txn := types.NewEmptyTransaction()
 		txn.To = types.GenerateRandomAddress(types.BaseShardId)
 		txn.Data = []byte("hello")
+		txn.MaxFeePerGas = types.MaxFeePerGasDefault
 
 		s.Run("NoAccount", func() {
 			s.Require().Equal(types.ErrorDestinationContractDoesNotExist, validate(txn).Code())
@@ -106,9 +109,9 @@ func (s *TransactionsSuite) TestValidateExternalTransaction() {
 		})
 
 		s.Run("NoBalance", func() {
-			s.Require().ErrorIs(validate(txn), vm.ErrOutOfGas)
+			s.Require().Equal(types.ErrorInsufficientBalance, validate(txn).Code())
 
-			s.Require().NoError(es.SetBalance(txn.To, types.NewValueFromUint64(10_000_000)))
+			s.Require().NoError(es.SetBalance(txn.To, types.NewValueFromUint64(10_000_000_000_000_000)))
 		})
 
 		s.Run("Ok", func() {
@@ -133,6 +136,7 @@ func (s *TransactionsSuite) TestValidateExternalTransaction() {
 func (s *TransactionsSuite) TestValidateDeployTransaction() {
 	txn := types.NewEmptyTransaction()
 	txn.Data = types.Code("no-salt")
+	txn.MaxFeePerGas = types.MaxFeePerGasDefault
 
 	// data too short
 	s.Require().Equal(types.ErrorInvalidPayload, types.GetErrorCode(ValidateDeployTransaction(txn)))

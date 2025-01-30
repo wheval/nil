@@ -121,6 +121,10 @@ const (
 	ErrorGasRefundFailed
 	// ErrorPanicDuringExecution is returned when a panic occurs during the execution of the transaction.
 	ErrorPanicDuringExecution
+	// ErrorBaseFeeTooHigh is returned when the base fee is higher than MaxFeePerGas specified in the message.
+	ErrorBaseFeeTooHigh
+	// ErrorMaxFeePerGasIsZero is returned when the MaxFeePerGas is zero. It is not allowed to have zero MaxFeePerGas.
+	ErrorMaxFeePerGasIsZero
 )
 
 type ExecError interface {

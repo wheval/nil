@@ -32,7 +32,7 @@ func init() {
 contracts:
 - name: MainSmartAccount
   address: {{ .MainSmartAccountAddress }}
-  value: 100000000000000
+  value: 10000000000000000000000
   contract: SmartAccount
   ctorArgs: [{{ .MainPublicKey }}]
 - name: Faucet
@@ -223,9 +223,10 @@ func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error 
 
 		mainDeployTxn := &types.Transaction{
 			TransactionDigest: types.TransactionDigest{
-				Flags: types.NewTransactionFlags(types.TransactionFlagInternal),
-				Seqno: 0,
-				Data:  code,
+				Flags:        types.NewTransactionFlags(types.TransactionFlagInternal),
+				Seqno:        0,
+				Data:         code,
+				MaxFeePerGas: types.MaxFeePerGasDefault,
 			},
 		}
 

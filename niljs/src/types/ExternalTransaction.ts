@@ -11,6 +11,8 @@ type ExternalTransaction = {
   data: Uint8Array;
   authData: Uint8Array;
   feeCredit?: bigint;
+  maxPriorityFeePerGas?: bigint;
+  maxFeePerGas?: bigint;
 };
 
 export type { ExternalTransaction };

@@ -60,9 +60,17 @@ func runEstimateFee(cmd *cobra.Command, args []string, cfg *common.Config) error
 	}
 
 	if !common.Quiet {
-		fmt.Print("Estimated fee: ")
+		fmt.Print("FeeCredit: ")
 	}
-	fmt.Println(res)
+	fmt.Println(res.FeeCredit)
+	if !common.Quiet {
+		fmt.Print("MaxBasFee: ")
+	}
+	fmt.Println(res.MaxBasFee)
+	if !common.Quiet {
+		fmt.Print("AveragePriorityFee: ")
+	}
+	fmt.Println(res.AveragePriorityFee)
 
 	return nil
 }

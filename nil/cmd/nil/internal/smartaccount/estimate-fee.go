@@ -69,15 +69,23 @@ func runEstimateFee(cmd *cobra.Command, args []string, cfg *common.Config) error
 		return err
 	}
 
-	value, err := service.EstimateFee(cfg.Address, smartAccountCalldata, types.TransactionFlags{}, types.Value{})
+	res, err := service.EstimateFee(cfg.Address, smartAccountCalldata, types.TransactionFlags{}, types.Value{})
 	if err != nil {
 		return err
 	}
 
 	if !common.Quiet {
-		fmt.Print("Estimated fee: ")
+		fmt.Print("FeeCredit: ")
 	}
-	fmt.Println(value)
+	fmt.Println(res.FeeCredit)
+	if !common.Quiet {
+		fmt.Print("MaxBasFee: ")
+	}
+	fmt.Println(res.MaxBasFee)
+	if !common.Quiet {
+		fmt.Print("AveragePriorityFee: ")
+	}
+	fmt.Println(res.AveragePriorityFee)
 
 	return nil
 }

@@ -36,7 +36,7 @@ func TestSszBlock(t *testing.T) {
 	h, err := common.PoseidonSSZ(&block2)
 	require.NoError(t, err)
 
-	h2, err := hex.DecodeString("0fa4ff7d139b73ce29662cf4c07a7f6f553caa7fa438a0a10a9629feef1abc39")
+	h2, err := hex.DecodeString("21682bef122af58bd745341d3ece26a7c78a636d459382d5cd1a9da0f7ddc34e")
 	require.NoError(t, err)
 
 	require.Equal(t, common.BytesToHash(h2), common.BytesToHash(h[:]))
@@ -72,7 +72,7 @@ func TestSszTransaction(t *testing.T) {
 	h, err := common.PoseidonSSZ(&transaction2)
 	require.NoError(t, err)
 
-	h2 := common.HexToHash("0x10060c887f638e1c8d7f23abc7360367d8ab1870958db43ab5a802d7bec5cf24")
+	h2 := common.HexToHash("2d3efc5c6f1d6ade476e0ed2641cde7e863434f7eb2429d59cc1844a0144ff38")
 	require.Equal(t, h2, h)
 }
 

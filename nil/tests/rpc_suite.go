@@ -28,7 +28,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var DefaultContractValue = types.NewValueFromUint64(500_000_000)
+var DefaultContractValue = types.GasToValue(500_000_000)
 
 type RpcSuite struct {
 	CliRunner
@@ -157,7 +157,7 @@ func (s *RpcSuite) SendTransactionViaSmartAccount(addrFrom types.Address, addrTo
 ) *jsonrpc.RPCReceipt {
 	s.T().Helper()
 
-	txHash, err := s.Client.SendTransactionViaSmartAccount(s.Context, addrFrom, calldata, GasToValue(1_000_000), types.NewZeroValue(),
+	txHash, err := s.Client.SendTransactionViaSmartAccount(s.Context, addrFrom, calldata, types.NewFeePackFromGas(1_000_000), types.NewZeroValue(),
 		[]types.TokenBalance{}, addrTo, key)
 	s.Require().NoError(err)
 
@@ -187,12 +187,12 @@ func (s *RpcSuite) SendExternalTransactionNoCheck(bytecode types.Code, contractA
 
 // SendTransactionViaSmartAccountNoCheck sends a transaction via a smart account contract. Doesn't require the receipt be successful.
 func (s *RpcSuite) SendTransactionViaSmartAccountNoCheck(addrSmartAccount types.Address, addrTo types.Address, key *ecdsa.PrivateKey,
-	calldata []byte, feeCredit, value types.Value, tokens []types.TokenBalance,
+	calldata []byte, fee types.FeePack, value types.Value, tokens []types.TokenBalance,
 ) *jsonrpc.RPCReceipt {
 	s.T().Helper()
 
 	// Send the raw transaction
-	txHash, err := s.Client.SendTransactionViaSmartAccount(s.Context, addrSmartAccount, calldata, feeCredit, value, tokens, addrTo, key)
+	txHash, err := s.Client.SendTransactionViaSmartAccount(s.Context, addrSmartAccount, calldata, fee, value, tokens, addrTo, key)
 	s.Require().NoError(err)
 
 	receipt := s.WaitIncludedInMain(txHash)
@@ -204,6 +204,13 @@ func (s *RpcSuite) SendTransactionViaSmartAccountNoCheck(addrSmartAccount types.
 		s.Require().NotEqual("Success", receipt.Status)
 	}
 
+	return receipt
+}
+
+func (s *RpcSuite) SendRawTransaction(data []byte) *jsonrpc.RPCReceipt {
+	txHash, err := s.Client.SendRawTransaction(s.Context, data)
+	s.Require().NoError(err)
+	receipt := s.WaitIncludedInMain(txHash)
 	return receipt
 }
 

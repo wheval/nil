@@ -101,8 +101,8 @@ func (s *TracerMockClientTestSuite) makeClient() client.Client {
 		s.T().Helper()
 		block := &types.Block{
 			BlockData: types.BlockData{
-				Id:       1,
-				GasPrice: types.DefaultGasPrice,
+				Id:      1,
+				BaseFee: types.DefaultGasPrice,
 			},
 		}
 		blockWithData := &types.BlockWithExtractedData{

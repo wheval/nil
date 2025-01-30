@@ -123,6 +123,8 @@ test("Deploy through smart account", async ({ expect }) => {
     shardId: 1,
     value: 100n,
     feeCredit: 100_000n,
+    maxPriorityFeePerGas: 10n,
+    maxFeePerGas: 100_000_000_000n,
   });
   expect(fn.mock.calls).toHaveLength(1);
   expect(fn.mock.calls[0][0].method).toBe("eth_sendRawTransaction");

@@ -10,6 +10,8 @@ export type SendBaseTransactionParams = {
   data?: Uint8Array | Hex;
   value?: bigint;
   feeCredit?: bigint;
+  maxPriorityFeePerGas?: bigint;
+  maxFeePerGas?: bigint;
   tokens?: Token[];
   deploy?: boolean;
   seqno?: number;

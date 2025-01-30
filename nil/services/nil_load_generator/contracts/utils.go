@@ -31,7 +31,7 @@ func NewSmartAccount(service *cliservice.Service, shardId types.ShardId) (SmartA
 	}
 	salt := types.NewUint256(0)
 
-	smartAccountAdr, err := service.CreateSmartAccount(shardId, salt, types.GasToValue(1_000_000_000), types.NewValueFromUint64(0), &pk.PublicKey)
+	smartAccountAdr, err := service.CreateSmartAccount(shardId, salt, types.GasToValue(1_000_000_000), types.FeePack{}, &pk.PublicKey)
 	if err != nil {
 		if !strings.Contains(err.Error(), "smart account already exists") {
 			return SmartAccount{}, err
@@ -47,7 +47,7 @@ func GetFromContract(service *cliservice.Service, abi abi.ABI, addr types.Addres
 	if err != nil {
 		return nil, err
 	}
-	data, err := service.CallContract(addr, types.GasToValue(1_000_000), calldata, nil)
+	data, err := service.CallContract(addr, types.NewFeePackFromGas(1_000_000), calldata, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func GetFromContract(service *cliservice.Service, abi abi.ABI, addr types.Addres
 
 func SendTransactionAndCheck(ctx context.Context, client client.Client, service *cliservice.Service, smartAccount SmartAccount, contract types.Address, calldata types.Code, tokens []types.TokenBalance) error {
 	hash, err := client.SendTransactionViaSmartAccount(ctx, smartAccount.Addr, calldata,
-		types.NewZeroValue(), types.NewZeroValue(), tokens, contract, smartAccount.PrivateKey)
+		types.FeePack{}, types.NewZeroValue(), tokens, contract, smartAccount.PrivateKey)
 	if err != nil {
 		return err
 	}

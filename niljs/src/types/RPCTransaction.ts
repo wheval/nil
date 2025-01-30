@@ -17,6 +17,8 @@ export type RPCTransaction = {
   from: Hex;
   gasUsed: Hex;
   feeCredit: string;
+  maxPriorityFeePerGas: string;
+  maxFeePerGas: string;
   hash: Hex;
   seqno: Hex;
   to: Hex;

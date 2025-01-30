@@ -51,6 +51,11 @@ func WaitIncludedInMain(t *testing.T, ctx context.Context, client client.Client,
 	t.Helper()
 
 	return WaitForReceiptCommon(t, ctx, client, hash, func(receipt *jsonrpc.RPCReceipt) bool {
+		// We should not wait for transactions if an external transaction fails. Because it may not be included in the
+		// main chain.
+		if receipt != nil && !receipt.Flags.IsInternal() && !receipt.Success {
+			return true
+		}
 		return receipt.IsCommitted()
 	})
 }
@@ -67,7 +72,7 @@ func DeployContractViaSmartAccount(
 	t.Helper()
 
 	contractAddr := types.CreateAddress(shardId, payload)
-	txHash, err := client.SendTransactionViaSmartAccount(ctx, addrFrom, types.Code{}, GasToValue(100_000), initialAmount,
+	txHash, err := client.SendTransactionViaSmartAccount(ctx, addrFrom, types.Code{}, types.NewFeePackFromGas(100_000), initialAmount,
 		[]types.TokenBalance{}, contractAddr, key)
 	require.NoError(t, err)
 	receipt := WaitForReceipt(t, ctx, client, txHash)
@@ -75,7 +80,7 @@ func DeployContractViaSmartAccount(
 	require.Equal(t, "Success", receipt.Status)
 	require.Len(t, receipt.OutReceipts, 1)
 
-	txHash, addr, err := client.DeployContract(ctx, shardId, addrFrom, payload, types.Value{}, key)
+	txHash, addr, err := client.DeployContract(ctx, shardId, addrFrom, payload, types.Value{}, types.NewFeePackFromGas(100_000), key)
 	require.NoError(t, err)
 	require.Equal(t, contractAddr, addr)
 
@@ -137,7 +142,8 @@ func AbiPack(t *testing.T, abi *abi.ABI, name string, args ...any) []byte {
 func SendExternalTransactionNoCheck(t *testing.T, ctx context.Context, client client.Client, bytecode types.Code, contractAddress types.Address) *jsonrpc.RPCReceipt {
 	t.Helper()
 
-	txHash, err := client.SendExternalTransaction(ctx, bytecode, contractAddress, execution.MainPrivateKey, GasToValue(500_000))
+	txHash, err := client.SendExternalTransaction(ctx, bytecode, contractAddress, execution.MainPrivateKey,
+		types.NewFeePackFromGas(500_000))
 	require.NoError(t, err)
 
 	return WaitIncludedInMain(t, ctx, client, txHash)
@@ -236,10 +242,10 @@ func CallGetter(t *testing.T, ctx context.Context, client client.Client, addr ty
 	log.Debug().Str("contract", addr.String()).Uint64("seqno", uint64(seqno)).Msg("sending external transaction getter")
 
 	callArgs := &jsonrpc.CallArgs{
-		Data:      (*hexutil.Bytes)(&calldata),
-		To:        addr,
-		FeeCredit: GasToValue(100_000_000),
-		Seqno:     seqno,
+		Data:  (*hexutil.Bytes)(&calldata),
+		To:    addr,
+		Fee:   types.NewFeePackFromGas(100_000_000),
+		Seqno: seqno,
 	}
 	res, err := client.Call(ctx, callArgs, blockId, overrides)
 	require.NoError(t, err)

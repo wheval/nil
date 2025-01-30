@@ -121,7 +121,7 @@ describe.sequential("Nil.js handles the full swap tutorial flow", async () => {
           abi: SWAP_MATCH_ABI,
           functionName: "placeSwapRequest",
           args: [20_000_000n, smartAccountTwoAddress],
-          feeCredit: gasPrice * 1_000_000_000n,
+          feeCredit: gasPrice * 1_000_000n,
         });
 
         await waitTillCompleted(client, hashTransaction);
@@ -142,7 +142,7 @@ describe.sequential("Nil.js handles the full swap tutorial flow", async () => {
           abi: SWAP_MATCH_ABI,
           functionName: "placeSwapRequest",
           args: [10_000_000n, smartAccountOneAddress],
-          feeCredit: gasPrice * 1_000_000_000n,
+          feeCredit: gasPrice * 1_000_000n,
         });
 
         await waitTillCompleted(client, hashTransaction);
