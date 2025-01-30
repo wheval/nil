@@ -182,7 +182,7 @@ func validateArchiveNodeConfig(cfg *Config, nm *network.Manager) error {
 	if nm == nil {
 		return errors.New("Failed to start archive node without network configuration")
 	}
-	if len(cfg.BootstrapPeers) > 0 && len(cfg.BootstrapPeers) != len(cfg.MyShards) {
+	if len(cfg.BootstrapPeers) > 0 && len(cfg.BootstrapPeers) != int(cfg.NShards) {
 		return errors.New("On archive node, number of bootstrap peers must be equal to the number of shards")
 	}
 	if !slices.Contains(cfg.MyShards, uint(types.MainShardId)) {
@@ -197,19 +197,17 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 		return nil, err
 	}
 
-	nodeShards := make([]types.ShardId, 0, len(cfg.MyShards))
-	for _, shardId := range cfg.MyShards {
-		nodeShards = append(nodeShards, types.ShardId(shardId))
-	}
-
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
 	syncerTimeout := syncTimeoutFactor * collatorTickPeriod
 
 	var wgFetch sync.WaitGroup
-	wgFetch.Add(len(nodeShards))
+	wgFetch.Add(int(cfg.NShards))
 
-	funcs := make([]concurrent.Func, 0, len(nodeShards))
-	for i, shardId := range nodeShards {
+	funcs := make([]concurrent.Func, 0, cfg.NShards)
+
+	for i := range cfg.NShards {
+		shardId := types.ShardId(i)
+
 		var bootstrapPeer *network.AddrInfo
 		if len(cfg.BootstrapPeers) > 0 {
 			bootstrapPeer = &cfg.BootstrapPeers[i]
@@ -230,7 +228,7 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 			ShardId:              shardId,
 			Timeout:              syncerTimeout,
 			BootstrapPeer:        bootstrapPeer,
-			ReplayBlocks:         true,
+			ReplayBlocks:         cfg.IsShardActive(shardId),
 			BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
 			ZeroState:            zeroState,
 			ZeroStateConfig:      zeroStateConfig,
