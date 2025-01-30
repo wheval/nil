@@ -18,10 +18,14 @@ func NewNilLoadGeneratorAPI() *NilLoadGeneratorAPIImpl {
 }
 
 func (c NilLoadGeneratorAPIImpl) HealthCheck() bool {
-	return true
+	return isInitialized.Load()
 }
 
 func (c NilLoadGeneratorAPIImpl) SmartAccountsAddr() []types.Address {
+	if !isInitialized.Load() {
+		return nil
+	}
+
 	smartAccountsAddr := make([]types.Address, len(smartAccounts))
 	for i, smartAccount := range smartAccounts {
 		smartAccountsAddr[i] = smartAccount.Addr

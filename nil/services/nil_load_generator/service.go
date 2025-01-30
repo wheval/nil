@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os/signal"
 	"strconv"
+	"sync/atomic"
 	"syscall"
 
 	rpc_client "github.com/NilFoundation/nil/nil/client/rpc"
@@ -40,7 +41,10 @@ const (
 	swapAmount       = 1000
 )
 
-var smartAccounts []uniswap.SmartAccount
+var (
+	smartAccounts []uniswap.SmartAccount
+	isInitialized atomic.Bool
+)
 
 func calculateOutputAmount(amountIn, reserveIn, reserveOut *big.Int) *big.Int {
 	feeMultiplier := big.NewInt(997)
@@ -173,6 +177,8 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 		logger.Error().Err(err).Msg("Failed to compile contracts")
 		return err
 	}
+
+	isInitialized.Store(true)
 
 	tokens := make([]*uniswap.Token, len(shardIdList)*2)
 	factories := make([]*uniswap.Factory, len(shardIdList))
