@@ -51,6 +51,11 @@ func WaitIncludedInMain(t *testing.T, ctx context.Context, client client.Client,
 	t.Helper()
 
 	return WaitForReceiptCommon(t, ctx, client, hash, func(receipt *jsonrpc.RPCReceipt) bool {
+		// We should not wait for transactions if an external transaction fails. Because it may not be included in the
+		// main chain.
+		if receipt != nil && !receipt.Flags.IsInternal() && !receipt.Success {
+			return true
+		}
 		return receipt.IsCommitted()
 	})
 }
