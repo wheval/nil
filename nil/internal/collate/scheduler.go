@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -111,16 +110,6 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 	}
 
 	return s.consensus.RunSequence(ctx, id.Uint64()+1)
-}
-
-func (s *Scheduler) readLastBlockHash(ctx context.Context) (common.Hash, error) {
-	roTx, err := s.txFabric.CreateRoTx(ctx)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	defer roTx.Rollback()
-
-	return db.ReadLastBlockHash(roTx, s.params.ShardId)
 }
 
 func (s *Scheduler) readLastBlockId(ctx context.Context) (types.BlockNumber, error) {
