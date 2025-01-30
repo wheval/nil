@@ -36,6 +36,10 @@ const binPath = join(__dirname, '../dist/clijs')
 fs.copyFileSync(nodePath, binPath)
 fs.chmodSync(binPath, 0o755)
 
+if (process.platform === 'darwin') {
+  execaCommandSync(`codesign --remove-signature ${binPath}`)
+}
+
 // prepare sea-prep.blob
 execaCommandSync(`${nodePath} --experimental-sea-config ./sea-config.json`, {
   stdio: 'inherit',
@@ -49,6 +53,11 @@ await inject(
   fs.readFileSync(join(__dirname, '../dist/sea-prep.blob')),
   {
     sentinelFuse: 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
+    machoSegmentName: 'NODE_SEA',
   })
+
+if (process.platform === 'darwin') {
+  execaCommandSync(`codesign --sign - ${binPath}`)
+}
 
 console.log('🎉  Done!')
