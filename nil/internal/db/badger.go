@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NilFoundation/badger/v4"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog/log"
 )
 
