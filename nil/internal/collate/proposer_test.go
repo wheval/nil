@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/db"
@@ -13,7 +14,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type CollatorTestSuite struct {
+type ProposerTestSuite struct {
 	suite.Suite
 
 	ctx     context.Context
@@ -21,32 +22,32 @@ type CollatorTestSuite struct {
 	db      db.DB
 }
 
-func (s *CollatorTestSuite) SetupSuite() {
+func (s *ProposerTestSuite) SetupSuite() {
 	s.ctx = context.Background()
 	s.shardId = types.BaseShardId
 }
 
-func (s *CollatorTestSuite) SetupTest() {
+func (s *ProposerTestSuite) SetupTest() {
 	var err error
 	s.db, err = db.NewBadgerDbInMemory()
 	s.Require().NoError(err)
 }
 
-func (s *CollatorTestSuite) TearDownTest() {
+func (s *ProposerTestSuite) TearDownTest() {
 	s.db.Close()
 }
 
-func (s *CollatorTestSuite) newParams() Params {
+func (s *ProposerTestSuite) newParams() Params {
 	return Params{
 		BlockGeneratorParams: execution.NewBlockGeneratorParams(s.shardId, 2, types.DefaultGasPrice, 0),
 	}
 }
 
-func newTestCollator(params Params, pool TxnPool) *collator {
-	return newCollator(params, new(TrivialShardTopology), pool, sharedLogger)
+func newTestProposer(params Params, pool TxnPool) *proposer {
+	return newProposer(params, new(TrivialShardTopology), pool, logging.NewLogger("proposer"))
 }
 
-func (s *CollatorTestSuite) TestBlockGas() {
+func (s *ProposerTestSuite) TestBlockGas() {
 	s.Run("GenerateZeroState", func() {
 		execution.GenerateZeroState(s.T(), s.ctx, s.shardId, s.db)
 	})
@@ -59,9 +60,9 @@ func (s *CollatorTestSuite) TestBlockGas() {
 	params := s.newParams()
 
 	s.Run("DefaultMaxGasInBlock", func() {
-		c := newTestCollator(params, pool)
+		p := newTestProposer(params, pool)
 
-		proposal, err := c.GenerateProposal(s.ctx, s.db)
+		proposal, err := p.GenerateProposal(s.ctx, s.db)
 		s.Require().NoError(err)
 		s.Require().NotNil(proposal)
 
@@ -70,9 +71,9 @@ func (s *CollatorTestSuite) TestBlockGas() {
 
 	s.Run("MaxGasInBlockFor1Txn", func() {
 		params.MaxGasInBlock = 5000
-		c := newTestCollator(params, pool)
+		p := newTestProposer(params, pool)
 
-		proposal, err := c.GenerateProposal(s.ctx, s.db)
+		proposal, err := p.GenerateProposal(s.ctx, s.db)
 		s.Require().NoError(err)
 		s.Require().NotNil(proposal)
 
@@ -80,17 +81,17 @@ func (s *CollatorTestSuite) TestBlockGas() {
 	})
 }
 
-func (s *CollatorTestSuite) TestCollator() {
+func (s *ProposerTestSuite) TestCollator() {
 	to := contracts.CounterAddress(s.T(), s.shardId)
 
 	pool := &MockTxnPool{}
 	params := s.newParams()
-	c := newTestCollator(params, pool)
-	gasPrice := c.params.GasBasePrice
-	shardId := c.params.ShardId
+	p := newTestProposer(params, pool)
+	gasPrice := p.params.GasBasePrice
+	shardId := p.params.ShardId
 
 	generateBlock := func() *execution.Proposal {
-		proposal, err := c.GenerateProposal(s.ctx, s.db)
+		proposal, err := p.GenerateProposal(s.ctx, s.db)
 		s.Require().NoError(err)
 		s.Require().NotNil(proposal)
 
@@ -135,7 +136,7 @@ func (s *CollatorTestSuite) TestCollator() {
 	})
 
 	// Now process internal transactions by one to test queueing.
-	c.params.MaxInternalTransactionsInBlock = 1
+	p.params.MaxInternalTransactionsInBlock = 1
 
 	s.Run("ProcessInternalTransaction1", func() {
 		generateBlock()
@@ -151,7 +152,7 @@ func (s *CollatorTestSuite) TestCollator() {
 		s.Equal(txnValue.Add(txnValue), s.getBalance(shardId, to))
 	})
 
-	c.params.MaxInternalTransactionsInBlock = defaultMaxInternalTxns
+	p.params.MaxInternalTransactionsInBlock = defaultMaxInternalTxns
 
 	s.Run("ProcessRefundTransactions", func() {
 		generateBlock()
@@ -213,13 +214,13 @@ func (s *CollatorTestSuite) TestCollator() {
 	})
 }
 
-func (s *CollatorTestSuite) getMainBalance() types.Value {
+func (s *ProposerTestSuite) getMainBalance() types.Value {
 	s.T().Helper()
 
 	return s.getBalance(s.shardId, types.MainSmartAccountAddress)
 }
 
-func (s *CollatorTestSuite) getBalance(shardId types.ShardId, addr types.Address) types.Value {
+func (s *ProposerTestSuite) getBalance(shardId types.ShardId, addr types.Address) types.Value {
 	s.T().Helper()
 
 	tx, err := s.db.CreateRwTx(s.ctx)
@@ -239,7 +240,7 @@ func (s *CollatorTestSuite) getBalance(shardId types.ShardId, addr types.Address
 	return acc.Balance
 }
 
-func (s *CollatorTestSuite) checkSeqno(shardId types.ShardId) {
+func (s *ProposerTestSuite) checkSeqno(shardId types.ShardId) {
 	s.T().Helper()
 
 	tx, err := s.db.CreateRoTx(s.ctx)
@@ -268,7 +269,7 @@ func (s *CollatorTestSuite) checkSeqno(shardId types.ShardId) {
 	check(block.OutTransactions())
 }
 
-func (s *CollatorTestSuite) checkReceipt(shardId types.ShardId, m *types.Transaction) *types.Receipt {
+func (s *ProposerTestSuite) checkReceipt(shardId types.ShardId, m *types.Transaction) *types.Receipt {
 	s.T().Helper()
 
 	tx, err := s.db.CreateRoTx(s.ctx)
@@ -290,5 +291,5 @@ func (s *CollatorTestSuite) checkReceipt(shardId types.ShardId, m *types.Transac
 func TestCollator(t *testing.T) {
 	t.Parallel()
 
-	suite.Run(t, &CollatorTestSuite{})
+	suite.Run(t, &ProposerTestSuite{})
 }

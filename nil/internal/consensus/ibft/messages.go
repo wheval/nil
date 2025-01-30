@@ -40,7 +40,7 @@ func (i *backendIBFT) BuildPrePrepareMessage(
 		return nil
 	}
 
-	block, err := i.scheduler.VerifyProposal(i.ctx, proposal)
+	block, err := i.validator.VerifyProposal(i.ctx, proposal)
 	if err != nil {
 		return nil
 	}

@@ -3,21 +3,17 @@ package collate
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
+	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
-	"github.com/NilFoundation/nil/nil/internal/telemetry"
-	"github.com/NilFoundation/nil/nil/internal/telemetry/telattr"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 	"github.com/rs/zerolog"
 )
-
-const enableConsensus = true
 
 type TxnPool interface {
 	Peek(ctx context.Context, n int) ([]*types.Transaction, error)
@@ -54,28 +50,29 @@ type Scheduler struct {
 
 	params Params
 
-	measurer *telemetry.Measurer
-	logger   zerolog.Logger
+	logger zerolog.Logger
 }
 
-func NewScheduler(txFabric db.DB, pool txnpool.Pool, params Params, networkManager *network.Manager) (*Scheduler, error) {
-	const name = "github.com/NilFoundation/nil/nil/internal/collate"
-	measurer, err := telemetry.NewMeasurer(telemetry.NewMeter(name), "collations",
-		telattr.ShardId(params.ShardId))
-	if err != nil {
-		return nil, err
-	}
-
+func NewScheduler(txFabric db.DB, pool txnpool.Pool, params Params, networkManager *network.Manager) *Scheduler {
 	return &Scheduler{
 		txFabric:       txFabric,
 		pool:           pool,
 		networkManager: networkManager,
 		params:         params,
-		measurer:       measurer,
 		logger: logging.NewLogger("collator").With().
 			Stringer(logging.FieldShardId, params.ShardId).
 			Logger(),
-	}, nil
+	}
+}
+
+func (s *Scheduler) Validator() *Validator {
+	return &Validator{
+		params:         s.params,
+		txFabric:       s.txFabric,
+		pool:           s.pool,
+		networkManager: s.networkManager,
+		logger:         s.logger,
+	}
 }
 
 func (s *Scheduler) Run(ctx context.Context, consensus Consensus) error {
@@ -116,13 +113,7 @@ func (s *Scheduler) generateZeroState(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, s.params.Timeout)
 	defer cancel()
 
-	roTx, err := s.txFabric.CreateRoTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer roTx.Rollback()
-
-	if _, err := db.ReadLastBlockHash(roTx, s.params.ShardId); !errors.Is(err, db.ErrKeyNotFound) {
+	if _, err := s.readLastBlockHash(ctx); !errors.Is(err, db.ErrKeyNotFound) {
 		// error or nil if last block found
 		return err
 	}
@@ -149,75 +140,36 @@ func (s *Scheduler) generateZeroState(ctx context.Context) error {
 	return PublishBlock(ctx, s.networkManager, s.params.ShardId, &types.BlockWithExtractedData{Block: block})
 }
 
-func (s *Scheduler) BuildProposal(ctx context.Context) (*execution.Proposal, error) {
-	collator := newCollator(s.params, s.params.Topology, s.pool, s.logger)
-	proposal, err := collator.GenerateProposal(ctx, s.txFabric)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate proposal: %w", err)
-	}
-	return proposal, nil
-}
-
-func (s *Scheduler) VerifyProposal(ctx context.Context, proposal *execution.Proposal) (*types.Block, error) {
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create block generator: %w", err)
-	}
-	defer gen.Rollback()
-
-	res, err := gen.BuildBlock(proposal, s.logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate block: %w", err)
-	}
-	return res, nil
-}
-
-func (s *Scheduler) InsertProposal(ctx context.Context, proposal *execution.Proposal, sig types.Signature) error {
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric)
-	if err != nil {
-		return fmt.Errorf("failed to create block generator: %w", err)
-	}
-	defer gen.Rollback()
-
-	res, err := gen.GenerateBlock(proposal, s.logger, sig)
-	if err != nil {
-		return fmt.Errorf("failed to generate block: %w", err)
-	}
-
-	if err := s.pool.OnCommitted(ctx, proposal.RemoveFromPool); err != nil {
-		s.logger.Warn().Err(err).Msgf("Failed to remove %d committed transactions from pool", len(proposal.RemoveFromPool))
-	}
-
-	return PublishBlock(ctx, s.networkManager, s.params.ShardId, &types.BlockWithExtractedData{
-		Block:           res.Block,
-		InTransactions:  res.InTxns,
-		OutTransactions: res.OutTxns,
-		ChildBlocks:     proposal.ShardHashes,
-	})
-}
-
 func (s *Scheduler) doCollate(ctx context.Context) error {
-	if enableConsensus {
-		roTx, err := s.txFabric.CreateRoTx(ctx)
-		if err != nil {
-			return err
-		}
-		defer roTx.Rollback()
-
-		block, _, err := db.ReadLastBlock(roTx, s.params.ShardId)
-		if err != nil {
-			return err
-		}
-
-		return s.consensus.RunSequence(ctx, block.Id.Uint64()+1)
-	} else {
-		ctx, cancel := context.WithTimeout(ctx, s.params.Timeout)
-		defer cancel()
-
-		proposal, err := s.BuildProposal(ctx)
-		if err != nil {
-			return err
-		}
-		return s.InsertProposal(ctx, proposal, nil)
+	id, err := s.readLastBlockId(ctx)
+	if err != nil {
+		return err
 	}
+
+	return s.consensus.RunSequence(ctx, id.Uint64()+1)
+}
+
+func (s *Scheduler) readLastBlockHash(ctx context.Context) (common.Hash, error) {
+	roTx, err := s.txFabric.CreateRoTx(ctx)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	defer roTx.Rollback()
+
+	return db.ReadLastBlockHash(roTx, s.params.ShardId)
+}
+
+func (s *Scheduler) readLastBlockId(ctx context.Context) (types.BlockNumber, error) {
+	roTx, err := s.txFabric.CreateRoTx(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer roTx.Rollback()
+
+	b, _, err := db.ReadLastBlock(roTx, s.params.ShardId)
+	if err != nil {
+		return 0, err
+	}
+
+	return b.Id, nil
 }

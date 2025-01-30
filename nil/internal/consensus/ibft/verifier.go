@@ -14,7 +14,7 @@ func (i *backendIBFT) IsValidProposal(rawProposal []byte) bool {
 		return false
 	}
 
-	_, err = i.scheduler.VerifyProposal(i.ctx, proposal)
+	_, err = i.validator.VerifyProposal(i.ctx, proposal)
 	return err == nil
 }
 
@@ -47,7 +47,7 @@ func (i *backendIBFT) IsValidProposalHash(proposal *protoIBFT.Proposal, hash []b
 		return false
 	}
 
-	block, err := i.scheduler.VerifyProposal(i.ctx, prop)
+	block, err := i.validator.VerifyProposal(i.ctx, prop)
 	if err != nil {
 		return false
 	}

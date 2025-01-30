@@ -481,15 +481,13 @@ func createShards(
 			if err != nil {
 				return nil, nil, err
 			}
-			collator, err := createActiveCollator(shardId, cfg, collatorTickPeriod, database, networkManager, txnPool)
-			if err != nil {
-				return nil, nil, err
-			}
+
+			collator := createActiveCollator(shardId, cfg, collatorTickPeriod, database, networkManager, txnPool)
 
 			consensus := ibft.NewConsensus(&ibft.ConsensusParams{
 				ShardId:    shardId,
 				Db:         database,
-				Scheduler:  collator,
+				Validator:  collator.Validator(),
 				NetManager: networkManager,
 				PrivateKey: pKey,
 			})
@@ -552,7 +550,7 @@ func createShards(
 	return funcs, pools, nil
 }
 
-func createActiveCollator(shard types.ShardId, cfg *Config, collatorTickPeriod time.Duration, database db.DB, networkManager *network.Manager, txnPool txnpool.Pool) (*collate.Scheduler, error) {
+func createActiveCollator(shard types.ShardId, cfg *Config, collatorTickPeriod time.Duration, database db.DB, networkManager *network.Manager, txnPool txnpool.Pool) *collate.Scheduler {
 	collatorCfg := collate.Params{
 		BlockGeneratorParams: execution.BlockGeneratorParams{
 			ShardId:       shard,
