@@ -30,21 +30,19 @@ export function CardSection({
 
 export function Card({
   id,
+  date,
   title,
   description,
   to,
-  tag,
+  tagLabel,
   className,
 }: PropsWithChildren<{
   id?: string;
+  date?: string;
   title: string;
   description?: string;
   to: string;
-  tag?: {
-    label: string;
-    color: string;
-    description: string;
-  };
+  tagLabel: string;
   className?: string;
 }>) {
   const label = `Index page: ${title}`;
@@ -56,22 +54,19 @@ export function Card({
       data-goatcounter-title={label}
     >
       <div className="card-content">
+        {date && <div className="description">{date}</div>}
         <div className="title" id={id && title}>
           {title}
         </div>
         {description && <div className="description">{description}</div>}
+        {tagLabel && (
+          <div className="tag-container">
+            <span className="tag-label" style={{ backgroundColor: "inherit" }}>
+              {tagLabel}
+            </span>
+          </div>
+        )}
       </div>
-      {tag && (
-        <div className="tag absolute right-0 top-0 h-16 w-16">
-          <span
-            className="absolute right-[-28px] top-[-2px] w-[80px] rotate-45 transform bg-gray-600 py-1 text-center font-semibold text-white"
-            style={{ backgroundColor: tag.color }}
-            title={tag.description}
-          >
-            {tag.label}
-          </span>
-        </div>
-      )}
     </Link>
   );
 }

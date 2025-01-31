@@ -112,6 +112,9 @@ const config = {
       integrity: "sha384-odtC+0UGzzFL/6PNoE8rX/SPcQDXBJ+uRepguP4QkPCm2LBxH3FA3y+fKSiJ+AmM",
       crossorigin: "anonymous",
     },
+    {
+      href: "https://fonts.googleapis.com/icon?family=Material+Icons",
+    },
   ],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
@@ -133,10 +136,11 @@ const config = {
         title: "=nil; Foundation",
         logo: {
           src: "img/nil-logo.png",
+          href: "https://nil.foundation",
         },
         items: [
           {
-            label: "Documentation",
+            label: "Docs",
             position: "left",
             to: "/nil/intro",
           },
@@ -148,7 +152,7 @@ const config = {
           {
             label: "Migration guides",
             position: "left",
-            to: "nil/migration-guides/january-2901-2025-release",
+            to: "nil/migration-guides/february-0302-2025-release",
           },
           {
             label: "Videos",
@@ -157,7 +161,7 @@ const config = {
           },
           {
             type: "dropdown",
-            label: "Developer tools",
+            label: "Dev tools",
             position: "left",
             items: [
               {

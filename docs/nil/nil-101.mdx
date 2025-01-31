@@ -6,7 +6,7 @@ This tutorial acts as a 'primer' for working with =nil;. It explains how to perf
 
 :::tip
 
-This tutorial focuses on the =nil; CLI. To learn more about using `Nil.js` to create a smart account, deploy smart contracts, and send transactions to these contracts, refer to the [**Cookbook**](../cookbook/niljs-deploy/deploy-call-smart-contract.mdx).
+This tutorial focuses on the =nil; CLI. To learn more about using `Nil.js` to create a smart account, deploy smart contracts, and send transactions to these contracts, refer to the [**Cookbook**](./cookbook/niljs-deploy/deploy-call-smart-contract.mdx).
 
 :::
 
@@ -22,12 +22,12 @@ curl -fsSL https://github.com/NilFoundation/nil_cli/raw/master/install.sh | bash
 
 To generate a new private key and set inside the CLI config:
 
-```bash file=../../tests/commands.mjs start=startKeygen end=endKeygen
+```bash file=../tests/commands.mjs start=startKeygen end=endKeygen
 ```
 
 To point the CLI toward the RPC endpoint:
 
-```bash file=../../tests/commands.mjs start=startEndpoint end=endEndpoint
+```bash file=../tests/commands.mjs start=startEndpoint end=endEndpoint
 ```
 
 ## Create a new smart account
@@ -38,7 +38,7 @@ In =nil; a smart account is just a smart contract that can handle payments. Ther
 
 To create a new smart account:
 
-```bash file=../../tests/commands.mjs start=startSmartAccount end=endSmartAccount
+```bash file=../tests/commands.mjs start=startSmartAccount end=endSmartAccount
 ```
 
 Expected response:
@@ -56,17 +56,13 @@ nil contract code SMART_ACCOUNT_ADDRESS
 
 To request a 'top up':
 
-```bash file=../../tests/commands.mjs start=startTopup end=endTopup
+```bash file=../tests/commands.mjs start=startTopup end=endTopup
 ```
 
 To see the smart account address and its public key:
 
-```bash file=../../tests/commands.mjs start=startInfo end=endInfo
+```bash file=../tests/commands.mjs start=startInfo end=endInfo
 ```
-
-### Advanced tutorials
-
-* [**Creating a smart account**](essentials/creating-a-smart-account.mdx)
 
 ## Deploy a smart contract
 
@@ -78,19 +74,19 @@ Any smart contract deployed in Ethereum-compatible networks and written in Solid
 
 Create a new contract containing this code:
 
-```solidity showLineNumbers file=../../tests/Counter.sol start=startContract end=endContract
+```solidity showLineNumbers file=../tests/Counter.sol start=startContract end=endContract
 ```
 
 <PGButton name="Counter.sol"/>
 
 Compile the contract:
 
-```bash file=../../tests/compilationCommands.js start=startCompilation end=endCompilation
+```bash file=../tests/compilationCommands.js start=startCompilation end=endCompilation
 ```
 
 Deploy a contract with the =nil; CLI:
 
-```bash file=../../tests/commands.mjs start=startCounterDeploymentCommand end=endCounterDeploymentCommand
+```bash file=../tests/commands.mjs start=startCounterDeploymentCommand end=endCounterDeploymentCommand
 
 ```
 
@@ -103,19 +99,13 @@ Transaction hash: TRANSACTION_HASH (shard 1)
 
 Call the `increment()` function:
 
-```bash file=../../tests/nil-101.test.mjs start=startIncrement end=endIncrement
+```bash file=../tests/nil-101.test.mjs start=startIncrement end=endIncrement
 ```
 
 Retrieve the result:
 
-```bash file=../../tests/nil-101.test.mjs start=start_CallToIncrementer end=end_CallToIncrementer
+```bash file=../tests/nil-101.test.mjs start=start_CallToIncrementer end=end_CallToIncrementer
 ```
-
-### Advanced tutorials
-
-* [**Reading and writing to =nil;**](essentials/reading-writing-info.mdx)
-* [**Writing a smart contract**](working-with-smart-contracts/writing-a-contract.mdx)
-* [**Deploying a contract**](working-with-smart-contracts/deploying-a-contract.mdx)
 
 ## Make a cross-shard call
 
@@ -126,17 +116,17 @@ When a smart contract makes a call to another smart contract deployed on a separ
 Create a new contract with the following code:
 
 
-```solidity showLineNumbers file=../../tests/Caller.sol start=startContract end=endContract
+```solidity showLineNumbers file=../tests/Caller.sol start=startContract end=endContract
 ```
 
 <PGButton name="CallerCounter.sol"/>
 
 Compile it and deploy it to Shard 2:
 
-```bash file=../../tests/compilationCommands.js start=startCallerCompilation end=endCallerCompilation
+```bash file=../tests/compilationCommands.js start=startCallerCompilation end=endCallerCompilation
 ```
 
-```bash file=../../tests/commands.mjs start=startCallerDeploy end=endCallerDeploy
+```bash file=../tests/commands.mjs start=startCallerDeploy end=endCallerDeploy
 ```
 
 Expected output:
@@ -150,25 +140,20 @@ Note that `CALLER_ADDRESS` starts with `0x0002`, which indicates that `Caller` i
 
 Send tokens to `Caller` and call the `call()` function:
 
-```bash file=../../tests/nil-101.test.mjs start=start_SendTokensToCaller end=end_SendTokensToCaller
+```bash file=../tests/nil-101.test.mjs start=start_SendTokensToCaller end=end_SendTokensToCaller
 ```
 
-```bash file=../../tests/nil-101.test.mjs start=startTransactionFromCallerToIncrementer end=endTransactionFromCallerToIncrementer
+```bash file=../tests/nil-101.test.mjs start=startTransactionFromCallerToIncrementer end=endTransactionFromCallerToIncrementer
 ```
 
 Retrieve the result:
 
-```bash file=../../tests/nil-101.test.mjs start=start_CallToIncrementer end=end_CallToIncrementer
+```bash file=../tests/nil-101.test.mjs start=start_CallToIncrementer end=end_CallToIncrementer
 ```
-
-### Advanced tutorials
-
-* [**Handling async execution**](essentials/handling-async-execution.mdx)
-* [**Calling methods inside a contract**](working-with-smart-contracts/calling-contract-methods.mdx)
 
 :::info[Nil.js]
 
-[**Refer to the Cookbook**](../cookbook/niljs-deploy/deploy-call-smart-contract.mdx) to learn how this flow would look like when using `Nil.js`.
+[**Refer to the Cookbook**](./cookbook/niljs-deploy/deploy-call-smart-contract.mdx) to learn how this flow would look like when using `Nil.js`.
 
 :::
 
@@ -188,17 +173,17 @@ Non-owners cannot perform any operations with a custom token.
 
 Create a new smart account:
 
-```bash file=../../tests/commands.mjs start=startSaltSmartAccountCreation end=endSaltSmartAccountCreation
+```bash file=../tests/commands.mjs start=startSaltSmartAccountCreation end=endSaltSmartAccountCreation
 ```
 
 Create a new token and withdraw it:
 
-```bash file=../../tests/nil-101.test.mjs start=startMintToken end=endMintToken
+```bash file=../tests/nil-101.test.mjs start=startMintToken end=endMintToken
 ```
 
 Check the tokens of the smart account:
 
-```bash file=../../tests/nil-101.test.mjs start=startTokensCheck end=endTokensCheck
+```bash file=../tests/nil-101.test.mjs start=startTokensCheck end=endTokensCheck
 ```
 
 Expected output:
@@ -207,9 +192,3 @@ Expected output:
 Contract tokens:
 Balance: 50000 TokenId=Token_ID
 ```
-
-### Advanced tutorials
-
-* [**Tokens support**](essentials/tokens.mdx)
-
-

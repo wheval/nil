@@ -2,15 +2,13 @@ import PGButton from '@theme/PGButton';
 
 # Handling async execution
 
-To support [**cross-shard communication**](../../specification/principles.mdx#cross-shard-communication), =nil; supports smart contracts making async calls to one another directly in Solidity code.
-
-This tutorial provides a brief theoretical and practical primer on async execution, and gives suggestions on how this feature can be integrated into an application.
+To support [**cross-shard communication**](../specification/principles.mdx#cross-shard-communication), =nil; supports smart contracts making async calls to one another directly in Solidity code.
 
 ## Performing an async call
 
 Consider a smart contract with the following code:
 
-```sol showLineNumbers file=../../../tests/CallerAsyncBasicPattern.sol start=startCallerAsyncBasicPattern end=endCallerAsyncBasicPattern
+```sol showLineNumbers file=../../tests/CallerAsyncBasicPattern.sol start=startCallerAsyncBasicPattern end=endCallerAsyncBasicPattern
 ```
 
 <PGButton name="CallerAsyncBasicPattern.sol"/>
@@ -37,7 +35,7 @@ To initiate an async call, the 'caller' contract must have sufficient funds to p
 
 ## Retreiving values
 
-The [**`Nil.sol` extension library**](getting-started/prerequisites.mdx#solidity-library) also exposes the `awaitCall()` function.
+The `Nil.sol` contract also exposes the `awaitCall()` function.
 
 The function allows for calling another smart contract asynchronously and retrieving the result of the call. This is useful if the contract logic needs to mimick the typical `async`/`await` flow prevalent in programming languages other than Solidity. Note that the feature is currently experimental and may change in future releases.
 
@@ -49,12 +47,12 @@ State is not persistent before and after `asyncCall`, and can be changed.
 
 Consider the following example of an `Awaiter` contract:
 
-```solidity showLineNumbers file=../../../tests/Awaiter.sol start=startAwaiterContract end=endAwaiterContract
+```solidity showLineNumbers file=../../tests/Awaiter.sol start=startAwaiterContract end=endAwaiterContract
 ```
 
 <PGButton name="AwaiterCounter.sol"/>
 
-The contract is designed to call [**the`Counter` contract**](getting-started/nil-101.mdx#flow-1) asynchronously and store the returned value inside the `result` variable.
+The contract is designed to call [**the`Counter` contract**](../nil-101.mdx#flow-1) asynchronously and store the returned value inside the `result` variable.
 
 :::info
 
@@ -89,12 +87,12 @@ In this pattern, Contract 1 simply calls a function in Contract 2 without receiv
 
 Contract 1 has the following structure:
 
-```solidity showLineNumbers file=../../../tests/Caller.sol start=startContract end=endContract
+```solidity showLineNumbers file=../../tests/Caller.sol start=startContract end=endContract
 ```
 
 <PGButton name="CallerCounter.sol"/>
 
-Contract 2 is [**the`Counter` contract**](getting-started/nil-101.mdx#flow-1).
+Contract 2 is [**the`Counter` contract**](../nil-101.mdx#flow-1).
 
 Whenever the `call()` function is called inside Contract 1, a new outgoing transaction is spawned. When Shard 2 picks up this transaction and processes it, Contract 2 calls its `increment()` function. After `getValue()` is called, the result should display the total number of times the `call()` function was executed by Contract 1.
 
@@ -116,14 +114,14 @@ As its third argument, `sendRequest()` accepts the amount of gas that will be re
 
 Contract 1 acts as a simple escrow mechanism. The `submitForVerification()` function accepts the address of the validator and the addresses of the escrow participants. The function then sends a request to the validator while assigning `resolve()` as the callback. Whenever the validator processes the request, Contract 1 can retrieve the returned data.
 
-```solidity showLineNumbers file=../../../tests/Escrow.sol start=startEscrow end=endEscrow
+```solidity showLineNumbers file=../../tests/Escrow.sol start=startEscrow end=endEscrow
 ```
 
 <PGButton name="EscrowValidator.sol"/>
 
 Contract 2 acts as the validator for escrow resolution:
 
-```solidity showLineNumbers file=../../../tests/Validator.sol start=startValidator end=endValidator
+```solidity showLineNumbers file=../../tests/Validator.sol start=startValidator end=endValidator
 ```
 
 <PGButton name="EscrowValidator.sol"/>

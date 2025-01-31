@@ -2,7 +2,7 @@
   color: #0f0f0f;
   background-color: #eff0f2;
   border-radius: 5px;
-  padding: 2px 5px 2px 5px;
+  padding: 4px 5px 4px 5px;
   display: flex;
   cursor: pointer;
   justify-content: center;
@@ -12,6 +12,26 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-right: 0.5rem;
+  margin-left: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1000px) {
+  .buttonText {
+    display: none;
+  }
+
+  .askAIButton {
+    margin-right: 0.3rem;
+    padding: 6px 0.3rem 6px 0.3rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .buttonText {
+    display: none;
+  }
 }
 
 .askAIButton:hover {

@@ -1,0 +1,48 @@
+# `Nil.js` deploying a smart contract
+
+## Overview
+
+This tutorial deploys two smart contracts:
+
+* [**`Retailer.sol`**](https://github.com/NilFoundation/nil/blob/main/docs/tests/Retailer.sol): this contract can call a special 'manufacturer' contract and order new products by performing an async call.
+* [**`Manufacturer.sol`**](https://github.com/NilFoundation/nil/blob/main/docs/tests/Manufacturer.sol): this contract can accept orders from the retailer and fulfil them by 'manufacturing' and sending new products.
+
+## Internal deployment
+
+:::tip
+
+When submitting contract bytecode as a string to a deployment transaction, preface it with "0x".
+
+The contract ABI can be copy-pasted from the `./abi` file and then cast into the `Abi` type.
+
+:::
+
+To deploy the retailer contract:
+
+```ts showLineNumbers file=../../tests/working-with-smart-contracts-niljs.test.mjs start=startInternalDeployOfRetailer end=endInternalDeployOfRetailer
+```
+
+To deploy the manufacturer contract:
+
+```ts showLineNumbers file=../../tests/working-with-smart-contracts-niljs.test.mjs start=startInternalDeployOfManufacturer end=endInternalDeployOfManufacturer
+```
+
+## External deployment
+
+:::tip
+
+When submitting contract bytecode as a string to a deployment transaction, preface it with "0x".
+
+The contract ABI can be copy-pasted from the `./abi` file and then cast into the `Abi` type.
+
+:::
+
+To deploy the retailer contract:
+
+```ts showLineNumbers file=../../tests/working-with-smart-contracts-niljs.test.mjs start=startExternalDeployOfRetailer end=endExternalDeployOfRetailer
+```
+
+To deploy the manufacturer contract:
+
+```ts showLineNumbers file=../../tests/working-with-smart-contracts-niljs.test.mjs start=startExternalDeployOfManufacturer end=endExternalDeployOfManufacturer
+```

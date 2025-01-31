@@ -1,0 +1,49 @@
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+
+# `smart-contracts`: getting started
+
+## Overview
+
+The `smart-contracts` NPM package contains the Solidity extensions for working with =nil;. The package includes four contracts:
+
+* [**Faucet.sol**](https://github.com/NilFoundation/nil/blob/main/smart-contracts/contracts/Faucet.sol) is a service contract for distributing tokens
+* [**Nil.sol**](https://github.com/NilFoundation/nil/blob/main/smart-contracts/contracts/Nil.sol) is the extension library that allows for making async calls and performing other essential operations
+* [**NilTokenBase.sol**](https://github.com/NilFoundation/nil/blob/main/smart-contracts/contracts/NilTokenBase.sol) is the base contract for custom tokens on the cluster
+* [**SmartAccount.sol**](https://github.com/NilFoundation/nil/blob/main/smart-contracts/contracts/SmartAccount.sol) is the default smart account that is deployed by the =nil; CLI and Nil.js
+
+## Installation and usage
+
+To install the package:
+
+<Tabs groupId='packageSystem'>
+  <TabItem value='npm' label='npm'>
+    ```bash
+    npm install @nilfoundation/smart-contracts
+    ```
+  </TabItem>
+  <TabItem value='yarn' label='yarn'>
+    ```bash
+    yarn add @nilfoundation/smart-contracts
+    ```
+  </TabItem>
+</Tabs>
+
+To use the package, simply import the required contract in a project. 
+
+In a JS/TS project:
+
+```ts showLineNumbers
+import SmartAccount_compiled from '@nilfoundation/smart-contracts/artifacts/SmartAccount.json';
+const smartAccount_bytecode = `0x${SmartAccount_compiled.evm.bytecode.object}`
+```
+
+In a Solidity smart contract:
+
+```solidity showLineNumbers
+pragma solidity ^0.8.0;
+
+import "@nilfoundation/smart-contracts/contracts/SmartAccount.sol";
+```
+
+

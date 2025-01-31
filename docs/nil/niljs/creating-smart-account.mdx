@@ -1,0 +1,25 @@
+# `Nil.js`: creating a smart account
+
+`Nil.js` library exposes the `SmartAccountV1` class that allows for quickly creating and deploying a new smart account:
+
+```typescript showLineNumbers file=../../tests/creating-a-smart-account.test.mjs start=startNilJSSmartAccountImports end=endNilJSSmartAccountImports
+```
+
+```typescript showLineNumbers file=../../tests/creating-a-smart-account.test.mjs start=startNilJSSmartAccountCreation end=endNilJSSmartAccountCreation
+```
+
+This example initializes a new smart account, provides it with a `Signer` and requests a top up to the smart account address. The smart account is then deployed.
+
+:::tip[Seqno]
+
+When using the client library, `seqno` defaults to `0` for every transaction sent via the smart account. If too many transactions are sent at the same time with this `seqno`, they will fail. To avoid this issue, set the `seqno` manually whenever using the smart account:
+
+```ts showLineNumbers
+smartAccount.sendTransaction({
+    ...
+    seqno: SEQNO,
+    ...
+})
+```
+
+:::
