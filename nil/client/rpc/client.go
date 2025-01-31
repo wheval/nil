@@ -27,13 +27,27 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// CallError represents an error that occurs during a remote procedure call,
+// including the data marshalling and unmarshalling parts
+type CallError struct {
+	message string
+}
+
+func (e CallError) Error() string {
+	return e.message
+}
+
+func newCallErr(message string) error {
+	return &CallError{message}
+}
+
 var (
-	ErrFailedToMarshalRequest    = errors.New("failed to marshal request")
-	ErrFailedToSendRequest       = errors.New("failed to send request")
-	ErrUnexpectedStatusCode      = errors.New("unexpected status code")
-	ErrFailedToReadResponse      = errors.New("failed to read response")
-	ErrFailedToUnmarshalResponse = errors.New("failed to unmarshal response")
-	ErrRPCError                  = errors.New("rpc error")
+	ErrFailedToMarshalRequest    = newCallErr("failed to marshal request")
+	ErrFailedToSendRequest       = newCallErr("failed to send request")
+	ErrUnexpectedStatusCode      = newCallErr("unexpected status code")
+	ErrFailedToReadResponse      = newCallErr("failed to read response")
+	ErrFailedToUnmarshalResponse = newCallErr("failed to unmarshal response")
+	ErrRPCError                  = newCallErr("rpc error")
 	/*
 		This error means that your code exceeds the maximum supported size.
 		Try compiling your contract with the usage of solc --optimize flag,
@@ -41,7 +55,7 @@ var (
 		For more information go to
 		https://ethereum.org/en/developers/tutorials/downsizing-contracts-to-fight-the-contract-size-limit/`
 	*/
-	ErrTxnDataTooLong = errors.New("data is too long")
+	ErrTxnDataTooLong = newCallErr("data is too long")
 )
 
 const (
