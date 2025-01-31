@@ -2,10 +2,13 @@ package execution
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/shopspring/decimal"
 )
+
+var lock sync.Mutex
 
 func (es *ExecutionState) UpdateBaseFee() error {
 	acc, err := es.shardAccessor.GetBlock().ByHash(es.PrevBlock)
@@ -88,12 +91,22 @@ func toPercentage(gasUsedPrevious, gasLimitAbsolute decimal.Decimal) decimal.Dec
 
 func sigmoid1(gasUsedPercentage, centerSigmoid, smoothingFactor decimal.Decimal) decimal.Decimal {
 	n := gasUsedPercentage.Sub(centerSigmoid).Div(smoothingFactor)
+	// Decimal's Pow function is not thread-safe, so we need to lock it
+	// https://github.com/shopspring/decimal/issues/368
+	// TODO: This is a workaround, we should find a better solution
+	lock.Lock()
 	exp := eNumber.Pow(n)
+	lock.Unlock()
 	return decimal.NewFromInt(1).Div(decimal.NewFromInt(1).Add(exp))
 }
 
 func sigmoid2(gasUsedPercentage, centerSigmoid, smoothingFactor decimal.Decimal) decimal.Decimal {
 	n := gasUsedPercentage.Sub(centerSigmoid).Neg().Div(smoothingFactor)
+	// Decimal's Pow function is not thread-safe, so we need to lock it
+	// https://github.com/shopspring/decimal/issues/368
+	// TODO: This is a workaround, we should find a better solution
+	lock.Lock()
 	exp := eNumber.Pow(n)
+	lock.Unlock()
 	return decimal.NewFromInt(1).Div(decimal.NewFromInt(1).Add(exp))
 }
