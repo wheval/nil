@@ -78,6 +78,11 @@ func (s *NilLoadGeneratorRpc) TestSmartAccountBalanceModification() {
 		return len(resSmartAccounts) != 0
 	}, 20*time.Second, 100*time.Millisecond)
 
+	for i, addr := range resSmartAccounts {
+		s.Require().Positive(smartAccountsBalance[i].Uint64(),
+			"Zero balance for smart account %d, addr %s", i, addr)
+	}
+
 	for {
 		select {
 		case <-testTimeout:
