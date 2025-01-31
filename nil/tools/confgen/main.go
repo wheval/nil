@@ -45,14 +45,14 @@ func do(nShards uint, dir string) error {
 	for i := range nShards {
 		suffix := shardSuffix(nShards, i)
 		validatorKeysPath := "validator-keys" + suffix + ".yaml"
-		validatorKeysManager := keys.NewValidatorKeyManager(validatorKeysPath, uint32(nShards))
-		if err := validatorKeysManager.InitKeys(); err != nil {
+		validatorKeysManager := keys.NewValidatorKeyManager(validatorKeysPath)
+		if err := validatorKeysManager.InitKey(); err != nil {
 			return err
 		}
 		keysManagers[i] = validatorKeysManager
 
 		shardId := types.ShardId(i)
-		pkey, err := validatorKeysManager.GetPublicKey(shardId)
+		pkey, err := validatorKeysManager.GetPublicKey()
 		if err != nil {
 			return err
 		}

@@ -171,11 +171,10 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func (c *Config) LoadValidatorPrivateKey(shardId types.ShardId) (key *ecdsa.PrivateKey, err error) {
+func (c *Config) LoadValidatorPrivateKey() (key *ecdsa.PrivateKey, err error) {
 	defer func() {
 		if err == nil {
 			Logger.Trace().
-				Stringer(logging.FieldShardId, shardId).
 				Hex(logging.FieldPublicKey, crypto.FromECDSAPub(&key.PublicKey)).
 				Msg("Loaded validator key")
 		}
@@ -185,13 +184,13 @@ func (c *Config) LoadValidatorPrivateKey(shardId types.ShardId) (key *ecdsa.Priv
 	}
 
 	if c.ValidatorKeysManager == nil {
-		c.ValidatorKeysManager = keys.NewValidatorKeyManager(c.ValidatorKeysPath, c.NShards)
-		if err := c.ValidatorKeysManager.InitKeys(); err != nil {
+		c.ValidatorKeysManager = keys.NewValidatorKeyManager(c.ValidatorKeysPath)
+		if err := c.ValidatorKeysManager.InitKey(); err != nil {
 			return nil, err
 		}
 	}
 
-	return c.ValidatorKeysManager.GetKey(shardId)
+	return c.ValidatorKeysManager.GetKey()
 }
 
 func (c *Config) BlockGeneratorParams(shardId types.ShardId) execution.BlockGeneratorParams {

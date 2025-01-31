@@ -11,17 +11,16 @@ func TestInitKeys(t *testing.T) {
 
 	tempDir := t.TempDir()
 	fileName := tempDir + "/keys.yaml"
-	const nShards = 5
-	validatorKeysManager := NewValidatorKeyManager(fileName, nShards)
-	require.NoError(t, validatorKeysManager.InitKeys())
+	validatorKeysManager := NewValidatorKeyManager(fileName)
+	require.NoError(t, validatorKeysManager.InitKey())
 
-	keys, err := validatorKeysManager.GetKeys()
+	keys, err := validatorKeysManager.GetKey()
 	require.NoError(t, err)
 
-	validatorKeysManager2 := NewValidatorKeyManager(fileName, nShards)
-	require.NoError(t, validatorKeysManager2.InitKeys())
+	validatorKeysManager2 := NewValidatorKeyManager(fileName)
+	require.NoError(t, validatorKeysManager2.InitKey())
 
-	keys2, err := validatorKeysManager2.GetKeys()
+	keys2, err := validatorKeysManager2.GetKey()
 	require.NoError(t, err)
 
 	require.Equal(t, keys, keys2)

@@ -466,17 +466,17 @@ func createShards(
 	var wgFetch sync.WaitGroup
 	wgFetch.Add(int(cfg.NShards) - len(cfg.GetMyShards()))
 
+	pKey, err := cfg.LoadValidatorPrivateKey()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
 
 		blockVerifier := signer.NewBlockVerifier(shardId, cfg.Validators[shardId])
 
 		if cfg.IsShardActive(shardId) {
-			pKey, err := cfg.LoadValidatorPrivateKey(shardId)
-			if err != nil {
-				return nil, nil, err
-			}
-
 			txnPool, err := txnpool.New(ctx, txnpool.NewConfig(shardId), networkManager)
 			if err != nil {
 				return nil, nil, err
