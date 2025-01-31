@@ -81,23 +81,29 @@ func (ta *TracerAccount) GetSlotUpdatesTraces() ([]StorageTrieUpdateTrace, error
 	updatedStateSlots := ta.getUpdatedStateSlots()
 	traces := make([]StorageTrieUpdateTrace, 0, len(updatedStateSlots))
 	for mptKey, diff := range updatedStateSlots {
+		// ReadMPTOperation plays no role here, could be any
+		proof, err := mpt.BuildProof(ta.StorageTree.Reader, mptKey.Bytes(), mpt.ReadMPTOperation)
+		if err != nil {
+			return nil, err
+		}
 		slotChangeTrace := StorageTrieUpdateTrace{
 			RootBefore:  ta.StorageTree.RootHash(),
 			ValueBefore: diff.before,
+			PathBefore:  proof.PathToNode,
+			Proof:       proof,
 		}
 
 		if err := ta.StorageTree.Update(mptKey, &diff.after); err != nil {
 			return nil, err
 		}
 
-		slotChangeTrace.RootAfter = ta.StorageTree.RootHash()
-		slotChangeTrace.ValueAfter = diff.after
-
-		var err error
-		slotChangeTrace.Proof, err = mpt.BuildProof(ta.StorageTree.Reader, mptKey.Bytes(), mpt.SetMPTOperation)
+		proof, err = mpt.BuildProof(ta.StorageTree.Reader, mptKey.Bytes(), mpt.ReadMPTOperation)
 		if err != nil {
 			return nil, err
 		}
+		slotChangeTrace.PathAfter = proof.PathToNode
+		slotChangeTrace.RootAfter = ta.StorageTree.RootHash()
+		slotChangeTrace.ValueAfter = diff.after
 
 		traces = append(traces, slotChangeTrace)
 	}

@@ -7,8 +7,6 @@ import (
 	"math/big"
 
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/check"
-	"github.com/NilFoundation/nil/nil/internal/mpt"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/internal/vm"
 	pb "github.com/NilFoundation/nil/nil/services/synccommittee/prover/proto"
@@ -174,7 +172,7 @@ func FromProto(traces *PbTracesSet) (ExecutionTraces, error) {
 		ep.StackOps[i] = StackOp{
 			IsRead: pbStackOp.IsRead,
 			Idx:    int(pbStackOp.Index),
-			Value:  protoUint256ToUint256(pbStackOp.Value),
+			Value:  pb.ProtoUint256ToUint256(pbStackOp.Value),
 			PC:     pbStackOp.Pc,
 			TxnId:  uint(pbStackOp.TxnId),
 			RwIdx:  uint(pbStackOp.RwIdx),
@@ -196,8 +194,8 @@ func FromProto(traces *PbTracesSet) (ExecutionTraces, error) {
 		ep.StorageOps[i] = StorageOp{
 			IsRead:    pbStorageOp.IsRead,
 			Key:       common.HexToHash(pbStorageOp.Key),
-			Value:     protoUint256ToUint256(pbStorageOp.Value),
-			PrevValue: protoUint256ToUint256(pbStorageOp.PrevValue),
+			Value:     pb.ProtoUint256ToUint256(pbStorageOp.Value),
+			PrevValue: pb.ProtoUint256ToUint256(pbStorageOp.PrevValue),
 			PC:        pbStorageOp.Pc,
 			TxnId:     uint(pbStorageOp.TxnId),
 			RwIdx:     uint(pbStorageOp.RwIdx),
@@ -206,9 +204,9 @@ func FromProto(traces *PbTracesSet) (ExecutionTraces, error) {
 	}
 
 	for i, pbExpOp := range traces.exp.ExpOps {
-		base := protoUint256ToUint256(pbExpOp.Base)
-		exponent := protoUint256ToUint256(pbExpOp.Exponent)
-		result := protoUint256ToUint256(pbExpOp.Result)
+		base := pb.ProtoUint256ToUint256(pbExpOp.Base)
+		exponent := pb.ProtoUint256ToUint256(pbExpOp.Exponent)
+		result := pb.ProtoUint256ToUint256(pbExpOp.Result)
 		ep.ExpOps[i] = ExpOp{
 			Base:     (*uint256.Int)(&base),
 			Exponent: (*uint256.Int)(&exponent),
@@ -227,7 +225,7 @@ func FromProto(traces *PbTracesSet) (ExecutionTraces, error) {
 			RwIdx:           uint(pbZKEVMState.RwIdx),
 			BytecodeHash:    common.HexToHash(pbZKEVMState.BytecodeHash),
 			OpCode:          vm.OpCode(pbZKEVMState.Opcode),
-			AdditionalInput: protoUint256ToUint256(pbZKEVMState.AdditionalInput),
+			AdditionalInput: pb.ProtoUint256ToUint256(pbZKEVMState.AdditionalInput),
 			StackSize:       pbZKEVMState.StackSize,
 			MemorySize:      pbZKEVMState.MemorySize,
 			TxFinish:        pbZKEVMState.TxFinish,
@@ -237,14 +235,14 @@ func FromProto(traces *PbTracesSet) (ExecutionTraces, error) {
 		}
 
 		for j, stackVal := range pbZKEVMState.StackSlice {
-			ep.ZKEVMStates[i].StackSlice[j] = protoUint256ToUint256(stackVal)
+			ep.ZKEVMStates[i].StackSlice[j] = pb.ProtoUint256ToUint256(stackVal)
 		}
 		for addr, memVal := range pbZKEVMState.MemorySlice {
 			ep.ZKEVMStates[i].MemorySlice[addr] = uint8(memVal)
 		}
 		for _, entry := range pbZKEVMState.StorageSlice {
-			key := protoUint256ToUint256(entry.Key)
-			ep.ZKEVMStates[i].StorageSlice[key] = protoUint256ToUint256(entry.Value)
+			key := pb.ProtoUint256ToUint256(entry.Key)
+			ep.ZKEVMStates[i].StorageSlice[key] = pb.ProtoUint256ToUint256(entry.Value)
 		}
 	}
 
@@ -259,7 +257,7 @@ func FromProto(traces *PbTracesSet) (ExecutionTraces, error) {
 		ep.ContractsBytecode[types.HexToAddress(pbContractAddr)] = pbContractBytecode
 	}
 
-	mptTraces, err := mptTracesFromProto(traces.mpt)
+	mptTraces, err := mpttracer.TracesFromProto(traces.mpt)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +294,7 @@ func ToProto(tr ExecutionTraces, traceIdx uint64) (*PbTracesSet, error) {
 		pbTraces.rw.StackOps[i] = &pb.StackOp{
 			IsRead: stackOp.IsRead,
 			Index:  int32(stackOp.Idx),
-			Value:  uint256ToProtoUint256(stackOp.Value),
+			Value:  pb.Uint256ToProtoUint256(stackOp.Value),
 			Pc:     stackOp.PC,
 			TxnId:  uint64(stackOp.TxnId),
 			RwIdx:  uint64(stackOp.RwIdx),
@@ -320,8 +318,8 @@ func ToProto(tr ExecutionTraces, traceIdx uint64) (*PbTracesSet, error) {
 		pbTraces.rw.StorageOps[i] = &pb.StorageOp{
 			IsRead:    storageOp.IsRead,
 			Key:       storageOp.Key.Hex(),
-			Value:     uint256ToProtoUint256(storageOp.Value),
-			PrevValue: uint256ToProtoUint256(storageOp.PrevValue),
+			Value:     pb.Uint256ToProtoUint256(storageOp.Value),
+			PrevValue: pb.Uint256ToProtoUint256(storageOp.PrevValue),
 			Pc:        storageOp.PC,
 			TxnId:     uint64(storageOp.TxnId),
 			RwIdx:     uint64(storageOp.RwIdx),
@@ -331,9 +329,9 @@ func ToProto(tr ExecutionTraces, traceIdx uint64) (*PbTracesSet, error) {
 
 	for i, expOp := range traces.ExpOps {
 		pbTraces.exp.ExpOps[i] = &pb.ExpOp{
-			Base:     uint256ToProtoUint256(types.Uint256(*expOp.Base)),
-			Exponent: uint256ToProtoUint256(types.Uint256(*expOp.Exponent)),
-			Result:   uint256ToProtoUint256(types.Uint256(*expOp.Result)),
+			Base:     pb.Uint256ToProtoUint256(types.Uint256(*expOp.Base)),
+			Exponent: pb.Uint256ToProtoUint256(types.Uint256(*expOp.Exponent)),
+			Result:   pb.Uint256ToProtoUint256(types.Uint256(*expOp.Result)),
 			Pc:       expOp.PC,
 			TxnId:    uint64(expOp.TxnId),
 		}
@@ -348,7 +346,7 @@ func ToProto(tr ExecutionTraces, traceIdx uint64) (*PbTracesSet, error) {
 			RwIdx:           uint64(zkevmState.RwIdx),
 			BytecodeHash:    zkevmState.BytecodeHash.String(),
 			Opcode:          uint64(zkevmState.OpCode),
-			AdditionalInput: uint256ToProtoUint256(zkevmState.AdditionalInput),
+			AdditionalInput: pb.Uint256ToProtoUint256(zkevmState.AdditionalInput),
 			StackSize:       zkevmState.StackSize,
 			MemorySize:      zkevmState.MemorySize,
 			TxFinish:        zkevmState.TxFinish,
@@ -357,7 +355,7 @@ func ToProto(tr ExecutionTraces, traceIdx uint64) (*PbTracesSet, error) {
 			StorageSlice:    make([]*pb.StorageEntry, len(zkevmState.StorageSlice)),
 		}
 		for j, stackVal := range zkevmState.StackSlice {
-			pbTraces.zkevm.ZkevmStates[i].StackSlice[j] = uint256ToProtoUint256(stackVal)
+			pbTraces.zkevm.ZkevmStates[i].StackSlice[j] = pb.Uint256ToProtoUint256(stackVal)
 		}
 		for addr, memVal := range zkevmState.MemorySlice {
 			pbTraces.zkevm.ZkevmStates[i].MemorySlice[addr] = uint32(memVal)
@@ -365,8 +363,8 @@ func ToProto(tr ExecutionTraces, traceIdx uint64) (*PbTracesSet, error) {
 		storageSliceCounter := 0
 		for storageKey, storageVal := range zkevmState.StorageSlice {
 			pbEntry := &pb.StorageEntry{
-				Key:   uint256ToProtoUint256(storageKey),
-				Value: uint256ToProtoUint256(storageVal),
+				Key:   pb.Uint256ToProtoUint256(storageKey),
+				Value: pb.Uint256ToProtoUint256(storageVal),
 			}
 			pbTraces.zkevm.ZkevmStates[i].StorageSlice[storageSliceCounter] = pbEntry
 			storageSliceCounter++
@@ -387,37 +385,13 @@ func ToProto(tr ExecutionTraces, traceIdx uint64) (*PbTracesSet, error) {
 		pbTraces.bytecode.ContractBytecodes[addr.Hex()] = bytecode
 	}
 
-	mptTraces, err := mptTracesToProto(traces.MPTTraces, traceIdx)
+	mptTraces, err := mpttracer.TracesToProto(traces.MPTTraces, traceIdx)
 	if err != nil {
 		return nil, err
 	}
 	pbTraces.mpt = mptTraces
 
 	return pbTraces, nil
-}
-
-func uint256ToProtoUint256(u types.Uint256) *pb.Uint256 {
-	return &pb.Uint256{
-		WordParts: u[:],
-	}
-}
-
-func protoUint256ToUint256(pb *pb.Uint256) types.Uint256 {
-	var u types.Uint256
-	copy(u[:], pb.WordParts)
-	return u
-}
-
-func goToProtoProof(p mpt.Proof) ([]byte, error) {
-	encodedProof, err := p.Encode()
-	if err != nil {
-		return nil, err
-	}
-	return encodedProof, nil
-}
-
-func protoToGoProof(pbProof []byte) (mpt.Proof, error) {
-	return mpt.DecodeProof(pbProof)
 }
 
 var copyLocationToProtoMap = map[CopyLocation]pb.CopyLocation{
@@ -464,150 +438,4 @@ func copyParticipantToProto(participant *CopyParticipant) *pb.CopyParticipant {
 		ret.Id = &pb.CopyParticipant_KeccakHash{KeccakHash: participant.KeccakHash.Hex()}
 	}
 	return ret
-}
-
-func mptTracesFromProto(pbMptTraces *pb.MPTTraces) (*mpttracer.MPTTraces, error) {
-	check.PanicIfNot(pbMptTraces != nil)
-
-	addrToStorageTraces := make(map[types.Address][]mpttracer.StorageTrieUpdateTrace, len(pbMptTraces.StorageTracesByAccount))
-	for addr, pbStorageTrace := range pbMptTraces.StorageTracesByAccount {
-		storageTraces := make([]mpttracer.StorageTrieUpdateTrace, len(pbStorageTrace.UpdatesTraces))
-		for i, pbStorageUpdateTrace := range pbStorageTrace.UpdatesTraces {
-			proof, err := protoToGoProof(pbStorageUpdateTrace.SszProof)
-			if err != nil {
-				return nil, err
-			}
-			storageTraces[i] = mpttracer.StorageTrieUpdateTrace{
-				Key:         common.HexToHash(pbStorageUpdateTrace.Key),
-				RootBefore:  common.HexToHash(pbStorageUpdateTrace.RootBefore),
-				RootAfter:   common.HexToHash(pbStorageUpdateTrace.RootAfter),
-				ValueBefore: protoUint256ToUint256(pbStorageUpdateTrace.ValueBefore),
-				ValueAfter:  protoUint256ToUint256(pbStorageUpdateTrace.ValueAfter),
-				Proof:       proof,
-			}
-		}
-		addrToStorageTraces[types.HexToAddress(addr)] = storageTraces
-	}
-
-	contractTrieTraces := make([]mpttracer.ContractTrieUpdateTrace, len(pbMptTraces.ContractTrieTraces))
-	for i, pbContractTrieUpdate := range pbMptTraces.ContractTrieTraces {
-		proof, err := protoToGoProof(pbContractTrieUpdate.SszProof)
-		if err != nil {
-			return nil, err
-		}
-		contractTrieTraces[i] = mpttracer.ContractTrieUpdateTrace{
-			Key:         common.HexToHash(pbContractTrieUpdate.Key),
-			RootBefore:  common.HexToHash(pbContractTrieUpdate.RootBefore),
-			RootAfter:   common.HexToHash(pbContractTrieUpdate.RootAfter),
-			ValueBefore: smartContractFromProto(pbContractTrieUpdate.ValueBefore),
-			ValueAfter:  smartContractFromProto(pbContractTrieUpdate.ValueAfter),
-			Proof:       proof,
-		}
-	}
-
-	ret := &mpttracer.MPTTraces{
-		StorageTracesByAccount: addrToStorageTraces,
-		ContractTrieTraces:     contractTrieTraces,
-	}
-
-	return ret, nil
-}
-
-func mptTracesToProto(mptTraces *mpttracer.MPTTraces, traceIdx uint64) (*pb.MPTTraces, error) {
-	check.PanicIfNot(mptTraces != nil)
-
-	pbAddrToStorageTraces := make(map[string]*pb.StorageTrieUpdatesTraces, len(mptTraces.StorageTracesByAccount))
-	for addr, storageTraces := range mptTraces.StorageTracesByAccount {
-		pbStorageTraces := make([]*pb.StorageTrieUpdateTrace, len(storageTraces))
-		for i, storageUpdateTrace := range storageTraces {
-			proof, err := goToProtoProof(storageUpdateTrace.Proof)
-			if err != nil {
-				return nil, err
-			}
-			pbStorageTraces[i] = &pb.StorageTrieUpdateTrace{
-				Key:         storageUpdateTrace.Key.Hex(),
-				RootBefore:  storageUpdateTrace.RootBefore.Hex(),
-				RootAfter:   storageUpdateTrace.RootAfter.Hex(),
-				ValueBefore: uint256ToProtoUint256(storageUpdateTrace.ValueBefore),
-				ValueAfter:  uint256ToProtoUint256(storageUpdateTrace.ValueAfter),
-				SszProof:    proof,
-			}
-		}
-
-		pbAddrToStorageTraces[addr.Hex()] = &pb.StorageTrieUpdatesTraces{UpdatesTraces: pbStorageTraces}
-	}
-
-	pbContractTrieTraces := make([]*pb.ContractTrieUpdateTrace, len(mptTraces.ContractTrieTraces))
-	for i, contractTrieUpdate := range mptTraces.ContractTrieTraces {
-		proof, err := goToProtoProof(contractTrieUpdate.Proof)
-		if err != nil {
-			return nil, err
-		}
-		pbContractTrieTraces[i] = &pb.ContractTrieUpdateTrace{
-			Key:         contractTrieUpdate.Key.Hex(),
-			RootBefore:  contractTrieUpdate.RootBefore.Hex(),
-			RootAfter:   contractTrieUpdate.RootAfter.Hex(),
-			ValueBefore: smartContractToProto(contractTrieUpdate.ValueBefore),
-			ValueAfter:  smartContractToProto(contractTrieUpdate.ValueAfter),
-			SszProof:    proof,
-		}
-	}
-
-	ret := &pb.MPTTraces{
-		StorageTracesByAccount: pbAddrToStorageTraces,
-		ContractTrieTraces:     pbContractTrieTraces,
-		TraceIdx:               traceIdx,
-		ProtoHash:              constants.ProtoHash,
-	}
-
-	return ret, nil
-}
-
-// smartContractFromProto converts a Protocol Buffers SmartContract to Go SmartContract
-func smartContractFromProto(pbSmartContract *pb.SmartContract) *types.SmartContract {
-	if pbSmartContract == nil {
-		return nil
-	}
-
-	var balance types.Value
-	if pbSmartContract.Balance != nil {
-		b := protoUint256ToUint256(pbSmartContract.Balance)
-		balance = types.NewValue(b.Int())
-	}
-	return &types.SmartContract{
-		Address:          types.HexToAddress(pbSmartContract.Address),
-		Initialised:      pbSmartContract.Initialized,
-		Balance:          types.NewValue(balance.Int()),
-		TokenRoot:        common.HexToHash(pbSmartContract.TokenRoot),
-		StorageRoot:      common.HexToHash(pbSmartContract.StorageRoot),
-		CodeHash:         common.HexToHash(pbSmartContract.CodeHash),
-		AsyncContextRoot: common.HexToHash(pbSmartContract.AsyncContextRoot),
-		Seqno:            types.Seqno(pbSmartContract.Seqno),
-		ExtSeqno:         types.Seqno(pbSmartContract.ExtSeqno),
-		RequestId:        pbSmartContract.RequestId,
-	}
-}
-
-// smartContractToProto converts a Go SmartContract to Protocol Buffers SmartContract
-func smartContractToProto(smartContract *types.SmartContract) *pb.SmartContract {
-	if smartContract == nil {
-		return nil
-	}
-
-	var pbBalance *pb.Uint256
-	if smartContract.Balance.Uint256 != nil {
-		pbBalance = uint256ToProtoUint256(*smartContract.Balance.Uint256)
-	}
-	return &pb.SmartContract{
-		Address:          smartContract.Address.Hex(),
-		Initialized:      smartContract.Initialised,
-		Balance:          pbBalance,
-		TokenRoot:        smartContract.TokenRoot.Hex(),
-		StorageRoot:      smartContract.StorageRoot.Hex(),
-		CodeHash:         smartContract.CodeHash.Hex(),
-		AsyncContextRoot: smartContract.AsyncContextRoot.Hex(),
-		Seqno:            uint64(smartContract.Seqno),
-		ExtSeqno:         uint64(smartContract.ExtSeqno),
-		RequestId:        smartContract.RequestId,
-	}
 }

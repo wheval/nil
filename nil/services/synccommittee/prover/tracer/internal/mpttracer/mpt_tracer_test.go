@@ -25,18 +25,19 @@ func TestMPTTracer_GetAccountSlotChangeTraces(t *testing.T) {
 	err = mptTracer.SetSlot(account, key2, value2)
 	require.NoError(t, err)
 
-	accountTrieTraces, err := mptTracer.GetAccountTrieTraces()
+	mptTraces, err := mptTracer.GetMPTTraces()
 	require.NoError(t, err)
-	require.NotNil(t, accountTrieTraces)
+	require.NotNil(t, mptTraces)
+	require.NotNil(t, mptTraces.ContractTrieTraces)
+	require.NotNil(t, mptTraces.StorageTracesByAccount)
 
 	// Verify ContractTrie traces contain single change
-	assert.Len(t, accountTrieTraces, 1)
+	assert.Len(t, mptTraces.ContractTrieTraces, 1)
 
 	// Verify both slots are included into trace for specific address
-	storageTracesByAccount, err := mptTracer.GetAccountsStorageUpdatesTraces()
 	require.NoError(t, err)
-	assert.Len(t, storageTracesByAccount, 1)
-	accountStorageTraces, exists := storageTracesByAccount[account]
+	assert.Len(t, mptTraces.StorageTracesByAccount, 1)
+	accountStorageTraces, exists := mptTraces.StorageTracesByAccount[account]
 	assert.True(t, exists)
 	assert.Len(t, accountStorageTraces, 2)
 }
@@ -62,7 +63,7 @@ func TestMPTTracer_MultipleUpdatesToSameSlot(t *testing.T) {
 	assert.Equal(t, value2, retrievedValue)
 
 	// Verify only one operation was recorded
-	storageTracesByAccount, err := mptTracer.GetAccountsStorageUpdatesTraces()
+	storageTracesByAccount, err := mptTracer.getAccountsStorageUpdatesTraces()
 	require.NoError(t, err)
 	assert.Len(t, storageTracesByAccount, 1)
 	accountStorageTraces, exists := storageTracesByAccount[account]

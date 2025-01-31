@@ -18,12 +18,14 @@ const (
 	DeleteMPTOperation
 )
 
+type ProofPath []Node
+
 type Proof struct {
 	operation MPTOperation
 	key       []byte
 	// path from root to the node with max matching to key prefix
 	// if key is presented in the MPT this'll be simply path to corresponding node
-	pathToNode []Node
+	PathToNode ProofPath
 }
 
 func BuildProof(tree *Reader, key []byte, op MPTOperation) (Proof, error) {
@@ -35,7 +37,7 @@ func BuildProof(tree *Reader, key []byte, op MPTOperation) (Proof, error) {
 	if path, err := getMaxMatchingRoute(tree, key); err != nil {
 		return p, err
 	} else {
-		p.pathToNode = path
+		p.PathToNode = path
 	}
 
 	return p, nil
@@ -157,7 +159,7 @@ func unwrapSparseMpt(p *Proof) (*MerklePatriciaTrie, error) {
 }
 
 func PopulateMptWithProof(mpt *MerklePatriciaTrie, p *Proof) error {
-	for i, node := range p.pathToNode {
+	for i, node := range p.PathToNode {
 		if nodeRef, err := mpt.storeNode(node); err != nil {
 			return err
 		} else if i == 0 {
@@ -184,7 +186,7 @@ func getMaxMatchingRoute(tree *Reader, key []byte) ([]Node, error) {
 }
 
 func (p *Proof) Encode() ([]byte, error) {
-	if len(p.key) > maxRawKeyLen || len(p.pathToNode) >= (1<<8) {
+	if len(p.key) > maxRawKeyLen || len(p.PathToNode) >= (1<<8) {
 		return nil, ssz.ErrListTooBig
 	}
 
@@ -194,9 +196,9 @@ func (p *Proof) Encode() ([]byte, error) {
 	buf = ssz.MarshalUint8(buf, uint8(len(p.key)))
 	buf = append(buf, p.key...)
 
-	buf = ssz.MarshalUint8(buf, uint8(len(p.pathToNode)))
-	for i := range p.pathToNode {
-		node, err := p.pathToNode[i].Encode()
+	buf = ssz.MarshalUint8(buf, uint8(len(p.PathToNode)))
+	for i := range p.PathToNode {
+		node, err := p.PathToNode[i].Encode()
 		if err != nil {
 			return nil, err
 		}
@@ -230,7 +232,7 @@ func DecodeProof(data []byte) (Proof, error) {
 			return p, err
 		}
 
-		p.pathToNode = append(p.pathToNode, node)
+		p.PathToNode = append(p.PathToNode, node)
 		data = data[4+nodeLen:]
 	}
 
