@@ -9,9 +9,11 @@ import (
 	"github.com/NilFoundation/nil/nil/cmd/nild/nildconfig"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
+	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/network"
+	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"gopkg.in/yaml.v3"
@@ -37,11 +39,26 @@ func do(nShards uint, dir string) error {
 
 	configs := make([]*nildconfig.Config, nShards)
 	peerAddresses := make(network.AddrInfoSlice, nShards)
+	keysManagers := make([]*keys.ValidatorKeysManager, nShards)
+	validators := make(map[types.ShardId][]config.ValidatorInfo, nShards)
 
-	validatorKeysPath := "validator-keys.yaml"
-	validatorKeysManager := keys.NewValidatorKeyManager(validatorKeysPath, uint32(nShards))
-	if err := validatorKeysManager.InitKeys(); err != nil {
-		return err
+	for i := range nShards {
+		suffix := shardSuffix(nShards, i)
+		validatorKeysPath := "validator-keys" + suffix + ".yaml"
+		validatorKeysManager := keys.NewValidatorKeyManager(validatorKeysPath, uint32(nShards))
+		if err := validatorKeysManager.InitKeys(); err != nil {
+			return err
+		}
+		keysManagers[i] = validatorKeysManager
+
+		shardId := types.ShardId(i)
+		pkey, err := validatorKeysManager.GetPublicKey(shardId)
+		if err != nil {
+			return err
+		}
+		validators[shardId] = []config.ValidatorInfo{
+			{PublicKey: config.Pubkey(pkey)},
+		}
 	}
 
 	for i := range nShards {
@@ -50,20 +67,22 @@ func do(nShards uint, dir string) error {
 		mainKeysFileName := "main-keys" + suffix + ".yaml"
 		dbPath := "test.db" + suffix
 
+		validatorKeysPath := keysManagers[i].GetKeysPath()
 		cfg := &nildconfig.Config{
 			Config: &nilservice.Config{
-				NShards:           uint32(nShards),
-				MyShards:          []uint{i},
-				SplitShards:       true,
-				MainKeysOutPath:   mainKeysFileName,
-				NetworkKeysPath:   networkKeysFileName,
-				ValidatorKeysPath: validatorKeysPath,
-				RPCPort:           9000 + int(i),
+				NShards:         uint32(nShards),
+				MyShards:        []uint{i},
+				SplitShards:     true,
+				MainKeysOutPath: mainKeysFileName,
+				NetworkKeysPath: networkKeysFileName,
+				RPCPort:         9000 + int(i),
 				Network: &network.Config{
 					TcpPort:           19000 + int(i),
 					DHTEnabled:        true,
 					DHTBootstrapPeers: peerAddresses,
 				},
+				ValidatorKeysPath: validatorKeysPath,
+				Validators:        validators,
 			},
 			DB: &db.BadgerDBOptions{
 				Path: dbPath,

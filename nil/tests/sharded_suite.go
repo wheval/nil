@@ -13,8 +13,10 @@ import (
 	rpc_client "github.com/NilFoundation/nil/nil/client/rpc"
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/abi"
+	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
+	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
@@ -30,6 +32,7 @@ type Shard struct {
 	P2pAddress network.AddrInfo
 	Client     client.Client
 	nm         *network.Manager
+	Config     *nilservice.Config
 }
 
 func getShardAddress(s Shard) network.AddrInfo {
@@ -66,12 +69,24 @@ func (s *ShardedSuite) Cancel() {
 	}
 }
 
-func (s *ShardedSuite) createShardCfg(
-	shardId types.ShardId, cfg *nilservice.Config, netCfg *network.Config, validatorKeysPath string,
+func (s *ShardedSuite) createOneShardOneValidatorCfg(
+	shardId types.ShardId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[types.ShardId]*keys.ValidatorKeysManager,
 ) *nilservice.Config {
+	validatorKeysPath := keyManagers[shardId].GetKeysPath()
+
+	validators := make(map[types.ShardId][]config.ValidatorInfo)
+	for kmShardId, km := range keyManagers {
+		pkey, err := km.GetPublicKey(kmShardId)
+		s.Require().NoError(err)
+		validators[kmShardId] = []config.ValidatorInfo{
+			{PublicKey: config.Pubkey(pkey)},
+		}
+	}
+
+	s.Require().NotEmpty(validatorKeysPath)
 	return &nilservice.Config{
 		NShards:              cfg.NShards,
-		MyShards:             []uint{uint(s.Shards[shardId].Id)},
+		MyShards:             []uint{uint(shardId)},
 		SplitShards:          true,
 		HttpUrl:              s.Shards[shardId].RpcUrl,
 		Topology:             cfg.Topology,
@@ -80,6 +95,7 @@ func (s *ShardedSuite) createShardCfg(
 		Network:              netCfg,
 		ZeroStateYaml:        cfg.ZeroStateYaml,
 		ValidatorKeysPath:    validatorKeysPath,
+		Validators:           validators,
 	}
 }
 
@@ -97,9 +113,17 @@ func (s *ShardedSuite) start(cfg *nilservice.Config, port int) {
 
 	networkConfigs, p2pAddresses := network.GenerateConfigs(s.T(), cfg.NShards, port)
 
+	keysManagers := make(map[types.ShardId]*keys.ValidatorKeysManager)
 	s.Shards = make([]Shard, 0, cfg.NShards)
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
+
+		keysPath := s.T().TempDir() + fmt.Sprintf("/validator-keys-%d.yaml", i)
+		km := keys.NewValidatorKeyManager(keysPath, cfg.NShards)
+		s.Require().NotNil(km)
+		s.Require().NoError(km.InitKeys())
+		keysManagers[shardId] = km
+
 		url := rpc.GetSockPathIdx(s.T(), int(i))
 		shard := Shard{
 			Id:         shardId,
@@ -113,11 +137,12 @@ func (s *ShardedSuite) start(cfg *nilservice.Config, port int) {
 
 	PatchConfigWithTestDefaults(cfg)
 	for i := range types.ShardId(cfg.NShards) {
-		shardConfig := s.createShardCfg(i, cfg, networkConfigs[i], cfg.ValidatorKeysPath)
+		shardConfig := s.createOneShardOneValidatorCfg(i, cfg, networkConfigs[i], keysManagers)
 
 		node, err := nilservice.CreateNode(s.Context, fmt.Sprintf("shard-%d", i), shardConfig, s.Shards[i].Db, nil)
 		s.Require().NoError(err)
 		s.Shards[i].nm = node.NetworkManager
+		s.Shards[i].Config = shardConfig
 
 		s.Wg.Add(1)
 		go func() {
@@ -156,18 +181,19 @@ func (s *ShardedSuite) connectToShards(nm *network.Manager) {
 	wg.Wait()
 }
 
-func (s *ShardedSuite) StartArchiveNode(port int, withBootstrapPeers bool, validatorKeysPath string) (client.Client, network.AddrInfo) {
+func (s *ShardedSuite) StartArchiveNode(port int, withBootstrapPeers bool) (client.Client, network.AddrInfo) {
 	s.T().Helper()
 
+	s.Require().NotEmpty(s.Shards)
 	netCfg, addr := network.GenerateConfig(s.T(), port)
 	serviceName := fmt.Sprintf("archive-%d", port)
 
 	cfg := &nilservice.Config{
-		NShards:           uint32(len(s.Shards)),
-		Network:           netCfg,
-		HttpUrl:           rpc.GetSockPathService(s.T(), serviceName),
-		RunMode:           nilservice.ArchiveRunMode,
-		ValidatorKeysPath: validatorKeysPath,
+		NShards:    uint32(len(s.Shards)),
+		Network:    netCfg,
+		HttpUrl:    rpc.GetSockPathService(s.T(), serviceName),
+		RunMode:    nilservice.ArchiveRunMode,
+		Validators: s.Shards[0].Config.Validators,
 	}
 
 	cfg.MyShards = slices.Collect(common.Range(0, uint(cfg.NShards)))

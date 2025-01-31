@@ -27,8 +27,8 @@ func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 	if !i.signer.Verify(msgNoSig, msg.Signature) {
 		event := i.logger.Error().Stringer(logging.FieldType, msg.GetType())
 		if view := msg.GetView(); view != nil {
-			event = event.Uint64(logging.FieldHeight, msg.GetView().Height).
-				Uint64(logging.FieldRound, msg.GetView().Round)
+			event = event.Uint64(logging.FieldHeight, view.Height).
+				Uint64(logging.FieldRound, view.Round)
 		}
 		event.Msg("Invalid signature")
 		return false

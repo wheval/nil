@@ -57,7 +57,7 @@ func (s *SuiteConfigParams) TearDownTest() {
 func (s *SuiteConfigParams) NewValidator() *config.ValidatorInfo {
 	s.T().Helper()
 
-	var pubkey [33]byte
+	var pubkey config.Pubkey
 	_, err := rand.Read(pubkey[:])
 	s.Require().NoError(err)
 

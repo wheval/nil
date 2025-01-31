@@ -2,7 +2,6 @@ package collate
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,9 +15,9 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
+	"github.com/NilFoundation/nil/nil/internal/signer"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi/pb"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/multiformats/go-multistream"
 	"github.com/rs/zerolog"
 	"google.golang.org/protobuf/proto"
@@ -33,7 +32,7 @@ type SyncerConfig struct {
 	BlockGeneratorParams execution.BlockGeneratorParams
 	ZeroState            string
 	ZeroStateConfig      *execution.ZeroStateConfig
-	ValidatorPublicKey   *ecdsa.PublicKey
+	BlockVerifier        *signer.BlockVerifier
 }
 
 type Syncer struct {
@@ -48,15 +47,9 @@ type Syncer struct {
 
 	lastBlockNumber types.BlockNumber
 	lastBlockHash   common.Hash
-
-	validatorPublicKey []byte
 }
 
 func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Syncer, error) {
-	if cfg.ValidatorPublicKey == nil {
-		return nil, errors.New("validator public key is required")
-	}
-
 	return &Syncer{
 		config:         cfg,
 		topic:          topicShardBlocks(cfg.ShardId),
@@ -65,8 +58,7 @@ func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Sy
 		logger: logging.NewLogger("sync").With().
 			Stringer(logging.FieldShardId, cfg.ShardId).
 			Logger(),
-		lastBlockNumber:    types.BlockNumber(math.MaxUint64),
-		validatorPublicKey: crypto.CompressPubkey(cfg.ValidatorPublicKey),
+		lastBlockNumber: types.BlockNumber(math.MaxUint64),
 	}, nil
 }
 
@@ -260,13 +252,12 @@ func (s *Syncer) saveBlocks(ctx context.Context, blocks []*types.BlockWithExtrac
 			continue
 		}
 
-		if err := block.Block.VerifySignature(s.validatorPublicKey, s.config.ShardId); err != nil {
+		if err := s.config.BlockVerifier.VerifyBlock(ctx, block.Block); err != nil {
 			s.logger.Error().
 				Uint64(logging.FieldBlockNumber, uint64(block.Id)).
 				Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
 				Stringer(logging.FieldShardId, s.config.ShardId).
 				Stringer(logging.FieldSignature, block.Signature).
-				Hex(logging.FieldPublicKey, crypto.FromECDSAPub(s.config.ValidatorPublicKey)).
 				Err(err).
 				Msg("Failed to verify block signature")
 			return err

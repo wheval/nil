@@ -4,7 +4,6 @@ import (
 	"math"
 	"testing"
 
-	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
@@ -19,16 +18,13 @@ type SuiteRpcNode struct {
 func (s *SuiteRpcNode) SetupTest() {
 	port := 11001
 	nShards := uint32(5)
-	validatorKeysPath := s.T().TempDir() + "/validator-keys.yaml"
-	validatorKeyManager := keys.NewValidatorKeyManager(validatorKeysPath, nShards)
-	s.Require().NoError(validatorKeyManager.InitKeys())
+
 	s.Start(&nilservice.Config{
-		NShards:           nShards,
-		RunMode:           nilservice.NormalRunMode,
-		ValidatorKeysPath: validatorKeysPath,
+		NShards: nShards,
+		RunMode: nilservice.NormalRunMode,
 	}, port)
 
-	_, archiveNodeAddr := s.StartArchiveNode(port+int(nShards), true, validatorKeysPath)
+	_, archiveNodeAddr := s.StartArchiveNode(port+int(nShards), true)
 	s.DefaultClient, _ = s.StartRPCNode(tests.WithoutDhtBootstrapByValidators, network.AddrInfoSlice{archiveNodeAddr})
 }
 

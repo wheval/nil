@@ -9,7 +9,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/execution"
-	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
@@ -92,16 +91,13 @@ contracts:
 func (s *SuiteAsyncAwait) SetupTest() {
 	nShards := uint32(4)
 	port := 10425
-	validatorKeysPath := s.T().TempDir() + "/validator-keys.yaml"
-	validatorKeyManager := keys.NewValidatorKeyManager(validatorKeysPath, nShards)
-	s.Require().NoError(validatorKeyManager.InitKeys())
+
 	s.Start(&nilservice.Config{
-		NShards:           nShards,
-		ZeroStateYaml:     s.zerostateCfg,
-		ValidatorKeysPath: validatorKeysPath,
+		NShards:       nShards,
+		ZeroStateYaml: s.zerostateCfg,
 	}, port)
 
-	_, archiveNodeAddr := s.StartArchiveNode(port+int(nShards), true, validatorKeysPath)
+	_, archiveNodeAddr := s.StartArchiveNode(port+int(nShards), true)
 	s.DefaultClient, _ = s.StartRPCNode(tests.WithDhtBootstrapByValidators, network.AddrInfoSlice{archiveNodeAddr})
 }
 
