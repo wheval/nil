@@ -141,7 +141,7 @@ func (s *ReplayScheduler) buildProposalFromPrevBlock(ctx context.Context, blockI
 	s.logger.Trace().Msgf("Last block is %s, last MC block is %s", proposal.PrevBlockHash, proposal.MainChainHash)
 
 	// we could also consider option with fairly collecting these transactions
-	// from neighbor shards and running collator
+	// from neighbor shards and running proposer
 	// however it's not a purpose of replay mode (at least now)
 	inTxnsReader := execution.NewDbTransactionTrieReader(roTx, s.params.ShardId)
 	inTxnsReader.SetRootHash(blockToReplay.InTransactionsRoot)

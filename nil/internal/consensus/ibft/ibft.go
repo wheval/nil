@@ -9,7 +9,6 @@ import (
 	"github.com/NilFoundation/nil/nil/go-ibft/core"
 	"github.com/NilFoundation/nil/nil/go-ibft/messages"
 	protoIBFT "github.com/NilFoundation/nil/nil/go-ibft/messages/proto"
-	"github.com/NilFoundation/nil/nil/internal/collate"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
@@ -22,9 +21,15 @@ const ibftProto = "/ibft/0.2"
 type ConsensusParams struct {
 	ShardId    types.ShardId
 	Db         db.DB
-	Scheduler  *collate.Scheduler
+	Validator  validator
 	NetManager *network.Manager
 	PrivateKey *ecdsa.PrivateKey
+}
+
+type validator interface {
+	BuildProposal(ctx context.Context) (*execution.Proposal, error)
+	VerifyProposal(ctx context.Context, proposal *execution.Proposal) (*types.Block, error)
+	InsertProposal(ctx context.Context, proposal *execution.Proposal, sig types.Signature) error
 }
 
 type backendIBFT struct {
@@ -32,7 +37,7 @@ type backendIBFT struct {
 	db        db.DB
 	consensus *core.IBFT
 	shardId   types.ShardId
-	scheduler *collate.Scheduler
+	validator validator
 	logger    zerolog.Logger
 	nm        *network.Manager
 	transport transport
@@ -50,7 +55,7 @@ func (i *backendIBFT) unmarshalProposal(raw []byte) (*execution.Proposal, error)
 }
 
 func (i *backendIBFT) BuildProposal(view *protoIBFT.View) []byte {
-	proposal, err := i.scheduler.BuildProposal(i.ctx)
+	proposal, err := i.validator.BuildProposal(i.ctx)
 	if err != nil {
 		return nil
 	}
@@ -74,7 +79,7 @@ func (i *backendIBFT) InsertProposal(proposal *protoIBFT.Proposal, committedSeal
 		}
 	}
 
-	if err := i.scheduler.InsertProposal(i.ctx, proposalBlock, signature); err != nil {
+	if err := i.validator.InsertProposal(i.ctx, proposalBlock, signature); err != nil {
 		i.logger.Error().Err(err).Msg("fail to insert proposal")
 	}
 }
@@ -96,7 +101,7 @@ func NewConsensus(cfg *ConsensusParams) *backendIBFT {
 	backend := &backendIBFT{
 		db:        cfg.Db,
 		shardId:   cfg.ShardId,
-		scheduler: cfg.Scheduler,
+		validator: cfg.Validator,
 		logger:    logger,
 		nm:        cfg.NetManager,
 		signer:    NewSigner(cfg.PrivateKey),

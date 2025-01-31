@@ -121,7 +121,7 @@ func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
 	s.logger.Debug().
 		Stringer(logging.FieldBlockHash, s.lastBlockHash).
 		Uint64(logging.FieldBlockNumber, s.lastBlockNumber.Uint64()).
-		Msgf("Initialized sync collator at starting block")
+		Msgf("Initialized sync proposer at starting block")
 
 	s.logger.Info().Msg("Starting sync")
 
@@ -135,7 +135,7 @@ func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
 	for {
 		select {
 		case <-ctx.Done():
-			s.logger.Debug().Msg("Sync collator is terminated")
+			s.logger.Debug().Msg("Sync proposer is terminated")
 			return nil
 		case data := <-ch:
 			saved, err := s.processTopicTransaction(ctx, data)
