@@ -141,13 +141,33 @@ func (bk BlockId) String() string {
 	return hex.EncodeToString(bk.Bytes())
 }
 
+type PrunedBlock struct {
+	ShardId       types.ShardId
+	BlockNumber   types.BlockNumber
+	Timestamp     uint64
+	PrevBlockHash common.Hash
+	Transactions  []*PrunedTransaction
+}
+
+func NewPrunedBlock(block *jsonrpc.RPCBlock) *PrunedBlock {
+	return &PrunedBlock{
+		ShardId:       block.ShardId,
+		BlockNumber:   block.Number,
+		Timestamp:     block.DbTimestamp,
+		PrevBlockHash: block.ParentHash,
+		Transactions:  BlockTransactions(block),
+	}
+}
+
 type PrunedTransaction struct {
-	Flags types.TransactionFlags
-	Seqno hexutil.Uint64
-	From  types.Address
-	To    types.Address
-	Value types.Value
-	Data  hexutil.Bytes
+	Flags    types.TransactionFlags
+	Seqno    hexutil.Uint64
+	From     types.Address
+	To       types.Address
+	BounceTo types.Address
+	RefundTo types.Address
+	Value    types.Value
+	Data     hexutil.Bytes
 }
 
 func BlockTransactions(block *jsonrpc.RPCBlock) []*PrunedTransaction {
@@ -160,12 +180,14 @@ func BlockTransactions(block *jsonrpc.RPCBlock) []*PrunedTransaction {
 
 func NewTransaction(transaction *jsonrpc.RPCInTransaction) *PrunedTransaction {
 	return &PrunedTransaction{
-		Flags: transaction.Flags,
-		Seqno: transaction.Seqno,
-		From:  transaction.From,
-		To:    transaction.To,
-		Value: transaction.Value,
-		Data:  transaction.Data,
+		Flags:    transaction.Flags,
+		Seqno:    transaction.Seqno,
+		From:     transaction.From,
+		To:       transaction.To,
+		BounceTo: transaction.BounceTo,
+		RefundTo: transaction.RefundTo,
+		Value:    transaction.Value,
+		Data:     transaction.Data,
 	}
 }
 

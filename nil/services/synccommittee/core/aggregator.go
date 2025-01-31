@@ -12,6 +12,9 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	coreTypes "github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/core/batches"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/blob"
+	v1 "github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/encode/v1"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
@@ -25,13 +28,14 @@ type AggregatorMetrics interface {
 }
 
 type Aggregator struct {
-	logger       zerolog.Logger
-	rpcClient    client.Client
-	blockStorage storage.BlockStorage
-	taskStorage  storage.TaskStorage
-	timer        common.Timer
-	metrics      AggregatorMetrics
-	pollingDelay time.Duration
+	logger         zerolog.Logger
+	rpcClient      client.Client
+	blockStorage   storage.BlockStorage
+	taskStorage    storage.TaskStorage
+	batchCommitter batches.BatchCommitter
+	timer          common.Timer
+	metrics        AggregatorMetrics
+	pollingDelay   time.Duration
 }
 
 func NewAggregator(
@@ -48,6 +52,13 @@ func NewAggregator(
 		rpcClient:    rpcClient,
 		blockStorage: blockStorage,
 		taskStorage:  taskStorage,
+		batchCommitter: batches.NewBatchCommitter(
+			v1.NewEncoder(logger),
+			blob.NewBuilder(),
+			nil, // TODO
+			logger,
+			batches.DefaultCommitOptions(),
+		),
 		timer:        timer,
 		metrics:      metrics,
 		pollingDelay: pollingDelay,
@@ -183,6 +194,11 @@ func (agg *Aggregator) handleBlockBatch(ctx context.Context, batch *types.BlockB
 		return fmt.Errorf("error reading latest fetched block from storage: %w", err)
 	}
 	if err := latestFetched.ValidateChild(batch.MainShardBlock); err != nil {
+		return err
+	}
+
+	prunedBatch := types.NewPrunedBatch(batch)
+	if err := agg.batchCommitter.Commit(ctx, prunedBatch); err != nil {
 		return err
 	}
 

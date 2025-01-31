@@ -71,11 +71,15 @@ $(root_sce)/public/taskdebugorder_string.go: $(root_sce)/public/task_debug_api.g
 	go generate $(root_sce)/public
 
 .PHONY: pb_synccommittee
-pb_synccommittee: $(root_sce)/prover/proto/traces.pb.go
+pb_synccommittee: $(root_sce)/prover/proto/traces.pb.go \
+                  $(root_sce)/internal/types/proto/blob_transaction.pb.go
 
 $(root_sce)/prover/proto/traces.pb.go: $(root_sce)/prover/proto/traces.proto
 	protoc --proto_path=$(root_sce)/prover/proto --go_out=$(root_sce)/prover/ $(root_sce)/prover/proto/traces.proto $(root_sce)/prover/proto/verbose_mpt.proto
 
+
+$(root_sce)/internal/types/proto/blob_transaction.pb.go: $(root_sce)/internal/types/proto/blob_transaction.proto
+	protoc --go_out=$(root_sce)/internal/types/ $(root_sce)/internal/types/proto/blob_transaction.proto
 
 .PHONY: generate_contract_from_abi
 generate_contract_from_abi:

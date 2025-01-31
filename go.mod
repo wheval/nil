@@ -54,6 +54,8 @@ require (
 	github.com/dgraph-io/badger/v4 v4.2.0
 	github.com/ethereum/go-ethereum v1.14.12
 	github.com/hashicorp/golang-lru/v2 v2.0.7
+	github.com/icza/bitio v1.1.0
+	github.com/klauspost/compress v1.17.11
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/viper v1.19.0
 	golang.org/x/term v0.26.0
@@ -139,7 +141,6 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/koron/go-ssdp v0.0.4 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
