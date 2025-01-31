@@ -1,3 +1,4 @@
 nil/go-ibft/core
 nil/tests/archive_node
 nil/services/txnpool
+nil/tests/rpc_node
