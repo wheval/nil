@@ -13,6 +13,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/NilFoundation/nil/nil/services/txnpool"
 	"github.com/rs/zerolog"
 )
 
@@ -181,6 +182,7 @@ func (p *proposer) handleTransactionsFromPool() error {
 
 	sa := execution.NewStateAccessor()
 
+	var duplicates, unverified []*types.Transaction
 	handle := func(txn *types.Transaction) (bool, error) {
 		hash := txn.Hash()
 
@@ -190,15 +192,19 @@ func (p *proposer) handleTransactionsFromPool() error {
 		} else if err == nil && txnData.Transaction() != nil {
 			p.logger.Trace().Stringer(logging.FieldTransactionHash, hash).
 				Msg("Transaction is already in the blockchain. Dropping...")
+
+			duplicates = append(duplicates, txn)
 			return false, nil
 		}
 
 		if res := execution.ValidateExternalTransaction(p.executionState, txn); res.FatalError != nil {
 			return false, res.FatalError
 		} else if res.Failed() {
-			p.logger.Error().Stringer(logging.FieldTransactionHash, hash).
-				Err(res.Error).Msg("External message validation failed")
+			p.logger.Warn().Stringer(logging.FieldTransactionHash, hash).
+				Err(res.Error).Msg("External txn validation failed. Saved failure receipt. Dropping...")
+
 			execution.AddFailureReceipt(hash, txn.To, res)
+			unverified = append(unverified, txn)
 			return false, nil
 		}
 
@@ -224,8 +230,24 @@ func (p *proposer) handleTransactionsFromPool() error {
 
 			p.proposal.InTxns = append(p.proposal.InTxns, txn)
 		}
+	}
 
-		p.proposal.RemoveFromPool = append(p.proposal.RemoveFromPool, txn)
+	if len(duplicates) > 0 {
+		p.logger.Debug().Msgf("Removing %d duplicate transactions from the pool", len(duplicates))
+
+		if err := p.pool.Discard(p.ctx, duplicates, txnpool.DuplicateHash); err != nil {
+			p.logger.Error().Err(err).
+				Msgf("Failed to remove %d duplicate transactions from the pool", len(duplicates))
+		}
+	}
+
+	if len(unverified) > 0 {
+		p.logger.Debug().Msgf("Removing %d unverifiable transactions from the pool", len(unverified))
+
+		if err := p.pool.Discard(p.ctx, unverified, txnpool.Unverified); err != nil {
+			p.logger.Error().Err(err).
+				Msgf("Failed to remove %d unverifiable transactions from the pool", len(unverified))
+		}
 	}
 
 	return nil

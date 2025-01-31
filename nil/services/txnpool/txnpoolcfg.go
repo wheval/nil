@@ -34,6 +34,7 @@ const (
 	SeqnoTooLow         DiscardReason = 18
 	NotReplaced         DiscardReason = 20 // There was an existing transaction with the same sender and seqno, not enough price bump to replace
 	DuplicateHash       DiscardReason = 21 // There was an existing transaction with the same hash
+	Unverified          DiscardReason = 22 // Transaction verification failed
 )
 
 func (r DiscardReason) String() string {
@@ -60,6 +61,8 @@ func (r DiscardReason) String() string {
 		return "seqno too low"
 	case DuplicateHash:
 		return "duplicate hash"
+	case Unverified:
+		return "verification failed"
 	default:
 		panic(fmt.Sprintf("discard reason: %d", r))
 	}

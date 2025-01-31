@@ -10,6 +10,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/NilFoundation/nil/nil/services/txnpool"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/suite"
 )
@@ -123,7 +124,6 @@ func (s *ProposerTestSuite) TestCollator() {
 		r1 := s.checkReceipt(shardId, m1)
 		r2 := s.checkReceipt(shardId, m2)
 		s.Equal(pool.Txns, proposal.InTxns)
-		s.Equal(pool.Txns, proposal.RemoveFromPool)
 
 		pool.Txns = nil
 
@@ -170,9 +170,8 @@ func (s *ProposerTestSuite) TestCollator() {
 		proposal := generateBlock()
 		s.Empty(proposal.InTxns)
 		s.Empty(proposal.ForwardTxns)
-		s.Equal(pool.Txns, proposal.RemoveFromPool)
-
-		pool.Txns = nil
+		s.Equal(pool.Txns, pool.LastDiscarded)
+		s.Equal(txnpool.DuplicateHash, pool.LastReason)
 	})
 
 	s.Run("Deploy", func() {
