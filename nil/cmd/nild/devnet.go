@@ -98,8 +98,8 @@ func validatorKeysFile(credsDir string) string {
 }
 
 func (spec *devnetSpec) ensureValidatorKeys(srv *server) (*keys.ValidatorKeysManager, error) {
-	vkm := keys.NewValidatorKeyManager(validatorKeysFile(srv.credsDir), spec.NShards)
-	if err := vkm.InitKeys(); err != nil {
+	vkm := keys.NewValidatorKeyManager(validatorKeysFile(srv.credsDir))
+	if err := vkm.InitKey(); err != nil {
 		return nil, err
 	}
 	return vkm, nil
@@ -108,14 +108,13 @@ func (spec *devnetSpec) ensureValidatorKeys(srv *server) (*keys.ValidatorKeysMan
 func (devnet devnet) collectPublicKeys(servers []server) (map[types.ShardId][]config.ValidatorInfo, error) {
 	validator := make(map[types.ShardId][]config.ValidatorInfo, devnet.spec.NShards)
 	for _, srv := range servers {
+		key, err := srv.vkm.GetPublicKey()
+		if err != nil {
+			return nil, err
+		}
+
 		for _, id := range srv.nodeSpec.Shards {
 			shardId := types.ShardId(id)
-
-			key, err := srv.vkm.GetPublicKey(shardId)
-			if err != nil {
-				return nil, err
-			}
-
 			validator[shardId] = append(validator[shardId], config.ValidatorInfo{
 				PublicKey: config.Pubkey(key),
 			})

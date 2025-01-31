@@ -76,7 +76,7 @@ func (s *ShardedSuite) createOneShardOneValidatorCfg(
 
 	validators := make(map[types.ShardId][]config.ValidatorInfo)
 	for kmShardId, km := range keyManagers {
-		pkey, err := km.GetPublicKey(kmShardId)
+		pkey, err := km.GetPublicKey()
 		s.Require().NoError(err)
 		validators[kmShardId] = []config.ValidatorInfo{
 			{PublicKey: config.Pubkey(pkey)},
@@ -119,9 +119,9 @@ func (s *ShardedSuite) start(cfg *nilservice.Config, port int) {
 		shardId := types.ShardId(i)
 
 		keysPath := s.T().TempDir() + fmt.Sprintf("/validator-keys-%d.yaml", i)
-		km := keys.NewValidatorKeyManager(keysPath, cfg.NShards)
+		km := keys.NewValidatorKeyManager(keysPath)
 		s.Require().NotNil(km)
-		s.Require().NoError(km.InitKeys())
+		s.Require().NoError(km.InitKey())
 		keysManagers[shardId] = km
 
 		url := rpc.GetSockPathIdx(s.T(), int(i))
