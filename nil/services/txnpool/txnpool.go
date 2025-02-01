@@ -16,6 +16,7 @@ import (
 
 type Pool interface {
 	Add(ctx context.Context, txns ...*types.Transaction) ([]DiscardReason, error)
+	Discard(ctx context.Context, txns []*types.Transaction, reason DiscardReason) error
 	OnCommitted(ctx context.Context, committed []*types.Transaction) error
 	// IdHashKnown check whether transaction with given Id hash is known to the pool
 	IdHashKnown(hash common.Hash) (bool, error)
@@ -285,6 +286,23 @@ func (p *TxnPool) discardLocked(mm *metaTxn, reason DiscardReason) {
 	hashStr := string(mm.hash.Bytes())
 	delete(p.byHash, hashStr)
 	p.all.delete(mm, reason)
+}
+
+func (p *TxnPool) Discard(_ context.Context, txns []*types.Transaction, reason DiscardReason) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	for _, txn := range txns {
+		mm := p.getLocked(txn.Hash())
+		if mm == nil {
+			continue
+		}
+
+		p.queue.Remove(mm)
+		p.discardLocked(mm, reason)
+	}
+
+	return nil
 }
 
 func (p *TxnPool) OnCommitted(_ context.Context, committed []*types.Transaction) (err error) {

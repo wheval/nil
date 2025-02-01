@@ -56,8 +56,9 @@ func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Prop
 		return fmt.Errorf("failed to generate block: %w", err)
 	}
 
-	if err := s.pool.OnCommitted(ctx, proposal.RemoveFromPool); err != nil {
-		s.logger.Warn().Err(err).Msgf("Failed to remove %d committed transactions from pool", len(proposal.RemoveFromPool))
+	if err := s.pool.OnCommitted(ctx, proposal.InTxns); err != nil {
+		s.logger.Warn().Err(err).
+			Msgf("Failed to remove %d committed transactions from pool", len(proposal.InTxns))
 	}
 
 	return PublishBlock(ctx, s.networkManager, s.params.ShardId, &types.BlockWithExtractedData{

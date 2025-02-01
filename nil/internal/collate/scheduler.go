@@ -17,6 +17,7 @@ import (
 
 type TxnPool interface {
 	Peek(ctx context.Context, n int) ([]*types.Transaction, error)
+	Discard(ctx context.Context, txns []*types.Transaction, reason txnpool.DiscardReason) error
 	OnCommitted(ctx context.Context, committed []*types.Transaction) error
 }
 

@@ -33,10 +33,6 @@ type Proposal struct {
 
 	InTxns      []*types.Transaction `json:"inTxns" ssz-max:"4096"`
 	ForwardTxns []*types.Transaction `json:"forwardTxns" ssz-max:"4096"`
-
-	// In the future, collator should remove transactions from the pool itself after the consensus on the proposal.
-	// Currently, we need to remove them after the block was committed, or they may be lost.
-	RemoveFromPool []*types.Transaction `json:"removeFromPool" ssz-max:"4096"`
 }
 
 func NewEmptyProposal() *Proposal {
