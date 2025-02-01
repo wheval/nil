@@ -1,6 +1,5 @@
 nil/tests/economy
 nil/tests/faucet
-nil/tests/rpc_node
 nil/internal/execution
 nil/tests/async_await
 nil/tests/basic
