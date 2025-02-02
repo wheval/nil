@@ -240,7 +240,7 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 				logger.Error().
 					Err(err).
 					Stringer(logging.FieldShardId, shardId).
-					Msg("Collator goroutine failed")
+					Msg("Syncer goroutine failed")
 				return err
 			}
 			return nil
@@ -460,11 +460,11 @@ func createShards(
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
 	syncerTimeout := syncTimeoutFactor * collatorTickPeriod
 
-	funcs := make([]concurrent.Func, cfg.NShards)
+	funcs := make([]concurrent.Func, 0, 2*cfg.NShards)
 	pools := make(map[types.ShardId]txnpool.Pool)
 
 	var wgFetch sync.WaitGroup
-	wgFetch.Add(int(cfg.NShards) - len(cfg.GetMyShards()))
+	wgFetch.Add(int(cfg.NShards))
 
 	pKey, err := cfg.LoadValidatorPrivateKey()
 	if err != nil {
@@ -475,6 +475,42 @@ func createShards(
 		shardId := types.ShardId(i)
 
 		blockVerifier := signer.NewBlockVerifier(shardId, cfg.Validators[shardId])
+
+		zeroState := execution.DefaultZeroStateConfig
+		zeroStateConfig := cfg.ZeroState
+		if len(cfg.ZeroStateYaml) != 0 {
+			zeroState = cfg.ZeroStateYaml
+		}
+
+		syncerCfg := collate.SyncerConfig{
+			ShardId:              shardId,
+			ReplayBlocks:         shardId.IsMainShard() || cfg.IsShardActive(shardId),
+			Timeout:              syncerTimeout,
+			BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
+			BlockVerifier:        blockVerifier,
+			ZeroState:            zeroState,
+			ZeroStateConfig:      zeroStateConfig,
+		}
+
+		if int(shardId) < len(cfg.BootstrapPeers) {
+			syncerCfg.BootstrapPeer = &cfg.BootstrapPeers[shardId]
+		}
+
+		syncer, err := collate.NewSyncer(syncerCfg, database, networkManager)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		funcs = append(funcs, func(ctx context.Context) error {
+			if err := syncer.Run(ctx, &wgFetch); err != nil {
+				logger.Error().
+					Err(err).
+					Stringer(logging.FieldShardId, shardId).
+					Msg("Syncer goroutine failed")
+				return err
+			}
+			return nil
+		})
 
 		if cfg.IsShardActive(shardId) {
 			txnPool, err := txnpool.New(ctx, txnpool.NewConfig(shardId), networkManager)
@@ -496,8 +532,8 @@ func createShards(
 			}
 
 			pools[shardId] = txnPool
-			funcs[i] = func(ctx context.Context) error {
-				if err := collator.Run(ctx, consensus); err != nil {
+			funcs = append(funcs, func(ctx context.Context) error {
+				if err := collator.Run(ctx, syncer, consensus); err != nil {
 					logger.Error().
 						Err(err).
 						Stringer(logging.FieldShardId, shardId).
@@ -505,45 +541,9 @@ func createShards(
 					return err
 				}
 				return nil
-			}
-		} else {
-			zeroState := execution.DefaultZeroStateConfig
-			zeroStateConfig := cfg.ZeroState
-			if len(cfg.ZeroStateYaml) != 0 {
-				zeroState = cfg.ZeroStateYaml
-			}
-
-			config := collate.SyncerConfig{
-				ShardId:              shardId,
-				ReplayBlocks:         shardId.IsMainShard(),
-				Timeout:              syncerTimeout,
-				BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
-				BlockVerifier:        blockVerifier,
-				ZeroState:            zeroState,
-				ZeroStateConfig:      zeroStateConfig,
-			}
-			if int(shardId) < len(cfg.BootstrapPeers) {
-				config.BootstrapPeer = &cfg.BootstrapPeers[shardId]
-			}
-			if networkManager == nil {
-				return nil, nil, errors.New("trying to start syncer without network configuration")
-			}
-
-			syncer, err := collate.NewSyncer(config, database, networkManager)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			funcs[i] = func(ctx context.Context) error {
-				if err := syncer.Run(ctx, &wgFetch); err != nil {
-					logger.Error().
-						Err(err).
-						Stringer(logging.FieldShardId, shardId).
-						Msg("Syncer goroutine failed")
-					return err
-				}
-				return nil
-			}
+			})
+		} else if networkManager == nil {
+			return nil, nil, errors.New("trying to start syncer without network configuration")
 		}
 	}
 
@@ -553,18 +553,18 @@ func createShards(
 func createActiveCollator(shard types.ShardId, cfg *Config, collatorTickPeriod time.Duration, database db.DB, networkManager *network.Manager, txnPool txnpool.Pool) *collate.Scheduler {
 	collatorCfg := collate.Params{
 		BlockGeneratorParams: execution.BlockGeneratorParams{
-			ShardId:       shard,
-			NShards:       cfg.NShards,
-			TraceEVM:      cfg.TraceEVM,
-			Timer:         common.NewTimer(),
-			GasBasePrice:  types.NewValueFromUint64(cfg.GasBasePrice),
-			GasPriceScale: cfg.GasPriceScale,
+			ShardId:         shard,
+			NShards:         cfg.NShards,
+			TraceEVM:        cfg.TraceEVM,
+			Timer:           common.NewTimer(),
+			GasBasePrice:    types.NewValueFromUint64(cfg.GasBasePrice),
+			GasPriceScale:   cfg.GasPriceScale,
+			MainKeysOutPath: cfg.MainKeysOutPath,
 		},
 		CollatorTickPeriod: collatorTickPeriod,
 		Timeout:            collatorTickPeriod,
 		ZeroState:          execution.DefaultZeroStateConfig,
 		ZeroStateConfig:    cfg.ZeroState,
-		MainKeysOutPath:    cfg.MainKeysOutPath,
 		Topology:           collate.GetShardTopologyById(cfg.Topology),
 	}
 	if len(cfg.ZeroStateYaml) != 0 {
