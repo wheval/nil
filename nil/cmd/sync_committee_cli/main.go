@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -36,6 +37,9 @@ func execute() error {
 		return err
 	}
 	rootCmd.AddCommand(getTaskTreeCmd)
+
+	decodeBatchCmd := buildDecodeBatchCmd(executorParams, logger)
+	rootCmd.AddCommand(decodeBatchCmd)
 
 	return rootCmd.Execute()
 }
@@ -107,6 +111,24 @@ func buildGetTaskTreeCmd(commonParam *commands.ExecutorParams, logger zerolog.Lo
 	}
 
 	return cmd, nil
+}
+
+func buildDecodeBatchCmd(_ *commands.ExecutorParams, logger zerolog.Logger) *cobra.Command {
+	params := &commands.DecodeBatchParams{}
+
+	cmd := &cobra.Command{
+		Use:   "decode-batch",
+		Short: "Deserialize L1 stored batch with nil transactions into human readable format",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return commands.DecodeBatch(context.Background(), params, logger)
+		},
+	}
+
+	cmd.Flags().Var(&params.BatchId, "batch-id", "unique ID of L1-stored batch")
+	cmd.Flags().StringVar(&params.BatchFile, "batch-file", "", "file with binary content of concatenated blobs of the batch")
+	cmd.Flags().StringVar(&params.OutputFile, "output-file", "", "target file to keep decoded batch data")
+
+	return cmd
 }
 
 func addCommonFlags(cmd *cobra.Command, params *commands.ExecutorParams) {

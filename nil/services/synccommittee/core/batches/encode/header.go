@@ -2,6 +2,7 @@ package encode
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 )
 
@@ -19,12 +20,36 @@ func NewBatchHeader(version uint16) BatchHeader {
 	}
 }
 
-func (bh BatchHeader) EncodeTo(out io.Writer) error {
+func (bh *BatchHeader) EncodeTo(out io.Writer) error {
 	if err := binary.Write(out, binary.LittleEndian, bh.Magic); err != nil {
 		return err
 	}
 	if err := binary.Write(out, binary.LittleEndian, bh.Version); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (bh *BatchHeader) ReadFrom(in io.Reader) error {
+	if err := binary.Read(in, binary.LittleEndian, &bh.Magic); err != nil {
+		return err
+	}
+	if bh.Magic != BatchMagic {
+		return fmt.Errorf("%w: read value %04X", ErrInvalidMagic, bh.Magic)
+	}
+	if err := binary.Read(in, binary.LittleEndian, &bh.Version); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CheckBatchVersion(in io.Reader, desiredVersion uint16) error {
+	var bh BatchHeader
+	if err := bh.ReadFrom(in); err != nil {
+		return err
+	}
+	if bh.Version != desiredVersion {
+		return fmt.Errorf("%w: version is %04X", ErrInvalidVersion, bh.Version)
 	}
 	return nil
 }
