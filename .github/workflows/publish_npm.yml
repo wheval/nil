@@ -30,7 +30,3 @@ jobs:
       - name: Publish
         run: npm run pub
         shell: bash
-
-      - name: Remove .npmrc
-        run: rm ~/.npmrc
-        shell: bash
