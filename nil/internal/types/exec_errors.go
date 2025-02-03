@@ -23,7 +23,14 @@ const (
 	ErrorSuccess ErrorCode = iota
 	ErrorUnknown
 	ErrorExecution
+
+	ErrorOutOfGasStart
 	ErrorOutOfGas
+	ErrorOutOfGasDynamic
+	ErrorOutOfGasForPrecompile
+	ErrorOutOfGasStorage
+	ErrorOutOfGasEnd
+
 	ErrorBounce
 	ErrorBuyGas
 	ErrorValidation
@@ -183,6 +190,13 @@ func ToError(err error) ExecError {
 func IsVmError(err error) bool {
 	var e *VmError
 	return errors.As(err, &e)
+}
+
+func IsOutOfGasError(err error) bool {
+	if !IsValidError(err) {
+		return false
+	}
+	return GetErrorCode(err) >= ErrorOutOfGasStart && GetErrorCode(err) <= ErrorOutOfGasEnd
 }
 
 func GetErrorCode(err error) ErrorCode {

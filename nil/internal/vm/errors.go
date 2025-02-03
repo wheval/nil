@@ -25,7 +25,6 @@ import (
 // List evm execution errors
 var (
 	ErrOutOfGas                 = types.NewVmError(types.ErrorOutOfGas)
-	ErrCodeStoreOutOfGas        = types.NewVmError(types.ErrorCodeStoreOutOfGas)
 	ErrDepth                    = types.NewVmError(types.ErrorCallDepthExceeded)
 	ErrInsufficientBalance      = types.NewVmError(types.ErrorInsufficientBalance)
 	ErrContractAddressCollision = types.NewVmError(types.ErrorContractAddressCollision)

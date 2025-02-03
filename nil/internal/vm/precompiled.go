@@ -155,7 +155,8 @@ func RunPrecompiledContract(p PrecompiledContract, evm *EVM, input []byte, suppl
 		return nil, 0, err
 	}
 	if suppliedGas < gasCost {
-		return nil, 0, fmt.Errorf("%w: %d < %d", ErrOutOfGas, suppliedGas, gasCost)
+		return nil, 0, types.NewVerboseError(types.ErrorOutOfGasForPrecompile,
+			fmt.Sprintf("%d < %d", suppliedGas, gasCost))
 	}
 	if logger != nil && logger.OnGasChange != nil {
 		logger.OnGasChange(suppliedGas, suppliedGas-gasCost, tracing.GasChangeCallPrecompiledContract)
