@@ -10,7 +10,7 @@ This release of =nil; adds support of the `onlyResponse` modifier, changes token
 
 :::info
 
-[**Read this tutorial**](../getting-started/essentials/tokens.mdx#token-faucet-service) to learn more about the token faucet service.
+[**Read this tutorial**](../getting-started/tokens.mdx#token-faucet-service) to learn more about the token faucet service.
 
 :::
 
@@ -28,7 +28,7 @@ This change simplifies the management of custom tokens as there is no longer a n
 
 * Mark callback functions with the `onlyResponse` modifier
 
-The `Nil.sol` library now includes [**the `onlyResponse` modifier**](../tools/sol-library/func-modifiers.mdx). After this modifier is applied to a function, said function can only be called by responses that arrive to the requests sent via `sendRequest()`. The modifier protects callback functions from being unfairly executed by malicious parties.
+The `Nil.sol` library now includes the `onlyResponse` modifier. After this modifier is applied to a function, said function can only be called by responses that arrive to the requests sent via `sendRequest()`. The modifier protects callback functions from being unfairly executed by malicious parties.
 
 ## Migration of the =nil; CLI
 
@@ -38,7 +38,7 @@ No specific changes have to be made to the =nil; CLI commands.
 
 The Nil.js client library now supports several useful 'wrappers' designed to simplify work with the faucet service.
 
-[**Read this tutorial**](../getting-started/essentials/tokens.mdx#token-faucet-service) to learn more or access the [**references for Nil.js to learn more.**](../reference/client/index.mdx).
+[**Read this tutorial**](../getting-started/tokens.mdx#token-faucet-service) to learn more or access the [**references for Nil.js to learn more.**](../reference/client/index.mdx).
 
 ## Migration of Hardhat scripts
 

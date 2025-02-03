@@ -6,7 +6,7 @@ The latest release of =nil; introduces several changes to multi-token support an
 
 
 * The `Minter` contract no longer exists and cannot be called from other smart contracts
-* The `Nil.sol` extension library now exposes [**the `awaitCall()` function**](getting-started/essentials/handling-async-execution.mdx##retrieving-values) that allows for making an async call to a smart contract and then awaiting the result
+* The `Nil.sol` extension library now exposes the `awaitCall()` function that allows for making an async call to a smart contract and then awaiting the result
 * The JSON-RPC API now includes the `eth_estimateFee` method which can be used for gas estimations. Client tools (`Nil.js` and the =nil; CLI) will support this feature at a later date
 
 ## Migration of smart contracts
@@ -15,7 +15,7 @@ The latest release of =nil; introduces several changes to multi-token support an
 
 All 'out of the box' smart accounts provided by =nil; can now mint tokens without having to refer to the `Minter` contract. As a result, the `Minter` contract has been discontinued. Any calls or transactions sent to this contract should be removed.
 
-A more detailed overview of how to create tokens via smart accounts is provided in [**this tutorial**](getting-started/essentials/tokens.mdx).
+A more detailed overview of how to create tokens via smart accounts is provided in [**this tutorial**](../getting-started/tokens.mdx).
 
 * Use `NilTokenBase` to create custom tokens
 
@@ -111,7 +111,6 @@ await waitTillCompleted(CLIENT, SHARD_ID, HASH, {
 }
 );
 ```
-
 
 ## Migration of Hardhat scripts
 
