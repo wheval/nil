@@ -130,7 +130,7 @@ const config = {
       },
       colorMode: {
         defaultMode: "dark",
-        disableSwitch: false,
+        disableSwitch: true,
       },
       navbar: {
         title: "=nil; Foundation",
