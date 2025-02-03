@@ -7,7 +7,7 @@ import {
 } from "../src/index.js";
 
 export const RPC_ENDPOINT = "http://127.0.0.1:8529";
-export const FAUCET_ENDPOINT = "http://127.0.0.1:8527";
+export const FAUCET_ENDPOINT = "http://127.0.0.1:8529";
 
 export function generateRandomAddress(shardId = 1) {
   return bytesToHex(

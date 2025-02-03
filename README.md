@@ -57,7 +57,7 @@ To run the cluster:
 To run the [faucet service](https://docs.nil.foundation/nil/getting-started/essentials/tokens#token-faucet-service):
 
 ```bash
-faucet run
+./build/bin/faucet run
 ```
 
 To run the [Cometa service](https://docs.nil.foundation/nil/guides/cometa-and-debugging):

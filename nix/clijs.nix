@@ -73,12 +73,10 @@ stdenv.mkDerivation rec {
     echo "smoke check passed"
 
     nohup nild run --http-port 8529 --collator-tick-ms=100 > nild.log 2>&1 & echo $! > nild_pid &
-    nohup faucet run > faucet.log 2>&1 & echo $! > faucet_pid
 
     npm run test:ci
 
     kill `cat nild_pid` && rm nild_pid
-    kill `cat faucet_pid` && rm faucet_pid
 
     echo "tests finished successfully"
   '';

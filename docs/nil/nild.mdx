@@ -40,7 +40,7 @@ This will launch the cluster locally with the following default settings:
 * `--db-path ./test.db`: database stored in `./test.db` (this file is created if it does not exist, but it is not deleted if an incompatible old database is present);
 * `--nshards 5`: 4 working shards, plus a main shard, all collated by this instance of `nild`;
 * HTTP RPC API on `127.0.0.1:8529`, with the faucet API enabled;
-* Cometa endpoint on `127.0.0.1:8528`.
+* Cometa endpoint on `127.0.0.1:8529`.
 
 If an incompatible old database is found in the specified `db-path`, `nild` will refuse to start by default. When working with test databases that can be safely discarded, use the `--allow-db-clear` option to automatically delete the incompatible database and proceed with running the cluster.
 

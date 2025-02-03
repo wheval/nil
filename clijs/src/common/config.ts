@@ -120,13 +120,13 @@ const DefaultConfig = `; Configuration for interacting with the =nil; cluster
 
 ; Specify the RPC endpoint of your Cometa service
 ; Cometa service is not mandatory, you can leave it empty if you don't use it
-; For example, if your Cometa's RPC endpoint is at "http://127.0.0.1:8528", set it as below
-; cometa_endpoint = "http://127.0.0.1:8528"
+; For example, if your Cometa's RPC endpoint is at "http://127.0.0.1:8529", set it as below
+; cometa_endpoint = "http://127.0.0.1:8529"
 
 ; Specify the RPC endpoint of a Faucet service
 ; Faucet service is not mandatory, you can leave it empty if you don't use it
-; For example, if your Faucet's RPC endpoint is at "http://127.0.0.1:8527", set it as below
-; faucet_endpoint = "http://127.0.0.1:8527"
+; For example, if your Faucet's RPC endpoint is at "http://127.0.0.1:8529", set it as below
+; faucet_endpoint = "http://127.0.0.1:8529"
 
 ; Specify the private key used for signing external transactions to your smart account.
 ; You can generate a new key with "nil keygen new".
