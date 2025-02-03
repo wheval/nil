@@ -6,7 +6,6 @@ import (
 
 	"github.com/NilFoundation/nil/nil/client/rpc"
 	"github.com/NilFoundation/nil/nil/common/logging"
-	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	rpctest "github.com/NilFoundation/nil/nil/services/rpc"
@@ -17,6 +16,7 @@ import (
 type SuiteFetchBlock struct {
 	suite.Suite
 
+	server  tests.RpcSuite
 	nShards uint32
 	cfg     Cfg
 	context context.Context
@@ -57,23 +57,18 @@ func (s *SuiteFetchBlock) SetupSuite() {
 		Client: rpc.NewClient(url, logger),
 	}
 
-	database, err := db.NewBadgerDbInMemory()
-	s.Require().NoError(err)
-
-	cfg := nilservice.NewDefaultConfig()
-	cfg.NShards = s.nShards
-	cfg.HttpUrl = url
-	cfg.CollatorTickPeriodMs = 100
-
-	tmpDir := s.T().TempDir()
-	cfg.ValidatorKeysPath = tmpDir + "/validator-keys.yaml"
-	cfg.NetworkKeysPath = tmpDir + "/network-keys.yaml"
-	cfg.MainKeysOutPath = tmpDir + "/main-keys.yaml"
-
-	go nilservice.Run(s.context, cfg, database, nil)
-	tests.WaitBlock(s.T(), s.context, s.cfg.Client, types.MainShardId, 1)
+	cfg := &nilservice.Config{
+		NShards:              s.nShards,
+		HttpUrl:              url,
+		CollatorTickPeriodMs: 100,
+	}
+	s.server.SetT(s.T())
+	s.server.ShardsNum = s.nShards
+	s.server.Context = s.context
+	s.server.CtxCancel = s.cancel
+	s.server.Start(cfg)
 }
 
 func (s *SuiteFetchBlock) TearDownSuite() {
-	s.cancel()
+	s.server.Cancel()
 }

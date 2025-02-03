@@ -69,8 +69,8 @@ func (s *ShardedSuite) Cancel() {
 	}
 }
 
-func (s *ShardedSuite) createOneShardOneValidatorCfg(
-	shardId types.ShardId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[types.ShardId]*keys.ValidatorKeysManager,
+func createOneShardOneValidatorCfg(
+	s *ShardedSuite, shardId types.ShardId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[types.ShardId]*keys.ValidatorKeysManager,
 ) *nilservice.Config {
 	validatorKeysPath := keyManagers[shardId].GetKeysPath()
 
@@ -99,7 +99,46 @@ func (s *ShardedSuite) createOneShardOneValidatorCfg(
 	}
 }
 
-func (s *ShardedSuite) start(cfg *nilservice.Config, port int) {
+func createShardAllValidatorsCfg(
+	s *ShardedSuite, shardId types.ShardId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[types.ShardId]*keys.ValidatorKeysManager,
+) *nilservice.Config {
+	myShards := slices.Collect(common.Range(0, uint(cfg.NShards)))
+
+	validatorKeysPath := keyManagers[shardId].GetKeysPath()
+	validators := make(map[types.ShardId][]config.ValidatorInfo, cfg.NShards)
+
+	// Order of validators is important and should be the same for all instances
+	for kmId := range cfg.NShards {
+		pubkey, err := keyManagers[types.ShardId(kmId)].GetPublicKey()
+		s.Require().NoError(err)
+
+		for i := range cfg.NShards {
+			id := types.ShardId(i)
+			validators[id] = append(validators[id], config.ValidatorInfo{
+				PublicKey: config.Pubkey(pubkey),
+			})
+		}
+	}
+
+	return &nilservice.Config{
+		NShards:              cfg.NShards,
+		MyShards:             myShards,
+		SplitShards:          true,
+		HttpUrl:              s.Shards[shardId].RpcUrl,
+		Topology:             cfg.Topology,
+		CollatorTickPeriodMs: cfg.CollatorTickPeriodMs,
+		GasBasePrice:         cfg.GasBasePrice,
+		Network:              netCfg,
+		ZeroStateYaml:        cfg.ZeroStateYaml,
+		ValidatorKeysPath:    validatorKeysPath,
+		Validators:           validators,
+	}
+}
+
+func (s *ShardedSuite) start(
+	cfg *nilservice.Config, port int,
+	shardCfgGen func(*ShardedSuite, types.ShardId, *nilservice.Config, *network.Config, map[types.ShardId]*keys.ValidatorKeysManager) *nilservice.Config,
+) {
 	s.T().Helper()
 	s.Context, s.ctxCancel = context.WithCancel(context.Background())
 
@@ -137,7 +176,7 @@ func (s *ShardedSuite) start(cfg *nilservice.Config, port int) {
 
 	PatchConfigWithTestDefaults(cfg)
 	for i := range types.ShardId(cfg.NShards) {
-		shardConfig := s.createOneShardOneValidatorCfg(i, cfg, networkConfigs[i], keysManagers)
+		shardConfig := shardCfgGen(s, i, cfg, networkConfigs[i], keysManagers)
 
 		node, err := nilservice.CreateNode(s.Context, fmt.Sprintf("shard-%d", i), shardConfig, s.Shards[i].Db, nil)
 		s.Require().NoError(err)
@@ -162,7 +201,13 @@ func (s *ShardedSuite) start(cfg *nilservice.Config, port int) {
 func (s *ShardedSuite) Start(cfg *nilservice.Config, port int) {
 	s.T().Helper()
 
-	s.start(cfg, port)
+	s.start(cfg, port, createOneShardOneValidatorCfg)
+}
+
+func (s *ShardedSuite) StartShardAllValidators(cfg *nilservice.Config, port int) {
+	s.T().Helper()
+
+	s.start(cfg, port, createShardAllValidatorsCfg)
 }
 
 func (s *ShardedSuite) connectToShards(nm *network.Manager) {

@@ -19,8 +19,10 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/collate"
+	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
+	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
@@ -79,6 +81,22 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 	var serviceInterop chan nilservice.ServiceInterop
 	if cfg.RunMode == nilservice.CollatorsOnlyRunMode {
 		serviceInterop = make(chan nilservice.ServiceInterop, 1)
+	}
+
+	if cfg.ValidatorKeysPath == "" {
+		keysPath := s.T().TempDir() + "/validator-keys.yaml"
+		km := keys.NewValidatorKeyManager(keysPath)
+		s.Require().NotNil(km)
+		s.Require().NoError(km.InitKey())
+		cfg.ValidatorKeysPath = keysPath
+
+		validators := make(map[types.ShardId][]config.ValidatorInfo, cfg.NShards)
+		pubkey, err := km.GetPublicKey()
+		s.Require().NoError(err)
+		for i := range cfg.NShards {
+			validators[types.ShardId(i)] = []config.ValidatorInfo{{PublicKey: config.Pubkey(pubkey)}}
+		}
+		cfg.Validators = validators
 	}
 
 	PatchConfigWithTestDefaults(cfg)

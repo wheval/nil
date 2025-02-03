@@ -255,7 +255,7 @@ func (s *SuiteTxnPool) TestNetwork() {
 		has, err := pool2.IdHashKnown(txn.Hash())
 		s.Require().NoError(err)
 		return has
-	}, 10*time.Second, 100*time.Millisecond)
+	}, 20*time.Second, 200*time.Millisecond)
 }
 
 func TestSuiteTxnpool(t *testing.T) {

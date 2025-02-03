@@ -9,6 +9,7 @@ import (
 	"github.com/NilFoundation/nil/nil/go-ibft/core"
 	"github.com/NilFoundation/nil/nil/go-ibft/messages"
 	protoIBFT "github.com/NilFoundation/nil/nil/go-ibft/messages/proto"
+	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
@@ -24,6 +25,7 @@ type ConsensusParams struct {
 	Validator  validator
 	NetManager *network.Manager
 	PrivateKey *ecdsa.PrivateKey
+	Validators []config.ValidatorInfo
 }
 
 type validator interface {
@@ -33,15 +35,16 @@ type validator interface {
 }
 
 type backendIBFT struct {
-	ctx       context.Context
-	db        db.DB
-	consensus *core.IBFT
-	shardId   types.ShardId
-	validator validator
-	logger    zerolog.Logger
-	nm        *network.Manager
-	transport transport
-	signer    *Signer
+	ctx        context.Context
+	db         db.DB
+	consensus  *core.IBFT
+	shardId    types.ShardId
+	validator  validator
+	logger     zerolog.Logger
+	nm         *network.Manager
+	transport  transport
+	signer     *Signer
+	validators []config.ValidatorInfo
 }
 
 var _ core.Backend = &backendIBFT{}
@@ -99,20 +102,23 @@ func NewConsensus(cfg *ConsensusParams) *backendIBFT {
 	}
 
 	backend := &backendIBFT{
-		db:        cfg.Db,
-		shardId:   cfg.ShardId,
-		validator: cfg.Validator,
-		logger:    logger,
-		nm:        cfg.NetManager,
-		signer:    NewSigner(cfg.PrivateKey),
+		db:         cfg.Db,
+		shardId:    cfg.ShardId,
+		validator:  cfg.Validator,
+		logger:     logger,
+		nm:         cfg.NetManager,
+		signer:     NewSigner(cfg.PrivateKey),
+		validators: cfg.Validators,
 	}
 	backend.consensus = core.NewIBFT(l, backend, backend)
 	return backend
 }
 
 func (i *backendIBFT) GetVotingPowers(height uint64) (map[string]*big.Int, error) {
-	result := make(map[string]*big.Int)
-	result[string(i.ID())] = big.NewInt(1)
+	result := make(map[string]*big.Int, len(i.validators))
+	for _, v := range i.validators {
+		result[string(v.PublicKey[:])] = big.NewInt(1)
+	}
 	return result, nil
 }
 
