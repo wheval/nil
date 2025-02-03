@@ -271,7 +271,7 @@ export const sendMethodFx = createEffect<
 
   await waitTillCompleted(smartAccount.client, hash);
   const contractIface = new ethers.Interface(abi);
-  const receipts = await smartAccount.client.getMessageReceiptByHash(hash);
+  const receipts = await smartAccount.client.getTransactionReceiptByHash(hash);
   const logs = receipts
     ? [
         ...(receipts.outputReceipts?.flatMap((receipt) => {
