@@ -13,14 +13,13 @@ see https://github.com/facebook/docusaurus/issues/9527#issuecomment-1805272379
   }
 }
 
-@media (max-width: 996px) {
+@media (max-width: 768px) {
   .navbarSearchContainer {
-    position: absolute;
     right: var(--ifm-navbar-padding-horizontal);
   }
 }
 
-@media (min-width: 997px) {
+@media (min-width: 769px) {
   .navbarSearchContainer {
     padding: var(--ifm-navbar-item-padding-vertical) var(--ifm-navbar-item-padding-horizontal);
   }

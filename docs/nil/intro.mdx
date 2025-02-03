@@ -6,60 +6,37 @@ import {Card, CardSection} from '@site/src/components/CardSection'
 
 
 <CardSection>
-    <Card id='nil101' title='=nil; 101' description='Start building using developer tools' to='https://docs.nil.foundation/nil/getting-started/nil-101'/>
-    <Card id='getting-started' title='Getting started' description='Learn how to perform essential operations on the cluster' to='https://docs.nil.foundation/nil/getting-started/essentials/creating-a-smart-account'/>
+    <Card id='learnmore' title='Fundamentals' description='Master the fundamentals of =nil;' to='https://docs.nil.foundation/nil/fundamentals'/>
+    <Card id='nil101' title='=nil; 101' description='Deploy and call a smart contract' to='https://docs.nil.foundation/nil/getting-started/nil-101'/>
+    <Card id='gettingstarted' title='Getting started' description='Learn about what makes =nil; unique' to='https://docs.nil.foundation/nil/getting-started/essentials/creating-a-smart-account'/>
 </CardSection>
 
-The design of =nil; embodies three core qualities:
+## Developer tools
 
-* **Horizontal scalability**. State is partitioned across execution shards without state and liquidity fragmentation.
-* **Modularity**. =nil; acts as an execution layer while using Ethereum for data availability and consensus.
-* **Verifiable security**. The entire =nil; network can be verified with a single zero-knowledge proof attesting to the correctness of all shards.
-
-The design of =nil; transcends the typical monolithic vs. modular discourse as it emphasizes horizontal scalability above all else. =nil; scales out beyond the constraints of a single machine's processing power, by leveraging zkSharding, a new type of sharding architecture. 
-
-In zkSharding, transaction processing is delegated to execution shards which contain small partitions of the overall state. Execution shards are managed by the main shard while a special sync committee handles data availability. The sync committee is also responsible for producing zero-knowledge proofs (ZKPs) verifying intra-shard state transitions.
-
-In addition, cross-shard communications are incorporated directly into the =nil; protocol. This means that the issue of state fragmentation is avoided entirely as each shard can call contracts deployed on a different shard.
-
-:::info[Contract deployment]
-
-In =nil; it is only possible to deploy smart contracts on execution shards. The main shard exists for synchronization purposes only.
-
-:::
-
-=nil; offers an effective strategy for scaling Ethereum while avoiding the limitations typically associated with the modular approach such as state and liquidity fragmentation.
-
-## Key differences with Ethereum
-
-The following table summarizes how =nil; differs from Ethereum.
-
-| Area | =nil; | Ethereum |
-|:--:|:--:|:--:|
-| State | State is partitioned between individual shards responsible for transaction execution | State is not partitioned |
-| Execution | Support of async transaction execution | Only sync transaction execution |
-| Accounts | All accounts are smart contracts, no EOAs  | Separation of EOAs and contract accounts |
-| Deployment | Support of internal and external deployment without requiring an EOA | An EOA or a smart contract are required for deployment  |
-| RPC | Custom RPC loosely modeled after the Ethereum RPC | The original Ethereum RPC |
-| Token and tokens | One native token used to pay for execution; contracts can create and be debited in custom tokens | One native token, support of multiple token standards  |
-
-
-
-## The architecture of =nil;
-
-:::info[WIP provisions]
-
-The materials in this section may describe features and components that are not yet part of the cluster as it is available to developers.
-
-:::
+Try the tools for building on top of =nil;.
 
 <CardSection>
-    <Card id='principles' title='Principles' description='Grasp the key tenets of =nil;' to='https://docs.nil.foundation/nil/specification/principles'/>
-    <Card id='accounts' title='Accounts' description='Learn about how =nil; handles accounts' to='https://docs.nil.foundation/nil/core-concepts/accounts'/>
-    <Card id='lifecycle' title='Transaction lifecycle' description='Follow a transaction to finality' to='https://docs.nil.foundation/nil/core-concepts/transaction-lifecycle'/>
-    <Card id='shards' title='Shards and parallelized execution' description='See how =nil; achieves scalability' to='https://docs.nil.foundation/nil/core-concepts/shards-parallel-execution'/>
-    <Card id='sequencing' title='Sequencing' description='Read about how =nil; adopts the PBS model' to='https://docs.nil.foundation/nil/specification/sequencing'/>
-    <Card id='finality' title='Finality' description='Learn about the strong security guarantees of =nil;' to='https://docs.nil.foundation/nil/specification/finality'/>
-    <Card id='data' title='Data availability' description='See how =nil; achieves DA at all levels' to='https://docs.nil.foundation/nil/specification/data-availability'/>
-    <Card id='contract' title='Contract placement' description='Ensure account placement on the same shard' to='https://docs.nil.foundation/nil/specification/contract-co-location'/>
+    <Card id='solidity' title='Smart contracts' description='' to='https://docs.nil.foundation/nil/smart-contracts/getting-started'/>
+    <Card id='niljs' title='Nil.js' description='' to='https://docs.nil.foundation/nil/niljs/getting-started'/>
+    <Card id='nilcli' title='=nil; CLI' description='' to='https://docs.nil.foundation/nil/nilcli/getting-started'/>
+    <Card id='blockexplorer' title='Block explorer ↪' description='' to='https://explore.nil.foundation/'/>
+    <Card id='playground' title='Playground ↪' description='' to='https://explore.nil.foundation/sandbox'/>
+</CardSection>
+
+## Spec and guides
+
+Learn more about the architecture of =nil; and its specification. 
+
+<CardSection>
+    <Card id='coreconcepts' title='Core concepts' description='Accounts, transactions, execution' to='https://docs.nil.foundation/nil/core-concepts/accounts'/>
+    <Card id='clusterspec' title='Cluster spec' description='Proofs, consensus, DA and finality' to='https://docs.nil.foundation/nil/specification/principles'/>
+    <Card id='guides' title='Guides' description='Contract debugging, dApp migration' to='https://docs.nil.foundation/nil/guides/cometa-and-debugging'/>
+</CardSection>
+
+## Featured content
+
+<CardSection>
+    <Card id='newrelease' date='29 January 2025' title='New release' description='' to='https://docs.nil.foundation/nil/migration-guides/january-2901-2025-release' tagLabel='Migration guides'/>
+    <Card id='featuredlifecycle' date='14 December 2024' title='Transaction lifecycle' description='' to='https://docs.nil.foundation/nil/core-concepts/transaction-lifecycle' tagLabel='Core concepts'/>
+    <Card id='featured patterns' date='11 November 2024' title='Design patterns' description='' to='https://docs.nil.foundation/nil/guides/design-patterns' tagLabel='Guides'/>
 </CardSection>

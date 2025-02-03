@@ -39,14 +39,14 @@ The `"execution reverted"` error is thrown when the execution of a transaction e
 The most probable causes of the error:
 
 * There is a `require()` statement in a contract that the transaction data fails to pass
-* A function with [**an `onlyInternal` or an `onlyExternal` modifier**](tools/sol-library/func-modifiers.mdx) is called with an incorrect transaction type
+* A function with [**an `onlyInternal` or an `onlyExternal` modifier**](../smart-contracts/func-modifiers.mdx) is called with an incorrect transaction type
 * Any kind of internal contract logic is not being executed correctly
 * A transaction with a non-zero `value` is attempting to call a function not marked as `payable`
 
 To resolve the error:
 
 * Double-check the contract logic and, if possible, remove unnecessary `require()` statements
-* Ensure that the correct `FORWARD_KIND` is used in async calls, which should guarantee that contracts can pay [**for chains of two or more async calls**](getting-started/essentials/gas-and-value.mdx)
+* Ensure that the correct `FORWARD_KIND` is used in async calls, which should guarantee that contracts can pay [**for chains of two or more async calls**](../getting-started/gas-and-value.mdx)
 * Remove `onlyInternal` or `onlyExternal` modifiers and rerun the transaction chain
 * Make sure that transactions with a non-zero `value` only call `payable` functions
 
@@ -87,13 +87,13 @@ The `"KEY not specified in config" error is thrown when the CLI configuration fi
 
 To resolve the error, execute the following command(s) depending on which key is missing:
 
-```bash file=../../../tests/commands.mjs start=startKeygen end=endKeygen
+```bash file=../../tests/commands.mjs start=startKeygen end=endKeygen
 ```
 
-```bash file=../../../tests/commands.mjs start=startSmartAccount end=endSmartAccount
+```bash file=../../tests/commands.mjs start=startSmartAccount end=endSmartAccount
 ```
 
-```bash file=../../../tests/commands.mjs start=startEndpoint end=endEndpoint
+```bash file=../../tests/commands.mjs start=startEndpoint end=endEndpoint
 ```
 
 ## Out of gas
@@ -103,7 +103,7 @@ The `"out of gas"` error is thrown when the transaction cannot pay for its own e
 To resolve the error:
 
 * Assign a higher `feeCredit` to the transaction
-* If the error is thrown during a chain of async calls, [**adjust the `FORWARD_KIND` used in the chain**](getting-started/essentials/gas-and-value.mdx)
+* If the error is thrown during a chain of async calls, [**adjust the `FORWARD_KIND` used in the chain**](../getting-started/gas-and-value.mdx)
 
 ## Contract address collision
 
@@ -133,7 +133,7 @@ To resolve the error:
 
 ## Transaction fee forwarding failed
 
-The `"transaction fee forwarding failed"` error is thrown when there is an issue with [**gas forwarding**](getting-started/essentials/gas-and-value.mdx) across several contracts.
+The `"transaction fee forwarding failed"` error is thrown when there is an issue with [**gas forwarding**](../getting-started/gas-and-value.mdx) across several contracts.
 
 To resolve the error:
 

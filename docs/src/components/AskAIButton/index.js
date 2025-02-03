@@ -2,7 +2,6 @@ import styles from "./styles.module.css";
 import React from "react";
 import Modal from "react-modal";
 import { AIChat } from "../AIChat";
-import {} from "react";
 
 const customStyles = {
   content: {
@@ -32,7 +31,8 @@ export function AskAiButton() {
   return (
     <div>
       <div className={styles.askAIButton} onClick={openModal}>
-        Ask AI
+        <span className={styles.buttonText}>Ask AI&nbsp;</span>
+        <span class="material-icons">smart_toy</span>
       </div>
       <Modal
         isOpen={modalIsOpen}

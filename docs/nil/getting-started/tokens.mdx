@@ -1,0 +1,102 @@
+# Tokens support
+
+## Definition
+
+=nil; supplies a basic 'default' token (NIL).
+
+The network also has a multi-token mechanism. All accounts (smart contracts) can be paid in any number of arbitrary tokens created either by the account owner or other accounts.
+
+:::info
+
+While custom tokens can be transferred between accounts, they cannot be used for paying for essential functionalities of =nil; such as deploying contracts or sending async calls.
+
+:::
+
+:::info
+
+A contract can only be the owner of one token. While non-owners can transfer different tokens between accounts, they cannot mint any tokens that they do not own.
+
+:::
+
+* To learn how to create new custom tokens using the `smart-contracts` package, [**click here**](../smart-contracts/tokens.mdx).
+* To learn how to work with tokens using `Nil.js`, [**click here**](../niljs/tokens.mdx).
+* To learn how to work with tokens using the =nil; CLI, [**click here**](../nilcli/tokens.mdx).
+
+
+## Token faucet service
+
+The token faucet is a special service whose main purpose is to distribute default cluster tokens (NIL) that are used to pay for contract deployment and transaction execution. In addition, the faucet also distributes various pre-set 'mock' tokens such as USDC and BTC.
+
+Each token faucet resides at a different address. To withdraw a specific token, simply call the corresponding address using the `faucet_TopUpViaFaucet` method.
+
+### Usage
+
+#### Via the =nil; testnet
+
+The faucet service resides at the `http://api.devnet.nil.foundation/api/faucet/${USERNAME}/${TOKEN}` endpoint.
+
+To see all active faucets:
+
+```bash
+curl -X POST http://api.devnet.nil.foundation/api/faucet/${USERNAME}/${TOKEN} \
+-H "Content-Type: application/json" \
+-d '{"jsonrpc": "2.0", "id": 0, "method": "faucet_getFaucets", "params": []}'
+```
+
+Expected response:
+
+```bash
+{
+  "jsonrpc":"2.0",
+  "id":0,
+  "result":
+  {
+    "BTC":"0x0001111111111111111111111111111111111114",
+    "ETH":"0x0001111111111111111111111111111111111112",
+    "NIL":"0x0001111111111111111111111111111111111110",
+    "USDT":"0x0001111111111111111111111111111111111113"
+  }
+}
+```
+
+To withdraw from a faucet:
+
+```bash
+curl -X POST http://api.devnet.nil.foundation/api/${USERNAME}/${TOKEN} \
+-H "Content-Type: application/json" \
+-d '{"jsonrpc": "2.0", "id": 0, "method": "faucet_topUpViaFaucet", "params": ["$FAUCET_ADDRESS", "$SMART_ACCOUNT_ADDRESS", $AMOUNT]}'
+```
+
+Expected output:
+
+```bash
+{
+  "jsonrpc":"2.0",
+  "id":0,
+  "result": HASH
+}
+```
+
+#### Via running the faucet locally
+
+It is also possible to run the faucet service locally. 
+
+First, enter the Nix development environment:
+
+```bash
+nix develop
+```
+
+Then, build the faucet binary:
+
+```bash
+make faucet
+```
+
+Launch the faucet binary at port `8527`:
+
+```bash
+./build/bin/faucet run
+```
+
+It should now be possible to send requests to the faucet service at `http://127.0.0.1:8527`.

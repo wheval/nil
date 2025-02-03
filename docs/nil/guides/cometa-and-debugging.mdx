@@ -15,6 +15,54 @@ Whenever a contract is deployed via [**the =nil; Playground**](https://explore.n
 
 :::
 
+## Set the correct Cometa endpoint
+
+To use the Cometa service with =nil; developer tools, it is necessary to to set the correct endpoint to it:
+
+* For the =nil; CLI, the endpoint should be set in the CLI config file:
+
+```
+cometa_endpoint: COMETA_ENDPOINT
+```
+
+* For `Nil.js`, the endpoint should be set when creating an instance of `CometaService`:
+
+```ts showLineNumbers
+const service = new CometaService({
+  transport: new HttpTransport({
+    endpoint: COMETA_ENDPOINT,
+  }),
+});
+```
+
+### Via the =nil; testnet
+
+When using the =nil; testnet, the Cometa service endpoint is the same as the RPC endpoint.
+
+### Via running Cometa locally
+
+It is also possible to run Cometa locally.
+
+First, enter the Nix development environment:
+
+```bash
+nix develop
+```
+
+Then, build the faucet binary:
+
+```bash
+make cometa
+```
+
+Launch the Cometa service at port `8528`:
+
+```bash
+./build/bin/cometa run --use-badger
+```
+
+It should now be possible to send requests to the Cometa service at `http://127.0.0.1:8528`.
+
 ## Draft an example contract
 
 To illustrate how debugging works, this tutorial uses the following contract:

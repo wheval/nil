@@ -1,38 +1,4 @@
-# Reading and writing to =nil;
-
-This tutorial details the different ways that allow for reading and writing information to =nil;. It covers these actions:
-
-1. Reading information from a block
-2. Calling an existing smart contract
-3. Retrieving data about the resulting transaction
-4. Reading the transaction receipt
-
-## Via the =nil; CLI
-
-The =nil; CLI provides several commands that produce data about key cluster entities including blocks, transactions, and logs.
-
-To view the latest block recorded by shard with `shardId = 1`:
-
-```bash file=../../../tests/commands.mjs start=startLatestBlock end=endLatestBlock
-```
-
-To call an existing smart contract via the smart account:
-
-```bash
-nil smart-account send-transaction CONTRACT_ADDRESS METHOD_NAME [ARGS] --abi path/to/contract.abi
-```
-
-To read information about the resulting transaction:
-
-```bash file=../../../tests/reading-and-writing.test.mjs start=startTransactionRead end=endTransactionRead
-```
-
-To read the transaction receipt:
-
-```bash file=../../../tests/reading-and-writing.test.mjs start=startReceiptRead end=endReceiptRead
-```
-
-## Via the client library
+# `Nil.js`: reading and writing info
 
 The `Nil.js` client library provides several 'helper' methods for reading and writing to =nil;
 
@@ -50,7 +16,7 @@ const client = new PublicClient({
 const block = await client.getBlockByHash(BLOCK_HASH);
 ```
 
-To call an existing smart contract after [**initializing a smart account**](./creating-a-smart-account#via-the-client-library):
+To call an existing smart contract after [**initializing a smart account**](./creating-smart-account.mdx):
 
 ```typescript showLineNumbers
 import {

@@ -1,12 +1,12 @@
 import PGButton from '@theme/PGButton';
 
-# Receiving external transactions
+# `smart-contracts`: receiving external transactions
 
 This tutorial explains how exactly a contract can accept external transactions.
 
 ## `verifyExternal()`
 
-The contract receiving [**an external transaction**](core-concepts/shards-parallel-execution.mdx##internal-vs-external-transactions) must implement an additional function so that this call is processed. Unless this function is present, a contract cannot accept external transactions. The function signature:
+The contract receiving [**an external transaction**](../core-concepts/shards-parallel-execution.mdx##internal-vs-external-transactions) must implement an additional function so that this call is processed. Unless this function is present, a contract cannot accept external transactions. The function signature:
 
 ```solidity showLineNumbers
  function validateSignature(
@@ -30,7 +30,7 @@ As the receiving contract is charged with paying for external transactions, the 
 
 This example contains a simple mechanism for verifying `authData`:
 
-```solidity showLineNumbers file=../../../tests/Receiver.sol start=startReceiverContract end=endReceiverContract
+```solidity showLineNumbers file=../../tests/Receiver.sol start=startReceiverContract end=endReceiverContract
 ```
 
 <PGButton name="Receiver.sol"/>

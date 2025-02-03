@@ -1,0 +1,68 @@
+# `Nil.js`: working with tokens
+
+## Basic example
+
+To create a new token and withdraw it:
+
+```ts showLineNumbers file=../../tests/multi-tokens-support.test.mjs start=startBasicNilJSExample end=endBasicNilJSExample
+```
+
+To burn an existing token:
+
+```ts showLineNumbers file=../../tests/multi-tokens-support.test.mjs start=startNilJSBurningExample end=endNilJSBurningExample
+```
+
+## Working with multiple smart accounts
+
+This example creates a smart account that stores three tokens: the default token, and two custom tokens.
+
+Create two new smart accounts:
+
+```ts showLineNumbers file=../../tests/multi-tokens-support.test.mjs start=startAdvancedNilJSExample end=endAdvancedNilJSExample
+```
+
+Create a new token for Smart Account 1 and withdraw it:
+
+```ts showLineNumbers file=../../tests/multi-tokens-support.test.mjs start=startAdvancedNilJSMintingExample end=endAdvancedNilJSMintingExample
+```
+
+Create a new token for Smart Account 2 and send it to Smart Account 1:
+
+```ts showLineNumbers file=../../tests/multi-tokens-support.test.mjs start=startNilJSTransferExample end=endNilJSTransferExample
+```
+
+## Working with the faucet service
+
+:::tip
+
+Refer to [**the Codebook**](../cookbook/faucet-service/use-faucet-service.mdx) for ready-made canonical examples on using the faucet service.
+
+:::
+
+Nil.js offers several 'helper' wrappers designed to simplify work with the faucet service.
+
+To create a new faucet client:
+
+```js showLineNumbers
+const faucetClient = new FaucetClient({
+	transport: new HttpTransport({
+		endpoint: FAUCET_ENDPOINT,
+	}),
+});
+```
+
+To request a list of all faucets:
+
+```js showLineNumbers
+const faucets = await faucetClient.getAllFaucets();
+```
+
+To request tokens from a faucet:
+
+```js showLineNumbers
+await faucetClient.topUpAndWaitUntilCompletion({
+  smartAccountAddress: SMART_ACCOUNT_ADDRESS,
+  faucetAddress: FAUCET_ADDRESS,
+  amount: AMOUNT,
+});
+```

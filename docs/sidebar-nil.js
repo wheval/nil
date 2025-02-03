@@ -13,18 +13,23 @@ export default {
         },
         {
           type: "doc",
+          label: "Fundamentals",
+          id: "fundamentals",
+        },
+        {
+          type: "doc",
           label: "Prerequisites",
-          id: "getting-started/prerequisites",
+          id: "prerequisites",
         },
         {
           type: "doc",
           label: "=nil; 101",
-          id: "getting-started/nil-101",
+          id: "nil-101",
         },
         {
           type: "doc",
           label: "Running the cluster locally",
-          id: "getting-started/nild",
+          id: "nild",
         },
       ],
     },
@@ -36,35 +41,95 @@ export default {
       items: [
         {
           type: "doc",
-          label: "Creating a smart account",
-          id: "getting-started/essentials/creating-a-smart-account",
+          label: "Account abstraction",
+          id: "getting-started/account-abstraction",
         },
         {
           type: "doc",
-          label: "Tokens support",
-          id: "getting-started/essentials/tokens",
-        },
-        {
-          type: "doc",
-          label: "Reading and writing to =nil;",
-          id: "getting-started/essentials/reading-writing-info",
-        },
-        {
-          type: "doc",
-          label: "Receiving external transactions",
-          id: "getting-started/essentials/receiving-ext-transactions",
-        },
-        {
-          type: "doc",
-          label: "Handling async execution",
-          id: "getting-started/essentials/handling-async-execution",
+          label: "Async execution",
+          id: "getting-started/async-execution",
         },
         {
           type: "doc",
           label: "Gas and value",
-          id: "getting-started/essentials/gas-and-value",
+          id: "getting-started/gas-and-value",
         },
-
+        {
+          type: "doc",
+          label: "Tokens",
+          id: "getting-started/tokens",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Smart contracts",
+      collapsed: false,
+      collapsible: true,
+      items: [
+        {
+          type: "doc",
+          label: "Getting started",
+          id: "smart-contracts/getting-started",
+        },
+        {
+          type: "doc",
+          label: "Async execution",
+          id: "smart-contracts/handling-async-execution",
+        },
+        {
+          type: "doc",
+          label: "Working with tokens",
+          id: "smart-contracts/tokens",
+        },
+        {
+          type: "doc",
+          label: "Gas forwarding",
+          id: "smart-contracts/gas-forwarding",
+        },
+        {
+          type: "doc",
+          label: "Receiving external transactions",
+          id: "smart-contracts/receiving-ext-transactions",
+        },
+        {
+          type: "doc",
+          label: "Function modifiers",
+          id: "smart-contracts/func-modifiers",
+        },
+        {
+          type: "doc",
+          label: "Pre-compiles",
+          id: "smart-contracts/pre-compiles",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Nil.js",
+      collapsed: true,
+      collapsible: true,
+      items: [
+        {
+          type: "doc",
+          label: "Getting started",
+          id: "niljs/getting-started",
+        },
+        {
+          type: "doc",
+          label: "Reading and writing info",
+          id: "niljs/reading-writing-info",
+        },
+        {
+          type: "doc",
+          label: "Creating a smart account",
+          id: "niljs/creating-smart-account",
+        },
+        {
+          type: "doc",
+          label: "Working with tokens",
+          id: "niljs/tokens",
+        },
         {
           type: "category",
           label: "Working with smart contracts",
@@ -73,18 +138,59 @@ export default {
           items: [
             {
               type: "doc",
-              label: "Writing a smart contract",
-              id: "getting-started/working-with-smart-contracts/writing-a-contract",
-            },
-            {
-              type: "doc",
               label: "Deploying a smart contract",
-              id: "getting-started/working-with-smart-contracts/deploying-a-contract",
+              id: "niljs/deploying-smart-contract",
             },
             {
               type: "doc",
               label: "Calling methods inside a contract",
-              id: "getting-started/working-with-smart-contracts/calling-contract-methods",
+              id: "niljs/calling-smart-contract",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "=nil; CLI",
+      collapsed: true,
+      collapsible: true,
+      items: [
+        {
+          type: "doc",
+          label: "Getting started",
+          id: "nilcli/getting-started",
+        },
+        {
+          type: "doc",
+          label: "Reading and writing info",
+          id: "nilcli/reading-writing-info",
+        },
+        {
+          type: "doc",
+          label: "Reading and writing info",
+          id: "nilcli/reading-writing-info",
+        },
+        {
+          type: "doc",
+          label: "Working with tokens",
+          id: "nilcli/tokens",
+        },
+        {
+          type: "category",
+          label: "Working with smart contracts",
+          collapsed: true,
+          collapsible: true,
+          items: [
+            {
+              type: "doc",
+              label: "Deploying a smart contract",
+              id: "nilcli/deploying-smart-contract",
+            },
+            {
+              type: "doc",
+              label: "Calling methods inside a contract",
+              id: "nilcli/calling-smart-contract",
             },
           ],
         },
@@ -127,61 +233,9 @@ export default {
       ],
     },
     {
-      type: "category",
-      label: "Tools",
-      collapsed: false,
-      collapsible: true,
-      items: [
-        {
-          type: "category",
-          label: "=nil; CLI",
-          collapsed: true,
-          collapsible: true,
-          items: [
-            {
-              type: "doc",
-              label: "Usage",
-              id: "tools/nil-cli/usage",
-            },
-            {
-              type: "doc",
-              label: "Error handling",
-              id: "tools/nil-cli/error-handling",
-            },
-          ],
-        },
-        {
-          type: "category",
-          label: "Solidity library",
-          collapsed: true,
-          collapsible: true,
-          items: [
-            {
-              type: "doc",
-              label: "Function modifiers",
-              id: "tools/sol-library/func-modifiers",
-            },
-            {
-              type: "doc",
-              label: "Pre-compiles",
-              id: "tools/sol-library/pre-compiles",
-            },
-          ],
-        },
-        {
-          type: "category",
-          label: "Block explorer",
-          collapsed: true,
-          collapsible: true,
-          items: [
-            {
-              type: "doc",
-              label: "Usage",
-              id: "tools/block-explorer/usage",
-            },
-          ],
-        },
-      ],
+      type: "doc",
+      label: "Block explorer",
+      id: "block-explorer/usage",
     },
     {
       type: "category",
@@ -292,15 +346,23 @@ export default {
   migrationGuides: [
     {
       type: "category",
-      label: "January 2025 releases",
+      label: "February 2025 releases",
       collapsed: false,
       collapsible: true,
       items: [
         {
           type: "doc",
-          label: "29 January 2025 guide",
-          id: "migration-guides/january-2901-2025-release",
+          label: "03 February 2025 guide",
+          id: "migration-guides/february-0302-2025-release",
         },
+      ],
+    },
+    {
+      type: "category",
+      label: "January 2025 releases",
+      collapsed: true,
+      collapsible: true,
+      items: [
         {
           type: "doc",
           label: "14 January 2025 guide",

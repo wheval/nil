@@ -30,79 +30,13 @@ Transactions in =nil; can either be incoming or outgoing:
 * Incoming transactions trigger contract execution.
 * Outgoing transactions are spawned by contracts as part of execution. These outgoing transactions are sent to other contracts located on various shards.
 
-To support [**cross-shard communications**](../getting-started/essentials/handling-async-execution.mdx), execution shards must record all necessary outgoing transactions posted in other execution shards.
+To support cross-shard communications, execution shards must record all necessary outgoing transactions posted in other execution shards.
 
 Each transaction contains information about its destination account. If a shard sees that a transaction targets one of the accounts in the shard, the shard must include this transaction in its next block. Such outgoing transactions are called necessary transactions and new blocks are considered invalid unless they include all necessary transactions.
 
 :::info
 
 As the number of execution shards grows, this process may be changed so that shards are only tasked with tracking transactions from their neighbors. The closeness of shards can be determined by their Hamming distance.
-
-:::
-
-### Async execution
-
-Generally, the term 'async execution' describes delegating the completion of a task to a dedicated CPU thread or a similar isolated component. While this task is processed, the main program can freely execute other instructions, and then react to receiving the results of the async task.
-
-In =nil; async execution functions differently: any contract (the caller) may perform an async call to any other contract (the receiver). An async call spawns a transaction, and the execution of the call is delayed until this transaction is processed by the shard where the receiver is located. The time taken to execute an async call may vary, and the caller contract is free to execute other instructions without having to wait for the results of the call.
-
-Consider two contracts deployed on two different shards in =nil;:
-
-* Contract 1 (caller) is deployed on Shard 1
-* Contract 2 (receiver) is deployed on Shard 2
-
-The below diagram displays how an async call could work between Contract 1 and Contract 2.
-
-```mermaid
-%%{
-  init: {
-    'theme': 'base',
-    'themeVariables': {
-      'primaryColor': '#181A1B',
-      'secondaryBorderColor': '#404040'
-      'textColor': '#fff'
-    }
-  }
-}%%
-sequenceDiagram
-    participant S1 as Shard 1 with Contract 1
-    participant S2 as Shard 2 with Contract 2
-    S1 ->> S1: Contract 1 calls a function<br>inside Contract 2
-    S1 ->> S1: Shard 1 creates a new outgoing<br>transaction and persists it<br>in a block
-    Note right of S1: Contract 1 is freed and can execute other operations
-    S1 --> S2: Shard 2 picks up external transactions from its mempool
-    S2 ->> S2: Shard 2 picks up internal transactions from other shards
-    S2 ->> S2: Contract 2 executes the function<br>that Contract 1 called   
-    S2 ->> S2: Shard 2 creates a new block that includes the picked up transactions
-```
-
-The key stages of this flow are:
-
-1. Contract 1 calls a function inside Contract 2, which creates a new outgoing transaction
-2. Shard 2 must copy this transaction and execute it
-3. When Shard 2 processes the transaction, Contract 2 executes the function that Contract 1 called
-
-For an in-depth explanation of how to perform and manage async calls, [**read this tutorial**](../getting-started/essentials/handling-async-execution.mdx).
-
-:::info
-
-All shards 'listen' to the latest blocks created by other shards. When creating a block, a shard must copy transactions from other shards that have this shard as its destination. These transactions do not go through the mempool and, therefore, cannot be lost.
-
-:::
-
-:::info[Callback pattern]
-
-There is also a variation of the above flow in which the function inside Contract 2 makes an async call back to Contract 1.
-
-In this case, the flow would work as follows:
-
-1. Contract 1 calls a function inside Contract 2, creating a new outgoing transaction copied by Shard 2
-2. Shard 2 processes the transaction, and Contract 2 calls the requested function
-3. As part of executing the function, Contract 2 makes an async call back to Contract 1
-4. Shard 1 picks up the new transaction from Shard 2 and executes it
-5. Contract 1 performs whatever operation was requested by Contract 2
-
-As shown above, the async call inside Contract 2 effectively becomes a callback function for Contract 1. Note that the use of this pattern is only possible if Contract 1 or Contract 2 share the same owner (or their owners cooperate with each other).
 
 :::
 
@@ -118,7 +52,7 @@ External transactions can originate only in one case: when any entity that exist
 
 For internal transactions, the transaction itself is the 'payer' entity. An internal transaction spends its `value` to cover processing costs. Note that the transaction only pays for the initial call to a 'top-level' smart contract. If the transaction produces a chain of sync calls, the transaction will only pay for the first call in the chain.
 
-For external transactions, the receiving contract is the 'payer' entity. To process external transactions, the receiving contract must implement a special function that uses arbitrary logic to verify these transactions. If this function is absent, the contract will only accept internal transactions. A more detailed explanation of how a contract may receive external transactions is [**given in a practical tutorial**](../getting-started/essentials/receiving-ext-transactions).
+For external transactions, the receiving contract is the 'payer' entity. To process external transactions, the receiving contract must implement a special function that uses arbitrary logic to verify these transactions. If this function is absent, the contract will only accept internal transactions.
 
 Regardless of the transaction type, the 'payer' is tasked with purchasing gas equal to the transaction `gasLimit`. The transaction fails if the balance of the 'payer' is insufficient. If execution is successful, the remaining gas is refunded to the 'payer'.
 

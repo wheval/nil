@@ -1,0 +1,64 @@
+# Gas and value
+
+## Definition
+
+In nil;, every transaction has two fields responsible for handling gas and value:
+
+* `FeeCredit`
+* `Value`
+
+`FeeCredit` contains the amount of =nil; base tokens to be paid for transaction execution. This is different from regular Ethereum in that there is no base fee or the premium fee. Instead, `FeeCredit` is the gas limit (the maximum possible amount of gas the transaction sender is willing to pay) multiplied by the possible gas price within a specific shard.
+
+:::info
+
+`FeeCredit` is an estimate created by the transaction sender rather than a precisely calculated transaction execution fee. To evaluate whether a given fee credit would be enough to make a call, use the `nil smart-account estimate-fee ADDRESS FUNC_NAME [ARGS]` command.
+
+To estimate gas in a different way, use the `eth_estimateFee` JSON-RPC method or the `nil smart-account call-readonly ADDRESS` command while providing the `--with-details` flag. Note that this command may sometimes produce the `"out of gas"` response which should not be considered an error.
+
+:::
+
+`Value` is the amount of tokens to be transferred to the address where the transaction is sent. These tokens are not used for transaction execution and, instead, are debited to the receiving address.
+
+:::info
+
+If a transaction is made to a non-payable function, and `Value` is not zero, execution will be reverted as the contract will not be able to accept the transferred tokens.
+
+:::
+
+## Basic example
+
+This Nil.js example sends a transaction from the user's smart account to another contract. It estimates the gas price to be `100n` and is willing to pay for a maximum of `1_000_000n` units of gas.
+
+```typescript showLineNumbers
+const hash = await smartAccount.sendTransaction({
+  to: CONTRACT_ADDRESS,
+  value: 0n,
+  bounceTo: BOUNCE_ADDRESS,
+  feeCredit: 1_000_000n * 100n,
+  data: encodeFunctionData({
+    abi: CONTRACT_ABI,
+    functionName: "func_name()",
+    args: [ARGS],
+  }),
+});
+```
+
+If the receiver contract has a payable function, the smart account would be able to send the following transaction.
+
+```typescript showLineNumbers
+const hash = await smartAccount.sendTransaction({
+  to: CONTRACT_ADDRESS,
+  value: 5_000_000n,
+  bounceTo: BOUNCE_ADDRESS,
+  feeCredit: 100_000n * 10n,
+  data: encodeFunctionData({
+    abi: CONTRACT_ABI,
+    functionName: "payable_func_name()",
+    args: [ARGS],
+  }),
+});
+```
+
+
+
+

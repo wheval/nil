@@ -1,0 +1,19 @@
+# =nil; CLI: working with tokens
+
+To create a new token and withdraw it to the address of the owner:
+
+```bash file=../../tests/multi-tokens-support.test.mjs start=startBasicCreateTokenCommand end=endBasicCreateTokenCommand
+```
+
+```bash file=../../tests/multi-tokens-support.test.mjs start=startBasicWithdrawTokenCommand end=endBasicWithdrawTokenCommand
+```
+
+To mint an existing token (which automatically withdraws it to the owner):
+
+```bash file=../../tests/multi-tokens-support.test.mjs start=startMintExistingTokenCommand end=endMintExistingTokenCommand
+```
+
+To burn an existing token (the supply is automatically reduced at the address of the owner):
+
+```bash file=../../tests/multi-tokens-support.test.mjs start=startBurnExistingTokenCommand end=endBurnExistingTokenCommand
+```

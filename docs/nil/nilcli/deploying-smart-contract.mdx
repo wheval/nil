@@ -1,0 +1,60 @@
+# =nil; CLI: deploying a smart contract
+
+## Overview
+
+This tutorial deploys two smart contracts:
+
+* [**`Retailer.sol`**](https://github.com/NilFoundation/nil/blob/main/docs/tests/Retailer.sol): this contract can call a special 'manufacturer' contract and order new products by performing an async call.
+* [**`Manufacturer.sol`**](https://github.com/NilFoundation/nil/blob/main/docs/tests/Manufacturer.sol): this contract can accept orders from the retailer and fulfil them by 'manufacturing' and sending new products.
+
+## Internal deployment
+
+To deploy the retailer via the =nil; CLI:
+
+```bash file=../../tests/working-with-smart-contracts-cli.test.mjs start=startRetailerDeploymentCommand end=endRetailerDeploymentCommand
+```
+
+Take note of the address for the retailer. To retrieve the smart account public key:
+
+```bash file=../../tests/commands.mjs start=startInfo end=endInfo
+```
+
+To deploy the manufactuer with the given public key and the address of the retailer contract:
+
+```bash file=../../tests/working-with-smart-contracts-cli.test.mjs start=startManufacturerDeploymentCommand end=endManufacturerDeploymentCommand
+```
+
+This will make sure that `Manufacturer.sol` and `Retailer.sol` are on different shards.
+
+## External deployment
+
+First, calulate the address of the retailer contract and send funds to this address:
+
+```bash file=../../tests/working-with-smart-contracts-cli.test.mjs start=startExternalRetailerAddressCommand end=endExternalRetailerAddressCommand
+```
+
+```bash file=../../tests/working-with-smart-contracts-cli.test.mjs start=startSendTokensToRetailerForExternalDeployment end=endSendTokensToRetailerForExternalDeployment
+```
+
+Then, deploy the retailer contract while providing the same `SALT`:
+
+```bash file=../../tests/working-with-smart-contracts-cli.test.mjs start=startRetailerExternalDeploymentCommand end=endRetailerExternalDeploymentCommand
+```
+
+Retrieve the public key assigned to the smart account:
+
+```bash file=../../tests/commands.mjs start=startInfo end=endInfo
+```
+
+Calculate the address of the manufacturer contract and send funds to it:
+
+```bash file=../../tests/working-with-smart-contracts-cli.test.mjs start=startExternalManufacturerAddressCommand end=endExternalManufacturerAddressCommand
+```
+
+```bash file=../../tests/working-with-smart-contracts-cli.test.mjs start=startSendTokensToManufacturerForExternalDeploymentCommand end=endSendTokensToManufacturerForExternalDeploymentCommand
+```
+
+Deploy the manufacturer contract:
+
+```bash file=../../tests/working-with-smart-contracts-cli.test.mjs start=startManufacturerExternalDeploymentCommand end=endManufacturerExternalDeploymentCommand
+```
