@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var defaultNewSmartAccountAmount = types.GasToValue(10_000_000)
+var defaultNewSmartAccountAmount = types.GasToValue(1_000_000_000)
 
 func NewCommand(cfg *common.Config) *cobra.Command {
 	serverCmd := &cobra.Command{

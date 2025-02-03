@@ -178,7 +178,7 @@ func (s *TracerNildTestSuite) TestTestContract() {
 
 	s.Run("ContractDeploy", func() {
 		txHash, addr, err := s.Client.DeployContract(
-			s.Context, s.shardId, s.addrFrom, deployPayload, types.Value{}, types.NewFeePackFromGas(300_000),
+			s.Context, s.shardId, s.addrFrom, deployPayload, types.Value{}, types.NewFeePackFromGas(3_000_000),
 			execution.MainPrivateKey)
 		s.Require().NoError(err)
 		s.Require().Equal(contractAddr, addr)

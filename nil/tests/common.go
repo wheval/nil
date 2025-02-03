@@ -72,15 +72,16 @@ func DeployContractViaSmartAccount(
 	t.Helper()
 
 	contractAddr := types.CreateAddress(shardId, payload)
-	txHash, err := client.SendTransactionViaSmartAccount(ctx, addrFrom, types.Code{}, types.NewFeePackFromGas(100_000), initialAmount,
-		[]types.TokenBalance{}, contractAddr, key)
+	txHash, err := client.SendTransactionViaSmartAccount(ctx, addrFrom, types.Code{}, types.NewFeePackFromGas(10_000_000),
+		initialAmount, []types.TokenBalance{}, contractAddr, key)
 	require.NoError(t, err)
 	receipt := WaitForReceipt(t, ctx, client, txHash)
 	require.True(t, receipt.Success)
 	require.Equal(t, "Success", receipt.Status)
 	require.Len(t, receipt.OutReceipts, 1)
 
-	txHash, addr, err := client.DeployContract(ctx, shardId, addrFrom, payload, types.Value{}, types.NewFeePackFromGas(100_000), key)
+	txHash, addr, err := client.DeployContract(ctx, shardId, addrFrom, payload, types.Value{},
+		types.NewFeePackFromGas(10_000_000), key)
 	require.NoError(t, err)
 	require.Equal(t, contractAddr, addr)
 

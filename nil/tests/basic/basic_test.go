@@ -337,7 +337,7 @@ func (s *SuiteRpc) TestRpcCallWithTransactionSend() { //nolint:maintidx
 
 		hash, smartAccountAddr, err = s.Client.DeployContract(
 			s.Context, callerShardId, types.MainSmartAccountAddress, deployCode, types.GasToValue(10_000_000),
-			types.NewFeePackFromGas(200_000), execution.MainPrivateKey,
+			types.NewFeePackFromGas(20_000_000), execution.MainPrivateKey,
 		)
 		s.Require().NoError(err)
 		receipt := s.WaitForReceipt(hash)
@@ -350,7 +350,7 @@ func (s *SuiteRpc) TestRpcCallWithTransactionSend() { //nolint:maintidx
 
 		hash, counterAddr, err = s.Client.DeployContract(
 			s.Context, calleeShardId, types.MainSmartAccountAddress, deployCode, types.Value{},
-			types.NewFeePackFromGas(200_000), execution.MainPrivateKey,
+			types.NewFeePackFromGas(2_000_000), execution.MainPrivateKey,
 		)
 		s.Require().NoError(err)
 		receipt := s.WaitIncludedInMain(hash)
@@ -835,7 +835,7 @@ func (s *SuiteRpc) TestMultipleRefunds() {
 func (s *SuiteRpc) TestRpcBlockContent() {
 	// Deploy transaction
 	hash, _, err := s.Client.DeployContract(s.Context, types.BaseShardId, types.MainSmartAccountAddress,
-		contracts.CounterDeployPayload(s.T()), types.Value{}, types.NewFeePackFromGas(100_000), execution.MainPrivateKey)
+		contracts.CounterDeployPayload(s.T()), types.Value{}, types.NewFeePackFromGas(1_000_000), execution.MainPrivateKey)
 	s.Require().NoError(err)
 
 	var block *jsonrpc.RPCBlock
@@ -858,7 +858,7 @@ func (s *SuiteRpc) TestRpcBlockContent() {
 func (s *SuiteRpc) TestRpcTransactionContent() {
 	shardId := types.ShardId(3)
 	hash, _, err := s.Client.DeployContract(s.Context, shardId, types.MainSmartAccountAddress,
-		contracts.CounterDeployPayload(s.T()), types.Value{}, types.NewFeePackFromGas(100_000), execution.MainPrivateKey)
+		contracts.CounterDeployPayload(s.T()), types.Value{}, types.NewFeePackFromGas(1_000_000), execution.MainPrivateKey)
 	s.Require().NoError(err)
 
 	receipt := s.WaitForReceipt(hash)
