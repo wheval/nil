@@ -24,7 +24,7 @@
   --ifm-font-family-base: "HelveticaNeue";
 }
 
-[data-theme="light"] {
+:root[data-theme="light"] {
   --ifm-background-color: #ffffff;
   --ifm-color-primary: #1e1e1e;
   --ifm-navbar-link-color: #000000;
@@ -36,7 +36,7 @@
   --ifm-menu-color-active: #000000;
 }
 
-[data-theme="dark"] {
+:root[data-theme="dark"] {
   --ifm-footer-background-color: #181a1b;
   --ifm-color-primary: #ffffff;
   --ifm-heading-color: #ffffff;
@@ -60,10 +60,10 @@
   --ifm-menu-color-background-active: #8a8a8a;
   --ifm-menu-link-color: #f1f1f1;
   --ifm-menu-font-size: 0.9rem;
-  --aa-text-color-rgb: 189, 189, 189 !important;
-  --aa-background-color-rgb: 47, 47, 47 !important;
-  --aa-primary-color-rgb: 189, 189, 189 !important;
-  --aa-muted-color-rgb: 138, 138, 138 !important;
+  --aa-text-color-rgb: 189, 189, 189;
+  --aa-background-color-rgb: 47, 47, 47;
+  --aa-primary-color-rgb: 189, 189, 189;
+  --aa-muted-color-rgb: 138, 138, 138;
   --ifm-color-warning-contrast-background: #722f01;
   --ifm-color-warning-dark: #fe7c27;
   --ifm-color-info-contrast-background: #0a3068;
