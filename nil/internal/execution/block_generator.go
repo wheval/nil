@@ -25,32 +25,6 @@ type BlockGeneratorParams struct {
 	MainKeysOutPath string
 }
 
-type Proposal struct {
-	PrevBlockId   types.BlockNumber   `json:"prevBlockId"`
-	PrevBlockHash common.Hash         `json:"prevBlockHash"`
-	CollatorState types.CollatorState `json:"collatorState"`
-	MainChainHash common.Hash         `json:"mainChainHash"`
-	ShardHashes   []common.Hash       `json:"shardHashes" ssz-max:"4096"`
-
-	InTxns      []*types.Transaction `json:"inTxns" ssz-max:"4096"`
-	ForwardTxns []*types.Transaction `json:"forwardTxns" ssz-max:"4096"`
-}
-
-func NewEmptyProposal() *Proposal {
-	return &Proposal{}
-}
-
-func (p *Proposal) IsEmpty() bool {
-	return len(p.InTxns) == 0 && len(p.ForwardTxns) == 0
-}
-
-func (p *Proposal) GetMainShardHash(shardId types.ShardId) *common.Hash {
-	if shardId.IsMainShard() {
-		return &p.PrevBlockHash
-	}
-	return &p.MainChainHash
-}
-
 func NewBlockGeneratorParams(shardId types.ShardId, nShards uint32, gasBasePrice types.Value, gasPriceScale float64) BlockGeneratorParams {
 	return BlockGeneratorParams{
 		ShardId:       shardId,
@@ -69,8 +43,9 @@ type BlockGenerator struct {
 	rwTx           db.RwTx
 	executionState *ExecutionState
 
-	logger zerolog.Logger
-	mh     *MetricsHandler
+	logger   zerolog.Logger
+	mh       *MetricsHandler
+	counters *BlockGeneratorCounters
 }
 
 type BlockGenerationResult struct {
@@ -115,7 +90,8 @@ func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabri
 		logger: logging.NewLogger("block-gen").With().
 			Stringer(logging.FieldShardId, params.ShardId).
 			Logger(),
-		mh: mh,
+		mh:       mh,
+		counters: NewBlockGeneratorCounters(),
 	}, nil
 }
 
@@ -193,9 +169,8 @@ func (g *BlockGenerator) GenerateZeroState(zeroStateYaml string, config *ZeroSta
 	return res.Block, nil
 }
 
-func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, counters *BlockGeneratorCounters, logger zerolog.Logger) error {
+func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, logger zerolog.Logger) error {
 	if g.executionState.PrevBlock != proposal.PrevBlockHash {
-		// This shouldn't happen currently, because a new block cannot appear between collator and block generator calls.
 		esJson, err := g.executionState.MarshalJSON()
 		if err != nil {
 			logger.Err(err).Msg("Failed to marshal execution state")
@@ -215,7 +190,7 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, counters *Blo
 			RawJSON("proposal", proposalJson).
 			Msg("Proposed previous block hash doesn't match the current state")
 
-		return fmt.Errorf("Proposed previous block hash doesn't match the current state. Expected: %s, got: %s",
+		return fmt.Errorf("proposed previous block hash doesn't match the current state. Expected: %s, got: %s",
 			g.executionState.PrevBlock, proposal.PrevBlockHash)
 	}
 
@@ -225,38 +200,16 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, counters *Blo
 
 	g.executionState.MainChainHash = proposal.MainChainHash
 
-	var res *ExecutionResult
-	for _, txn := range proposal.InTxns {
-		if txn.IsDeploy() {
-			counters.DeployTransactions++
+	for _, txn := range proposal.InternalTxns {
+		if err := g.handleTxn(txn); err != nil {
+			return err
 		}
-		if txn.IsExecution() {
-			counters.ExecTransactions++
-		}
+	}
 
-		var txnHash common.Hash
-		if assert.Enable {
-			txnHash = txn.Hash()
+	for _, txn := range proposal.ExternalTxns {
+		if err := g.handleTxn(txn); err != nil {
+			return err
 		}
-
-		g.executionState.AddInTransaction(txn)
-		if txn.IsInternal() {
-			res = g.handleInternalInTransaction(txn)
-			counters.InternalTransactions++
-		} else {
-			res = g.handleExternalTransaction(txn)
-			counters.ExternalTransactions++
-		}
-
-		if assert.Enable {
-			check.PanicIfNotf(txnHash == txn.Hash(), "Transaction hash changed during execution")
-		}
-
-		if res.FatalError != nil {
-			return res.FatalError
-		}
-		g.addReceipt(res)
-		counters.CoinsUsed = counters.CoinsUsed.Add(res.CoinsUsed())
 	}
 
 	for _, txn := range proposal.ForwardTxns {
@@ -271,10 +224,44 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, counters *Blo
 	return nil
 }
 
-func (g *BlockGenerator) BuildBlock(proposal *Proposal, logger zerolog.Logger) (*types.Block, error) {
-	counters := NewBlockGeneratorCounters()
+func (g *BlockGenerator) handleTxn(txn *types.Transaction) error {
+	if txn.IsDeploy() {
+		g.counters.DeployTransactions++
+	}
+	if txn.IsExecution() {
+		g.counters.ExecTransactions++
+	}
 
-	if err := g.prepareExecutionState(proposal, counters, logger); err != nil {
+	var txnHash common.Hash
+	if assert.Enable {
+		txnHash = txn.Hash()
+	}
+
+	var res *ExecutionResult
+	g.executionState.AddInTransaction(txn)
+	if txn.IsInternal() {
+		res = g.handleInternalInTransaction(txn)
+		g.counters.InternalTransactions++
+	} else {
+		res = g.handleExternalTransaction(txn)
+		g.counters.ExternalTransactions++
+	}
+
+	if assert.Enable {
+		check.PanicIfNotf(txnHash == txn.Hash(), "Transaction hash changed during execution")
+	}
+
+	if res.FatalError != nil {
+		return res.FatalError
+	}
+	g.addReceipt(res)
+	g.counters.CoinsUsed = g.counters.CoinsUsed.Add(res.CoinsUsed())
+
+	return nil
+}
+
+func (g *BlockGenerator) BuildBlock(proposal *Proposal, logger zerolog.Logger) (*types.Block, error) {
+	if err := g.prepareExecutionState(proposal, logger); err != nil {
 		return nil, err
 	}
 
@@ -286,12 +273,10 @@ func (g *BlockGenerator) BuildBlock(proposal *Proposal, logger zerolog.Logger) (
 }
 
 func (g *BlockGenerator) GenerateBlock(proposal *Proposal, logger zerolog.Logger, sig types.Signature) (*BlockGenerationResult, error) {
-	counters := NewBlockGeneratorCounters()
-
 	g.mh.StartProcessingMeasurement(g.ctx, g.executionState.GasPrice, proposal.PrevBlockId+1)
-	defer func() { g.mh.EndProcessingMeasurement(g.ctx, counters) }()
+	defer func() { g.mh.EndProcessingMeasurement(g.ctx, g.counters) }()
 
-	if err := g.prepareExecutionState(proposal, counters, logger); err != nil {
+	if err := g.prepareExecutionState(proposal, logger); err != nil {
 		return nil, err
 	}
 

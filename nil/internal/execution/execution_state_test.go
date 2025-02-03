@@ -666,7 +666,7 @@ contracts:
 
 	proposal := NewEmptyProposal()
 	for range 1000 {
-		proposal.InTxns = append(proposal.InTxns, txn)
+		proposal.InternalTxns = append(proposal.InternalTxns, txn)
 	}
 
 	b.ResetTimer()

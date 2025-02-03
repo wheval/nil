@@ -3,6 +3,7 @@ package collate
 import (
 	"context"
 	"errors"
+	"slices"
 	"sort"
 	"time"
 
@@ -143,31 +144,31 @@ func (s *ReplayScheduler) buildProposalFromPrevBlock(ctx context.Context, blockI
 	// we could also consider option with fairly collecting these transactions
 	// from neighbor shards and running proposer
 	// however it's not a purpose of replay mode (at least now)
+	inTxns, err := s.collectTxns(roTx, blockToReplay.InTransactionsRoot)
+	if err != nil {
+		return nil, err
+	}
+	proposal.InternalTxns, proposal.ExternalTxns = execution.SplitInTransactions(inTxns)
+
+	forwardTxns, err := s.collectTxns(roTx, blockToReplay.OutTransactionsRoot)
+	if err != nil {
+		return nil, err
+	}
+	proposal.ForwardTxns, _ = execution.SplitOutTransactions(forwardTxns, s.params.ShardId)
+
+	return proposal, nil
+}
+
+func (s *ReplayScheduler) collectTxns(roTx db.RoTx, root common.Hash) ([]*types.Transaction, error) {
 	inTxnsReader := execution.NewDbTransactionTrieReader(roTx, s.params.ShardId)
-	inTxnsReader.SetRootHash(blockToReplay.InTransactionsRoot)
+	inTxnsReader.SetRootHash(root)
 	entries, err := inTxnsReader.Entries()
 	if err != nil {
 		return nil, err
 	}
-	proposal.InTxns = make([]*types.Transaction, len(entries))
-	for _, inTxn := range entries {
-		proposal.InTxns[inTxn.Key] = inTxn.Val
-	}
-
-	outTxnsReader := execution.NewDbTransactionTrieReader(roTx, s.params.ShardId)
-	outTxnsReader.SetRootHash(blockToReplay.OutTransactionsRoot)
-	entries, err = outTxnsReader.Entries()
-	if err != nil {
-		return nil, err
-	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Key < entries[j].Key })
-
-	proposal.ForwardTxns = make([]*types.Transaction, 0)
-	for _, outTxn := range entries {
-		if outTxn.Val.From.ShardId() != s.params.ShardId {
-			proposal.ForwardTxns = append(proposal.ForwardTxns, outTxn.Val)
-		}
-	}
-
-	return proposal, nil
+	return slices.Collect(common.Transform(slices.Values(entries),
+		func(e execution.Entry[types.TransactionIndex, *types.Transaction]) *types.Transaction {
+			return e.Val
+		})), nil
 }
