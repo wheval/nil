@@ -299,10 +299,10 @@ func calcDynamicCosts(contract *Contract, operation *operation, stack *Stack, in
 	// Cost is explicitly set so that the capture state defer method can get the proper cost.
 	dynamicCost, err := operation.dynamicGas(in.evm, contract, stack, mem, memorySize)
 	if err != nil {
-		return 0, 0, fmt.Errorf("%w: %w", ErrOutOfGas, err)
+		return 0, 0, types.NewWrapError(types.ErrorOutOfGasDynamic, err)
 	}
 	if !contract.UseGas(dynamicCost, in.evm.Config.Tracer, tracing.GasChangeIgnored) {
-		return 0, 0, fmt.Errorf("%w: %d < %d", ErrOutOfGas, contract.Gas, dynamicCost)
+		return 0, 0, types.NewVerboseError(types.ErrorOutOfGasDynamic, fmt.Sprintf("%d < %d", contract.Gas, dynamicCost))
 	}
 	return memorySize, dynamicCost, nil
 }

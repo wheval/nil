@@ -564,7 +564,7 @@ func (es *ExecutionState) SetInitState(addr types.Address, transaction *types.Tr
 	}
 	defer es.resetVm()
 
-	_, deployAddr, _, err := es.evm.Deploy(addr, vm.AccountRef{}, transaction.Data, uint64(100000) /* gas */, uint256.NewInt(0))
+	_, deployAddr, _, err := es.evm.Deploy(addr, vm.AccountRef{}, transaction.Data, uint64(100_000_000) /* gas */, uint256.NewInt(0))
 	if err != nil {
 		return err
 	}
@@ -1547,7 +1547,7 @@ func (es *ExecutionState) CallVerifyExternal(transaction *types.Transaction, acc
 
 	ret, leftOverGas, err := es.evm.StaticCall((vm.AccountRef)(account.address), account.address, calldata, gasCreditLimit.Uint64())
 	if err != nil {
-		if errors.Is(err, vm.ErrOutOfGas) && gasCreditLimit.Lt(ExternalTransactionVerificationMaxGas) {
+		if types.IsOutOfGasError(err) && gasCreditLimit.Lt(ExternalTransactionVerificationMaxGas) {
 			// This condition means that account has not enough balance even to execute the verification.
 			// So it will be clearer to return `InsufficientBalance` error instead of `OutOfGas`.
 			return NewExecutionResult().SetError(types.NewError(types.ErrorInsufficientBalance))

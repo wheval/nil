@@ -451,8 +451,12 @@ func (evm *EVM) create(caller ContractRef, codeAndHash types.Code, gas uint64, v
 	}
 
 	if err == nil {
-		// TODO: calculate gas required to store the code
-		err = evm.StateDB.SetCode(address, ret)
+		createDataGas := uint64(len(ret)) * params.CreateDataGas
+		if contract.UseGas(createDataGas, evm.Config.Tracer, tracing.GasChangeCallCodeStorage) {
+			err = evm.StateDB.SetCode(address, ret)
+		} else {
+			err = types.NewError(types.ErrorOutOfGasStorage)
+		}
 	}
 
 	// When an error was returned by the EVM or when setting the creation code.

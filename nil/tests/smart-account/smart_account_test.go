@@ -102,7 +102,7 @@ func (s *SuiteSmartAccountRpc) TestDeploySmartAccountWithValue() {
 
 	hash, address, err := s.Client.DeployContract(
 		s.Context, types.BaseShardId, types.MainSmartAccountAddress, deployCode, types.NewValueFromUint64(500_000),
-		types.NewFeePackFromGas(500_000), execution.MainPrivateKey,
+		types.NewFeePackFromGas(5_000_000), execution.MainPrivateKey,
 	)
 	s.Require().NoError(err)
 

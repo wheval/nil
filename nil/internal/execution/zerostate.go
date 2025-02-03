@@ -236,13 +236,13 @@ func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error 
 		if err := es.CreateContract(addr); err != nil {
 			return err
 		}
+		if err := es.SetBalance(addr, contract.Value); err != nil {
+			return err
+		}
 		if err := es.SetInitState(addr, mainDeployTxn); err != nil {
 			return err
 		}
 
-		if err := es.SetBalance(addr, contract.Value); err != nil {
-			return err
-		}
 		logger.Debug().Str("name", contract.Name).Stringer("address", addr).Msg("Created zero state contract")
 	}
 	return nil

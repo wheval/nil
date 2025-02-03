@@ -94,7 +94,7 @@ func (s *SuiteFaucet) TestDeployContractViaFaucet() {
 	}
 
 	txnHash, receiptContractAddress, err := s.DefaultClient.DeployExternal(s.Context, smartAccountAddr.ShardId(), code,
-		types.NewFeePackFromGas(100_000))
+		types.NewFeePackFromGas(10_000_000))
 	s.Require().NoError(err)
 	s.Require().Equal(smartAccountAddr, receiptContractAddress)
 	receipt = s.WaitForReceipt(txnHash)
