@@ -11,10 +11,10 @@ generate_mocks: \
 	$(root_db)/rwtx_generated_mock.go \
 	$(root_db)/db_generated_mock.go
 
-$(root_client)/client_generated_mock.go: $(root_client)/client.go
+$(root_client)/client_generated_mock.go: $(root_client)/client.go ssz_types
 	cd $(root_client) && go generate
 
-$(root_vm)/state_generated_mock.go: $(root_vm)/interface.go
+$(root_vm)/state_generated_mock.go: $(root_vm)/interface.go ssz_types
 	cd $(root_vm) && go generate
 
 $(root_db)/rwtx_generated_mock.go: $(root_db)/kv.go ssz_types
