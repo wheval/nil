@@ -42,6 +42,7 @@ type Params struct {
 
 type Scheduler struct {
 	consensus      Consensus
+	syncer         *Syncer
 	txFabric       db.DB
 	pool           txnpool.Pool
 	networkManager *network.Manager
@@ -78,6 +79,7 @@ func (s *Scheduler) Run(ctx context.Context, syncer *Syncer, consensus Consensus
 
 	s.logger.Info().Msg("Starting collation...")
 	s.consensus = consensus
+	s.syncer = syncer
 
 	// Enable handler for snapshot relaying
 	SetBootstrapHandler(ctx, s.networkManager, s.params.ShardId, s.txFabric)
@@ -110,7 +112,23 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 		return err
 	}
 
-	return s.consensus.RunSequence(ctx, id.Uint64()+1)
+	subId, syncCh := s.syncer.Subscribe()
+	defer s.syncer.Unsubscribe(subId)
+
+	ctx, cancelFn := context.WithCancel(ctx)
+	defer cancelFn()
+
+	consCh := make(chan error, 1)
+	go func() {
+		consCh <- s.consensus.RunSequence(ctx, id.Uint64()+1)
+	}()
+
+	select {
+	case <-syncCh:
+		return nil
+	case err := <-consCh:
+		return err
+	}
 }
 
 func (s *Scheduler) readLastBlockId(ctx context.Context) (types.BlockNumber, error) {

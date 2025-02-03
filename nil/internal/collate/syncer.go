@@ -45,6 +45,10 @@ type Syncer struct {
 	logger zerolog.Logger
 
 	waitForSync *sync.WaitGroup
+
+	subsMutex sync.Mutex
+	subsId    uint64
+	subs      map[uint64]chan struct{}
 }
 
 func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Syncer, error) {
@@ -60,6 +64,7 @@ func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Sy
 			Stringer(logging.FieldShardId, cfg.ShardId).
 			Logger(),
 		waitForSync: &waitForSync,
+		subs:        make(map[uint64]chan struct{}),
 	}, nil
 }
 
@@ -90,6 +95,34 @@ func (s *Syncer) shardIsEmpty(ctx context.Context) (bool, error) {
 
 func (s *Syncer) WaitComplete() {
 	s.waitForSync.Wait()
+}
+
+func (s *Syncer) Subscribe() (uint64, <-chan struct{}) {
+	s.subsMutex.Lock()
+	defer s.subsMutex.Unlock()
+
+	ch := make(chan struct{}, 1)
+	id := s.subsId
+	s.subs[id] = ch
+	s.subsId++
+	return id, ch
+}
+
+func (s *Syncer) Unsubscribe(id uint64) {
+	s.subsMutex.Lock()
+	defer s.subsMutex.Unlock()
+
+	close(s.subs[id])
+	delete(s.subs, id)
+}
+
+func (s *Syncer) notify() {
+	s.subsMutex.Lock()
+	defer s.subsMutex.Unlock()
+
+	for _, ch := range s.subs {
+		ch <- struct{}{}
+	}
 }
 
 func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
@@ -294,6 +327,7 @@ func (s *Syncer) saveBlocks(ctx context.Context, blocks []*types.BlockWithExtrac
 			return err
 		}
 	}
+	s.notify()
 
 	lastBlockNumber := blocks[len(blocks)-1].Block.Id
 	s.logger.Debug().
