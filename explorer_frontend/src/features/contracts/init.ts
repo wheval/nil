@@ -20,12 +20,12 @@ import {
   $callParams,
   $callResult,
   $contracts,
+  $deployedContracts,
   $deploymentArgs,
   $error,
   $errors,
   $loading,
   $shardId,
-  $state,
   $tokens,
   $txHashes,
   $valueInputs,
@@ -63,7 +63,7 @@ $contracts.on(compileCodeFx.doneData, (_, apps) => apps);
 $contracts.reset(compileCodeFx.fail);
 
 persist({
-  store: $state,
+  store: $deployedContracts,
   key: "contractStates",
 });
 
@@ -89,7 +89,7 @@ $deploymentArgs.reset($activeApp);
 $assignedAddress.on(setAssignAddress, (_, address) => address);
 $assignedAddress.reset($activeApp);
 
-$state.on(
+$deployedContracts.on(
   sample({
     source: combine($assignedAddress, $activeApp, (address, app) => {
       return {
@@ -268,11 +268,11 @@ sample({
   }),
   filter: $activeAppWithState.map((app) => !!app?.address),
   clock: choseApp,
-  fn: ({ endpoint, app }) => ({ address: app!.address!, endpoint }),
+  fn: ({ endpoint, app }) => ({ address: app?.address!, endpoint }),
   target: fetchBalanceFx,
 });
 
-$state.on(deploySmartContractFx.doneData, (state, { app, address }) => {
+$deployedContracts.on(deploySmartContractFx.doneData, (state, { app, address }) => {
   const addresses = state[app] ? [...state[app], address] : [address];
   return {
     ...state,
@@ -280,17 +280,20 @@ $state.on(deploySmartContractFx.doneData, (state, { app, address }) => {
   };
 });
 
-$state.on(assignSmartContractFx.doneData, (state, { app, assignedSmartContractAddress }) => {
-  const addresses = state[app]
-    ? [...state[app], assignedSmartContractAddress]
-    : [assignedSmartContractAddress];
-  return {
-    ...state,
-    [app]: addresses,
-  };
-});
+$deployedContracts.on(
+  assignSmartContractFx.doneData,
+  (state, { app, assignedSmartContractAddress }) => {
+    const addresses = state[app]
+      ? [...state[app], assignedSmartContractAddress]
+      : [assignedSmartContractAddress];
+    return {
+      ...state,
+      [app]: addresses,
+    };
+  },
+);
 
-$state.on(unlinkApp, (state, { app, address }) => {
+$deployedContracts.on(unlinkApp, (state, { app, address }) => {
   const addresses = state[app].filter((addr) => addr !== address);
   return {
     ...state,

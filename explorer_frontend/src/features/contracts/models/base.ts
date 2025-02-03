@@ -22,7 +22,7 @@ export type DeployedApp = App & {
 };
 
 export const $contracts = createStore<App[]>([]);
-export const $state = createStore<{ [code: string]: Address[] }>({});
+export const $deployedContracts = createStore<{ [code: string]: Address[] }>({});
 export const $activeApp = createStore<{
   bytecode: `0x${string}`;
   address?: Address;
@@ -36,7 +36,7 @@ export const closeApp = createEvent();
 
 export const resetApps = createEvent();
 
-export const $contractWithState = combine($contracts, $state, (contracts, state) => {
+export const $contractWithState = combine($contracts, $deployedContracts, (contracts, state) => {
   const contractsWithAddress: (App & { address?: Address })[] = [];
   for (const contract of contracts) {
     if (state[contract.bytecode]) {
@@ -286,7 +286,7 @@ export const sendMethodFx = createEffect<
       if (parsedLog == null) {
         return null;
       }
-      return `${parsedLog!.name} with args [${parsedLog!.args.join(", ")}]`;
+      return `${parsedLog?.name} with args [${parsedLog?.args.join(", ")}]`;
     })
     .filter((log): log is string => log !== null);
 
