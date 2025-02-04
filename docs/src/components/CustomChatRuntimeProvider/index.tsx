@@ -10,18 +10,14 @@ import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
 const pattern = /\d+:"([^"]*)"/g;
 
-function asAsyncIterable<T>(source: ReadableStream<T>): AsyncIterable<T> {
-  return {
-    [Symbol.asyncIterator]: () => {
-      const reader = source.getReader();
-      return {
-        async next(): Promise<IteratorResult<T, undefined>> {
-          const { done, value } = await reader.read();
-          return done ? { done: true, value: undefined } : { done: false, value };
-        },
-      };
-    },
-  };
+function processChunk(chunk: string): string {
+  const matches = [...chunk.matchAll(pattern)];
+  const tokens = matches.map((match) => match[1]);
+
+  let cleanedText = tokens.join("");
+  cleanedText = cleanedText.replace(/\\n/g, "\n");
+  
+  return cleanedText;
 }
 
 const CustomModelAdapter: (string, Function) => ChatModelAdapter = (
@@ -29,6 +25,8 @@ const CustomModelAdapter: (string, Function) => ChatModelAdapter = (
   handleReCaptchaVerify,
 ) => ({
   async *run({ messages, abortSignal }) {
+    yield { content: [{ type: "text", text: "..." }] };
+    
     const messagesToSend = messages.map((m) => ({
       role: m.role,
       content: m.content
@@ -36,6 +34,7 @@ const CustomModelAdapter: (string, Function) => ChatModelAdapter = (
         .map((c) => c.text)
         .join(" "),
     }));
+
     const response = await fetch("https://docs.nil.foundation/bot/api/chat", {
       method: "POST",
       headers: {
@@ -47,19 +46,55 @@ const CustomModelAdapter: (string, Function) => ChatModelAdapter = (
       }),
       signal: abortSignal,
     });
+
     handleReCaptchaVerify();
 
-    let text = "";
-    for await (const chunk of asAsyncIterable(
-      response.body!.pipeThrough(new TextDecoderStream()),
-    )) {
-      const matches = [...chunk.matchAll(pattern)];
-      const tokens = matches.map((match) => match[1]);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    if (!response.body) {
+      throw new Error('No response body received');
+    }
 
-      let cleanedText = tokens.join("");
-      cleanedText = cleanedText.replace(/\\n/g, "\n");
-      text += cleanedText;
-      yield { content: [{ type: "text", text }] };
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let accumulatedText = '';
+    let isFirstChunk = true;
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        
+        if (done) break;
+
+        const newText = decoder.decode(value, { stream: true });
+        buffer += newText;
+        
+        const matches = [...buffer.matchAll(pattern)];
+        if (matches.length > 0) {
+          const tokens = matches.map(match => match[1]);
+          const cleanedText = tokens.join("").replace(/\\n/g, "\n");
+          
+          if (cleanedText) {
+            if (isFirstChunk) {
+              accumulatedText = cleanedText;
+              isFirstChunk = false;
+            } else {
+              accumulatedText += cleanedText;
+            }
+            
+            yield { content: [{ type: "text", text: accumulatedText }] };
+            
+            const lastMatch = matches[matches.length - 1];
+            const lastMatchEnd = lastMatch.index! + lastMatch[0].length;
+            buffer = buffer.slice(lastMatchEnd);
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
     }
   },
 });
