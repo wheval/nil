@@ -26,11 +26,55 @@ jobs:
       - name: run check
         run: nix build .#checks.x86_64-linux.${{ matrix.check == 'nil' && 'others' || matrix.check }} -L
 
+  nix_check_macos:
+    name: macOS CI (${{ matrix.platform.os}}, ${{ matrix.platform.arch }}) - ${{ matrix.check }}
+    environment: prod
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Add other checks later, when they are stabilized, and caching will be configured for Nix.
+        check: ["clijs"]
+        platform:
+          # N.B. The architecture is chosen by GitHub at `runs-on` depending on the label (`os`)
+          # See https://github.com/actions/runner-images?tab=readme-ov-file#available-images
+          # The other fields only affect the logic of our steps
+          - os: macos-latest
+            arch: aarch64
+            nixArch: aarch64-darwin
+          - os: macos-13
+            arch: x64
+            nixArch: x86_64-darwin
+    steps:
+      - name: checkout local actions
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run check
+        run: nix build .#checks.${{ matrix.platform.nixArch }}.${{ matrix.check == 'nil' && 'others' || matrix.check }} -L
+
+      - name: Upload nil binary as artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nil-darwin-${{ matrix.platform.arch }}
+          path: |
+            build/bin/nil
+
   ensure_cluster_builds_macos:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
+          # N.B. The architecture is chosen by GitHub at `runs-on` depending on the label (`os`)
+          # See https://github.com/actions/runner-images?tab=readme-ov-file#available-images
+          # The other fields only affect the logic of our steps
           - os: macos-latest
             arch: aarch64
           - os: macos-13

@@ -1,4 +1,11 @@
 self: super: {
+  libuv = super.libuv.overrideAttrs (oldAttrs: rec {
+    postPatch = oldAttrs.postPatch + super.lib.optionalString (super.stdenv.hostPlatform.system == "x86_64-darwin") ''
+      # Disable flaky test
+      sed '/spawn_exercise_sigchld_issue/d' -i test/test-list.h
+    '';
+  });
+
   pkgsStatic = super.pkgsStatic // {
     nodejs_22 = super.pkgsStatic.nodejs_22.overrideAttrs (oldAttrs:
       let
