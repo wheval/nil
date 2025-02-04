@@ -7,7 +7,7 @@ const port = 3000;
 //endImport
 
 const RPC_ENDPOINT = "http://127.0.0.1:8529";
-const FAUCET_ENDPOINT = "http://127.0.0.1:8527";
+const FAUCET_ENDPOINT = "http://127.0.0.1:8529";
 
 //startServer
 const server = createServer((req, res) => {

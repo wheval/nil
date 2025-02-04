@@ -60,11 +60,9 @@ stdenv.mkDerivation rec {
     export NIL_RPC_ENDPOINT="http://127.0.0.1:8529"
 
     nild run --http-port 8529 --collator-tick-ms=100 >nild.log 2>&1 &
-    faucet run &
     sleep 2
 
     nil config set rpc_endpoint $NIL_RPC_ENDPOINT
-    nil config set faucet_endpoint http://127.0.0.1:8527
 
     export PRIVATE_KEY=`nil keygen new -q`
     export SMART_ACCOUNT_ADDR=`nil smart-account new -q`
