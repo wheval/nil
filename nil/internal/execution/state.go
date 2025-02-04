@@ -212,15 +212,15 @@ func NewEVMBlockContext(es *ExecutionState) (*vm.BlockContext, error) {
 		return nil, err
 	}
 
-	lastBlockId := uint64(0)
+	currentBlockId := uint64(0)
 	var header *types.Block
 	if err == nil {
 		header = data.Block()
-		lastBlockId = header.Id.Uint64()
+		currentBlockId = header.Id.Uint64() + 1
 	}
 	return &vm.BlockContext{
 		GetHash:     getHashFn(es, header),
-		BlockNumber: lastBlockId,
+		BlockNumber: currentBlockId,
 		Random:      &common.EmptyHash,
 		BaseFee:     big.NewInt(10),
 		BlobBaseFee: big.NewInt(10),
