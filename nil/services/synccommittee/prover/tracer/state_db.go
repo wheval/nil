@@ -54,6 +54,7 @@ type transactionTraceContext struct {
 	zkevmTracer   *ZKEVMStateTracer
 	copyTracer    *CopyTracer
 	expTracer     *ExpOpTracer
+	keccakTracer  *KeccakTracer
 
 	// Current program counter, used only for storage operations trace. Incremetned inside OnOpcode
 	curPC uint64
@@ -79,6 +80,7 @@ func (mtc *transactionTraceContext) processOpcode(
 	mtc.expTracer.FinishPrevOpcodeTracing()
 	mtc.storageTracer.FinishPrevOpcodeTracing()
 	mtc.stackTracer.FinishPrevOpcodeTracing()
+	mtc.keccakTracer.FinishPrevOpcodeTracing()
 	if err := mtc.copyTracer.FinishPrevOpcodeTracing(); err != nil {
 		return err
 	}
@@ -126,6 +128,14 @@ func (mtc *transactionTraceContext) processOpcode(
 		stats.ExpOpsN++
 	}
 
+	keccakTraced, err := mtc.keccakTracer.TraceOp(opCode, scope)
+	if err != nil {
+		return err
+	}
+	if keccakTraced {
+		stats.KeccakOpsN++
+	}
+
 	storageTraced, err := mtc.storageTracer.TraceOp(opCode, pc, scope)
 	if err != nil {
 		return err
@@ -142,6 +152,7 @@ func (mtc *transactionTraceContext) saveTransactionTraces(dst ExecutionTraces) e
 	dst.AddStackOps(mtc.stackTracer.Finalize())
 	dst.AddZKEVMStates(mtc.zkevmTracer.Finalize())
 	dst.AddExpOps(mtc.expTracer.Finalize())
+	dst.AddKeccakOps(mtc.keccakTracer.Finalize())
 	dst.AddStorageOps(mtc.storageTracer.GetStorageOps())
 
 	copies, err := mtc.copyTracer.Finalize()
@@ -318,6 +329,7 @@ func (tsdb *TracerStateDB) initTransactionTraceContext(
 		stackTracer:   NewStackOpTracer(&tsdb.RwCounter, txnId),
 		memoryTracer:  NewMemoryOpTracer(&tsdb.RwCounter, txnId),
 		expTracer:     NewExpOpTracer(txnId),
+		keccakTracer:  NewKeccakTracer(),
 		storageTracer: NewStorageOpTracer(&tsdb.RwCounter, txnId, tsdb),
 
 		zkevmTracer: NewZkEVMStateTracer(

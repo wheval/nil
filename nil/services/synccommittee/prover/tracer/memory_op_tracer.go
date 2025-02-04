@@ -43,8 +43,9 @@ type opRanges struct {
 var opsToMemoryRanges = map[vm.OpCode]func(stack *StackAccessor, memoryLen int) opRanges{
 	vm.KECCAK256: func(stack *StackAccessor, _ int) opRanges {
 		offset := stack.Pop()
+		lengthToRead := stack.Pop()
 		return opRanges{
-			before: memoryRange{offset.Uint64(), 32},
+			before: memoryRange{offset.Uint64(), lengthToRead.Uint64()},
 		}
 	},
 	vm.CALLDATACOPY: func(stack *StackAccessor, _ int) opRanges {
