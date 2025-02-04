@@ -46,23 +46,44 @@ export async function POST(req: Request) {
       const intent = await handlerToUse.intentLllmChain.invoke({
         query: query
       });
-      if (intent == "Question") {
-        result = await handlerToUse.genericLllmChain.stream({
+
+      const stream = new TransformStream();
+      const writer = stream.writable.getWriter();
+
+      (async () => {
+      try {
+        const chain = intent === "Question" 
+          ? handlerToUse.genericLllmChain 
+          : handlerToUse.generatorLllmChain;
+
+        const result = await chain.stream({
           query: query,
           context: retrievedDocs,
           sources: sources
         });
-      } else {
-        result = await handlerToUse.generatorLllmChain.stream({
-          query: query,
-          context: retrievedDocs,
-          sources: sources
-    })
-    }
-      const resFinal = LangChainAdapter.toDataStreamResponse(result);
-      resFinal.headers.append("Access-Control-Allow-Origin", "*");
-      resFinal.headers.append("Access-Control-Allow-Methods", "GET,OPTIONS,PATCH,DELETE,POST,PUT");
-      return resFinal;
+
+        for await (const chunk of result) {
+          console.log(chunk);
+          await writer.write(chunk);
+        }
+        console.log(result);
+      } catch (error) {
+        console.error('Streaming error:', error);
+      } finally {
+        await writer.close();
+      }
+    })();
+
+    return new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no', 
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET,OPTIONS,PATCH,DELETE,POST,PUT'
+      },
+    });
 
     } else {
       return new Response(JSON.stringify({ message: "Failed to verify" }), {
