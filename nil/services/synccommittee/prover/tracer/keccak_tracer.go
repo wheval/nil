@@ -36,7 +36,7 @@ func (kt *KeccakTracer) TraceOp(opCode vm.OpCode, opCtx tracing.OpContext) (bool
 		bufSize   = stack.PopUint64()
 	)
 
-	buf := getDataOverflowSafe(opCtx.MemoryData(), memOffset, bufSize)
+	buf := getFixedSizeDataSafe(opCtx.MemoryData(), memOffset, bufSize)
 	kt.hashes = append(kt.hashes, KeccakBuffer{
 		buf: buf,
 	})
