@@ -35,12 +35,13 @@ export function generatePublicKey() {
   return getPublicKey(generateRandomPrivateKey());
 }
 
-export async function topUpTest(address: Hex, token = "NIL") {
+export async function topUpTest(address: Hex, token = "NIL", amount = 1e18) {
   await topUp({
     address,
     rpcEndpoint: testEnv.endpoint,
     faucetEndpoint: testEnv.faucetServiceEndpoint,
     token,
+    amount,
   });
 }
 

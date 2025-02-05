@@ -78,3 +78,31 @@ test("External deployment", async ({ expect }) => {
   expect(code).toBeDefined();
   expect(code.length).toBeGreaterThan(10);
 });
+
+test("External failed deployment", async ({ expect }) => {
+  const chainId = await client.chainId();
+  const gasPrice = await client.getGasPrice(1);
+
+  const pubKey = generatePublicKey();
+  const deploymentTransaction = externalDeploymentTransaction(
+    {
+      salt: 100n,
+      shard: 1,
+      bytecode: SmartAccountV1.code,
+      abi: SmartAccountV1.abi,
+      args: [pubKey],
+      feeCredit: 1000000n * gasPrice,
+    },
+    chainId,
+  );
+  const addr = bytesToHex(deploymentTransaction.to);
+  expect(addr).toBeDefined();
+
+  await topUpTest(addr, "NIL", 50_000_000);
+
+  const hash = await deploymentTransaction.send(client);
+
+  const receipts = await waitTillCompleted(client, hash);
+
+  expect(receipts.some((receipt) => !receipt.success)).toBe(true);
+});

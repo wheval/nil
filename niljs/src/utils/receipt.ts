@@ -18,17 +18,23 @@ async function waitTillCompleted(
   options?: { waitTillMainShard?: boolean; interval?: number },
 ): Promise<ProcessedReceipt[]> {
   const interval = options?.interval || 1000;
-  const waitTillMainShard = options?.waitTillMainShard || true;
+  const waitTillMainShard = options?.waitTillMainShard || false;
   const receipts: ProcessedReceipt[] = [];
   const hashes: [Hex][] = [[hash]];
   let cur = 0;
   while (cur !== hashes.length) {
     const [hash] = hashes[cur];
     const receipt = await client.getTransactionReceiptByHash(hash);
+
     if (!receipt) {
       await new Promise((resolve) => setTimeout(resolve, interval));
       continue;
     }
+
+    if (hashes.length === 1 && receipt.flags.some((x) => x === "External") && !receipt.success) {
+      return [receipt];
+    }
+
     if (
       receipt.outTransactions !== null &&
       receipt.outputReceipts &&
@@ -37,6 +43,7 @@ async function waitTillCompleted(
       await new Promise((resolve) => setTimeout(resolve, interval));
       continue;
     }
+
     if (waitTillMainShard && receipt.shardId !== 0 && !receipt.includedInMain) {
       await new Promise((resolve) => setTimeout(resolve, interval));
       continue;
