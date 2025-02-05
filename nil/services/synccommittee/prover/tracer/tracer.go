@@ -8,8 +8,10 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
+	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/internal/vm"
+	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/prover/tracer/api"
 	"github.com/rs/zerolog"
@@ -53,52 +55,66 @@ func (rt *RemoteTracerImpl) GetBlockTraces(
 	if dbgBlock == nil {
 		return errors.New("client returned nil block")
 	}
-
 	decodedDbgBlock, err := dbgBlock.DecodeSSZ()
 	if err != nil {
 		return err
 	}
-
 	if decodedDbgBlock.Id == 0 {
 		// TODO: prove genesis block generation?
 		return ErrCantProofGenesisBlock
 	}
-	prevBlock, err := rt.client.GetBlock(ctx, shardId, transport.BlockNumber(decodedDbgBlock.Id-1), false)
+
+	prevBlock, err := rt.client.GetBlock(ctx, shardId, transport.BlockNumber(decodedDbgBlock.Id-1), true)
 	if err != nil {
 		return err
+	}
+	if prevBlock == nil {
+		return errors.New("client returned nil block")
 	}
 
 	getHashFunc := func(blkNum uint64) (common.Hash, error) {
 		// TODO: try to replace it with prevBlock.Hash
 		_ = prevBlock.Hash
 
-		block, err := rt.client.GetBlock(ctx, shardId, transport.BlockNumber(blkNum), false)
-		if err != nil {
-			return common.EmptyHash, err
-		}
-		return block.Hash, nil
+		return decodedDbgBlock.Hash(shardId), nil
 	}
 
 	blkContext := &vm.BlockContext{
 		GetHash:     getHashFunc,
-		BlockNumber: prevBlock.Number.Uint64(),
+		BlockNumber: decodedDbgBlock.Id.Uint64(),
 		Random:      &common.EmptyHash,
-		BaseFee:     big.NewInt(10),
+		BaseFee:     decodedDbgBlock.BaseFee.ToBig(),
+		// TODO: adjust when `NewEVMBlockContext` uses non-hardcoded 10 value.
+		// Seems like we need to include this into API Block response.
 		BlobBaseFee: big.NewInt(10),
 		Time:        decodedDbgBlock.Timestamp,
 	}
 
-	localDb, err := db.NewBadgerDbInMemory() // TODO: move this creation to caller
+	chainConfig, err := rt.getConfigForBlock(ctx, decodedDbgBlock.Block, shardId)
 	if err != nil {
 		return err
 	}
 
-	stateDB, err := NewTracerStateDB(ctx, aggTraces, rt.client, shardId, prevBlock.Number, blkContext, localDb, rt.logger)
+	localDb, err := db.NewBadgerDbInMemory()
 	if err != nil {
 		return err
 	}
 
-	stateDB.GasPrice = decodedDbgBlock.BaseFee
+	stateDB, err := NewTracerStateDB(
+		ctx,
+		aggTraces,
+		rt.client,
+		shardId,
+		prevBlock.Number,
+		blkContext,
+		localDb,
+		chainConfig,
+		rt.logger,
+	)
+	if err != nil {
+		return err
+	}
+
 	for _, inTxn := range decodedDbgBlock.InTransactions {
 		_, txnHadErr := decodedDbgBlock.Errors[inTxn.Hash()]
 		if txnHadErr {
@@ -110,7 +126,7 @@ func (rt *RemoteTracerImpl) GetBlockTraces(
 		}
 
 		stateDB.AddInTransaction(inTxn)
-		if err := stateDB.HandleInTransaction(inTxn); err != nil { //nolint:contextcheck
+		if err := stateDB.HandleInTransaction(inTxn, execution.NewTransactionPayer(inTxn, stateDB)); err != nil { //nolint:contextcheck
 			return err
 		}
 	}
@@ -152,4 +168,24 @@ func GenerateTrace(ctx context.Context, rpcClient api.RpcClient, cfg *TraceConfi
 	}
 
 	return SerializeToFile(aggTraces, cfg.MarshalMode, cfg.BaseFileName)
+}
+
+func (rt *RemoteTracerImpl) getConfigForBlock(ctx context.Context, block *types.Block, shardId types.ShardId) (*jsonrpc.ChainConfig, error) {
+	var blockWithConfig common.Hash
+	if shardId.IsMainShard() {
+		// fetch config from prev main chain block
+		blockWithConfig = block.PrevBlock
+	} else {
+		// fetch config from corresponding main chain hash
+		blockWithConfig = block.MainChainHash
+	}
+	dbgBlock, err := rt.client.GetDebugBlock(ctx, shardId, blockWithConfig, true)
+	if err != nil {
+		return nil, err
+	}
+	if dbgBlock == nil {
+		return nil, errors.New("client returned nil block")
+	}
+
+	return dbgBlock.Config, nil
 }
