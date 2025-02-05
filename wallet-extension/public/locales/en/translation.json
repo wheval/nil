@@ -1,0 +1,114 @@
+{
+  "welcomePage": {
+    "header": {
+      "pinInstruction": {
+        "mainText": "Pin the Extensions",
+        "subText": "for easy access",
+        "walletName": "=nil; Wallet"
+      }
+    },
+    "card": {
+      "heading": "Test your projects without real assets",
+      "description": "Open =nil; Wallet extension with the shortcut or via button below.",
+      "buttonLabel": "Open =nil; Wallet extension"
+    }
+  },
+  "getStarted": {
+    "testnetInfo": {
+      "heading": "You’re in Testnet mode",
+      "description": "You can try out features and transactions without using real assets. Tokens on testnets don’t hold any real value",
+      "button": "Got It"
+    },
+    "loading": {
+      "title": "Almost there — setting up your wallet!"
+    },
+    "setEndpoint": {
+      "heading": "Enter the endpoint to access the wallet",
+      "connectButton": "Connect and continue",
+      "getEndpointButton": "Don’t have endpoint? Get it",
+      "inputPlaceholder": "Endpoint"
+    },
+    "error": {
+      "heading": "Something went wrong",
+      "description": "Try again or check the endpoint you entered earlier",
+      "tryAgain": "Try again",
+      "goBack": "Go back"
+    }
+  },
+  "wallet": {
+    "header": {
+      "mainWallet": "Main Wallet",
+      "testnetButton": "Testnet"
+    },
+    "quickActions": {
+      "topUp": "Top Up",
+      "send": "Send",
+      "receive": "Receive"
+    },
+    "nftTab": {
+      "placeholder": {
+        "text": "This section is under construction. Stay tuned and join =nil; community for updates",
+        "linkText": "join =nil; community"
+      }
+    },
+    "activityTab": {
+      "noActivityText": "There is no activity yet"
+    },
+    "receivePage": {
+      "title": "Receive",
+      "mainWallet": "Main Wallet",
+      "inputPlaceholder": "Wallet Address",
+      "copyButton": "Copy",
+      "copiedButton": "Copied",
+      "noActivityText": "This section is under construction; received transactions are not yet tracked.",
+      "activity": {
+        "title": "Received",
+        "subtitle": "Confirmed",
+        "rightTextColor": "green"
+      }
+    },
+    "endpointPage": {
+      "title": "View Endpoint",
+      "inputPlaceholder": "RPC Endpoint",
+      "copyButton": "Copy",
+      "copiedButton": "Copied",
+      "getEndpointButton": "Open RPC Bot"
+    },
+    "sendPage": {
+      "title": "Send",
+      "fromSection": {
+        "heading": "From"
+      },
+      "toSection": {
+        "heading": "To",
+        "inputPlaceholder": "0x... "
+      },
+      "amountSection": {
+        "max": "Send Max",
+        "estimate" : "Estimated gas fee",
+        "heading": "Amount",
+        "balanceText": "Balance: {balance}",
+        "buttonLabel": "Send"
+      }
+    },
+    "settingsPage": {
+      "title": "Settings",
+      "endpointSection": "View endpoint",
+      "getSupport": "Get support",
+      "feedback": "Share Feedback",
+      "community": "Join community",
+      "footerVersion": "Version"
+    },
+    "topUpPage": {
+      "title": "Top Up",
+      "toSection": "To",
+      "amountSection": "Amount",
+      "button": "Top Up"
+    },
+    "testNet": {
+      "title": "You’re on Testnet – Mainnet launches this year",
+      "text": "Stay tuned and join the =nil; community for updates. In the meantime, you can try out features and transactions without using real assets. Tokens on testnets don’t hold any real value",
+      "button": "Join =nil; community"
+    }
+  }
+}

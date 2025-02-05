@@ -40,6 +40,7 @@
           nilcli = (pkgs.callPackage ./nix/nilcli.nix { nil = nil; versionFull = versionFull; });
           nilsmartcontracts = (pkgs.callPackage ./nix/nilsmartcontracts.nix { });
           nilexplorer = (pkgs.callPackage ./nix/nilexplorer.nix { });
+          walletextension = (pkgs.callPackage ./nix/walletextension.nix { });
           uniswap = (pkgs.callPackage ./nix/uniswap.nix { });
           docsaibackend = (pkgs.callPackage ./nix/docsaibackend.nix { });
           l1-contracts = (pkgs.callPackage ./nix/l1-contracts.nix { });
@@ -71,6 +72,9 @@
             solc = packages.solc;
           });
           nilexplorer = (pkgs.callPackage ./nix/nilexplorer.nix {
+            enableTesting = true;
+          });
+          walletextension = (pkgs.callPackage ./nix/walletextension.nix {
             enableTesting = true;
           });
           uniswap = (pkgs.callPackage ./nix/uniswap.nix {
