@@ -125,6 +125,9 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 
 	select {
 	case <-syncCh:
+		cancelFn()
+		err := <-consCh
+		s.logger.Debug().Err(err).Msg("Consensus interrupted by syncer")
 		return nil
 	case err := <-consCh:
 		return err
