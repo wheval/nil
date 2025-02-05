@@ -162,6 +162,7 @@ The repository also houses the following projects:
 * `./docs`, the =nil; documentation available at https://docs.nil.foundation
 * `./docs_ai_backend`, a Next.js app handling the RAG chatbot available inside the =nil; documentation
 * `./explorer_frontend` and `./explorer_backend`, the two core components of the =nil; block explorer and Playground
+* `./l1-contracts`, the =nil; contracts to be deployed on Ethereum
 * `./uniswap`, an implementation of the Uniswap V2 protocol on =nil;
 
 The `./nix` folder houses Nix derivations.
