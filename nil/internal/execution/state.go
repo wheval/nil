@@ -1705,12 +1705,18 @@ func (es *ExecutionState) resetVm() {
 }
 
 func (es *ExecutionState) MarshalJSON() ([]byte, error) {
+	prevBlock, err := es.shardAccessor.GetBlock().ByHash(es.PrevBlock)
+	if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
+		return nil, err
+	}
+
 	data := struct {
 		ContractTreeRoot       common.Hash                                  `json:"contractTreeRoot"`
 		InTransactionTreeRoot  common.Hash                                  `json:"inTransactionTreeRoot"`
 		OutTransactionTreeRoot common.Hash                                  `json:"outTransactionTreeRoot"`
 		ReceiptTreeRoot        common.Hash                                  `json:"receiptTreeRoot"`
-		PrevBlock              common.Hash                                  `json:"prevBlock"`
+		PrevBlock              *types.Block                                 `json:"prevBlock"`
+		PrevBlockHash          common.Hash                                  `json:"prevBlockHash"`
 		MainChainHash          common.Hash                                  `json:"mainChainHash"`
 		ShardId                types.ShardId                                `json:"shardId"`
 		ChildChainBlocks       map[types.ShardId]common.Hash                `json:"childChainBlocks"`
@@ -1725,7 +1731,8 @@ func (es *ExecutionState) MarshalJSON() ([]byte, error) {
 		InTransactionTreeRoot:  es.InTransactionTree.RootHash(),
 		OutTransactionTreeRoot: es.OutTransactionTree.RootHash(),
 		ReceiptTreeRoot:        es.ReceiptTree.RootHash(),
-		PrevBlock:              es.PrevBlock,
+		PrevBlock:              prevBlock.Block(),
+		PrevBlockHash:          es.PrevBlock,
 		MainChainHash:          es.MainChainHash,
 		ShardId:                es.ShardId,
 		ChildChainBlocks:       es.ChildChainBlocks,

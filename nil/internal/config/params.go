@@ -1,10 +1,14 @@
 package config
 
 import (
+	"context"
 	"errors"
 
 	"github.com/NilFoundation/nil/nil/common/hexutil"
+	"github.com/NilFoundation/nil/nil/common/logging"
+	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/rs/zerolog"
 )
 
 const ValidatorPubkeySize = 33
@@ -94,6 +98,73 @@ func CreateAccessor[T any, paramPtr IConfigParamPointer[T]]() *ParamAccessor {
 
 func GetParamValidators(c ConfigAccessor) (*ParamValidators, error) {
 	return getParamImpl[ParamValidators](c)
+}
+
+func mergeValidators(input []ListValidators) []ValidatorInfo {
+	var result []ValidatorInfo
+	visited := make(map[Pubkey]struct{})
+
+	for _, shardValidators := range input {
+		for _, v := range shardValidators.List {
+			if _, ok := visited[v.PublicKey]; ok {
+				continue
+			}
+			visited[v.PublicKey] = struct{}{}
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
+func GetValidatorListForShard(
+	ctx context.Context, database db.DB, height types.BlockNumber, shardId types.ShardId, logger zerolog.Logger,
+) ([]ValidatorInfo, error) {
+	tx, err := database.CreateRoTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	block, err := db.ReadBlockByNumber(tx, shardId, height-1)
+	if err != nil {
+		return nil, err
+	}
+
+	mainShardHash := block.MainChainHash
+	if shardId.IsMainShard() {
+		mainShardHash = block.PrevBlock
+		if mainShardHash.Empty() {
+			mainShardHash = block.Hash(types.MainShardId)
+		}
+	}
+
+	c, err := NewConfigAccessorTx(ctx, tx, &mainShardHash)
+	if errors.Is(err, db.ErrKeyNotFound) {
+		// It is possible that the needed main chain block has not arrived yet, or that this one is some byzantine block.
+		// Because right now the config is actually constant, we can use whatever version we like in this case,
+		// so we use the latest accessible config.
+		// TODO(@isergeyam): create some subscription mechanism that will handle this correctly.
+		logger.Warn().
+			Stringer(logging.FieldBlockNumber, block.Id).
+			Stringer(logging.FieldBlockMainChainHash, mainShardHash).
+			Msg("Main chain block not found, using the latest accessible config")
+		c, err = NewConfigAccessorTx(ctx, tx, nil)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	validatorsList, err := getParamImpl[ParamValidators](c)
+	if err != nil {
+		return nil, err
+	}
+	if shardId.IsMainShard() {
+		return mergeValidators(validatorsList.Validators), nil
+	}
+	if int(shardId)-1 >= len(validatorsList.Validators) {
+		return nil, types.NewError(types.ErrorShardIdIsTooBig)
+	}
+	return validatorsList.Validators[shardId-1].List, nil
 }
 
 func SetParamValidators(c ConfigAccessor, params *ParamValidators) error {

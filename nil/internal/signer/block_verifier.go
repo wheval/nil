@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -26,40 +25,14 @@ func NewBlockVerifier(shardId types.ShardId, db db.DB) *BlockVerifier {
 	}
 }
 
-func (b *BlockVerifier) VerifyBlock(ctx context.Context, logger zerolog.Logger, block *types.Block) error {
-	tx, err := b.db.CreateRoTx(ctx)
-	if err != nil {
-		return fmt.Errorf("%w: failed to create read-only transaction: %w", errBlockVerify, err)
-	}
-	defer tx.Rollback()
-
-	var accessor config.ConfigAccessor
-	_, err = db.ReadBlock(tx, types.MainShardId, block.MainChainHash)
-	if err != nil {
-		// It is possible that the needed main chain block has not arrived yet, or that this one is some byzantine block.
-		// Because right now the config is actually constant, we can use whatever version we like in this case,
-		// so we use the latest accessible config.
-		// TODO(@isergeyam): create some subscription mechanism that will handle this correctly.
-		if errors.Is(err, db.ErrKeyNotFound) {
-			logger.Warn().
-				Stringer(logging.FieldBlockHash, block.MainChainHash).
-				Msg("Main chain block not found, using the latest accessible config")
-			accessor, err = config.NewConfigAccessorTx(ctx, tx, nil)
-		}
-	} else {
-		accessor, err = config.NewConfigAccessorTx(ctx, tx, &block.MainChainHash)
-	}
-	if err != nil {
-		return fmt.Errorf("%w: failed to create config accessor: %w", errBlockVerify, err)
-	}
-
-	validatorsList, err := config.GetParamValidators(accessor)
+func (b *BlockVerifier) VerifyBlock(ctx context.Context, block *types.Block, logger zerolog.Logger) error {
+	validatorsList, err := config.GetValidatorListForShard(ctx, b.db, block.Id, b.shardId, logger)
 	if err != nil {
 		return fmt.Errorf("%w: failed to get validators set: %w", errBlockVerify, err)
 	}
 
 	// TODO: for now check that block is signed by one known validator
-	for _, v := range validatorsList.Validators[b.shardId].List {
+	for _, v := range validatorsList {
 		if err = block.VerifySignature(v.PublicKey[:], b.shardId); err == nil {
 			return nil
 		}

@@ -25,7 +25,7 @@ type SuiteFaucet struct {
 
 func (s *SuiteFaucet) SetupSuite() {
 	s.Start(&nilservice.Config{
-		NShards:              5,
+		NShards:              3,
 		CollatorTickPeriodMs: 200,
 	}, 10225)
 

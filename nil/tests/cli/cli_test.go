@@ -47,7 +47,7 @@ func (s *SuiteCliBase) SetupSuite() {
 
 func (s *SuiteCliBase) SetupTest() {
 	s.Start(&nilservice.Config{
-		NShards:              5,
+		NShards:              3,
 		CollatorTickPeriodMs: 200,
 	}, s.basePort)
 

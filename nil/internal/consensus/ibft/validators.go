@@ -4,11 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/rs/zerolog"
 )
 
 func (i *backendIBFT) calcProposer(height, round uint64) (*config.ValidatorInfo, error) {
@@ -70,39 +70,7 @@ type validatorValue struct {
 }
 
 func (v *validatorValue) getValidators(ctx context.Context) ([]config.ValidatorInfo, error) {
-	tx, err := v.txFabric.CreateRoTx(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	var mainBlockHash *common.Hash
-
-	if v.shardId.IsMainShard() {
-		hash, err := db.ReadBlockHashByNumber(tx, v.shardId, types.BlockNumber(max(0, int64(v.height)-2)))
-		if err != nil {
-			return nil, err
-		}
-		mainBlockHash = &hash
-	} else {
-		block, err := db.ReadBlockByNumber(tx, v.shardId, types.BlockNumber(v.height-1))
-		if err != nil {
-			return nil, err
-		}
-		mainBlockHash = &block.MainChainHash
-	}
-
-	configAccessor, err := config.NewConfigAccessorTx(ctx, tx, mainBlockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	validatorsList, err := config.GetParamValidators(configAccessor)
-	if err != nil {
-		return nil, err
-	}
-
-	return validatorsList.Validators[v.shardId].List, nil
+	return config.GetValidatorListForShard(ctx, v.txFabric, types.BlockNumber(v.height), v.shardId, zerolog.Nop())
 }
 
 func (v *validatorValue) init(ctx context.Context) {
