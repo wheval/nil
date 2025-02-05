@@ -21,7 +21,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
-	"github.com/NilFoundation/nil/nil/internal/signer"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/admin"
@@ -221,8 +220,6 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 			zeroState = cfg.ZeroStateYaml
 		}
 
-		blockVerifier := signer.NewBlockVerifier(shardId, cfg.Validators[shardId])
-
 		syncer, err := collate.NewSyncer(collate.SyncerConfig{
 			ShardId:              shardId,
 			Timeout:              syncerTimeout,
@@ -231,7 +228,6 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 			BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
 			ZeroState:            zeroState,
 			ZeroStateConfig:      zeroStateConfig,
-			BlockVerifier:        blockVerifier,
 		}, database, nm)
 		if err != nil {
 			return nil, err
@@ -472,22 +468,31 @@ func createShards(
 		return nil, nil, err
 	}
 
-	if !cfg.SplitShards && len(cfg.Validators) == 0 {
-		pubkey, err := cfg.ValidatorKeysManager.GetPublicKey()
-		if err != nil {
-			return nil, nil, err
-		}
-		for i := range cfg.NShards {
-			cfg.Validators[types.ShardId(i)] = []config.ValidatorInfo{
-				{PublicKey: config.Pubkey(pubkey)},
+	if cfg.ZeroState == nil {
+		cfg.ZeroState = &execution.ZeroStateConfig{}
+	}
+
+	if !cfg.SplitShards {
+		if len(cfg.ZeroState.ConfigParams.Validators.Validators) == 0 {
+			validators := make([]config.ListValidators, 0, cfg.NShards)
+			pubkey, err := cfg.ValidatorKeysManager.GetPublicKey()
+			if err != nil {
+				return nil, nil, err
 			}
+			for range cfg.NShards {
+				validators = append(validators, config.ListValidators{List: []config.ValidatorInfo{{PublicKey: config.Pubkey(pubkey)}}})
+			}
+			cfg.ZeroState.ConfigParams.Validators = config.ParamValidators{Validators: validators}
+		}
+		if len(cfg.ZeroState.ConfigParams.Validators.Validators) != int(cfg.NShards) {
+			return nil, nil, fmt.Errorf("number of shards mismatch in the config, expected %d, got %d",
+				cfg.NShards,
+				len(cfg.ZeroState.ConfigParams.Validators.Validators))
 		}
 	}
 
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
-
-		blockVerifier := signer.NewBlockVerifier(shardId, cfg.Validators[shardId])
 
 		zeroState := execution.DefaultZeroStateConfig
 		zeroStateConfig := cfg.ZeroState
@@ -500,7 +505,6 @@ func createShards(
 			ReplayBlocks:         shardId.IsMainShard() || cfg.IsShardActive(shardId),
 			Timeout:              syncerTimeout,
 			BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
-			BlockVerifier:        blockVerifier,
 			ZeroState:            zeroState,
 			ZeroStateConfig:      zeroStateConfig,
 		}
@@ -539,15 +543,14 @@ func createShards(
 				Validator:  collator.Validator(),
 				NetManager: networkManager,
 				PrivateKey: pKey,
-				Validators: cfg.Validators[shardId],
 			})
-			if err := consensus.Init(ctx); err != nil {
-				return nil, nil, err
-			}
 
 			pools[shardId] = txnPool
 			funcs = append(funcs, func(ctx context.Context) error {
-				wgFetch.Wait() // wait for all syncers to avoid data race in the DB
+				wgFetch.Wait() // wait for all syncers to avoid data race in the DB and generate zerostate
+				if err := consensus.Init(ctx); err != nil {
+					return err
+				}
 				if err := collator.Run(ctx, syncer, consensus); err != nil {
 					logger.Error().
 						Err(err).

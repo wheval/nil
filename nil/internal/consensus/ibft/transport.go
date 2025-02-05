@@ -63,6 +63,13 @@ func (i *backendIBFT) setupTransport(ctx context.Context) error {
 					continue
 				}
 
+				if data == nil {
+					i.logger.Debug().
+						Str(logging.FieldTopic, protocol).
+						Msg("Received nil data")
+					continue
+				}
+
 				msg := &proto.IbftMessage{}
 				if err := protobuf.Unmarshal(data, msg); err != nil {
 					i.logger.Error().

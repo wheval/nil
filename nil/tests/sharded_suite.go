@@ -69,21 +69,34 @@ func (s *ShardedSuite) Cancel() {
 	}
 }
 
+func zeroState(validators []config.ListValidators) *execution.ZeroStateConfig {
+	return &execution.ZeroStateConfig{
+		ConfigParams: execution.ConfigParams{
+			Validators: config.ParamValidators{
+				Validators: validators,
+			},
+		},
+	}
+}
+
 func createOneShardOneValidatorCfg(
 	s *ShardedSuite, shardId types.ShardId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[types.ShardId]*keys.ValidatorKeysManager,
 ) *nilservice.Config {
-	validatorKeysPath := keyManagers[shardId].GetKeysPath()
-
-	validators := make(map[types.ShardId][]config.ValidatorInfo)
-	for kmShardId, km := range keyManagers {
+	validators := make([]config.ListValidators, 0, cfg.NShards)
+	for i := range cfg.NShards {
+		km := keyManagers[types.ShardId(i)]
 		pkey, err := km.GetPublicKey()
 		s.Require().NoError(err)
-		validators[kmShardId] = []config.ValidatorInfo{
-			{PublicKey: config.Pubkey(pkey)},
-		}
+		validators = append(validators, config.ListValidators{
+			List: []config.ValidatorInfo{
+				{PublicKey: config.Pubkey(pkey)},
+			},
+		})
 	}
 
+	validatorKeysPath := keyManagers[shardId].GetKeysPath()
 	s.Require().NotEmpty(validatorKeysPath)
+
 	return &nilservice.Config{
 		NShards:              cfg.NShards,
 		MyShards:             []uint{uint(shardId)},
@@ -95,7 +108,7 @@ func createOneShardOneValidatorCfg(
 		Network:              netCfg,
 		ZeroStateYaml:        cfg.ZeroStateYaml,
 		ValidatorKeysPath:    validatorKeysPath,
-		Validators:           validators,
+		ZeroState:            zeroState(validators),
 	}
 }
 
@@ -105,7 +118,7 @@ func createShardAllValidatorsCfg(
 	myShards := slices.Collect(common.Range(0, uint(cfg.NShards)))
 
 	validatorKeysPath := keyManagers[shardId].GetKeysPath()
-	validators := make(map[types.ShardId][]config.ValidatorInfo, cfg.NShards)
+	validators := make([]config.ListValidators, cfg.NShards)
 
 	// Order of validators is important and should be the same for all instances
 	for kmId := range cfg.NShards {
@@ -114,7 +127,7 @@ func createShardAllValidatorsCfg(
 
 		for i := range cfg.NShards {
 			id := types.ShardId(i)
-			validators[id] = append(validators[id], config.ValidatorInfo{
+			validators[id].List = append(validators[id].List, config.ValidatorInfo{
 				PublicKey: config.Pubkey(pubkey),
 			})
 		}
@@ -131,7 +144,7 @@ func createShardAllValidatorsCfg(
 		Network:              netCfg,
 		ZeroStateYaml:        cfg.ZeroStateYaml,
 		ValidatorKeysPath:    validatorKeysPath,
-		Validators:           validators,
+		ZeroState:            zeroState(validators),
 	}
 }
 
@@ -234,11 +247,11 @@ func (s *ShardedSuite) StartArchiveNode(port int, withBootstrapPeers bool) (clie
 	serviceName := fmt.Sprintf("archive-%d", port)
 
 	cfg := &nilservice.Config{
-		NShards:    uint32(len(s.Shards)),
-		Network:    netCfg,
-		HttpUrl:    rpc.GetSockPathService(s.T(), serviceName),
-		RunMode:    nilservice.ArchiveRunMode,
-		Validators: s.Shards[0].Config.Validators,
+		NShards:   uint32(len(s.Shards)),
+		Network:   netCfg,
+		HttpUrl:   rpc.GetSockPathService(s.T(), serviceName),
+		RunMode:   nilservice.ArchiveRunMode,
+		ZeroState: s.Shards[0].Config.ZeroState,
 	}
 
 	cfg.MyShards = slices.Collect(common.Range(0, uint(cfg.NShards)))

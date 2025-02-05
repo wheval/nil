@@ -30,7 +30,6 @@ type SyncerConfig struct {
 	BlockGeneratorParams execution.BlockGeneratorParams
 	ZeroState            string
 	ZeroStateConfig      *execution.ZeroStateConfig
-	BlockVerifier        *signer.BlockVerifier
 }
 
 type Syncer struct {
@@ -45,9 +44,10 @@ type Syncer struct {
 
 	waitForSync *sync.WaitGroup
 
-	subsMutex sync.Mutex
-	subsId    uint64
-	subs      map[uint64]chan struct{}
+	subsMutex     sync.Mutex
+	subsId        uint64
+	subs          map[uint64]chan struct{}
+	blockVerifier *signer.BlockVerifier
 }
 
 func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Syncer, error) {
@@ -62,8 +62,9 @@ func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Sy
 		logger: logging.NewLogger("sync").With().
 			Stringer(logging.FieldShardId, cfg.ShardId).
 			Logger(),
-		waitForSync: &waitForSync,
-		subs:        make(map[uint64]chan struct{}),
+		waitForSync:   &waitForSync,
+		subs:          make(map[uint64]chan struct{}),
+		blockVerifier: signer.NewBlockVerifier(cfg.ShardId, db),
 	}, nil
 }
 
@@ -135,14 +136,15 @@ func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
 		}
 	}
 
-	// Wait until snapshots for shards are fetched.
-	// It's impossible to load data and commit transactions at the same time.
-	wgFetch.Done()
-	wgFetch.Wait()
-
 	if err := s.generateZerostate(ctx); err != nil {
 		return fmt.Errorf("Failed to generate zerostate for shard %s: %w", s.config.ShardId, err)
 	}
+
+	// Wait until snapshots for shards are fetched.
+	// It's impossible to load data and commit transactions at the same time.
+	// We also wait for zerostate generation, because otherwise consensus won't be able to access the config.
+	wgFetch.Done()
+	wgFetch.Wait()
 
 	if s.networkManager == nil {
 		s.waitForSync.Done()
@@ -157,6 +159,7 @@ func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
 	s.logger.Debug().
 		Stringer(logging.FieldBlockHash, hash).
 		Uint64(logging.FieldBlockNumber, uint64(block.Id)).
+		Uint32(logging.FieldShardId, uint32(s.config.ShardId)).
 		Msg("Initialized sync proposer at starting block")
 
 	s.logger.Info().Msg("Starting sync")
@@ -210,6 +213,7 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 	s.logger.Debug().
 		Stringer(logging.FieldBlockNumber, block.Id).
 		Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
+		Uint32(logging.FieldShardId, uint32(s.config.ShardId)).
 		Msg("Received block")
 
 	lastBlock, lastHash, err := s.readLastBlock(ctx)
@@ -313,7 +317,7 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 		return nil
 	}
 
-	if err := s.config.BlockVerifier.VerifyBlock(ctx, block.Block); err != nil {
+	if err := s.blockVerifier.VerifyBlock(ctx, s.logger, block.Block); err != nil {
 		s.logger.Error().
 			Uint64(logging.FieldBlockNumber, uint64(block.Id)).
 			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).

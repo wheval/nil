@@ -19,7 +19,6 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/collate"
-	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/keys"
@@ -89,14 +88,6 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 		s.Require().NotNil(km)
 		s.Require().NoError(km.InitKey())
 		cfg.ValidatorKeysPath = keysPath
-
-		validators := make(map[types.ShardId][]config.ValidatorInfo, cfg.NShards)
-		pubkey, err := km.GetPublicKey()
-		s.Require().NoError(err)
-		for i := range cfg.NShards {
-			validators[types.ShardId(i)] = []config.ValidatorInfo{{PublicKey: config.Pubkey(pubkey)}}
-		}
-		cfg.Validators = validators
 	}
 
 	PatchConfigWithTestDefaults(cfg)

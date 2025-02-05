@@ -153,11 +153,7 @@ func (g *BlockGenerator) GenerateZeroState(zeroStateYaml string, config *ZeroSta
 	g.logger.Info().Msg("Generating zero-state...")
 	g.executionState.BaseFee = types.DefaultGasPrice
 
-	if config != nil {
-		if err := g.executionState.GenerateZeroState(config); err != nil {
-			return nil, err
-		}
-	} else if err := g.executionState.GenerateZeroStateYaml(zeroStateYaml); err != nil {
+	if err := g.executionState.GenerateMergedZeroState(config, zeroStateYaml); err != nil {
 		return nil, err
 	}
 

@@ -156,6 +156,27 @@ func (es *ExecutionState) GenerateZeroStateYaml(configYaml string) error {
 	return es.GenerateZeroState(config)
 }
 
+func (es *ExecutionState) GenerateMergedZeroState(leftConfig *ZeroStateConfig, configYaml string) error {
+	var rightConfig *ZeroStateConfig
+	var err error
+	if configYaml != "" {
+		if rightConfig, err = ParseZeroStateConfig(configYaml); err != nil {
+			return err
+		}
+	} else {
+		rightConfig = &ZeroStateConfig{}
+	}
+	if leftConfig == nil {
+		leftConfig = &ZeroStateConfig{}
+	}
+	return es.GenerateZeroState(
+		&ZeroStateConfig{
+			ConfigParams: leftConfig.ConfigParams,
+			Contracts:    append(leftConfig.Contracts, rightConfig.Contracts...),
+		},
+	)
+}
+
 func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error {
 	var err error
 

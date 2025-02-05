@@ -9,6 +9,7 @@ import (
 	"github.com/NilFoundation/nil/nil/cmd/nild/nildconfig"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
+	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
@@ -72,12 +73,12 @@ type server struct {
 }
 
 type devnet struct {
-	spec          *devnetSpec
-	baseDir       string
-	validators    []server
-	archivers     []server
-	rpcNodes      []server
-	validatorKeys map[types.ShardId][]config.ValidatorInfo
+	spec       *devnetSpec
+	baseDir    string
+	validators []server
+	archivers  []server
+	rpcNodes   []server
+	zeroState  *execution.ZeroStateConfig
 }
 
 func DevnetCommand() *cobra.Command {
@@ -105,8 +106,8 @@ func (spec *devnetSpec) ensureValidatorKeys(srv *server) (*keys.ValidatorKeysMan
 	return vkm, nil
 }
 
-func (devnet devnet) collectPublicKeys(servers []server) (map[types.ShardId][]config.ValidatorInfo, error) {
-	validator := make(map[types.ShardId][]config.ValidatorInfo, devnet.spec.NShards)
+func (devnet devnet) generateZeroState(nShards uint32, servers []server) (*execution.ZeroStateConfig, error) {
+	validators := make([]config.ListValidators, nShards)
 	for _, srv := range servers {
 		key, err := srv.vkm.GetPublicKey()
 		if err != nil {
@@ -115,12 +116,16 @@ func (devnet devnet) collectPublicKeys(servers []server) (map[types.ShardId][]co
 
 		for _, id := range srv.nodeSpec.Shards {
 			shardId := types.ShardId(id)
-			validator[shardId] = append(validator[shardId], config.ValidatorInfo{
+			validators[shardId].List = append(validators[shardId].List, config.ValidatorInfo{
 				PublicKey: config.Pubkey(key),
 			})
 		}
 	}
-	return validator, nil
+	return &execution.ZeroStateConfig{
+		ConfigParams: execution.ConfigParams{
+			Validators: config.ParamValidators{Validators: validators},
+		},
+	}, nil
 }
 
 func genDevnet(cmd *cobra.Command, args []string) error {
@@ -170,7 +175,7 @@ func genDevnet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get only flag: %w", err)
 	}
 
-	if devnet.validatorKeys, err = devnet.collectPublicKeys(devnet.validators); err != nil {
+	if devnet.zeroState, err = devnet.generateZeroState(spec.NShards, devnet.validators); err != nil {
 		return err
 	}
 	if err := devnet.writeConfigs(devnet.validators, "validator", only); err != nil {
@@ -264,7 +269,7 @@ func (devnet *devnet) writeServerConfig(instanceId int, srv server, only string)
 	}
 	cfg.RPCPort = srv.rpcPort
 	cfg.Network.TcpPort = srv.port
-	cfg.Validators = devnet.validatorKeys
+	cfg.ZeroState = devnet.zeroState
 
 	var err error
 	cfg.NetworkKeysPath, err = filepath.Abs(srv.NetworkKeysFile())

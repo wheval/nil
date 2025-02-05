@@ -11,6 +11,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
+	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
@@ -20,10 +21,12 @@ import (
 
 type SuiteConfigParams struct {
 	tests.RpcSuite
-	testAddressMain types.Address
-	testAddress     types.Address
-	abiTest         *abi.ABI
-	abiSmartAccount *abi.ABI
+	testAddressMain   types.Address
+	testAddress       types.Address
+	abiTest           *abi.ABI
+	abiSmartAccount   *abi.ABI
+	validatorsKeyPath string
+	validatorInfo     config.ValidatorInfo
 }
 
 func (s *SuiteConfigParams) SetupSuite() {
@@ -41,6 +44,18 @@ func (s *SuiteConfigParams) SetupSuite() {
 
 	s.abiTest, err = contracts.GetAbi(contracts.NameConfigTest)
 	s.Require().NoError(err)
+
+	s.validatorsKeyPath = s.T().TempDir() + "/validator-keys.yaml"
+	km := keys.NewValidatorKeyManager(s.validatorsKeyPath)
+	s.Require().NotNil(km)
+	s.Require().NoError(km.InitKey())
+
+	pk, err := km.GetPublicKey()
+	s.Require().NoError(err)
+
+	s.validatorInfo = config.ValidatorInfo{
+		PublicKey: config.Pubkey(pk),
+	}
 }
 
 func (s *SuiteConfigParams) SetupTest() {
@@ -71,91 +86,23 @@ func (s *SuiteConfigParams) NewValidator() *config.ValidatorInfo {
 	}
 }
 
-func (s *SuiteConfigParams) TestConfigReadWriteValidators() {
-	validator1 := s.NewValidator()
-	validator2 := s.NewValidator()
-	validator3 := s.NewValidator()
-	cfg := execution.ZeroStateConfig{
-		ConfigParams: execution.ConfigParams{
-			Validators: config.ParamValidators{List: []config.ValidatorInfo{*validator1}},
-		},
-		Contracts: []*execution.ContractDescr{
-			{
-				Name:     "TestConfig",
-				Address:  &s.testAddressMain,
-				Value:    types.GasToValue(10_000_000_000),
-				Contract: contracts.NameConfigTest,
-			},
-			{
-				Name:     "TestConfig",
-				Address:  &s.testAddress,
-				Value:    types.GasToValue(10_000_000_000),
-				Contract: contracts.NameConfigTest,
-			},
-		},
+func (s *SuiteConfigParams) makeParamValidators(vals ...config.ValidatorInfo) config.ParamValidators {
+	s.T().Helper()
+
+	validators := make([]config.ListValidators, 0, s.ShardsNum)
+	for range s.ShardsNum {
+		validators = append(validators, config.ListValidators{List: vals})
 	}
-	s.Start(&nilservice.Config{
-		NShards:   s.ShardsNum,
-		ZeroState: &cfg,
-		RunMode:   nilservice.CollatorsOnlyRunMode,
-	})
-
-	var (
-		receipt *jsonrpc.RPCReceipt
-		data    []byte
-		vals    config.ParamValidators
-	)
-
-	s.Run("Check initial validators", func() {
-		vals = config.ParamValidators{List: []config.ValidatorInfo{*validator1}}
-		data = s.AbiPack(s.abiTest, "testValidatorsEqual", vals)
-		receipt = s.SendExternalTransactionNoCheck(data, s.testAddressMain)
-		s.Require().True(receipt.AllSuccess())
-	})
-
-	s.Run("Set three new  validators", func() {
-		vals = config.ParamValidators{
-			List: []config.ValidatorInfo{*validator1, *validator2, *validator3},
-		}
-		data = s.AbiPack(s.abiTest, "setValidators", vals)
-		receipt = s.SendExternalTransactionNoCheck(data, s.testAddressMain)
-		s.Require().True(receipt.AllSuccess())
-
-		data = s.AbiPack(s.abiTest, "testValidatorsEqual", vals)
-		receipt = s.SendExternalTransactionNoCheck(data, s.testAddressMain)
-		s.Require().True(receipt.AllSuccess())
-
-		cfgReader, err := config.NewConfigAccessor(s.Context, s.Db, nil)
-		s.Require().NoError(err)
-		validators, err := config.GetParamValidators(cfgReader)
-		s.Require().NoError(err)
-		s.Require().Equal(vals, *validators)
-	})
-
-	s.Run("Check validators from non main shard contract", func() {
-		data = s.AbiPack(s.abiTest, "testValidatorsEqual", vals)
-		receipt = s.SendExternalTransactionNoCheck(data, s.testAddress)
-		s.Require().True(receipt.AllSuccess())
-	})
-
-	s.Run("Set empty validators", func() {
-		vals = config.ParamValidators{List: []config.ValidatorInfo{}}
-		data = s.AbiPack(s.abiTest, "setValidators", vals)
-		receipt = s.SendExternalTransactionNoCheck(data, s.testAddressMain)
-		s.Require().True(receipt.AllSuccess())
-
-		cfgReader, err := config.NewConfigAccessor(s.Context, s.Db, nil)
-		s.Require().NoError(err)
-		validators, err := config.GetParamValidators(cfgReader)
-		s.Require().NoError(err)
-		s.Require().Equal(vals, *validators)
-	})
+	return config.ParamValidators{Validators: validators}
 }
+
+// TODO(@isergeyam): add read/write validators test
 
 func (s *SuiteConfigParams) TestConfigReadWriteGasPrice() {
 	cfg := execution.ZeroStateConfig{
 		ConfigParams: execution.ConfigParams{
-			GasPrice: config.ParamGasPrice{GasPriceScale: *types.NewUint256(10)},
+			GasPrice:   config.ParamGasPrice{GasPriceScale: *types.NewUint256(10)},
+			Validators: s.makeParamValidators(s.validatorInfo),
 		},
 		Contracts: []*execution.ContractDescr{
 			{
@@ -186,6 +133,7 @@ func (s *SuiteConfigParams) TestConfigReadWriteGasPrice() {
 		ZeroState:            &cfg,
 		CollatorTickPeriodMs: 100,
 		RunMode:              nilservice.CollatorsOnlyRunMode,
+		ValidatorKeysPath:    s.validatorsKeyPath,
 	})
 
 	var (

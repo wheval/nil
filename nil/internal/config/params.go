@@ -33,8 +33,12 @@ type WorkaroundToImportTypes struct {
 
 var ErrParamCastFailed = errors.New("input object cannot be cast to Param")
 
-type ParamValidators struct {
+type ListValidators struct {
 	List []ValidatorInfo `json:"list" ssz-max:"4096" yaml:"list"`
+}
+
+type ParamValidators struct {
+	Validators []ListValidators `json:"validators" ssz-max:"4096" yaml:"validators"`
 }
 
 type ValidatorInfo struct {
