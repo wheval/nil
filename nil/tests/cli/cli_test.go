@@ -1,4 +1,4 @@
-package main
+package cli_tests
 
 import (
 	"encoding/json"
@@ -21,7 +21,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc"
 	"github.com/NilFoundation/nil/nil/tests"
-	"github.com/NilFoundation/nil/nil/tools/solc"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/suite"
 )
@@ -42,7 +41,7 @@ func (s *SuiteCli) SetupSuite() {
 
 	s.incBinPath = s.TmpDir + "/Incrementer.bin"
 	s.incAbiPath = s.TmpDir + "/Incrementer.abi"
-	s.compileIncrementerAndSaveToFile(s.incBinPath, s.incAbiPath)
+	compileIncrementerAndSaveToFile(s.T(), s.incBinPath, s.incAbiPath)
 }
 
 func (s *SuiteCli) SetupTest() {
@@ -122,25 +121,6 @@ func (s *SuiteCli) TestReadContract() {
 	res, err = s.cli.GetCode(types.EmptyAddress)
 	s.Require().NoError(err)
 	s.Equal("0x", res)
-}
-
-func (s *SuiteCli) compileIncrementerAndSaveToFile(binFileName string, abiFileName string) {
-	s.T().Helper()
-
-	contractData, err := solc.CompileSource(common.GetAbsolutePath("../contracts/increment.sol"))
-	s.Require().NoError(err)
-
-	if len(binFileName) > 0 {
-		err = os.WriteFile(binFileName, []byte(contractData["Incrementer"].Code), 0o600)
-		s.Require().NoError(err)
-	}
-
-	if len(abiFileName) > 0 {
-		abiData, err := json.Marshal(contractData["Incrementer"].Info.AbiDefinition)
-		s.Require().NoError(err)
-		err = os.WriteFile(abiFileName, abiData, 0o600)
-		s.Require().NoError(err)
-	}
 }
 
 func (s *SuiteCli) TestContract() {
@@ -312,14 +292,6 @@ func (s *SuiteCli) TestToken() {
 	s.Require().Equal(uint64(0), val.Uint64())
 }
 
-func (s *SuiteCli) TestCallCliHelp() {
-	res := s.RunCli("help")
-
-	for _, cmd := range []string{"block", "transaction", "contract", "smart-account", "completion"} {
-		s.Contains(res, cmd)
-	}
-}
-
 func (s *SuiteCli) TestCallCliBasic() {
 	cfgPath := s.T().TempDir() + "/config.ini"
 
@@ -333,12 +305,6 @@ func (s *SuiteCli) TestCallCliBasic() {
 	res := s.RunCli("-c", cfgPath, "block", "--json", block.Number.String())
 	s.Contains(res, block.Number.String())
 	s.Contains(res, block.Hash.String())
-}
-
-func (s *SuiteCli) TestCliP2pKeygen() {
-	res := s.RunCli("keygen", "new-p2p", "-q")
-	lines := strings.Split(res, "\n")
-	s.Require().Len(lines, 3)
 }
 
 func (s *SuiteCli) TestCliSmartAccount() {
@@ -547,60 +513,6 @@ faucet_endpoint = {{ .FaucetUrl }}
 		res, err := s.RunCliNoCheck("-c", cfgPath, "contract", "top-up", addr.Hex(), "123", "Unknown")
 		s.Require().Error(err)
 		s.Contains(res, "Error: undefined token id: Unknown")
-	})
-}
-
-func (s *SuiteCli) TestCliAbi() {
-	s.Run("Encode", func() {
-		res := s.RunCli("abi", "encode", "get", "--path", s.incAbiPath)
-		s.Equal("0x6d4ce63c", res)
-	})
-
-	s.Run("Decode", func() {
-		res := s.RunCli("abi", "decode", "get", "0x000000000000000000000000000000000000000000000000000000000001e1ba", "--path", s.incAbiPath)
-		s.Equal("uint256: 123322", res)
-	})
-}
-
-func (s *SuiteCli) TestCliEncodeInternalTransaction() {
-	calldata := s.RunCli("abi", "encode", "get", "--path", s.incAbiPath)
-	s.Equal("0x6d4ce63c", calldata)
-
-	addr := "0x00041945255839dcbd3001fd5e6abe9ee970a797"
-	res := s.RunCli("transaction", "encode-internal", "--to", addr, "--data", calldata, "--fee-credit", "5000000")
-
-	expected := "0x0000404b4c0000000000000000000000000000000000000000000000000000000000030000000000000000041945255839dcbd3001fd5e6abe9ee970a797000000000000000000000000000000000000000000000000000000000000000000000000000000009a00000000000000000000000000000000000000000000000000000000000000000000009a00000000000000000000009e0000006d4ce63c"
-	s.Contains(res, "\"feeCredit\": \"5000000\"")
-	s.Contains(res, "\"forwardKind\": 3")
-	s.Contains(res, "Result: "+expected)
-
-	res = s.RunCli("transaction", "encode-internal", "--to", addr, "--data", calldata, "--fee-credit", "5000000", "-q")
-	s.Equal(expected, res)
-}
-
-func (s *SuiteCli) TestCliConfig() {
-	dir := s.T().TempDir()
-
-	cfgPath := dir + "/config.ini"
-
-	s.Run("Create config", func() {
-		res := s.RunCli("-c", cfgPath, "config", "init")
-		s.Contains(res, "The config file has been initialized successfully: "+cfgPath)
-	})
-
-	s.Run("Set config value", func() {
-		res := s.RunCli("-c", cfgPath, "config", "set", "rpc_endpoint", s.endpoint)
-		s.Contains(res, fmt.Sprintf("Set \"rpc_endpoint\" to %q", s.endpoint))
-	})
-
-	s.Run("Read config value", func() {
-		res := s.RunCli("-c", cfgPath, "config", "get", "rpc_endpoint")
-		s.Contains(res, "rpc_endpoint: "+s.endpoint)
-	})
-
-	s.Run("Show config", func() {
-		res := s.RunCli("-c", cfgPath, "config", "show")
-		s.Contains(res, "rpc_endpoint      : "+s.endpoint)
 	})
 }
 

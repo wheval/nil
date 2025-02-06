@@ -6,8 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"testing"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -24,6 +26,21 @@ func (s *CliRunner) RunCli(args ...string) string {
 	return data
 }
 
+func runCliNoCheck(t *testing.T, binPath string, args ...string) (string, error) {
+	t.Helper()
+
+	if _, err := os.Stat(binPath); err != nil {
+		mainPath := common.GetAbsolutePath("../../cmd/nil/main.go")
+		cmd := exec.Command("go", "build", "-o", binPath, mainPath)
+		require.NoError(t, cmd.Run())
+	}
+
+	cmd := exec.Command(binPath, args...)
+	cmd.Env = append(os.Environ(), "INVOCATION_ID=")
+	data, err := cmd.CombinedOutput()
+	return strings.TrimSpace(string(data)), err
+}
+
 func (s *CliRunner) RunCliNoCheck(args ...string) (string, error) {
 	s.T().Helper()
 
@@ -31,17 +48,7 @@ func (s *CliRunner) RunCliNoCheck(args ...string) (string, error) {
 		s.FailNow("TmpDir is not set", "You need to set TmpDir in SetupSuite before use RunCli")
 	}
 
-	binPath := s.TmpDir + "/nil.bin"
-	if _, err := os.Stat(binPath); err != nil {
-		mainPath := common.GetAbsolutePath("../../cmd/nil/main.go")
-		cmd := exec.Command("go", "build", "-o", binPath, mainPath)
-		s.NoError(cmd.Run())
-	}
-
-	cmd := exec.Command(binPath, args...)
-	cmd.Env = append(os.Environ(), "INVOCATION_ID=")
-	data, err := cmd.CombinedOutput()
-	return strings.TrimSpace(string(data)), err
+	return runCliNoCheck(s.T(), s.TmpDir+"/nil.bin", args...)
 }
 
 func (s *CliRunner) CheckResult(res string, expectedLines ...string) {
