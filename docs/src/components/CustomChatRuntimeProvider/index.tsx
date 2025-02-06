@@ -13,7 +13,6 @@ const CustomModelAdapter: (string, Function) => ChatModelAdapter = (
   handleReCaptchaVerify,
 ) => ({
   async *run({ messages, abortSignal }) {
-    // Start a timeout to track how long we've been "Thinking..."
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
         reject(new Error("timeout"));
@@ -65,8 +64,19 @@ const CustomModelAdapter: (string, Function) => ChatModelAdapter = (
       try {
         while (true) {
           const { value, done } = await reader.read();
-          if (done) break;
           const newText = decoder.decode(value, { stream: true });
+          if (newText.length != 0 && done) {
+            yield {
+              content: [
+                {
+                  type: "text",
+                  text: "It looks like the server ended operations prematurely. Please generate the response.",
+                },
+              ],
+            };
+          }
+          if (done) break;
+
           buffer += newText;
           if (isFirstChunk) {
             accumulatedText = newText;

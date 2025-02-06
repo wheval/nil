@@ -31,6 +31,7 @@ export async function POST(req: Request) {
 
     if (response.data.success) {
       const query = messages.at(-1).content;
+      const pastMessages = messages.slice(-11,-1);
 
       const handlerToUse = await handler();
       const retrievedDocs = await handlerToUse.vectorRetriever.invoke(query);
@@ -66,10 +67,10 @@ export async function POST(req: Request) {
         const result = await chain.stream({
           query: query,
           context: retrievedDocs,
-          sources: sources
+          sources: sources,
+          pastMessages: pastMessages
         });
         for await (const chunk of result) {
-          console.log(chunk);
           await writer.write(chunk);
         }
         console.log(result);

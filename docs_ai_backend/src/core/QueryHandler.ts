@@ -11,9 +11,12 @@ const intentPrompt = new PromptTemplate({
 
     You are an assistant designed to detect intent in user queries. There exist three possible intents:
     
-    * Answer a question (Question)
-    * Generate code using CLI scripts or Nil.js (Basic generation)
-    * Generate Solidity code (Solidity generation)
+    * Answer a question (Question). This intent covers all cases where a user wants to know something about =nil;.
+    * Generate code using Nil.js or the =nil; CLI (Basic generation). This intent covers all cases where a user wants to deploy a smart contract or interact with it using the =nil; developer tools.
+    * Generate Solidity code (Solidity generation). This intent covers all cases where a user wants to create a new smart contract (and only that).
+    
+    For example, the intent for the 'deploy smart contract via Nil.js' query would be 'Basic generation'.
+    The intent for the 'create a smart contract' query would be 'Solidity generation'.
   
     ==TASK==
 
@@ -37,7 +40,7 @@ const intentPrompt = new PromptTemplate({
 });
 
 const generateSolidityCodePrompt = new PromptTemplate({
-  inputVariables: ["context", "query",],
+  inputVariables: ["context", "query", "sources", "pastMessages"],
   template: `
     ==SITUATION==
 
@@ -46,6 +49,10 @@ const generateSolidityCodePrompt = new PromptTemplate({
     libraries provided by =nil; Foundation to write your code. Here are the relevant code snippets from these libraries:
 
     Snippets: {context}
+
+    Here are the past 10 messages in the chat to give you more context:
+
+    {pastMessages}
 
     ==TASK==
 
@@ -57,6 +64,10 @@ const generateSolidityCodePrompt = new PromptTemplate({
 
     Provide Solidity code that has detailed comments and can be easily read by a human. Please also provide some
     text explaining why exactly you generated the code you chose to generate. Do not repeat the user's query back.
+    * Provide URL links from the sources to the relevant materials in your response always
+    * Provide all sources you receive as separate bullet points
+
+    Sources: {sources}
 
     ==REFINE==
 
@@ -70,7 +81,7 @@ const generateSolidityCodePrompt = new PromptTemplate({
 });
 
 const generateCodePrompt = new PromptTemplate({
-  inputVariables: ["context", "query",],
+  inputVariables: ["context", "query", "sources", "pastMessages"],
   template: `
     ==SITUATION==
 
@@ -86,6 +97,10 @@ const generateCodePrompt = new PromptTemplate({
 
     Snippets: {context}
 
+    Here are the past 10 messages in the chat to give you more context:
+
+    {pastMessages}
+
     ==TASK==
 
     You will be provided by a user query asking you to generate a bash script or JS/TS code. Please use information from the
@@ -96,6 +111,10 @@ const generateCodePrompt = new PromptTemplate({
 
     Provide code that has detailed comments and can be easily read by a human. Please also provide some
     text explaining why exactly you generated the code you chose to generate. Do not repeat the user's query back.
+    * Provide URL links from the sources to the relevant materials in your response always
+    * Provide all sources you receive as separate bullet points
+
+    Sources: {sources}
 
     ==REFINE==
 
@@ -108,7 +127,7 @@ const generateCodePrompt = new PromptTemplate({
 });
 
 const answerQuestionPrompt = new PromptTemplate({
-  inputVariables: ["context", "query", "sources"],
+  inputVariables: ["context", "query", "sources", "pastMessages"],
   template: `
     ==SITUATION==
 
@@ -117,6 +136,10 @@ const answerQuestionPrompt = new PromptTemplate({
     information that describes several features of =nil; or its developer tools:
 
     {context}
+
+    Here are the past 10 messages in the chat to give you more context:
+
+    {pastMessages}
 
     ==TASK==
 
