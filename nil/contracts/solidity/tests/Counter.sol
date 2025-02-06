@@ -6,6 +6,10 @@ contract Counter {
 
     event eventValue(int32 value);
 
+    function set(int32 val) public {
+        value = val;
+    }
+
     function add(int32 val) public {
         value += val;
     }
