@@ -205,7 +205,7 @@ func (s *Subscription) Start(ctx context.Context, skipSelfMessages bool) <-chan 
 			}
 
 			if skipSelfMessages && msg.ReceivedFrom == s.self {
-				s.logger.Error().Msg("Skip message from self")
+				s.logger.Trace().Msg("Skip message from self")
 				s.counters.SkippedMessages.Add(1)
 				continue
 			}

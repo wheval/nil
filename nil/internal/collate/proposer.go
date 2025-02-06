@@ -200,7 +200,7 @@ func (p *proposer) handleTransactionsFromPool() error {
 		if res := execution.ValidateExternalTransaction(p.executionState, txn); res.FatalError != nil {
 			return false, res.FatalError
 		} else if res.Failed() {
-			p.logger.Warn().Stringer(logging.FieldTransactionHash, hash).
+			p.logger.Info().Stringer(logging.FieldTransactionHash, hash).
 				Err(res.Error).Msg("External txn validation failed. Saved failure receipt. Dropping...")
 
 			execution.AddFailureReceipt(hash, txn.To, res)
