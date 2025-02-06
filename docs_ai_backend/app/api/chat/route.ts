@@ -13,7 +13,6 @@ export async function POST(req: Request) {
       { status: 405 },
     );
   }
-  let result;
   const data = await req.json();
   const { messages, token } = data;
 
@@ -52,16 +51,23 @@ export async function POST(req: Request) {
 
       (async () => {
       try {
-        const chain = intent === "Question" 
-          ? handlerToUse.genericLllmChain 
-          : handlerToUse.generatorLllmChain;
-
+        let chain;
+        switch (intent) {
+          case "Question":
+            chain = handlerToUse.genericLllmChain;
+            break;
+          case "Basic generation":
+            chain = handlerToUse.codeGeneratorLllmChain;
+            break;
+          case "Solidity generation":
+            chain = handlerToUse.solidityGeneratorLllmChain;
+            break;
+        }
         const result = await chain.stream({
           query: query,
           context: retrievedDocs,
           sources: sources
         });
-
         for await (const chunk of result) {
           console.log(chunk);
           await writer.write(chunk);

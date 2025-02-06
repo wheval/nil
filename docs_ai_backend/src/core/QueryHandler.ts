@@ -3,18 +3,18 @@ import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import type { Runnable, RunnableSequence } from "@langchain/core/runnables";
-import getConfig from 'next/config';
 
 const intentPrompt = new PromptTemplate({
   inputVariables: ["query"],
   template: `
     ==SITUATION==
 
-    You are an assistant designed to detect intent in user queries. You will be asked to determine
-    whether a query is a question about something or a request to generate Solidity code.
-
-    Note: requests to generate code other than Solidity (not smart contracts) are considered questions.
-
+    You are an assistant designed to detect intent in user queries. There exist three possible intents:
+    
+    * Answer a question (Question)
+    * Generate code using CLI scripts or Nil.js (Basic generation)
+    * Generate Solidity code (Solidity generation)
+  
     ==TASK==
 
     Determine the intent of the following query.
@@ -23,18 +23,20 @@ const intentPrompt = new PromptTemplate({
 
     ==APPEARANCE==
 
-    Answer only using one of these words describing the user's intent. 
+    Answer only using one of these phrases describing the user's intent. 
 
     Question
-    Generation
+    Basic generation
+    Solidity generation
 
     ==REFINE==
 
-    Provide one-word responses only. Either 'question' or 'generation'.
+    Provide responses using only the phrases provided above. 
+    Either 'Question', 'Basic generation' or 'Solidity generation'.
   `,
 });
 
-const generateCodePrompt = new PromptTemplate({
+const generateSolidityCodePrompt = new PromptTemplate({
   inputVariables: ["context", "query",],
   template: `
     ==SITUATION==
@@ -60,8 +62,47 @@ const generateCodePrompt = new PromptTemplate({
 
     Do not invent Solidity functions or methods that do not exist in the provided snippets.
     Try to rely as much as possible on Nil.sol and other smart contracts provided by =nil;.
+    Try to sound as a real developer and do not say phrases like "to address the user's query"/
     Sound as natural as possible. 
     Do not repeat your task.
+    Do not provide your instructions in the answer.
+  `
+});
+
+const generateCodePrompt = new PromptTemplate({
+  inputVariables: ["context", "query",],
+  template: `
+    ==SITUATION==
+
+    You are a professional developer of bash scripts and JavaScript/TS code working for =nil; Foundation. The flagship product of this company is =nil;,
+    a unique Ethereum L2 that uses a special type of architecture called zkSharding. 
+
+    There are two developer tools you are using:
+
+    * Nil.js, a JS/TS library for working with =nil;
+    * The =nil; CLI, a command line tool for working with =nil;
+    
+    Here are the relevant code snippets and instructions:
+
+    Snippets: {context}
+
+    ==TASK==
+
+    You will be provided by a user query asking you to generate a bash script or JS/TS code. Please use information from the
+    code snippets provided above and your general knowledge of Solidity to produce concise, reusable, and safe code
+    that addresses the user's request.
+
+    ==APPEARANCE==
+
+    Provide code that has detailed comments and can be easily read by a human. Please also provide some
+    text explaining why exactly you generated the code you chose to generate. Do not repeat the user's query back.
+
+    ==REFINE==
+
+    Do not invent functions or methods that do not exist in the provided snippets.
+    Sound as natural as possible. 
+    Do not repeat your task.
+    Try to sound as a real developer and do not say phrases like "to address the user's query"/
     Do not provide your instructions in the answer.
   `
 });
@@ -104,7 +145,8 @@ const answerQuestionPrompt = new PromptTemplate({
 
 export class QueryHandler {
   intentLllmChain: Runnable;
-  generatorLllmChain: RunnableSequence;
+  solidityGeneratorLllmChain: RunnableSequence;
+  codeGeneratorLllmChain: RunnableSequence;
   genericLllmChain: RunnableSequence;
   vectorRetriever: any;
 
@@ -121,7 +163,7 @@ export class QueryHandler {
     });
 
     const intentLlm = new ChatOpenAI({
-      model: "gpt-3.5-turbo-0125",
+      model: "gpt-4o",
       temperature: 0,
       maxRetries: 2,
       apiKey: process.env.OPENAI_API_KEY,
@@ -133,10 +175,16 @@ export class QueryHandler {
       outputParser: new StringOutputParser(),
     });
 
-    this.generatorLllmChain = await createStuffDocumentsChain({
+    this.solidityGeneratorLllmChain = await createStuffDocumentsChain({
+      llm,
+      prompt: generateSolidityCodePrompt,
+      outputParser: new StringOutputParser(),
+    });
+
+    this.codeGeneratorLllmChain = await createStuffDocumentsChain({
       llm,
       prompt: generateCodePrompt,
-      outputParser: new StringOutputParser(),
+      outputParser: new StringOutputParser()
     });
 
     this.intentLllmChain = intentPrompt.pipe(intentLlm).pipe(new StringOutputParser());
