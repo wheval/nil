@@ -18,7 +18,7 @@ type FaucetRpc struct {
 	builtinFaucet bool
 }
 
-func (s *FaucetRpc) SetupTest() {
+func (s *FaucetRpc) SetupSuite() {
 	sockPath := rpc.GetSockPath(s.T())
 
 	s.Start(&nilservice.Config{
@@ -34,7 +34,7 @@ func (s *FaucetRpc) SetupTest() {
 	time.Sleep(time.Second)
 }
 
-func (s *FaucetRpc) TearDownTest() {
+func (s *FaucetRpc) TearDownSuite() {
 	s.Cancel()
 }
 

@@ -23,7 +23,7 @@ type SuiteFaucet struct {
 	faucetClient *faucet.Client
 }
 
-func (s *SuiteFaucet) SetupTest() {
+func (s *SuiteFaucet) SetupSuite() {
 	s.Start(&nilservice.Config{
 		NShards:              5,
 		CollatorTickPeriodMs: 200,
@@ -33,7 +33,7 @@ func (s *SuiteFaucet) SetupTest() {
 	s.faucetClient, _ = tests.StartFaucetService(s.T(), s.Context, &s.Wg, s.DefaultClient)
 }
 
-func (s *SuiteFaucet) TearDownTest() {
+func (s *SuiteFaucet) TearDownSuite() {
 	s.Cancel()
 }
 
