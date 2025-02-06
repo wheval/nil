@@ -1,43 +1,63 @@
-# NilChain Verifier contract
+<h1 align="center">l1-contracts</h1>
 
-- Contract `NilChain` is to be deployed on L1 Chain
-- SyncCommittee refers to this L1 contract when submitting proof to get verified
-- StateRoot updates are also done on this contract
+<br />
 
-## Build
+<p align="center">
+  The =nil; L1 contract to be deployed on Ethereum.
+</p>
 
-1. install node dependencies
 
-```sh
-npm i
+## Table of contents
+
+* [Overview](#overview)
+* [Installation](#installation)
+* [Usage](#usage)
+
+## Overview
+
+This project contains the =nil; L1 Solidity smart contract as well as the Hardhat tasks and Ignition modules for their deployment. 
+
+The `NilChain.sol` contract fulfils the following functions:
+
+* It is meant to be deployed on Ethereum
+* It is used by [the sync committee when submitting proofs for verification](https://docs.nil.foundation/nil/core-concepts/transaction-lifecycle/#definition)
+* It also handles state root updates
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/NilFoundation/nil.git
+cd ./nil/l1-contracts
+```
+Install dependencies:
+
+```bash
+npm install
 ```
 
+Then, create an `.env` file and set the following variables:
 
-2. copy `.env.example` to `.env`
+```
+WALLET_ADDRESS:
+PRIVATE_KEY:
+```
 
-3. set all pre-requisite variables in .env
-    - WALLET_ADDRESS
-    - PRIVATE_KEY
-  - This address is same as the address used for deployment and acts as the owner of the NilChain contract
-  - The address is to be used when running SyncCommitee node
+Note that `WALLET_ADDRESS` will act as the owner of `NilChain` and it will also be used to run the sync committee.
 
+`NilChain` can then be deployed using either [`Nil.js`](https://docs.nil.foundation/nil/niljs/deploying-smart-contract), the [=nil; CLI](https://docs.nil.foundation/nil/nilcli/getting-started) or Hardhat. 
 
-## Local Run
+## Usage
 
-- For build pipeline or local testing, the contract is to be deployed on local Nil Node
+To compile the contract:
 
-### Please follow the steps mentioned below:
-
-1. copy `.env.example` to `.env`
-2. set all pre-requisite variables in .env
-  - WALLET_ADDRESS
-  - PRIVATE_KEY
-3. This address is same as the address used for deployment and acts as the owner of the NilChain contract
-4. The address is to be used when running SyncCommitee node
-
-Try running some of the following tasks:
-
-```shell
+```bash
 npx hardhat compile
+```
+
+To deploy the contract using Hardhat:
+
+```bash
 npx hardhat deploy --network local
 ```
