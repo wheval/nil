@@ -30,6 +30,7 @@ Clone the repository:
 git clone https://github.com/NilFoundation/nil.git
 cd ./nil/docs_ai_backend
 ```
+
 Install dependencies:
 
 ```bash
