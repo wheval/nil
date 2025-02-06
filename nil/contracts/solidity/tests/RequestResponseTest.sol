@@ -19,6 +19,13 @@ contract RequestResponseTest is NilTokenBase {
         return true;
     }
 
+    function reset() public {
+        value = 0;
+        counterValue = 0;
+        intValue = 0;
+        strValue = "";
+    }
+
     /**
      * Test sum of counters via awaitCall.
      */

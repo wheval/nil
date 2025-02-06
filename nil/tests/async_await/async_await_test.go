@@ -86,10 +86,8 @@ contracts:
 		"CounterAddress1":         s.counterAddress1.Hex(),
 	})
 	s.Require().NoError(err)
-}
 
-func (s *SuiteAsyncAwait) SetupTest() {
-	nShards := uint32(4)
+	nShards := uint32(3)
 	port := 10425
 
 	s.Start(&nilservice.Config{
@@ -101,7 +99,19 @@ func (s *SuiteAsyncAwait) SetupTest() {
 	s.DefaultClient, _ = s.StartRPCNode(tests.WithDhtBootstrapByValidators, network.AddrInfoSlice{archiveNodeAddr})
 }
 
-func (s *SuiteAsyncAwait) TearDownTest() {
+func (s *SuiteAsyncAwait) SetupTest() {
+	data := s.AbiPack(s.abiCounter, "set", int32(0))
+	receipt := s.SendExternalTransactionNoCheck(data, s.counterAddress0)
+	s.Require().True(receipt.AllSuccess())
+	receipt = s.SendExternalTransactionNoCheck(data, s.counterAddress1)
+	s.Require().True(receipt.AllSuccess())
+
+	data = s.AbiPack(s.abiTest, "reset")
+	receipt = s.SendExternalTransactionNoCheck(data, s.testAddress0)
+	s.Require().True(receipt.AllSuccess())
+}
+
+func (s *SuiteAsyncAwait) TearDownSuite() {
 	s.Cancel()
 }
 
