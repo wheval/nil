@@ -72,7 +72,7 @@ func (s *ReplayScheduler) doReplay(ctx context.Context, blockId types.BlockNumbe
 		return err
 	}
 
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric)
+	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, proposal.GetMainShardHash(s.params.ShardId))
 	if err != nil {
 		return err
 	}

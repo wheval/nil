@@ -31,7 +31,7 @@ func GenerateZeroState(t *testing.T, ctx context.Context,
 
 	g, err := NewBlockGenerator(ctx,
 		NewBlockGeneratorParams(shardId, 1, types.DefaultGasPrice, 0),
-		txFabric)
+		txFabric, nil)
 	require.NoError(t, err)
 	defer g.Rollback()
 	block, err := g.GenerateZeroState(DefaultZeroStateConfig, nil)
