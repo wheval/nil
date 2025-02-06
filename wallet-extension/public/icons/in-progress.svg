@@ -1,0 +1,27 @@
+<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M46.6667 14C49.244 14 51.3333 11.9106 51.3333 9.33336C51.3333 6.75603 49.244 4.66669 46.6667 4.66669C44.0894 4.66669 42 6.75603 42 9.33336C42 11.9106 44.0894 14 46.6667 14Z" stroke="#D6D6D6" stroke-linejoin="round"/>
+<path d="M27.9997 32.6666C30.577 32.6666 32.6663 30.5773 32.6663 28C32.6663 25.4227 30.577 23.3333 27.9997 23.3333C25.4224 23.3333 23.333 25.4227 23.333 28C23.333 30.5773 25.4224 32.6666 27.9997 32.6666Z" stroke="#D6D6D6" stroke-linejoin="round"/>
+<path d="M46.6667 51.3333C49.244 51.3333 51.3333 49.244 51.3333 46.6667C51.3333 44.0894 49.244 42 46.6667 42C44.0894 42 42 44.0894 42 46.6667C42 49.244 44.0894 51.3333 46.6667 51.3333Z" stroke="#D6D6D6" stroke-linejoin="round"/>
+<path d="M9.33366 14C11.9109 14 14.0003 11.9106 14.0003 9.33336C14.0003 6.75603 11.9109 4.66669 9.33366 4.66669C6.75633 4.66669 4.66699 6.75603 4.66699 9.33336C4.66699 11.9106 6.75633 14 9.33366 14Z" stroke="#D6D6D6" stroke-linejoin="round"/>
+<path d="M9.33366 51.3333C11.9109 51.3333 14.0003 49.244 14.0003 46.6667C14.0003 44.0894 11.9109 42 9.33366 42C6.75633 42 4.66699 44.0894 4.66699 46.6667C4.66699 49.244 6.75633 51.3333 9.33366 51.3333Z" stroke="#D6D6D6" stroke-linejoin="round"/>
+<mask id="path-6-inside-1_131_12683" fill="white">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M23.333 46.6667H32.6663H23.333Z"/>
+</mask>
+<path d="M23.333 47.6667H32.6663V45.6667H23.333V47.6667ZM32.6663 45.6667H23.333V47.6667H32.6663V45.6667Z" fill="#D6D6D6" mask="url(#path-6-inside-1_131_12683)"/>
+<path d="M23.333 46.6667H32.6663" stroke="#D6D6D6" stroke-linecap="round" stroke-linejoin="round"/>
+<mask id="path-9-inside-2_131_12683" fill="white">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M23.333 9.33331H32.6663H23.333Z"/>
+</mask>
+<path d="M23.333 10.3333H32.6663V8.33331H23.333V10.3333ZM32.6663 8.33331H23.333V10.3333H32.6663V8.33331Z" fill="#D6D6D6" mask="url(#path-9-inside-2_131_12683)"/>
+<path d="M23.333 9.33331H32.6663" stroke="#D6D6D6" stroke-linecap="round" stroke-linejoin="round"/>
+<mask id="path-12-inside-3_131_12683" fill="white">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M9.33301 23.3333V32.6666V23.3333Z"/>
+</mask>
+<path d="M8.33301 23.3333V32.6666H10.333V23.3333H8.33301ZM10.333 32.6666V23.3333H8.33301V32.6666H10.333Z" fill="#D6D6D6" mask="url(#path-12-inside-3_131_12683)"/>
+<path d="M9.33301 23.3333V32.6666" stroke="#D6D6D6" stroke-linecap="round" stroke-linejoin="round"/>
+<mask id="path-15-inside-4_131_12683" fill="white">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M46.667 23.3333V32.6666V23.3333Z"/>
+</mask>
+<path d="M45.667 23.3333V32.6666H47.667V23.3333H45.667ZM47.667 32.6666V23.3333H45.667V32.6666H47.667Z" fill="#D6D6D6" mask="url(#path-15-inside-4_131_12683)"/>
+<path d="M46.667 23.3333V32.6666" stroke="#D6D6D6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -11,6 +11,7 @@
     "explorer_backend",
     "uniswap",
     "clijs",
+    "wallet-extension",
     "docs_ai_backend"
   ],
   "scripts": {
