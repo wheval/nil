@@ -27,7 +27,6 @@ type SuiteEconomy struct {
 	testAddress4        types.Address
 	abiTest             *abi.ABI
 	abiSmartAccount     *abi.ABI
-	zerostateCfg        string
 	namesMap            map[types.Address]string
 }
 
@@ -77,7 +76,7 @@ contracts:
   value: 0
   contract: tests/Test
 `
-	s.zerostateCfg, err = common.ParseTemplate(zerostateTmpl, map[string]any{
+	zerostateCfg, err := common.ParseTemplate(zerostateTmpl, map[string]any{
 		"SmartAccountAddress": s.smartAccountAddress.Hex(),
 		"MainPublicKey":       hexutil.Encode(execution.MainPublicKey),
 		"TestAddress1":        s.testAddress1.Hex(),
@@ -92,19 +91,17 @@ contracts:
 
 	s.abiTest, err = contracts.GetAbi(contracts.NameTest)
 	s.Require().NoError(err)
-}
 
-func (s *SuiteEconomy) SetupTest() {
 	s.Start(&nilservice.Config{
 		NShards:              s.ShardsNum,
 		HttpUrl:              rpc.GetSockPath(s.T()),
-		ZeroStateYaml:        s.zerostateCfg,
-		CollatorTickPeriodMs: 300,
+		ZeroStateYaml:        zerostateCfg,
+		CollatorTickPeriodMs: 200,
 		RunMode:              nilservice.CollatorsOnlyRunMode,
 	})
 }
 
-func (s *SuiteEconomy) TearDownTest() {
+func (s *SuiteEconomy) TearDownSuite() {
 	s.Cancel()
 }
 
