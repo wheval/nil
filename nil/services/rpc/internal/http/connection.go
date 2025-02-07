@@ -13,6 +13,7 @@ const (
 	currentHeight            = 356
 	minSupportedRevision     = version.BaseRevision + currentHeight
 	minSupportedNiljsVersion = "0.24.0"
+	niljsClientVersionPrefix = "niljs/"
 )
 
 type (
