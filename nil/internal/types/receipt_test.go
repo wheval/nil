@@ -43,7 +43,6 @@ func TestReceiptEncoding(t *testing.T) {
 
 	require.Equal(t, receiptDecoded.Success, receipt.Success)
 	require.Equal(t, receiptDecoded.GasUsed, receipt.GasUsed)
-	require.Equal(t, receiptDecoded.Bloom, receipt.Bloom)
 	require.Equal(t, len(receiptDecoded.Logs), len(receipt.Logs))
 	for i := range receipt.Logs {
 		log1 := receipt.Logs[i]

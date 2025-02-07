@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/assert"
-	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
@@ -379,11 +377,7 @@ func NewRPCReceipt(info *rawapitypes.ReceiptInfo) (*RPCReceipt, error) {
 
 	// Set only non-empty bloom
 	if len(receipt.Logs) > 0 {
-		res.Bloom = receipt.Bloom.Bytes()
-	} else if assert.Enable {
-		for _, b := range receipt.Bloom {
-			check.PanicIfNotf(b == 0, "bloom must be zero for empty logs")
-		}
+		res.Bloom = types.CreateBloom(types.Receipts{receipt}).Bytes()
 	}
 
 	return res, nil

@@ -95,7 +95,6 @@ func TestDebugBlockToText(t *testing.T) {
 		Success:         true,
 		Status:          types.ErrorSuccess,
 		GasUsed:         1000,
-		Bloom:           types.Bloom{},
 		Logs:            []*types.Log{},
 		OutTxnIndex:     10,
 		OutTxnNum:       2,
@@ -107,7 +106,6 @@ func TestDebugBlockToText(t *testing.T) {
 		Success:         false,
 		Status:          types.ErrorExecutionReverted,
 		GasUsed:         1500,
-		Bloom:           types.Bloom{},
 		Logs:            []*types.Log{},
 		OutTxnIndex:     0,
 		OutTxnNum:       0,
@@ -126,9 +124,9 @@ func TestDebugBlockToText(t *testing.T) {
 				ReceiptsRoot:        common.HexToHash("0xD15EA5E"),
 				ChildBlocksRootHash: common.HexToHash("0xDEADBABE"),
 				MainChainHash:       common.HexToHash("0xB16B055"),
-				LogsBloom:           types.Bloom{},
 				Timestamp:           0x12345678,
 			},
+			LogsBloom: types.Bloom{},
 		},
 		ChildBlocks: []common.Hash{
 			common.HexToHash("0x111"),
@@ -150,7 +148,7 @@ func TestDebugBlockToText(t *testing.T) {
 		text, err := s.debugBlockToText(types.ShardId(13), block, false, false)
 		require.NoError(t, err)
 
-		expectedText := `Block #100500 [0x000d6da4c476108ff8ef3e2cbe4a3b4d974b3eecb57747b9f1bcebfdf63f75f8] @ 13 shard
+		expectedText := `Block #100500 [0x000d93541bc8aacce6715e281477aae775857ebc6e622991ef0a8d3f00e022b2] @ 13 shard
   PrevBlock: 0x00000000000000000000000000000000000000000000000000000000deadbeef
   ChildBlocksRootHash: 0x00000000000000000000000000000000000000000000000000000000deadbabe
   ChildBlocks:

@@ -36,7 +36,7 @@ func TestSszBlock(t *testing.T) {
 	h, err := common.PoseidonSSZ(&block2)
 	require.NoError(t, err)
 
-	h2, err := hex.DecodeString("21682bef122af58bd745341d3ece26a7c78a636d459382d5cd1a9da0f7ddc34e")
+	h2, err := hex.DecodeString("18f5d2ef18c2baeef2b6f477d923d3a1354e9760aacb110dc24fee7582472dcb")
 	require.NoError(t, err)
 
 	require.Equal(t, common.BytesToHash(h2), common.BytesToHash(h[:]))

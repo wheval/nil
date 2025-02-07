@@ -46,7 +46,6 @@ type BlockData struct {
 	ChildBlocksRootHash common.Hash      `json:"childBlocksRootHash" ch:"child_blocks_root_hash"`
 	MainChainHash       common.Hash      `json:"mainChainHash" ch:"main_chain_hash"`
 	ConfigRoot          common.Hash      `json:"configRoot" ch:"config_root"`
-	LogsBloom           Bloom            `json:"logsBloom" ch:"logs_bloom"`
 	Timestamp           uint64           `json:"timestamp" ch:"timestamp"`
 	BaseFee             Value            `json:"gasPrice" ch:"gas_price"`
 	GasUsed             Gas              `json:"gasUsed" ch:"gas_used"`
@@ -54,6 +53,7 @@ type BlockData struct {
 
 type Block struct {
 	BlockData
+	LogsBloom Bloom     `json:"logsBloom" ch:"logs_bloom"`
 	Signature Signature `json:"signature" ch:"signature" ssz-max:"65"`
 }
 
