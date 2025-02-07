@@ -109,8 +109,8 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 		return nil, fmt.Errorf("failed to handle transactions from pool: %w", err)
 	}
 
-	p.logger.Debug().Msgf("Collected %d in transactions (%d gas) and %d forward transactions",
-		len(p.proposal.InTxns), p.executionState.GasUsed, len(p.proposal.ForwardTxns))
+	p.logger.Debug().Msgf("Collected %d internal, %d external (%d gas) and %d forward transactions",
+		len(p.proposal.InternalTxns), len(p.proposal.ExternalTxns), p.executionState.GasUsed, len(p.proposal.ForwardTxns))
 
 	return p.proposal, nil
 }
@@ -228,7 +228,7 @@ func (p *proposer) handleTransactionsFromPool() error {
 				break
 			}
 
-			p.proposal.InTxns = append(p.proposal.InTxns, txn)
+			p.proposal.ExternalTxns = append(p.proposal.ExternalTxns, txn)
 		}
 	}
 
@@ -265,7 +265,7 @@ func (p *proposer) handleTransactionsFromNeighbors() error {
 
 	checkLimits := func() bool {
 		return p.executionState.GasUsed < p.params.MaxInternalGasInBlock &&
-			len(p.proposal.InTxns) < p.params.MaxInternalTransactionsInBlock &&
+			len(p.proposal.InternalTxns) < p.params.MaxInternalTransactionsInBlock &&
 			len(p.proposal.ForwardTxns) < p.params.MaxForwardTransactionsInBlock
 	}
 
@@ -322,7 +322,7 @@ func (p *proposer) handleTransactionsFromNeighbors() error {
 						}
 					}
 
-					p.proposal.InTxns = append(p.proposal.InTxns, txn)
+					p.proposal.InternalTxns = append(p.proposal.InternalTxns, txn)
 				} else if p.params.ShardId != neighborId {
 					if p.topology.ShouldPropagateTxn(neighborId, p.params.ShardId, txn.To.ShardId()) {
 						if !checkLimits() {
@@ -342,7 +342,7 @@ func (p *proposer) handleTransactionsFromNeighbors() error {
 	}
 
 	p.logger.Debug().Msgf("Collected %d incoming transactions from neigbors with %d gas",
-		len(p.proposal.InTxns), p.executionState.GasUsed)
+		len(p.proposal.InternalTxns), p.executionState.GasUsed)
 
 	p.proposal.CollatorState = state
 	return nil

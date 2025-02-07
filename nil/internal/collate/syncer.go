@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
 	"sync"
 	"time"
 
@@ -463,15 +462,15 @@ func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtracte
 		Stringer(logging.FieldBlockHash, blockHash).
 		Msg("Replaying block")
 
-	res, err := gen.GenerateBlock(&execution.Proposal{
+	proposal := &execution.Proposal{
 		PrevBlockId:   block.Block.Id - 1,
 		PrevBlockHash: block.Block.PrevBlock,
 		MainChainHash: block.Block.MainChainHash,
 		ShardHashes:   block.ChildBlocks,
-		InTxns:        block.InTransactions,
-		ForwardTxns: slices.DeleteFunc(slices.Clone(block.OutTransactions),
-			func(m *types.Transaction) bool { return m.From.ShardId() == s.config.ShardId }),
-	}, s.logger, block.Signature)
+	}
+	proposal.InternalTxns, proposal.ExternalTxns = execution.SplitInTransactions(block.InTransactions)
+	proposal.ForwardTxns, _ = execution.SplitOutTransactions(block.OutTransactions, s.config.ShardId)
+	res, err := gen.GenerateBlock(proposal, s.logger, block.Signature)
 	if err != nil {
 		return err
 	}

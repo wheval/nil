@@ -67,7 +67,7 @@ func (s *ProposerTestSuite) TestBlockGas() {
 		s.Require().NoError(err)
 		s.Require().NotNil(proposal)
 
-		s.Require().Len(proposal.InTxns, 2)
+		s.Equal(pool.Txns, proposal.ExternalTxns)
 	})
 
 	s.Run("MaxGasInBlockFor1Txn", func() {
@@ -78,7 +78,7 @@ func (s *ProposerTestSuite) TestBlockGas() {
 		s.Require().NoError(err)
 		s.Require().NotNil(proposal)
 
-		s.Require().Len(proposal.InTxns, 1)
+		s.Equal(pool.Txns[:1], proposal.ExternalTxns)
 	})
 }
 
@@ -123,7 +123,7 @@ func (s *ProposerTestSuite) TestCollator() {
 		proposal := generateBlock()
 		r1 := s.checkReceipt(shardId, m1)
 		r2 := s.checkReceipt(shardId, m2)
-		s.Equal(pool.Txns, proposal.InTxns)
+		s.Equal(pool.Txns, proposal.ExternalTxns)
 
 		pool.Txns = nil
 
@@ -168,7 +168,8 @@ func (s *ProposerTestSuite) TestCollator() {
 		pool.Txns = []*types.Transaction{m1, m2}
 
 		proposal := generateBlock()
-		s.Empty(proposal.InTxns)
+		s.Empty(proposal.ExternalTxns)
+		s.Empty(proposal.InternalTxns)
 		s.Empty(proposal.ForwardTxns)
 		s.Equal(pool.Txns, pool.LastDiscarded)
 		s.Equal(txnpool.DuplicateHash, pool.LastReason)
@@ -287,7 +288,7 @@ func (s *ProposerTestSuite) checkReceipt(shardId types.ShardId, m *types.Transac
 	return receipt
 }
 
-func TestCollator(t *testing.T) {
+func TestProposer(t *testing.T) {
 	t.Parallel()
 
 	suite.Run(t, &ProposerTestSuite{})

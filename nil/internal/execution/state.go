@@ -1255,18 +1255,21 @@ func (es *ExecutionState) AddReceipt(execResult *ExecutionResult) {
 }
 
 func GetOutTransactions(es *ExecutionState) []*types.Transaction {
-	outTxnValues := make([]*types.Transaction, 0, len(es.InTransactions))
-	for i := range es.InTransactions {
-		// Put all outbound transactions into the trie
-		for _, m := range es.OutTransactions[es.InTransactionHashes[i]] {
-			outTxnValues = append(outTxnValues, m.Transaction)
+	res := make([]*types.Transaction, 0, len(es.OutTransactions[common.EmptyHash]))
+
+	// First, forwarded txns
+	for _, m := range es.OutTransactions[common.EmptyHash] {
+		res = append(res, m.Transaction)
+	}
+
+	// Then, outgoing txns in the order of their parent txns
+	for _, h := range es.InTransactionHashes {
+		for _, m := range es.OutTransactions[h] {
+			res = append(res, m.Transaction)
 		}
 	}
-	// Put all outbound transactions transmitted over the topology into the trie
-	for _, m := range es.OutTransactions[common.EmptyHash] {
-		outTxnValues = append(outTxnValues, m.Transaction)
-	}
-	return outTxnValues
+
+	return res
 }
 
 func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*types.Block, []*types.Transaction, error) {
