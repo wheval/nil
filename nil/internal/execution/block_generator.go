@@ -44,6 +44,13 @@ func (p *Proposal) IsEmpty() bool {
 	return len(p.InTxns) == 0 && len(p.ForwardTxns) == 0
 }
 
+func (p *Proposal) GetMainShardHash(shardId types.ShardId) *common.Hash {
+	if shardId.IsMainShard() {
+		return &p.PrevBlockHash
+	}
+	return &p.MainChainHash
+}
+
 func NewBlockGeneratorParams(shardId types.ShardId, nShards uint32, gasBasePrice types.Value, gasPriceScale float64) BlockGeneratorParams {
 	return BlockGeneratorParams{
 		ShardId:       shardId,
@@ -72,13 +79,13 @@ type BlockGenerationResult struct {
 	OutTxns []*types.Transaction
 }
 
-func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabric db.DB) (*BlockGenerator, error) {
+func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabric db.DB, mainShardHash *common.Hash) (*BlockGenerator, error) {
 	rwTx, err := txFabric.CreateRwTx(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	configAccessor, err := config.NewConfigAccessor(ctx, txFabric, nil)
+	configAccessor, err := config.NewConfigAccessor(ctx, txFabric, mainShardHash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config accessor: %w", err)
 	}
@@ -117,50 +124,52 @@ func (g *BlockGenerator) Rollback() {
 }
 
 func (g *BlockGenerator) collectGasPrices(prevBlockHash common.Hash, shards []common.Hash) error {
-	if g.params.ShardId.IsMainShard() {
-		// In main shard we collect gas prices from all shards. Gas price for the main shard is not required.
-		gasPrice, err := config.GetParamGasPrice(g.executionState.GetConfigAccessor())
+	if !g.params.ShardId.IsMainShard() {
+		return nil
+	}
+
+	// In main shard we collect gas prices from all shards. Gas price for the main shard is not required.
+	gasPrice, err := config.GetParamGasPrice(g.executionState.GetConfigAccessor())
+	if err != nil {
+		return err
+	}
+	gasPrice.Shards = make([]types.Uint256, len(shards)+1)
+	err = func() error {
+		roTx, err := g.txFabric.CreateRoTx(g.ctx)
 		if err != nil {
 			return err
 		}
-		gasPrice.Shards = make([]types.Uint256, len(shards)+1)
-		err = func() error {
-			roTx, err := g.txFabric.CreateRoTx(g.ctx)
+		defer roTx.Rollback()
+
+		for i := range len(shards) + 1 {
+			shardId := types.ShardId(i)
+			var shardHash common.Hash
+			if shardId.IsMainShard() {
+				shardHash = prevBlockHash
+			} else {
+				shardHash = shards[i-1]
+			}
+
+			block, err := db.ReadBlock(roTx, shardId, shardHash)
 			if err != nil {
-				return err
+				logger.Err(err).
+					Stringer(logging.FieldShardId, shardId).
+					Msg("Get gas price from shard: failed to read last block")
+				gasPrice.Shards[shardId] = *types.DefaultGasPrice.Uint256
+			} else {
+				gasPrice.Shards[shardId] = *block.BaseFee.Uint256
 			}
-			defer roTx.Rollback()
-
-			for i := range len(shards) + 1 {
-				shardId := types.ShardId(i)
-				var shardHash common.Hash
-				if shardId.IsMainShard() {
-					shardHash = prevBlockHash
-				} else {
-					shardHash = shards[i-1]
-				}
-
-				block, err := db.ReadBlock(roTx, shardId, shardHash)
-				if err != nil {
-					logger.Err(err).
-						Stringer(logging.FieldShardId, shardId).
-						Msg("Get gas price from shard: failed to read last block")
-					gasPrice.Shards[shardId] = *types.DefaultGasPrice.Uint256
-				} else {
-					gasPrice.Shards[shardId] = *block.BaseFee.Uint256
-				}
-			}
-			if err = config.SetParamGasPrice(g.executionState.GetConfigAccessor(), gasPrice); err != nil {
-				return err
-			}
-			return nil
-		}()
-		if err != nil {
-			return fmt.Errorf("failed to read gas prices from shards: %w", err)
 		}
-		// In main shard we don't need to update base fee.
-		g.executionState.BaseFee = types.DefaultGasPrice
+		if err = config.SetParamGasPrice(g.executionState.GetConfigAccessor(), gasPrice); err != nil {
+			return err
+		}
+		return nil
+	}()
+	if err != nil {
+		return fmt.Errorf("failed to read gas prices from shards: %w", err)
 	}
+	// In main shard we don't need to update base fee.
+	g.executionState.BaseFee = types.DefaultGasPrice
 	return nil
 }
 

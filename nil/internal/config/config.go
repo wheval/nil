@@ -236,7 +236,7 @@ func setParamImpl[T any](c ConfigAccessor, obj *T) error {
 
 func getConfigTrie(tx db.RoTx, mainShardHash *common.Hash) (*mpt.Reader, error) {
 	configTree := mpt.NewDbReader(tx, types.MainShardId, db.ConfigTrieTable)
-	lastBlock := mainShardHash == nil || mainShardHash.Empty()
+	lastBlock := mainShardHash == nil
 
 	var mainChainBlock *types.Block
 	var err error
@@ -247,7 +247,7 @@ func getConfigTrie(tx db.RoTx, mainShardHash *common.Hash) (*mpt.Reader, error) 
 			return nil, err
 		}
 	} else {
-		if mainChainBlock, err = db.ReadBlock(tx, types.MainShardId, *mainShardHash); err != nil {
+		if mainChainBlock, err = db.ReadBlock(tx, types.MainShardId, *mainShardHash); err != nil && !errors.Is(err, db.ErrKeyNotFound) {
 			return nil, err
 		}
 	}

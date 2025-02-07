@@ -647,7 +647,7 @@ contracts:
 
 	params := NewBlockGeneratorParams(1, 2, types.DefaultGasPrice, 0)
 
-	gen, err := NewBlockGenerator(ctx, params, database)
+	gen, err := NewBlockGenerator(ctx, params, database, nil)
 	require.NoError(b, err)
 	_, err = gen.GenerateZeroState(zerostateCfg, nil)
 	require.NoError(b, err)
@@ -675,7 +675,7 @@ contracts:
 		tx, _ := database.CreateRwTx(ctx)
 		proposal.PrevBlockHash, _ = db.ReadLastBlockHash(tx, 1)
 
-		gen, err = NewBlockGenerator(ctx, params, database)
+		gen, err = NewBlockGenerator(ctx, params, database, nil)
 		require.NoError(b, err)
 		_, err = gen.GenerateBlock(proposal, logger, nil)
 		require.NoError(b, err)

@@ -403,7 +403,7 @@ func (s *Syncer) generateZerostate(ctx context.Context) error {
 
 	s.logger.Info().Msg("Generating zero-state...")
 
-	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db)
+	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, &common.EmptyHash)
 	if err != nil {
 		return err
 	}
@@ -446,7 +446,12 @@ func (s *Syncer) replayBlocks(ctx context.Context, blocks []*types.BlockWithExtr
 }
 
 func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtractedData) error {
-	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db)
+	mainShardHash := block.Block.MainChainHash
+	if s.config.ShardId.IsMainShard() {
+		mainShardHash = block.Block.PrevBlock
+	}
+
+	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, &mainShardHash)
 	if err != nil {
 		return err
 	}

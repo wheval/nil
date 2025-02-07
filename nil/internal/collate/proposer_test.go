@@ -96,7 +96,7 @@ func (s *ProposerTestSuite) TestCollator() {
 		s.Require().NoError(err)
 		s.Require().NotNil(proposal)
 
-		blockGenerator, err := execution.NewBlockGenerator(s.ctx, params.BlockGeneratorParams, s.db)
+		blockGenerator, err := execution.NewBlockGenerator(s.ctx, params.BlockGeneratorParams, s.db, nil)
 		s.Require().NoError(err)
 		defer blockGenerator.Rollback()
 
