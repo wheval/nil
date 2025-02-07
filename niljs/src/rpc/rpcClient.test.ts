@@ -8,3 +8,21 @@ test("creates a new RPC client with the correct endpoint", () => {
 
   expect(actualClient).not.toBeUndefined();
 });
+
+test("creates a new RPC client with the correct endpoint and headers", () => {
+  const actualClient = createRPCClient(endpoint, {
+    headers: {
+      "My-header": "my-value",
+    },
+  });
+
+  expect(actualClient).not.toBeUndefined();
+});
+
+test("throws an error when the headers are invalid (helps in JavaScript)", () => {
+  const headers = {
+    "Invalid-header": 333,
+  } as unknown as Record<string, string>;
+
+  expect(() => createRPCClient(endpoint, { headers })).toThrow();
+});
