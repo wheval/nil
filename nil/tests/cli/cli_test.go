@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type SuiteCli struct {
+type SuiteCliBase struct {
 	tests.ShardedSuite
 	cli *cliservice.Service
 
@@ -34,9 +34,10 @@ type SuiteCli struct {
 	faucetEndpoint string
 	incBinPath     string
 	incAbiPath     string
+	basePort       int
 }
 
-func (s *SuiteCli) SetupSuite() {
+func (s *SuiteCliBase) SetupSuite() {
 	s.TmpDir = s.T().TempDir()
 
 	s.incBinPath = s.TmpDir + "/Incrementer.bin"
@@ -44,11 +45,11 @@ func (s *SuiteCli) SetupSuite() {
 	compileIncrementerAndSaveToFile(s.T(), s.incBinPath, s.incAbiPath)
 }
 
-func (s *SuiteCli) SetupTest() {
+func (s *SuiteCliBase) SetupTest() {
 	s.Start(&nilservice.Config{
 		NShards:              5,
 		CollatorTickPeriodMs: 200,
-	}, 10325)
+	}, s.basePort)
 
 	s.DefaultClient, s.endpoint = s.StartRPCNode(tests.WithDhtBootstrapByValidators, nil)
 	s.cometaEndpoint = rpc.GetSockPathService(s.T(), "cometa")
@@ -59,11 +60,11 @@ func (s *SuiteCli) SetupTest() {
 	s.Require().NotNil(s.cli)
 }
 
-func (s *SuiteCli) TearDownTest() {
+func (s *SuiteCliBase) TearDownTest() {
 	s.Cancel()
 }
 
-func (s *SuiteCli) toJSON(v interface{}) string {
+func (s *SuiteCliBase) toJSON(v interface{}) string {
 	s.T().Helper()
 
 	data, err := json.MarshalIndent(v, "", "  ")
@@ -72,7 +73,11 @@ func (s *SuiteCli) toJSON(v interface{}) string {
 	return string(data)
 }
 
-func (s *SuiteCli) TestCliBlock() {
+type SuiteCliService struct {
+	SuiteCliBase
+}
+
+func (s *SuiteCliService) TestCliBlock() {
 	block, err := s.DefaultClient.GetBlock(s.Context, types.BaseShardId, 0, false)
 	s.Require().NoError(err)
 
@@ -85,7 +90,7 @@ func (s *SuiteCli) TestCliBlock() {
 	s.JSONEq(s.toJSON(block), string(res))
 }
 
-func (s *SuiteCli) TestCliTransaction() {
+func (s *SuiteCliService) TestCliTransaction() {
 	contractCode, abi := s.LoadContract(common.GetAbsolutePath("../contracts/increment.sol"), "Incrementer")
 	deployPayload := s.PrepareDefaultDeployPayload(abi, contractCode, big.NewInt(0))
 
@@ -106,7 +111,7 @@ func (s *SuiteCli) TestCliTransaction() {
 	s.JSONEq(s.toJSON(receipt), string(res))
 }
 
-func (s *SuiteCli) TestReadContract() {
+func (s *SuiteCliService) TestReadContract() {
 	contractCode, abi := s.LoadContract(common.GetAbsolutePath("../contracts/increment.sol"), "Incrementer")
 	deployPayload := s.PrepareDefaultDeployPayload(abi, contractCode, big.NewInt(1))
 
@@ -123,7 +128,7 @@ func (s *SuiteCli) TestReadContract() {
 	s.Equal("0x", res)
 }
 
-func (s *SuiteCli) TestContract() {
+func (s *SuiteCliService) TestContract() {
 	smartAccount := types.MainSmartAccountAddress
 
 	// Deploy contract
@@ -190,7 +195,7 @@ func (s *SuiteCli) TestContract() {
 	s.EqualValues(uint64(100), balanceAfter.Uint64()-balanceBefore.Uint64())
 }
 
-func (s *SuiteCli) testNewSmartAccountOnShard(shardId types.ShardId) {
+func (s *SuiteCliService) testNewSmartAccountOnShard(shardId types.ShardId) {
 	s.T().Helper()
 
 	ownerPrivateKey, err := crypto.GenerateKey()
@@ -205,15 +210,15 @@ func (s *SuiteCli) testNewSmartAccountOnShard(shardId types.ShardId) {
 	s.Require().Equal(expectedAddress, smartAccountAddres)
 }
 
-func (s *SuiteCli) TestNewSmartAccountOnFaucetShard() {
+func (s *SuiteCliService) TestNewSmartAccountOnFaucetShard() {
 	s.testNewSmartAccountOnShard(types.FaucetAddress.ShardId())
 }
 
-func (s *SuiteCli) TestNewSmartAccountOnRandomShard() {
+func (s *SuiteCliService) TestNewSmartAccountOnRandomShard() {
 	s.testNewSmartAccountOnShard(types.FaucetAddress.ShardId() + 1)
 }
 
-func (s *SuiteCli) TestSendExternalTransaction() {
+func (s *SuiteCliService) TestSendExternalTransaction() {
 	smartAccount := types.MainSmartAccountAddress
 
 	contractCode, abi := s.LoadContract(common.GetAbsolutePath("../contracts/external_increment.sol"), "ExternalIncrementer")
@@ -253,7 +258,7 @@ func (s *SuiteCli) TestSendExternalTransaction() {
 	s.Equal("0x000000000000000000000000000000000000000000000000000000000000007d", res.Data.String())
 }
 
-func (s *SuiteCli) TestToken() {
+func (s *SuiteCliService) TestToken() {
 	smartAccount := types.MainSmartAccountAddress
 	value := types.NewValueFromUint64(12345)
 
@@ -292,12 +297,12 @@ func (s *SuiteCli) TestToken() {
 	s.Require().Equal(uint64(0), val.Uint64())
 }
 
-func (s *SuiteCli) TestCallCliBasic() {
-	cfgPath := s.T().TempDir() + "/config.ini"
+type SuiteCliExec struct {
+	SuiteCliBase
+}
 
-	iniData := "[nil]\nrpc_endpoint = " + s.endpoint + "\n"
-	err := os.WriteFile(cfgPath, []byte(iniData), 0o600)
-	s.Require().NoError(err)
+func (s *SuiteCliExec) TestCallCliBasic() {
+	cfgPath := s.createConfigFile()
 
 	block, err := s.DefaultClient.GetBlock(s.Context, types.BaseShardId, "latest", false)
 	s.Require().NoError(err)
@@ -307,7 +312,7 @@ func (s *SuiteCli) TestCallCliBasic() {
 	s.Contains(res, block.Hash.String())
 }
 
-func (s *SuiteCli) TestCliSmartAccount() {
+func (s *SuiteCliExec) TestCliSmartAccount() {
 	dir := s.T().TempDir()
 
 	iniDataTmpl := `[nil]
@@ -350,7 +355,7 @@ faucet_endpoint = {{ .FaucetUrl }}
 		addr = s.RunCli("-c", cfgPath, "contract", "address", s.incBinPath, "123321", "--abi", s.incAbiPath, "-q")
 	})
 
-	res = s.RunCliCfg("-c", cfgPath, "smart-account", "deploy", s.incBinPath, "123321", "--abi", s.incAbiPath)
+	res = s.RunCli("-c", cfgPath, "smart-account", "deploy", s.incBinPath, "123321", "--abi", s.incAbiPath)
 	s.Run("Deploy contract", func() {
 		s.Contains(res, "Contract address")
 		s.Contains(res, addr)
@@ -443,63 +448,50 @@ faucet_endpoint = {{ .FaucetUrl }}
 	})
 }
 
-func (s *SuiteCli) TestCliToken() {
-	dir := s.T().TempDir()
-
-	iniDataTmpl := `[nil]
-rpc_endpoint = {{ .HttpUrl }}
-faucet_endpoint = {{ .FaucetUrl }}
-`
-	iniData, err := common.ParseTemplate(iniDataTmpl, map[string]interface{}{
-		"HttpUrl":   s.endpoint,
-		"FaucetUrl": s.faucetEndpoint,
-	})
-	s.Require().NoError(err)
-
-	cfgPath := dir + "/config.ini"
-	s.Require().NoError(os.WriteFile(cfgPath, []byte(iniData), 0o600))
+func (s *SuiteCliExec) TestCliToken() {
+	cfgPath := s.createConfigFile()
 
 	s.Run("Deploy new smart account", func() {
-		s.RunCli("-c", cfgPath, "keygen", "new")
-		res := s.RunCli("-c", cfgPath, "smart-account", "new")
+		s.RunCliCfg("keygen", "new")
+		res := s.RunCliCfg("smart-account", "new")
 		s.Contains(res, "New smart account address:")
 	})
 
 	var addr types.Address
 	s.Run("Get address", func() {
-		res := s.RunCli("-c", cfgPath, "smart-account", "info", "-q")
+		res := s.RunCliCfg("smart-account", "info", "-q")
 		s.Require().NoError(addr.Set(strings.Split(res, "\n")[0]))
 	})
 
 	s.Run("Top-up smart account BTC", func() {
-		res := s.RunCli("-c", cfgPath, "smart-account", "top-up", "10000")
+		res := s.RunCliCfg("smart-account", "top-up", "10000")
 		s.Contains(res, "Smart Account balance:")
 		s.Contains(res, "[NIL]")
 
-		res = s.RunCli("-c", cfgPath, "smart-account", "top-up", "10000", "BTC")
+		res = s.RunCliCfg("smart-account", "top-up", "10000", "BTC")
 		s.Contains(res, "Smart Account balance: 10000 [BTC]")
 
-		res = s.RunCli("-c", cfgPath, "contract", "tokens", addr.Hex())
+		res = s.RunCliCfg("contract", "tokens", addr.Hex())
 		s.Contains(res, types.BtcFaucetAddress.Hex()+"\t10000\t[BTC]")
 
-		s.RunCli("-c", cfgPath, "smart-account", "top-up", "20000", types.BtcFaucetAddress.Hex())
-		res = s.RunCli("-c", cfgPath, "contract", "tokens", addr.Hex())
+		s.RunCliCfg("smart-account", "top-up", "20000", types.BtcFaucetAddress.Hex())
+		res = s.RunCliCfg("contract", "tokens", addr.Hex())
 		s.Contains(res, types.BtcFaucetAddress.Hex()+"\t30000\t[BTC]")
 	})
 
 	s.Run("Top-up contract BTC", func() {
-		res := s.RunCli("-c", cfgPath, "contract", "top-up", addr.Hex(), "10000")
+		res := s.RunCliCfg("contract", "top-up", addr.Hex(), "10000")
 		s.Contains(res, "Contract balance:")
 		s.Contains(res, "[NIL]")
 
-		res = s.RunCli("-c", cfgPath, "contract", "top-up", addr.Hex(), "10000", "BTC")
+		res = s.RunCliCfg("contract", "top-up", addr.Hex(), "10000", "BTC")
 		s.Contains(res, "Contract balance: 40000 [BTC]")
 
-		res = s.RunCli("-c", cfgPath, "contract", "tokens", addr.Hex())
+		res = s.RunCliCfg("contract", "tokens", addr.Hex())
 		s.Contains(res, types.BtcFaucetAddress.Hex()+"\t40000\t[BTC]")
 
-		s.RunCli("-c", cfgPath, "contract", "top-up", addr.Hex(), "20000", types.BtcFaucetAddress.Hex())
-		res = s.RunCli("-c", cfgPath, "contract", "tokens", addr.Hex())
+		s.RunCliCfg("contract", "top-up", addr.Hex(), "20000", types.BtcFaucetAddress.Hex())
+		res = s.RunCliCfg("contract", "tokens", addr.Hex())
 		s.Contains(res, types.BtcFaucetAddress.Hex()+"\t60000\t[BTC]")
 	})
 
@@ -516,7 +508,7 @@ faucet_endpoint = {{ .FaucetUrl }}
 	})
 }
 
-func (s *SuiteCli) TestCliCometa() {
+func (s *SuiteCliExec) TestCliCometa() {
 	cfg := &cometa.Config{
 		UseBadger:   true,
 		DbPath:      s.T().TempDir() + "/cometa.db",
@@ -621,27 +613,39 @@ func parseCometaOutput(out string) []map[string]string {
 	return res
 }
 
-func (s *SuiteCli) createConfigFile() {
+func (s *SuiteCliBase) createConfigFile() string {
 	s.T().Helper()
 
 	cfgPath := s.TmpDir + "/config.ini"
 
 	iniData := "[nil]\nrpc_endpoint = " + s.endpoint + "\n"
 	iniData += "cometa_endpoint = " + s.cometaEndpoint + "\n"
+	iniData += "faucet_endpoint = " + s.faucetEndpoint + "\n"
 	iniData += "private_key = " + nilcrypto.PrivateKeyToEthereumFormat(execution.MainPrivateKey) + "\n"
 	iniData += "address = 0x0001111111111111111111111111111111111111\n"
 	err := os.WriteFile(cfgPath, []byte(iniData), 0o600)
 	s.Require().NoError(err)
+	return cfgPath
 }
 
-func (s *SuiteCli) RunCliCfg(args ...string) string {
+func (s *SuiteCliBase) RunCliCfg(args ...string) string {
 	s.T().Helper()
 	args = append([]string{"-c", s.TmpDir + "/config.ini"}, args...)
 	return s.RunCli(args...)
 }
 
-func TestSuiteCli(t *testing.T) {
+func TestSuiteCliService(t *testing.T) {
 	t.Parallel()
 
-	suite.Run(t, new(SuiteCli))
+	s := new(SuiteCliService)
+	s.basePort = 10325
+	suite.Run(t, s)
+}
+
+func TestSuiteCliExec(t *testing.T) {
+	t.Parallel()
+
+	s := new(SuiteCliExec)
+	s.basePort = 10335
+	suite.Run(t, s)
 }
