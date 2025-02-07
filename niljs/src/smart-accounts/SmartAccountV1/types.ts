@@ -1,8 +1,8 @@
 import type { Abi, Address } from "abitype";
 import type { XOR } from "ts-essentials";
-import type { ISigner, PublicClient } from "../../../index.js";
-import type { Token } from "../../../types/Token.js";
-import type { Hex } from "../../../types/index.js";
+import type { PublicClient } from "../../clients/PublicClient.js";
+import type { ISigner } from "../../signers/types/ISigner.js";
+import type { Hex } from "../../types/Hex.js";
 
 type WaletV1BaseConfig = {
   pubkey: Uint8Array | Hex;
@@ -39,36 +39,6 @@ export type CallParams = {
   data: Uint8Array;
   value: bigint;
 };
-
-export type SendBaseTransactionParams = {
-  to: Address | Uint8Array;
-  refundTo?: Address | Uint8Array;
-  bounceTo?: Address | Uint8Array;
-  data?: Uint8Array | Hex;
-  value?: bigint;
-  feeCredit: bigint;
-  tokens?: Token[];
-  deploy?: boolean;
-  seqno?: number;
-  chainId?: number;
-};
-
-export type SendDataTransactionParams = SendBaseTransactionParams & {
-  data?: Uint8Array | Hex;
-};
-
-export type SendAbiTransactionParams = SendBaseTransactionParams & {
-  abi: Abi;
-  functionName: string;
-  args?: unknown[];
-};
-
-/**
- * Represents the params for sending a transaction.
- *
- * @typedef {SendTransactionParams}
- */
-export type SendTransactionParams = XOR<SendDataTransactionParams, SendAbiTransactionParams>;
 
 export type SendSyncBaseTransactionParams = {
   to: Address | Uint8Array;

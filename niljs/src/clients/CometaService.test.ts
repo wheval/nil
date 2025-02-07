@@ -1,5 +1,6 @@
-import { CometaService, type ContractData } from "../index.js";
 import { MockTransport } from "../transport/MockTransport.js";
+import { CometaService } from "./CometaService.js";
+import type { ContractData } from "./types/CometaTypes.js";
 
 test("getContract", async ({ expect }) => {
   const fn = vi.fn();

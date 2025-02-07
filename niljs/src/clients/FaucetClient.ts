@@ -2,7 +2,7 @@ import type { Hex } from "../types/Hex.js";
 import { waitTillCompleted } from "../utils/receipt.js";
 import { BaseClient } from "./BaseClient.js";
 import type { PublicClient } from "./PublicClient.js";
-import type { FaucetClientConfig } from "./index.js";
+import type { FaucetClientConfig } from "./types/Configs.js";
 
 /**
  * The parameters for the top up request.

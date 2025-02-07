@@ -1,6 +1,6 @@
 import { numberToBytesBE } from "@noble/curves/abstract/utils";
 import type { PublicClient } from "../clients/PublicClient.js";
-import type { ISigner } from "../signers/index.js";
+import type { ISigner } from "../signers/types/ISigner.js";
 import type { ExternalTransaction } from "../types/ExternalTransaction.js";
 import type { IDeployData } from "../types/IDeployData.js";
 import { getShardIdFromAddress } from "../utils/address.js";

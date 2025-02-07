@@ -30,5 +30,8 @@
         "quickfix.biome": "explicit"
     },
     "editor.formatOnSave": true,
-    "editor.formatOnPaste": true
+    "editor.formatOnPaste": true,
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.preferences.autoImportFileExcludePatterns": ["**/index.ts"]
 }

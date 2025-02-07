@@ -1,6 +1,7 @@
 import { defaultAddress } from "../../test/mocks/address.js";
-import { FaucetClient, addHexPrefix } from "../index.js";
 import { MockTransport } from "../transport/MockTransport.js";
+import { addHexPrefix } from "../utils/hex.js";
+import { FaucetClient } from "./FaucetClient.js";
 
 test("getAllFaucets", async ({ expect }) => {
   const fn = vi.fn();

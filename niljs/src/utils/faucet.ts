@@ -1,6 +1,7 @@
-import { FaucetClient, PublicClient } from "../clients/index.js";
-import { HttpTransport } from "../transport/index.js";
-import type { Hex } from "../types/index.js";
+import { FaucetClient } from "../clients/FaucetClient.js";
+import { PublicClient } from "../clients/PublicClient.js";
+import { HttpTransport } from "../transport/HttpTransport.js";
+import type { Hex } from "../types/Hex.js";
 import { getShardIdFromAddress } from "./address.js";
 
 export async function topUp({
