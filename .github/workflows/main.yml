@@ -59,6 +59,8 @@ jobs:
         uses: cachix/install-nix-action@v27
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            max-jobs = 1
 
       - name: Run check
         run: nix build .#checks.${{ matrix.platform.nixArch }}.${{ matrix.check == 'nil' && 'others' || matrix.check }} -L
