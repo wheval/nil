@@ -11,7 +11,6 @@ type Receipt struct {
 	Status      ErrorCode   `json:"status"`
 	GasUsed     Gas         `json:"gasUsed"`
 	Forwarded   Value       `json:"forwarded"`
-	Bloom       Bloom       `json:"bloom"`
 	Logs        []*Log      `json:"logs" ssz-max:"1000"`
 	DebugLogs   []*DebugLog `json:"debugLogs" ssz-max:"1000"`
 	OutTxnIndex uint32      `json:"outTxnIndex"`
