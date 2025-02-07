@@ -1,5 +1,6 @@
 import { Client, HTTPTransport, RequestManager } from "@open-rpc/client-js";
 import fetch from "isomorphic-fetch";
+import { isValidHttpHeaders } from "../utils/rpc.js";
 import { version } from "../version.js";
 
 /**
@@ -7,6 +8,7 @@ import { version } from "../version.js";
  */
 type RPCClientOptions = {
   signal?: AbortSignal;
+  headers?: Record<string, string>;
 };
 
 /**
@@ -15,14 +17,17 @@ type RPCClientOptions = {
  * HTTP is currently the only supported transport.
  * @example const client = createRPCClient(RPC_ENDPOINT);
  */
-const createRPCClient = (endpoint: string, { signal }: RPCClientOptions = {}) => {
+const createRPCClient = (endpoint: string, { signal, headers = {} }: RPCClientOptions = {}) => {
   const fetcher: typeof fetch = (url, options) => {
     return fetch(url, { ...options, signal });
   };
 
+  isValidHttpHeaders(headers);
+
   const transport = new HTTPTransport(endpoint, {
     headers: {
       "Client-Version": version,
+      ...headers,
     },
     fetcher,
   });

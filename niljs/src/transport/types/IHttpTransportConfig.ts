@@ -21,6 +21,12 @@ type IHttpTransportConfig = {
    * @default undefined
    */
   signal?: AbortSignal;
+  /**
+   * The headers to be sent with the request.
+   * @example { 'My-header': 'my-value' }
+   * @default {}
+   */
+  headers?: Record<string, string>;
 };
 
 export type { IHttpTransportConfig };
