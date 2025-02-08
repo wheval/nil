@@ -48,7 +48,7 @@ type IBFTTransport struct {
 // ...
 
 func main() {
-	backend := NewIBFTBackned(...)
+	backend := NewIBFTBackend(...)
 	logger := NewIBFTLogger(...)
 	transport := NewIBFTTransport(...)
 
