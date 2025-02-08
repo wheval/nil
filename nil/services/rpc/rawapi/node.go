@@ -8,7 +8,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
-	"github.com/NilFoundation/nil/nil/common/ssz"
+	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
 	rpctypes "github.com/NilFoundation/nil/nil/services/rpc/types"
@@ -55,7 +55,7 @@ func makeCallError(methodName string, shardId types.ShardId, err error) error {
 	return fmt.Errorf("failed to call method %s on shard %d: %w", methodName, shardId, err)
 }
 
-func (api *NodeApiOverShardApis) GetBlockHeader(ctx context.Context, shardId types.ShardId, blockReference rawapitypes.BlockReference) (ssz.SSZEncodedData, error) {
+func (api *NodeApiOverShardApis) GetBlockHeader(ctx context.Context, shardId types.ShardId, blockReference rawapitypes.BlockReference) (sszx.SSZEncodedData, error) {
 	methodName := methodNameChecked("GetBlockHeader")
 	shardApi, ok := api.Apis[shardId]
 	if !ok {

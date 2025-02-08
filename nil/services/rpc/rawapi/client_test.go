@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/common/ssz"
+	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi/pb"
@@ -16,7 +16,7 @@ import (
 )
 
 type generatedApiClientIface interface {
-	TestMethod(ctx context.Context, blockReference rawapitypes.BlockReference) (ssz.SSZEncodedData, error)
+	TestMethod(ctx context.Context, blockReference rawapitypes.BlockReference) (sszx.SSZEncodedData, error)
 }
 
 type generatedApiClient struct {
@@ -45,8 +45,8 @@ func newGeneratedApiClient(networkManager *network.Manager, serverPeerId network
 	}, nil
 }
 
-func (api *generatedApiClient) TestMethod(ctx context.Context, blockReference rawapitypes.BlockReference) (ssz.SSZEncodedData, error) {
-	return sendRequestAndGetResponse[ssz.SSZEncodedData](api.doApiRequest, api.apiCodec, "TestMethod", ctx, blockReference)
+func (api *generatedApiClient) TestMethod(ctx context.Context, blockReference rawapitypes.BlockReference) (sszx.SSZEncodedData, error) {
+	return sendRequestAndGetResponse[sszx.SSZEncodedData](api.doApiRequest, api.apiCodec, "TestMethod", ctx, blockReference)
 }
 
 func (s *ApiClientTestSuite) SetupSuite() {
@@ -61,7 +61,7 @@ func (s *ApiClientTestSuite) SetupTest() {
 	s.Require().NoError(err)
 }
 
-func (s *ApiClientTestSuite) doRequest() (ssz.SSZEncodedData, error) {
+func (s *ApiClientTestSuite) doRequest() (sszx.SSZEncodedData, error) {
 	return s.apiClient.TestMethod(s.ctx, rawapitypes.NamedBlockIdentifierAsBlockReference(rawapitypes.LatestBlock))
 }
 

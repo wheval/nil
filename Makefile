@@ -31,6 +31,7 @@ test: generated
 
 $(COMMANDS): %: generated %.cmd
 
+include nil/common/sszx/Makefile.inc
 include nil/internal/db/Makefile.inc
 include nil/internal/mpt/Makefile.inc
 include nil/internal/types/Makefile.inc
@@ -41,7 +42,7 @@ include nil/go-ibft/messages/proto/Makefile.inc
 include nil/Makefile.inc
 
 .PHONY: ssz
-ssz: ssz_db ssz_mpt ssz_types ssz_config ssz_execution
+ssz: ssz_sszx ssz_db ssz_mpt ssz_types ssz_config ssz_execution
 
 .PHONY: pb
 pb: pb_rawapi pb_ibft pb_synccommittee

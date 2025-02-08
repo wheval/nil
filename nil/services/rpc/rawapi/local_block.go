@@ -7,13 +7,13 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
-	"github.com/NilFoundation/nil/nil/common/ssz"
+	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
 )
 
-func (api *LocalShardApi) GetBlockHeader(ctx context.Context, blockReference rawapitypes.BlockReference) (ssz.SSZEncodedData, error) {
+func (api *LocalShardApi) GetBlockHeader(ctx context.Context, blockReference rawapitypes.BlockReference) (sszx.SSZEncodedData, error) {
 	tx, err := api.db.CreateRoTx(ctx)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func (api *LocalShardApi) getBlockByHash(tx db.RoTx, hash common.Hash, withTrans
 
 		// Need to decode transactions to get its hashes because external transaction hash
 		// calculated in a bit different way (not just Hash(SSZ)).
-		transactions, err := ssz.DecodeContainer[*types.Transaction](result.InTransactions)
+		transactions, err := sszx.DecodeContainer[*types.Transaction](result.InTransactions)
 		if err != nil {
 			return nil, err
 		}

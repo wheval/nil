@@ -8,7 +8,7 @@ import (
 
 	fastssz "github.com/NilFoundation/fastssz"
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/ssz"
+	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -58,10 +58,10 @@ type Block struct {
 }
 
 type RawBlockWithExtractedData struct {
-	Block           ssz.SSZEncodedData
-	InTransactions  []ssz.SSZEncodedData
-	OutTransactions []ssz.SSZEncodedData
-	Receipts        []ssz.SSZEncodedData
+	Block           sszx.SSZEncodedData
+	InTransactions  []sszx.SSZEncodedData
+	OutTransactions []sszx.SSZEncodedData
+	Receipts        []sszx.SSZEncodedData
 	Errors          map[common.Hash]string
 	ChildBlocks     []common.Hash
 	DbTimestamp     uint64
@@ -92,15 +92,15 @@ func (b *RawBlockWithExtractedData) DecodeSSZ() (*BlockWithExtractedData, error)
 	if err := block.UnmarshalSSZ(b.Block); err != nil {
 		return nil, err
 	}
-	inTransactions, err := ssz.DecodeContainer[*Transaction](b.InTransactions)
+	inTransactions, err := sszx.DecodeContainer[*Transaction](b.InTransactions)
 	if err != nil {
 		return nil, err
 	}
-	outTransactions, err := ssz.DecodeContainer[*Transaction](b.OutTransactions)
+	outTransactions, err := sszx.DecodeContainer[*Transaction](b.OutTransactions)
 	if err != nil {
 		return nil, err
 	}
-	receipts, err := ssz.DecodeContainer[*Receipt](b.Receipts)
+	receipts, err := sszx.DecodeContainer[*Receipt](b.Receipts)
 	if err != nil {
 		return nil, err
 	}
@@ -120,15 +120,15 @@ func (b *BlockWithExtractedData) EncodeSSZ() (*RawBlockWithExtractedData, error)
 	if err != nil {
 		return nil, err
 	}
-	inTransactions, err := ssz.EncodeContainer(b.InTransactions)
+	inTransactions, err := sszx.EncodeContainer(b.InTransactions)
 	if err != nil {
 		return nil, err
 	}
-	outTransactions, err := ssz.EncodeContainer(b.OutTransactions)
+	outTransactions, err := sszx.EncodeContainer(b.OutTransactions)
 	if err != nil {
 		return nil, err
 	}
-	receipts, err := ssz.EncodeContainer(b.Receipts)
+	receipts, err := sszx.EncodeContainer(b.Receipts)
 	if err != nil {
 		return nil, err
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
-	"github.com/NilFoundation/nil/nil/common/ssz"
+	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
@@ -214,7 +214,7 @@ func unpackErrorMap(pbErrors map[string]*Error) map[common.Hash]string {
 
 // RawBlock converters
 
-func (rb *RawBlock) PackProtoMessage(block ssz.SSZEncodedData) error {
+func (rb *RawBlock) PackProtoMessage(block sszx.SSZEncodedData) error {
 	if block == nil {
 		return errors.New("block should not be nil")
 	}
@@ -224,13 +224,13 @@ func (rb *RawBlock) PackProtoMessage(block ssz.SSZEncodedData) error {
 	return nil
 }
 
-func (rb *RawBlock) UnpackProtoMessage() (ssz.SSZEncodedData, error) {
+func (rb *RawBlock) UnpackProtoMessage() (sszx.SSZEncodedData, error) {
 	return rb.BlockSSZ, nil
 }
 
 // RawBlockResponse converters
 
-func (br *RawBlockResponse) PackProtoMessage(block ssz.SSZEncodedData, err error) error {
+func (br *RawBlockResponse) PackProtoMessage(block sszx.SSZEncodedData, err error) error {
 	if err != nil {
 		br.fromError(err)
 	} else {
@@ -243,7 +243,7 @@ func (br *RawBlockResponse) fromError(err error) {
 	br.Result = &RawBlockResponse_Error{Error: new(Error).PackProtoMessage(err)}
 }
 
-func (br *RawBlockResponse) fromData(data ssz.SSZEncodedData) {
+func (br *RawBlockResponse) fromData(data sszx.SSZEncodedData) {
 	var rawBlock RawBlock
 	if err := rawBlock.PackProtoMessage(data); err != nil {
 		br.fromError(err)
@@ -252,7 +252,7 @@ func (br *RawBlockResponse) fromData(data ssz.SSZEncodedData) {
 	}
 }
 
-func (br *RawBlockResponse) UnpackProtoMessage() (ssz.SSZEncodedData, error) {
+func (br *RawBlockResponse) UnpackProtoMessage() (sszx.SSZEncodedData, error) {
 	switch br.Result.(type) {
 	case *RawBlockResponse_Error:
 		return nil, br.GetError().UnpackProtoMessage()

@@ -82,10 +82,8 @@ func (s *TracerMockClientTestSuite) makeClient() client.Client {
 		s.Require().NoError(err)
 
 		// Build empty proof
-		holder := make(map[string][]byte)
-		tree := mpt.NewMPT(mpt.NewMapSetter(holder), mpt.NewReader(mpt.NewMapGetter(holder)))
 		key := []byte{0x1}
-		proof, err := mpt.BuildProof(tree.Reader, key, mpt.ReadMPTOperation)
+		proof, err := mpt.BuildProof(mpt.NewInMemMPT().Reader, key, mpt.ReadMPTOperation)
 		s.Require().NoError(err)
 		encodedProof, err := proof.Encode()
 		s.Require().NoError(err)

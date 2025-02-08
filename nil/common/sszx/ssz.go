@@ -1,4 +1,4 @@
-package ssz
+package sszx
 
 import (
 	ssz "github.com/NilFoundation/fastssz"

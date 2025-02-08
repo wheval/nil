@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common/logging"
-	"github.com/NilFoundation/nil/nil/common/ssz"
+	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi/pb"
@@ -43,14 +43,14 @@ func (s *RawApiTestSuite) SetupTest() {
 }
 
 type testApiIface interface {
-	TestMethod(ctx context.Context, blockReference rawapitypes.BlockReference) (ssz.SSZEncodedData, error)
+	TestMethod(ctx context.Context, blockReference rawapitypes.BlockReference) (sszx.SSZEncodedData, error)
 }
 
 type testApi struct {
-	handler func() (ssz.SSZEncodedData, error)
+	handler func() (sszx.SSZEncodedData, error)
 }
 
-func (t *testApi) TestMethod(ctx context.Context, blockReference rawapitypes.BlockReference) (ssz.SSZEncodedData, error) {
+func (t *testApi) TestMethod(ctx context.Context, blockReference rawapitypes.BlockReference) (sszx.SSZEncodedData, error) {
 	return t.handler()
 }
 
@@ -106,7 +106,7 @@ func (s *ApiServerTestSuite) makeInvalidBlockRequest() []byte {
 
 func (s *ApiServerTestSuite) TestValidResponse() {
 	var index types.TransactionIndex
-	s.api.handler = func() (ssz.SSZEncodedData, error) {
+	s.api.handler = func() (sszx.SSZEncodedData, error) {
 		index += 1
 		return index.Bytes(), nil
 	}
@@ -123,7 +123,7 @@ func (s *ApiServerTestSuite) TestValidResponse() {
 }
 
 func (s *ApiServerTestSuite) TestNilResponse() {
-	s.api.handler = func() (ssz.SSZEncodedData, error) {
+	s.api.handler = func() (sszx.SSZEncodedData, error) {
 		return nil, nil
 	}
 
@@ -139,8 +139,8 @@ func (s *ApiServerTestSuite) TestNilResponse() {
 }
 
 func (s *ApiServerTestSuite) TestInvalidSchemaRequest() {
-	s.api.handler = func() (ssz.SSZEncodedData, error) {
-		return ssz.SSZEncodedData{}, nil
+	s.api.handler = func() (sszx.SSZEncodedData, error) {
+		return sszx.SSZEncodedData{}, nil
 	}
 
 	response, err := s.clientNetworkManager.SendRequestAndGetResponse(s.ctx, s.serverPeerId, "/shard/1/testapi/TestMethod", []byte("invalid request"))
@@ -154,8 +154,8 @@ func (s *ApiServerTestSuite) TestInvalidSchemaRequest() {
 }
 
 func (s *ApiServerTestSuite) TestInvalidDataRequest() {
-	s.api.handler = func() (ssz.SSZEncodedData, error) {
-		return ssz.SSZEncodedData{}, nil
+	s.api.handler = func() (sszx.SSZEncodedData, error) {
+		return sszx.SSZEncodedData{}, nil
 	}
 
 	request := s.makeInvalidBlockRequest()
@@ -170,7 +170,7 @@ func (s *ApiServerTestSuite) TestInvalidDataRequest() {
 }
 
 func (s *ApiServerTestSuite) TestHandlerPanic() {
-	s.api.handler = func() (ssz.SSZEncodedData, error) {
+	s.api.handler = func() (sszx.SSZEncodedData, error) {
 		panic("test panic")
 	}
 
