@@ -107,7 +107,7 @@ func (s *Validator) TxPool() TxnPool {
 	return s.pool
 }
 
-func (s *Validator) BuildProposal(ctx context.Context) (*execution.Proposal, error) {
+func (s *Validator) BuildProposal(ctx context.Context) (*execution.ProposalSSZ, error) {
 	// No lock since it doesn't directly access last block/hash
 	proposer := newProposer(s.params, s.params.Topology, s.pool, s.logger)
 	proposal, err := proposer.GenerateProposal(ctx, s.txFabric)
@@ -117,7 +117,12 @@ func (s *Validator) BuildProposal(ctx context.Context) (*execution.Proposal, err
 	return proposal, nil
 }
 
-func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Proposal) (*types.Block, error) {
+func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.ProposalSSZ) (*types.Block, error) {
+	p, err := execution.ConvertProposal(proposal)
+	if err != nil {
+		return nil, err
+	}
+
 	// No lock since it accesses last block/hash only inside "locked" GetLastBlock function
 	prevBlock, prevBlockHash, err := s.GetLastBlock(ctx)
 	if err != nil {
@@ -135,21 +140,25 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 	defer gen.Rollback()
 
 	gasPrices := gen.CollectGasPrices(proposal.PrevBlockId)
-	res, err := gen.BuildBlock(proposal, gasPrices)
+	res, err := gen.BuildBlock(p, gasPrices)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate block: %w", err)
 	}
 	return res.Block, nil
 }
 
-func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Proposal, params *types.ConsensusParams) error {
+func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.ProposalSSZ, params *types.ConsensusParams) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	return s.insertProposalUnlocked(ctx, proposal, params)
 }
 
-func (s *Validator) insertProposalUnlocked(ctx context.Context, proposal *execution.Proposal, params *types.ConsensusParams) error {
-	if err := s.validateProposalUnlocked(ctx, proposal); err != nil {
+func (s *Validator) insertProposalUnlocked(ctx context.Context, proposal *execution.ProposalSSZ, params *types.ConsensusParams) error {
+	p, err := execution.ConvertProposal(proposal)
+	if err != nil {
+		return err
+	}
+	if err := s.validateProposalUnlocked(ctx, p); err != nil {
 		return err
 	}
 
@@ -164,7 +173,7 @@ func (s *Validator) insertProposalUnlocked(ctx context.Context, proposal *execut
 	}
 	defer gen.Rollback()
 
-	res, err := gen.GenerateBlock(proposal, params)
+	res, err := gen.GenerateBlock(p, params)
 	if err != nil {
 		return fmt.Errorf("failed to generate block: %w", err)
 	}

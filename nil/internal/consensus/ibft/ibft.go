@@ -30,9 +30,9 @@ type ConsensusParams struct {
 }
 
 type validator interface {
-	BuildProposal(ctx context.Context) (*execution.Proposal, error)
-	VerifyProposal(ctx context.Context, proposal *execution.Proposal) (*types.Block, error)
-	InsertProposal(ctx context.Context, proposal *execution.Proposal, params *types.ConsensusParams) error
+	BuildProposal(ctx context.Context) (*execution.ProposalSSZ, error)
+	VerifyProposal(ctx context.Context, proposal *execution.ProposalSSZ) (*types.Block, error)
+	InsertProposal(ctx context.Context, proposal *execution.ProposalSSZ, params *types.ConsensusParams) error
 	GetLastBlock(ctx context.Context) (*types.Block, common.Hash, error)
 }
 
@@ -54,8 +54,8 @@ type backendIBFT struct {
 
 var _ core.Backend = &backendIBFT{}
 
-func (i *backendIBFT) unmarshalProposal(raw []byte) (*execution.Proposal, error) {
-	proposal := &execution.Proposal{}
+func (i *backendIBFT) unmarshalProposal(raw []byte) (*execution.ProposalSSZ, error) {
+	proposal := &execution.ProposalSSZ{}
 	if err := proposal.UnmarshalSSZ(raw); err != nil {
 		return nil, err
 	}

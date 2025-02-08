@@ -2,6 +2,7 @@ package mpt
 
 import (
 	"errors"
+	"fmt"
 
 	fastssz "github.com/NilFoundation/fastssz"
 	"github.com/NilFoundation/nil/nil/common"
@@ -47,7 +48,7 @@ func (m *Reader) RootHash() common.Hash {
 
 func (m *Reader) Get(key []byte) (ret []byte, err error) {
 	if m.root == nil {
-		return nil, db.ErrKeyNotFound
+		return nil, fmt.Errorf("%w: root is nil", db.ErrKeyNotFound)
 	}
 	if len(key) > maxRawKeyLen {
 		key = poseidon.Sum(key)
@@ -684,10 +685,7 @@ func (m *MerklePatriciaTrie) storeNode(node Node) (Reference, error) {
 		return data, nil
 	}
 
-	key := poseidon.Sum(data)
-	if len(key) != 32 {
-		key = common.BytesToHash(key).Bytes()
-	}
+	key := calcNodeKey(data)
 	if err := m.setter.Set(key, data); err != nil {
 		return nil, err
 	}

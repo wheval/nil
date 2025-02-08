@@ -1,12 +1,39 @@
 package mpt
 
 import (
+	"bytes"
+	"fmt"
 	"maps"
 	"testing"
 
+	ssz "github.com/NilFoundation/fastssz"
 	"github.com/NilFoundation/nil/nil/internal/db"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+/*
+	             R
+		         |
+	            Ext
+	             |
+	    _________Br________
+	   /          |        \
+
+Br[val-1]   Br[val-3]  Br[val-5]
+
+	|            |          |
+
+Leaf[val-2] Leaf[val-4]  Leaf[val-6]
+*/
+var defaultMPTData = map[string]string{
+	string([]byte{0xf, 0xf}):           "val-1",
+	string([]byte{0xf, 0xf, 0xa}):      "val-2",
+	string([]byte{0xf, 0xe}):           "val-3",
+	string([]byte{0xf, 0xe, 0xa}):      "val-4",
+	string([]byte{0xf, 0xd}):           "val-5",
+	string([]byte{0xf, 0xd, 0xa, 0xa}): "val-6",
+}
 
 func mptFromData(t *testing.T, data map[string]string) (*MerklePatriciaTrie, map[string][]byte) {
 	t.Helper()
@@ -30,26 +57,7 @@ func copyMpt(holder map[string][]byte, mpt *MerklePatriciaTrie) *MerklePatriciaT
 func TestReadProof(t *testing.T) {
 	t.Parallel()
 
-	/*
-		             R
-			         |
-		            Ext
-		             |
-		    _________Br________
-		   /          |        \
-		Br[val-1]   Br[val-3]  Br[val-5]
-		  |            |          |
-		Leaf[val-2] Leaf[val-4]  Leaf[val-6]
-
-	*/
-	data := map[string]string{
-		string([]byte{0xf, 0xf}):           "val-1",
-		string([]byte{0xf, 0xf, 0xa}):      "val-2",
-		string([]byte{0xf, 0xe}):           "val-3",
-		string([]byte{0xf, 0xe, 0xa}):      "val-4",
-		string([]byte{0xf, 0xd}):           "val-5",
-		string([]byte{0xf, 0xd, 0xa, 0xa}): "val-6",
-	}
+	data := defaultMPTData
 	mpt, _ := mptFromData(t, data)
 
 	t.Run("Prove existing keys", func(t *testing.T) {
@@ -109,6 +117,121 @@ func TestReadProof(t *testing.T) {
 		ok, err := p.VerifyRead(key, nil, tree.RootHash())
 		require.NoError(t, err)
 		require.True(t, ok)
+	})
+}
+
+func TestSparseMPT(t *testing.T) {
+	t.Parallel()
+
+	data := defaultMPTData
+	mpt, _ := mptFromData(t, data)
+
+	filter := func(key string) bool {
+		return len(key) < 3
+	}
+
+	sparseHolder := NewInMemHolder()
+	sparse := NewMPTFromMap(sparseHolder)
+	for k := range data {
+		if !filter(k) {
+			continue
+		}
+
+		p, err := BuildProof(mpt.Reader, []byte(k), ReadMPTOperation)
+		require.NoError(t, err)
+
+		require.NoError(t, PopulateMptWithProof(sparse, &p))
+	}
+
+	t.Run("Check original keys", func(t *testing.T) {
+		t.Parallel()
+
+		for k, v := range data {
+			if !filter(k) {
+				continue
+			}
+
+			val, err := sparse.Get([]byte(k))
+			require.NoError(t, err)
+			require.Equal(t, string(val), v)
+		}
+	})
+
+	t.Run("Check missing keys", func(t *testing.T) {
+		t.Parallel()
+
+		for _, k := range [][]byte{
+			{0xf, 0xf, 0xc},
+			{0xa},
+		} {
+			val, err := sparse.Get(k)
+			require.ErrorIs(t, err, db.ErrKeyNotFound)
+			require.Nil(t, val)
+		}
+	})
+
+	t.Run("Check manipulated proof", func(t *testing.T) {
+		t.Parallel()
+
+		modifiedKey := ""
+		modifiedVal := []byte("val-modified")
+		holder := maps.Clone(sparseHolder)
+		for k, v := range sparseHolder {
+			var manipulatedNode Node
+
+			switch ssz.UnmarshallUint8(v) {
+			case SszExtensionNode:
+				continue
+			case SszLeafNode:
+				node := &LeafNode{}
+				require.NoError(t, node.UnmarshalSSZ(v[1:]))
+
+				node.LeafData = modifiedVal
+				manipulatedNode = node
+			case SszBranchNode:
+				node := &BranchNode{}
+				require.NoError(t, node.UnmarshalSSZ(v[1:]))
+				if len(node.Value) == 0 {
+					continue
+				}
+
+				node.Value = modifiedVal
+				manipulatedNode = node
+			}
+
+			modified, err := manipulatedNode.Encode()
+			require.NoError(t, err)
+			holder[k] = modified
+			modifiedKey = k
+			break
+		}
+
+		// The holder is not valid anymore, because the hash of the value is not matching the key
+		err := ValidateHolder(holder)
+		require.Error(t, err)
+		require.ErrorContains(t, err, fmt.Sprintf("%x", modifiedKey))
+
+		// But we still get values from the MPT, because we don't validate it on Get
+		manipulatedSparse := NewMPTFromMap(holder)
+		manipulatedSparse.SetRootHash(sparse.RootHash())
+		manipulatedKey := ""
+		for k, v := range data {
+			if !filter(k) {
+				continue
+			}
+
+			val, err := manipulatedSparse.Get([]byte(k))
+			require.NoError(t, err)
+
+			if bytes.Equal(val, modifiedVal) {
+				manipulatedKey = k
+			} else {
+				assert.Equal(t, v, string(val))
+			}
+		}
+
+		// There must be a manipulated key
+		assert.NotEmpty(t, manipulatedKey)
 	})
 }
 
@@ -331,19 +454,8 @@ func TestDeleteProof(t *testing.T) {
 func TestProofEncoding(t *testing.T) {
 	t.Parallel()
 
-	mpt := NewInMemMPT()
-	data := map[string]string{
-		string([]byte{0xf, 0xf}):           "val-1",
-		string([]byte{0xf, 0xf, 0xa}):      "val-2",
-		string([]byte{0xf, 0xe}):           "val-3",
-		string([]byte{0xf, 0xe, 0xa}):      "val-4",
-		string([]byte{0xf, 0xd}):           "val-5",
-		string([]byte{0xf, 0xd, 0xa, 0xa}): "val-6",
-	}
-
-	for k, v := range data {
-		require.NoError(t, mpt.Set([]byte(k), []byte(v)))
-	}
+	data := defaultMPTData
+	mpt, _ := mptFromData(t, data)
 
 	p, err := BuildProof(mpt.Reader, []byte{0xf, 0xd, 0xa, 0xa}, ReadMPTOperation)
 	require.NoError(t, err)

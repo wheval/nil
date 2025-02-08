@@ -3,6 +3,7 @@ package mpt
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	ssz "github.com/NilFoundation/fastssz"
 	"github.com/NilFoundation/nil/nil/common"
@@ -161,6 +162,16 @@ func PopulateMptWithProof(mpt *MerklePatriciaTrie, p *Proof) error {
 			return err
 		} else if i == 0 {
 			mpt.root = nodeRef
+		}
+	}
+	return nil
+}
+
+func ValidateHolder(holder InMemHolder) error {
+	for key, value := range holder {
+		expectedKey := calcNodeKey(value)
+		if !bytes.Equal([]byte(key), expectedKey) {
+			return fmt.Errorf("key %x doesn't match the hash %x of value", key, expectedKey)
 		}
 	}
 	return nil
