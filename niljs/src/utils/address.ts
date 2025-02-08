@@ -3,7 +3,6 @@ import { bytesToHex } from "../encoding/fromBytes.js";
 import { poseidonHash } from "../encoding/poseidon.js";
 import type { IAddress } from "../signers/types/IAddress.js";
 import type { Hex } from "../types/Hex.js";
-import { assertIsValidShardId } from "./assert.js";
 import { removeHexPrefix } from "./hex.js";
 
 /**
@@ -42,7 +41,6 @@ const getShardIdFromAddress = (address: Hex): number => {
  * @returns {Uint8Array} The address.
  */
 const calculateAddress = (shardId: number, code: Uint8Array, salt: Uint8Array): Uint8Array => {
-  assertIsValidShardId(shardId);
   if (salt.length !== 32) {
     throw new Error("Salt must be 32 bytes");
   }

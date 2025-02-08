@@ -7,11 +7,7 @@ import type { ContractFunctionName } from "../../contract-factory/ContractFactor
 import { prepareDeployPart } from "../../encoding/deployPart.js";
 import { externalTransactionEncode } from "../../encoding/externalTransaction.js";
 import { hexToBytes } from "../../encoding/fromHex.js";
-import type { ISigner } from "../../signers/index.js";
-import type {
-  SendTransactionParams,
-  SmartAccountInterface,
-} from "../../smart-accounts/SmartAccountInterface.js";
+import type { ISigner } from "../../signers/types/ISigner.js";
 import type { Hex } from "../../types/Hex.js";
 import type { IDeployData } from "../../types/IDeployData.js";
 import { calculateAddress, getShardIdFromAddress, refineAddress } from "../../utils/address.js";
@@ -22,12 +18,13 @@ import {
   refineFunctionHexData,
   refineSalt,
 } from "../../utils/refiners.js";
+import type { SendTransactionParams, SmartAccountInterface } from "../SmartAccountInterface.js";
 import type {
   DeployParams,
   RequestParams,
   SendSyncTransactionParams,
   SmartAccountV1Config,
-} from "./types/index.js";
+} from "./types.js";
 
 /**
  * SmartAccountV1 is a class used for performing operations on the cluster that require authentication.
