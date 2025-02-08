@@ -104,11 +104,11 @@ func (mtc *transactionTraceContext) processOpcode(
 	stats.StackOpsN++
 
 	if hasMemOps {
-		copyOccured, err := mtc.copyTracer.TraceOp(opCode, mtc.rwCounter.ctr, scope, returnData)
+		copyOccurred, err := mtc.copyTracer.TraceOp(opCode, mtc.rwCounter.ctr, scope, returnData)
 		if err != nil {
 			return err
 		}
-		if copyOccured {
+		if copyOccurred {
 			stats.CopyOpsN++
 		}
 
