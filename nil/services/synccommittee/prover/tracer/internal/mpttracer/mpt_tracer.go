@@ -168,12 +168,12 @@ func (mt *MPTTracer) getAccountTrieTraces() ([]ContractTrieUpdateTrace, error) {
 			return nil, err
 		}
 
-		commitedAcc, err := acc.Commit()
+		committedAcc, err := acc.Commit()
 		if err != nil {
 			return nil, err
 		}
 
-		if accInTrie != nil && accInTrie.Hash() == commitedAcc.Hash() {
+		if accInTrie != nil && accInTrie.Hash() == committedAcc.Hash() {
 			continue
 		}
 
@@ -191,7 +191,7 @@ func (mt *MPTTracer) getAccountTrieTraces() ([]ContractTrieUpdateTrace, error) {
 			PathBefore:  proof.PathToNode,
 		}
 
-		if err := contractTrie.Update(addr.Hash(), commitedAcc); err != nil {
+		if err := contractTrie.Update(addr.Hash(), committedAcc); err != nil {
 			return nil, err
 		}
 
@@ -200,7 +200,7 @@ func (mt *MPTTracer) getAccountTrieTraces() ([]ContractTrieUpdateTrace, error) {
 			return nil, err
 		}
 		trace.RootAfter = contractTrie.RootHash()
-		trace.ValueAfter = commitedAcc
+		trace.ValueAfter = committedAcc
 		trace.PathAfter = proof.PathToNode
 
 		contractTrieTraces = append(contractTrieTraces, trace)
