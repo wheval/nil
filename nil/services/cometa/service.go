@@ -355,5 +355,5 @@ func (s *Service) startRpcServer(ctx context.Context, endpoint string) error {
 
 	apiList := []transport.API{s.GetRpcApi()}
 
-	return rpc.StartRpcServer(ctx, httpConfig, apiList, logger)
+	return rpc.StartRpcServer(ctx, httpConfig, apiList, logger, nil)
 }

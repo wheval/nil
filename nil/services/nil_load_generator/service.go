@@ -137,7 +137,7 @@ func startRpcServer(ctx context.Context, endpoint string) error {
 		},
 	}
 
-	return rpc.StartRpcServer(ctx, httpConfig, apiList, logger)
+	return rpc.StartRpcServer(ctx, httpConfig, apiList, logger, nil)
 }
 
 func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {

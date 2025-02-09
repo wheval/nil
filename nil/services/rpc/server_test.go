@@ -17,6 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const serverStartTimeout = 30 * time.Second
+
 func TestParseSocketUrl(t *testing.T) {
 	t.Parallel()
 
@@ -56,6 +58,8 @@ func TestContextCancellation(t *testing.T) {
 	api := &testApi{contextCancelled: false}
 
 	socketPath := GetSockPath(t)
+
+	started := make(chan struct{})
 	go func() {
 		httpConfig := &httpcfg.HttpCfg{
 			HttpURL:         socketPath,
@@ -72,8 +76,16 @@ func TestContextCancellation(t *testing.T) {
 				Service:   api,
 				Public:    true,
 			}},
-			logging.NewLogger("Test server"))
+			logging.NewLogger("Test server"),
+			started,
+		)
 	}()
+
+	select {
+	case <-time.After(serverStartTimeout):
+		t.Fatalf("rpc server did not start in time")
+	case <-started:
+	}
 
 	client := http.Client{
 		Transport: &http.Transport{
