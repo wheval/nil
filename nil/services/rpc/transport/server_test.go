@@ -19,7 +19,7 @@ func TestServer(t *testing.T) {
 			logger := logging.NewLogger("Test server")
 			// Create RPC server and handler.
 			var apis []API
-			server := NewServer(false /* traceRequests */, false /* traceSingleRequest */, logger, 0)
+			server := NewServer(false /* traceRequests */, false /* traceSingleRequest */, logger, 0, []string{})
 			if err := RegisterApisFromWhitelist(apis, conf.Modules, server, logger); err != nil {
 				return nil, logger
 			}

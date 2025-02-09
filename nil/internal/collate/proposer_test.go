@@ -11,7 +11,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -103,7 +102,7 @@ func (s *ProposerTestSuite) TestCollator() {
 		s.Require().NoError(err)
 		defer blockGenerator.Rollback()
 
-		_, err = blockGenerator.GenerateBlock(proposal, zerolog.Nop(), nil)
+		_, err = blockGenerator.GenerateBlock(proposal, nil)
 		s.Require().NoError(err)
 
 		return proposal

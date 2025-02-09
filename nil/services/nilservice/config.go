@@ -46,6 +46,9 @@ type Config struct {
 	// Admin
 	AdminSocketPath string `yaml:"adminSocket,omitempty"`
 
+	// RPC events log
+	LogClientRpcEvents bool `yaml:"logClientRpcEvents,omitempty"`
+
 	// Keys
 	MainKeysPath         string                     `yaml:"mainKeysPath,omitempty"`
 	NetworkKeysPath      string                     `yaml:"networkKeysPath,omitempty"`

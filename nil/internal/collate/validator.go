@@ -38,7 +38,7 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 	}
 	defer gen.Rollback()
 
-	res, err := gen.BuildBlock(proposal, s.logger)
+	res, err := gen.BuildBlock(proposal)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate block: %w", err)
 	}
@@ -53,7 +53,7 @@ func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Prop
 	}
 	defer gen.Rollback()
 
-	res, err := gen.GenerateBlock(proposal, s.logger, sig)
+	res, err := gen.GenerateBlock(proposal, sig)
 	if err != nil {
 		return fmt.Errorf("failed to generate block: %w", err)
 	}

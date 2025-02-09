@@ -309,9 +309,10 @@ type EthAPI interface {
 type APIImplRo struct {
 	accessor *execution.StateAccessor
 
-	logs   *LogsAggregator
-	logger zerolog.Logger
-	rawapi rawapi.NodeApi
+	logs            *LogsAggregator
+	logger          zerolog.Logger
+	clientEventsLog logging.CHLogger
+	rawapi          rawapi.NodeApi
 }
 
 // APIImpl is implementation of the EthAPI interface based on remote Db access
@@ -324,20 +325,24 @@ var (
 	_ EthAPIRo = (*APIImplRo)(nil)
 )
 
-func NewEthAPIRo(ctx context.Context, rawapi rawapi.NodeApi, db db.ReadOnlyDB, pollBlocksForLogs bool) *APIImplRo {
+func NewEthAPIRo(ctx context.Context, rawapi rawapi.NodeApi, db db.ReadOnlyDB, pollBlocksForLogs, logClientEvents bool) *APIImplRo {
 	accessor := execution.NewStateAccessor()
 	api := &APIImplRo{
-		logger:   logging.NewLogger("eth-api"),
-		accessor: accessor,
-		rawapi:   rawapi,
+		logger:          logging.NewLogger("eth-api"),
+		accessor:        accessor,
+		rawapi:          rawapi,
+		clientEventsLog: logging.NewCHLogger("eth-api", "rpc_requests"),
 	}
 	api.logs = NewLogsAggregator(ctx, db, pollBlocksForLogs)
+	if !logClientEvents {
+		api.clientEventsLog = api.clientEventsLog.Disable()
+	}
 	return api
 }
 
 // NewEthAPI returns APIImpl instance
-func NewEthAPI(ctx context.Context, rawapi rawapi.NodeApi, db db.ReadOnlyDB, pollBlocksForLogs bool) *APIImpl {
-	roApi := NewEthAPIRo(ctx, rawapi, db, pollBlocksForLogs)
+func NewEthAPI(ctx context.Context, rawapi rawapi.NodeApi, db db.ReadOnlyDB, pollBlocksForLogs, logClientEvents bool) *APIImpl {
+	roApi := NewEthAPIRo(ctx, rawapi, db, pollBlocksForLogs, logClientEvents)
 	return &APIImpl{roApi}
 }
 

@@ -37,7 +37,7 @@ func NewTestEthAPI(t *testing.T, ctx context.Context, db db.DB, nShards int) *AP
 		require.NoError(t, err)
 	}
 	rawApi := rawapi.NewNodeApiOverShardApis(shardApis)
-	return NewEthAPI(ctx, rawApi, db, true)
+	return NewEthAPI(ctx, rawApi, db, true, false)
 }
 
 func TestGetTransactionReceipt(t *testing.T) {
