@@ -15,7 +15,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/internal/vm"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -639,7 +638,6 @@ func BenchmarkBlockGeneration(b *testing.B) {
 	database, err := db.NewBadgerDbInMemory()
 	require.NoError(b, err)
 	logging.SetupGlobalLogger("error")
-	logger := zerolog.Nop()
 
 	address, err := contracts.CalculateAddress(contracts.NameCounter, 1, nil)
 	require.NoError(b, err)
@@ -684,7 +682,7 @@ contracts:
 
 		gen, err = NewBlockGenerator(ctx, params, database, nil, nil)
 		require.NoError(b, err)
-		_, err = gen.GenerateBlock(proposal, logger, nil)
+		_, err = gen.GenerateBlock(proposal, nil)
 		require.NoError(b, err)
 
 		tx.Rollback()

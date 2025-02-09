@@ -423,7 +423,7 @@ func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtracte
 
 	// First we build block without writing it into the database, because we need to check that the resulted block is
 	// the same as the proposed one.
-	resBlock, err := gen.BuildBlock(proposal, s.logger)
+	resBlock, err := gen.BuildBlock(proposal)
 	if err != nil {
 		return fmt.Errorf("failed to build block: %w", err)
 	}

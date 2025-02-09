@@ -80,7 +80,7 @@ func (s *ReplayScheduler) doReplay(ctx context.Context, blockId types.BlockNumbe
 	}
 	defer gen.Rollback()
 
-	if _, err := gen.GenerateBlock(proposal, s.logger, nil); err != nil {
+	if _, err := gen.GenerateBlock(proposal, nil); err != nil {
 		return err
 	}
 
