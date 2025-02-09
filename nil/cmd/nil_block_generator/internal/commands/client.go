@@ -22,11 +22,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-const (
-	defaultRPCEndpoint = "http://127.0.0.1:8529"
-	defaultRPCPort     = 8529
-)
-
 func backgroundNilNode(cfg *nildconfig.Config) {
 	database, err := db.NewBadgerDb(cfg.DB.Path)
 	if err != nil {
@@ -47,8 +42,8 @@ func backgroundNilNode(cfg *nildconfig.Config) {
 	}
 }
 
-func waitStartNil() error {
-	client := rpc.NewClient(defaultRPCEndpoint, zerolog.Nop())
+func waitStartNil(rpcEndpoint string) error {
+	client := rpc.NewClient(rpcEndpoint, zerolog.Nop())
 	ctx := context.Background()
 	retryRunner := common.NewRetryRunner(
 		common.RetryConfig{
@@ -65,7 +60,7 @@ func waitStartNil() error {
 	return err
 }
 
-func RunNilNode() error {
+func RunNilNode(rpcEndpoint string) error {
 	cfg := &nildconfig.Config{
 		Config: nilservice.NewDefaultConfig(),
 		DB:     db.NewDefaultBadgerDBOptions(),
@@ -73,10 +68,10 @@ func RunNilNode() error {
 			ForkMainAtBlock: transport.LatestBlockNumber,
 		},
 	}
-	cfg.RPCPort = defaultRPCPort
+	cfg.HttpUrl = rpcEndpoint
 	cfg.NShards = 2
 	go backgroundNilNode(cfg)
-	return waitStartNil() // make sure if service started
+	return waitStartNil(rpcEndpoint) // make sure if service started
 }
 
 func GetRpcClient(rpcEndpoint string, logger zerolog.Logger) *rpc.Client {
@@ -93,9 +88,9 @@ func GetFaucetRpcClient(faucetEndpoint string) *faucet.Client {
 	return faucet.NewClient(faucetEndpoint)
 }
 
-func CreateCliService(hexKey string, logger zerolog.Logger) (*cliservice.Service, error) {
-	faucet := GetFaucetRpcClient(defaultRPCEndpoint)
-	rpc := GetRpcClient(defaultRPCEndpoint, logger)
+func CreateCliService(rpcEndpoint, hexKey string, logger zerolog.Logger) (*cliservice.Service, error) {
+	faucet := GetFaucetRpcClient(rpcEndpoint)
+	rpc := GetRpcClient(rpcEndpoint, logger)
 	service := cliservice.NewService(context.Background(), rpc, nil, faucet)
 	err := service.GenerateKeyFromHex(hexKey)
 	if err != nil {
@@ -104,7 +99,7 @@ func CreateCliService(hexKey string, logger zerolog.Logger) (*cliservice.Service
 	return service, nil
 }
 
-func CreateNewSmartAccount(logger zerolog.Logger) (string, string, error) {
+func CreateNewSmartAccount(rpcEndpoint string, logger zerolog.Logger) (string, string, error) {
 	keygen := cliservice.NewService(context.Background(), &rpc.Client{}, nil, nil)
 	if err := keygen.GenerateNewKey(); err != nil {
 		return "", "", err
@@ -115,7 +110,7 @@ func CreateNewSmartAccount(logger zerolog.Logger) (string, string, error) {
 	amount := types.NewValueFromUint64(2_000_000_000_000_000)
 	fee := types.NewFeePackFromFeeCredit(types.NewValueFromUint64(200_000_000_000_000))
 
-	srv, err := CreateCliService(hexKey, logger)
+	srv, err := CreateCliService(rpcEndpoint, hexKey, logger)
 	if err != nil {
 		return "", "", err
 	}
@@ -130,10 +125,9 @@ func CreateNewSmartAccount(logger zerolog.Logger) (string, string, error) {
 	return smartAccount.Hex(), hexKey, nil
 }
 
-func DeployContract(smartAccountAdr, path, hexKey string, logger zerolog.Logger) (string, error) {
+func DeployContract(rpcEndpoint, smartAccountAdr, path, hexKey string, args []string, logger zerolog.Logger) (string, error) {
 	binPath := path + ".bin"
 	abiPath := path + ".abi"
-	var args []string
 	bytecode, err := cliservice_common.ReadBytecode(binPath, abiPath, args)
 	if err != nil {
 		return "", err
@@ -144,7 +138,7 @@ func DeployContract(smartAccountAdr, path, hexKey string, logger zerolog.Logger)
 
 	amount := types.Value0
 
-	srv, err := CreateCliService(hexKey, logger)
+	srv, err := CreateCliService(rpcEndpoint, hexKey, logger)
 	if err != nil {
 		return "", err
 	}
@@ -167,8 +161,8 @@ func DeployContract(smartAccountAdr, path, hexKey string, logger zerolog.Logger)
 	return addr.Hex(), nil
 }
 
-func CallContract(smartAccountAdr, hexKey string, calls []Call, logger zerolog.Logger) (string, error) {
-	srv, err := CreateCliService(hexKey, logger)
+func CallContract(rpcEndpoint, smartAccountAdr, hexKey string, calls []Call, logger zerolog.Logger) (string, error) {
+	srv, err := CreateCliService(rpcEndpoint, hexKey, logger)
 	if err != nil {
 		return "", err
 	}
@@ -188,7 +182,7 @@ func CallContract(smartAccountAdr, hexKey string, calls []Call, logger zerolog.L
 	fee := types.NewFeePackFromGas(100_000)
 
 	ctx := context.Background()
-	client := GetRpcClient(defaultRPCEndpoint, logger)
+	client := GetRpcClient(rpcEndpoint, logger)
 	privateKey, err := crypto.HexToECDSA(hexKey)
 	if err != nil {
 		return "", err

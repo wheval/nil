@@ -57,16 +57,20 @@ func buildInitCmd(logger zerolog.Logger) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = commands.RunNilNode()
+			httpUrl, err := commands.GetSockPath()
+			if err != nil {
+				return err
+			}
+			err = commands.RunNilNode(httpUrl)
 			if err != nil {
 				return err
 			}
 
-			smartAccountAdr, hexKey, err := commands.CreateNewSmartAccount(logger)
+			smartAccountAdr, hexKey, err := commands.CreateNewSmartAccount(httpUrl, logger)
 			if err != nil {
 				return err
 			}
-			return commands.InitConfig(smartAccountAdr, hexKey)
+			return commands.InitConfig(httpUrl, smartAccountAdr, hexKey)
 		},
 	}
 	return cmd
@@ -75,20 +79,23 @@ func buildInitCmd(logger zerolog.Logger) *cobra.Command {
 func buildAddContractCmd(logger zerolog.Logger) (*cobra.Command, error) {
 	var contractName string
 	var contractPath string
+	var argsCmd string
 	cmd := &cobra.Command{
 		Use:   "add-contract",
 		Short: "Deploy new contract",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := commands.RunNilNode()
-			if err != nil {
-				return err
-			}
-
 			cfg, err := commands.ReadConfigFromFile()
 			if err != nil {
 				return err
 			}
-			adr, err := commands.DeployContract(cfg.SmartAccountAdr, contractPath, cfg.PrivateKey, logger)
+
+			err = commands.RunNilNode(cfg.HttpUrl)
+			if err != nil {
+				return err
+			}
+
+			deployArgs := strings.Fields(argsCmd)
+			adr, err := commands.DeployContract(cfg.HttpUrl, cfg.SmartAccountAdr, contractPath, cfg.PrivateKey, deployArgs, logger)
 			if err != nil {
 				return err
 			}
@@ -105,6 +112,12 @@ func buildAddContractCmd(logger zerolog.Logger) (*cobra.Command, error) {
 	const contractPathFlag = "contract-path"
 	cmd.Flags().StringVar(&contractPath, contractPathFlag, contractPath, "path to contract code")
 	if err := cmd.MarkFlagRequired(contractPathFlag); err != nil {
+		return nil, err
+	}
+
+	const argsFlag = "args"
+	cmd.Flags().StringVar(&argsCmd, argsFlag, argsCmd, "method arguments")
+	if err := cmd.MarkFlagRequired(argsFlag); err != nil {
 		return nil, err
 	}
 
@@ -161,12 +174,12 @@ func buildGetBlockCmd(logger zerolog.Logger) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = commands.RunNilNode()
+			err = commands.RunNilNode(cfg.HttpUrl)
 			if err != nil {
 				return err
 			}
 
-			blockHash, err := commands.CallContract(cfg.SmartAccountAdr, cfg.PrivateKey, cfg.Calls, logger)
+			blockHash, err := commands.CallContract(cfg.HttpUrl, cfg.SmartAccountAdr, cfg.PrivateKey, cfg.Calls, logger)
 			if err != nil {
 				return err
 			}

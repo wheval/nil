@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 const (
+	socketDir      = "nil_block_generator_tmp"
 	configFilePath = "config.json"
 	nilDBPath      = "test.db"
 	fileMode       = 0o666
@@ -18,7 +20,7 @@ type Contract struct {
 	Address string `json:"address"`
 }
 
-func NewContract(path string, adr string) *Contract {
+func NewContract(path, adr string) *Contract {
 	return &Contract{
 		Path:    path,
 		Address: adr,
@@ -34,7 +36,7 @@ type Call struct {
 	Count        int      `json:"count"`
 }
 
-func NewCall(contractName string, method, abiPath, address string, args []string, count int) *Call {
+func NewCall(contractName, method, abiPath, address string, args []string, count int) *Call {
 	return &Call{
 		ContractName: contractName,
 		Method:       method,
@@ -46,6 +48,7 @@ func NewCall(contractName string, method, abiPath, address string, args []string
 }
 
 type Config struct {
+	HttpUrl         string              `json:"httpUrl"`
 	SmartAccountAdr string              `json:"smartAccountAdr"`
 	PrivateKey      string              `json:"privatekey"`
 	Contracts       map[string]Contract `json:"conracts"`
@@ -54,6 +57,7 @@ type Config struct {
 
 func NewConfig() *Config {
 	return &Config{
+		HttpUrl:         "",
 		SmartAccountAdr: "",
 		PrivateKey:      "",
 		Contracts:       make(map[string]Contract),
@@ -61,7 +65,11 @@ func NewConfig() *Config {
 }
 
 func CleanFiles() error {
-	err := os.Remove(configFilePath)
+	err := os.RemoveAll(socketDir)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	err = os.Remove(configFilePath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -82,6 +90,11 @@ func ReadConfigFromFile() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	// cleanup socket
+	err = os.Remove(filepath.Join(socketDir, "httpd.sock"))
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
 	return &cfg, nil
 }
 
@@ -94,14 +107,15 @@ func WriteConfigToFile(cfg *Config) error {
 	return err
 }
 
-func InitConfig(adr, hexKey string) error {
+func InitConfig(httpUrl, adr, hexKey string) error {
 	cfg := NewConfig()
+	cfg.HttpUrl = httpUrl
 	cfg.SmartAccountAdr = adr
 	cfg.PrivateKey = hexKey
 	return WriteConfigToFile(cfg)
 }
 
-func AddContract(name string, path string, adr string) error {
+func AddContract(name, path, adr string) error {
 	cfg, err := ReadConfigFromFile()
 	if err != nil {
 		return err
@@ -150,6 +164,15 @@ func ShowCalls(writer io.StringWriter) error {
 		}
 	}
 	return nil
+}
+
+func GetSockPath() (string, error) {
+	err := os.Mkdir(socketDir, fileMode)
+	if err != nil {
+		return "", err
+	}
+	httpUrl := "unix://" + filepath.Join(socketDir, "httpd.sock")
+	return httpUrl, nil
 }
 
 func (cfg *Config) GetContract(contractName string) (*Contract, error) {
