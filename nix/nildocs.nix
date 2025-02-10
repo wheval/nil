@@ -67,8 +67,10 @@ stdenv.mkDerivation rec {
     export NILJS_SRC=${../niljs}
     export OPENRPC_JSON=${nil}/share/doc/nil/openrpc.json
     export CMD_NIL=${../nil/cmd/nil/internal}
+    export NIL_CLI=${nil}/bin/nil
     export COMETA_CONFIG=${../docs/tests/cometa.yaml}
     export NODE_JS=${nodejs}/bin/node
+    export NIL=${nil}
     cd docs
     npm run build
   '';
@@ -88,6 +90,7 @@ stdenv.mkDerivation rec {
 
   shellHook = ''
     export NILJS_SRC=${../niljs}
+    export NIL_CLI=${nil}/bin/nil
     export OPENRPC_JSON=${nil}/share/doc/nil/openrpc.json
     export CMD_NIL=${../nil/cmd/nil/internal}
     export COMETA_CONFIG=${../docs/tests/cometa.yaml}
