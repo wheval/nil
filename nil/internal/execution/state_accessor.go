@@ -8,7 +8,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
-	nilssz "github.com/NilFoundation/nil/nil/common/ssz"
+	nilssz "github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/mpt"
 	"github.com/NilFoundation/nil/nil/internal/types"

@@ -148,11 +148,8 @@ func (p *Proof) VerifySet(key []byte, value []byte, rootHash, newRootHash common
 
 // unwrapSparseMpt creates sparse MPT trie from proof
 func unwrapSparseMpt(p *Proof) (*MerklePatriciaTrie, error) {
-	holder := make(map[string][]byte)
-	mpt := NewMPT(NewMapSetter(holder), NewReader(NewMapGetter(holder)))
-
-	err := PopulateMptWithProof(mpt, p)
-	if err != nil {
+	mpt := NewInMemMPT()
+	if err := PopulateMptWithProof(mpt, p); err != nil {
 		return nil, err
 	}
 	return mpt, nil

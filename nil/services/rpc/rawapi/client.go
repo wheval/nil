@@ -10,7 +10,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
-	"github.com/NilFoundation/nil/nil/common/ssz"
+	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
@@ -117,8 +117,8 @@ func makeDoLocalRawApiRequestFunction(rawapi ShardApi) doApiRequestFunction {
 	}
 }
 
-func (api *ShardApiAccessor) GetBlockHeader(ctx context.Context, blockReference rawapitypes.BlockReference) (ssz.SSZEncodedData, error) {
-	return sendRequestAndGetResponseWithCallerMethodName[ssz.SSZEncodedData](ctx, api, "GetBlockHeader", blockReference)
+func (api *ShardApiAccessor) GetBlockHeader(ctx context.Context, blockReference rawapitypes.BlockReference) (sszx.SSZEncodedData, error) {
+	return sendRequestAndGetResponseWithCallerMethodName[sszx.SSZEncodedData](ctx, api, "GetBlockHeader", blockReference)
 }
 
 func (api *ShardApiAccessor) GetFullBlockData(ctx context.Context, blockReference rawapitypes.BlockReference) (*types.RawBlockWithExtractedData, error) {

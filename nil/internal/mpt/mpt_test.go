@@ -47,17 +47,10 @@ func getValue(t *testing.T, trie *MerklePatriciaTrie, key []byte) []byte {
 	return value
 }
 
-func CreateMerklePatriciaTrie(t *testing.T) *MerklePatriciaTrie {
-	t.Helper()
-
-	holder := make(map[string][]byte)
-	return NewMPT(NewMapSetter(holder), NewReader(NewMapGetter(holder)))
-}
-
 func TestInsertGetOneShort(t *testing.T) {
 	t.Parallel()
 
-	trie := CreateMerklePatriciaTrie(t)
+	trie := NewInMemMPT()
 	key := []byte("key")
 	value := []byte("value")
 
@@ -72,7 +65,7 @@ func TestInsertGetOneShort(t *testing.T) {
 func TestInsertGetOneLong(t *testing.T) {
 	t.Parallel()
 
-	trie := CreateMerklePatriciaTrie(t)
+	trie := NewInMemMPT()
 
 	key := []byte("key_0000000000000000000000000000000000000000000000000000000000000000")
 	value := []byte("value_0000000000000000000000000000000000000000000000000000000000000000")
@@ -83,7 +76,7 @@ func TestInsertGetOneLong(t *testing.T) {
 func TestInsertGetMany(t *testing.T) {
 	t.Parallel()
 
-	trie := CreateMerklePatriciaTrie(t)
+	trie := NewInMemMPT()
 
 	cases := []struct {
 		k string
@@ -107,7 +100,7 @@ func TestInsertGetMany(t *testing.T) {
 func TestIterate(t *testing.T) {
 	t.Parallel()
 
-	trie := CreateMerklePatriciaTrie(t)
+	trie := NewInMemMPT()
 	// Check iteration on the empty trie
 	for range trie.Iterate() {
 	}
@@ -131,7 +124,7 @@ func TestIterate(t *testing.T) {
 func TestInsertGetLots(t *testing.T) {
 	t.Parallel()
 
-	trie := CreateMerklePatriciaTrie(t)
+	trie := NewInMemMPT()
 	const size uint32 = 100
 
 	var keys [size][]byte
@@ -154,7 +147,7 @@ func TestInsertGetLots(t *testing.T) {
 func TestDeleteOne(t *testing.T) {
 	t.Parallel()
 
-	trie := CreateMerklePatriciaTrie(t)
+	trie := NewInMemMPT()
 
 	require.NoError(t, trie.Set([]byte("key"), []byte("value")))
 	require.NoError(t, trie.Delete([]byte("key")))
@@ -167,7 +160,7 @@ func TestDeleteOne(t *testing.T) {
 func TestDeleteMany(t *testing.T) {
 	t.Parallel()
 
-	trie := CreateMerklePatriciaTrie(t)
+	trie := NewInMemMPT()
 
 	require.NoError(t, trie.Set([]byte("do"), []byte("verb")))
 	require.NoError(t, trie.Set([]byte("dog"), []byte("puppy")))
@@ -196,7 +189,7 @@ func TestDeleteMany(t *testing.T) {
 func TestDeleteLots(t *testing.T) {
 	t.Parallel()
 
-	trie := CreateMerklePatriciaTrie(t)
+	trie := NewInMemMPT()
 	const size uint32 = 100
 
 	require.Equal(t, trie.RootHash(), common.EmptyHash)
@@ -224,7 +217,7 @@ func TestDeleteLots(t *testing.T) {
 func TestTrieFromOldRoot(t *testing.T) {
 	t.Parallel()
 
-	trie := CreateMerklePatriciaTrie(t)
+	trie := NewInMemMPT()
 
 	require.NoError(t, trie.Set([]byte("do"), []byte("verb")))
 	require.NoError(t, trie.Set([]byte("dog"), []byte("puppy")))
@@ -249,16 +242,16 @@ func TestTrieFromOldRoot(t *testing.T) {
 func TestSmallRootHash(t *testing.T) {
 	t.Parallel()
 
-	holder := make(map[string][]byte)
+	holder := NewInMemHolder()
 
-	trie := NewMPT(NewMapSetter(holder), NewReader(NewMapGetter(holder)))
+	trie := NewMPTFromMap(holder)
 	key := []byte("key")
 	value := []byte("value")
 
 	require.NoError(t, trie.Set(key, value))
 	assert.Equal(t, value, getValue(t, trie, key))
 
-	trie2 := NewMPT(NewMapSetter(holder), NewReader(NewMapGetter(holder)))
+	trie2 := NewMPTFromMap(holder)
 	trie2.SetRootHash(trie.RootHash())
 
 	assert.Equal(t, value, getValue(t, trie2, key))
@@ -271,8 +264,8 @@ func TestInsertBatch(t *testing.T) {
 	// pick short alphabet and short keys to increase key collisions count
 	treeOps := generateTestCase(gen, 1000, 1, 8, "abcdefgh")
 
-	trie := CreateMerklePatriciaTrie(t)
-	trieBatch := CreateMerklePatriciaTrie(t)
+	trie := NewInMemMPT()
+	trieBatch := NewInMemMPT()
 
 	checkTreesEqual := func(t *testing.T) {
 		t.Helper()
@@ -329,8 +322,7 @@ func TestInsertBatch(t *testing.T) {
 
 func BenchmarkTreeInsertions(b *testing.B) {
 	b.Run("simple insert", func(b *testing.B) {
-		holder := make(map[string][]byte)
-		trie := NewMPT(NewMapSetter(holder), NewReader(NewMapGetter(holder)))
+		trie := NewInMemMPT()
 		gen := newRandGen()
 
 		// long keys and alphabet to increase key uniqueness
@@ -353,8 +345,7 @@ func BenchmarkTreeInsertions(b *testing.B) {
 	})
 
 	b.Run("batch insert", func(b *testing.B) {
-		holder := make(map[string][]byte)
-		trie := NewMPT(NewMapSetter(holder), NewReader(NewMapGetter(holder)))
+		trie := NewInMemMPT()
 		gen := newRandGen()
 
 		// long keys and alphabet to increase key uniqueness

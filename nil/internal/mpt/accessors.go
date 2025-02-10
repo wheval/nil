@@ -41,27 +41,25 @@ func (s *DbSetter) Set(key, value []byte) error {
 	return s.tx.PutToShard(s.shardId, s.tableName, key, value)
 }
 
-type MapGetter struct {
-	m map[string][]byte
+type InMemHolder map[string][]byte
+
+func NewInMemHolder() InMemHolder {
+	return make(map[string][]byte)
 }
 
-func NewMapGetter(m map[string][]byte) *MapGetter {
-	return &MapGetter{m}
+func NewMPTFromMap(m InMemHolder) *MerklePatriciaTrie {
+	return NewMPT(&m, NewReader(m))
 }
 
-func (g *MapGetter) Get(key []byte) ([]byte, error) {
-	return g.m[string(key)], nil
+func NewInMemMPT() *MerklePatriciaTrie {
+	return NewMPTFromMap(NewInMemHolder())
 }
 
-type MapSetter struct {
-	m map[string][]byte
+func (s InMemHolder) Get(key []byte) ([]byte, error) {
+	return s[string(key)], nil
 }
 
-func NewMapSetter(m map[string][]byte) *MapSetter {
-	return &MapSetter{m}
-}
-
-func (s *MapSetter) Set(key, value []byte) error {
-	s.m[string(key)] = value
+func (s *InMemHolder) Set(key, value []byte) error {
+	(*s)[string(key)] = value
 	return nil
 }

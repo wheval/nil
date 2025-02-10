@@ -1,6 +1,7 @@
 package mpt
 
 import (
+	"maps"
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/internal/db"
@@ -10,8 +11,8 @@ import (
 func mptFromData(t *testing.T, data map[string]string) (*MerklePatriciaTrie, map[string][]byte) {
 	t.Helper()
 
-	holder := make(map[string][]byte)
-	mpt := NewMPT(NewMapSetter(holder), NewReader(NewMapGetter(holder)))
+	holder := NewInMemHolder()
+	mpt := NewMPTFromMap(holder)
 	for k, v := range data {
 		require.NoError(t, mpt.Set([]byte(k), []byte(v)))
 	}
@@ -21,11 +22,7 @@ func mptFromData(t *testing.T, data map[string]string) (*MerklePatriciaTrie, map
 
 func copyMpt(holder map[string][]byte, mpt *MerklePatriciaTrie) *MerklePatriciaTrie {
 	// copy underlying data holder to ensure we not override the data occasionally
-	holderCopy := make(map[string][]byte)
-	for k, v := range holder {
-		holderCopy[k] = v
-	}
-	tree := NewMPT(NewMapSetter(holderCopy), NewReader(NewMapGetter(holderCopy)))
+	tree := NewMPTFromMap(maps.Clone(holder))
 	tree.SetRootHash(mpt.RootHash())
 	return tree
 }
@@ -103,7 +100,7 @@ func TestReadProof(t *testing.T) {
 	t.Run("Prove empty mpt", func(t *testing.T) {
 		t.Parallel()
 
-		tree := CreateMerklePatriciaTrie(t)
+		tree := NewInMemMPT()
 		key := []byte{0x1}
 
 		p, err := BuildProof(tree.Reader, key, ReadMPTOperation)
@@ -210,8 +207,8 @@ func TestSetProof(t *testing.T) {
 	t.Run("Prove add to empty tree", func(t *testing.T) {
 		t.Parallel()
 
-		tree := CreateMerklePatriciaTrie(t)
-		originalMpt := CreateMerklePatriciaTrie(t)
+		tree := NewInMemMPT()
+		originalMpt := NewInMemMPT()
 		key := []byte("key")
 		val := []byte("val")
 
@@ -314,8 +311,8 @@ func TestDeleteProof(t *testing.T) {
 		key := []byte{0xf}
 		val := []byte("val")
 
-		holder := make(map[string][]byte)
-		mpt := NewMPT(NewMapSetter(holder), NewReader(NewMapGetter(holder)))
+		holder := NewInMemHolder()
+		mpt := NewMPTFromMap(holder)
 		require.NoError(t, mpt.Set(key, val))
 
 		originalMpt := copyMpt(holder, mpt)
@@ -334,7 +331,7 @@ func TestDeleteProof(t *testing.T) {
 func TestProofEncoding(t *testing.T) {
 	t.Parallel()
 
-	mpt := CreateMerklePatriciaTrie(t)
+	mpt := NewInMemMPT()
 	data := map[string]string{
 		string([]byte{0xf, 0xf}):           "val-1",
 		string([]byte{0xf, 0xf, 0xa}):      "val-2",

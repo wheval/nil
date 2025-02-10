@@ -10,7 +10,7 @@ import (
 	"github.com/NilFoundation/nil/nil/cmd/exporter/internal"
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
-	"github.com/NilFoundation/nil/nil/common/ssz"
+	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/types"
 )
 
@@ -56,9 +56,9 @@ type TransactionWithBinary struct {
 
 func NewTransactionWithBinary(
 	transaction *types.Transaction,
-	transactionBinary ssz.SSZEncodedData,
+	transactionBinary sszx.SSZEncodedData,
 	receipt *types.Receipt,
-	receiptBinary ssz.SSZEncodedData,
+	receiptBinary sszx.SSZEncodedData,
 	block *types.BlockWithExtractedData,
 	idx types.TransactionIndex,
 	shardId types.ShardId,
@@ -312,7 +312,7 @@ type blockWithSSZ struct {
 
 type receiptWithSSZ struct {
 	decoded    *types.Receipt
-	sszEncoded ssz.SSZEncodedData
+	sszEncoded sszx.SSZEncodedData
 }
 
 func (d *ClickhouseDriver) ExportBlocks(ctx context.Context, blocksToExport []*internal.BlockWithShardId) error {
