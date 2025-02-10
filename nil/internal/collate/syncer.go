@@ -235,7 +235,7 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 		panic(txn)
 	}
 
-	if err := s.saveBlocks(ctx, []*types.BlockWithExtractedData{b}); err != nil {
+	if err := s.saveBlock(ctx, b); err != nil {
 		return false, err
 	}
 
@@ -245,21 +245,31 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 func (s *Syncer) fetchBlocks(ctx context.Context) {
 	// todo: fetch blocks until the queue (see todo above) is empty
 	for {
-		s.logger.Debug().Msg("Fetching next block")
+		s.logger.Trace().Msg("Fetching next blocks")
 
-		blocks := s.fetchBlocksRange(ctx)
-		if len(blocks) == 0 {
-			s.logger.Debug().Msg("No new blocks to fetch")
+		blocksCh := s.fetchBlocksRange(ctx)
+		if blocksCh == nil {
 			return
 		}
-		if err := s.saveBlocks(ctx, blocks); err != nil {
-			s.logger.Error().Err(err).Msg("Failed to save blocks")
+		var count int
+		for block := range blocksCh {
+			count++
+			if err := s.saveBlock(ctx, block); err != nil {
+				s.logger.Error().
+					Err(err).
+					Stringer(logging.FieldBlockNumber, block.Id).
+					Msg("Failed to save block")
+				return
+			}
+		}
+		if count == 0 {
+			s.logger.Trace().Msg("No new blocks to fetch")
 			return
 		}
 	}
 }
 
-func (s *Syncer) fetchBlocksRange(ctx context.Context) []*types.BlockWithExtractedData {
+func (s *Syncer) fetchBlocksRange(ctx context.Context) <-chan *types.BlockWithExtractedData {
 	peers := ListPeers(s.networkManager, s.config.ShardId)
 
 	if len(peers) == 0 {
@@ -267,7 +277,7 @@ func (s *Syncer) fetchBlocksRange(ctx context.Context) []*types.BlockWithExtract
 		return nil
 	}
 
-	s.logger.Debug().Msgf("Found %d peers to fetch block from:\n%v", len(peers), peers)
+	s.logger.Trace().Msgf("Found %d peers to fetch block from:\n%v", len(peers), peers)
 
 	lastBlock, _, err := s.readLastBlock(ctx)
 	if err != nil {
@@ -275,12 +285,11 @@ func (s *Syncer) fetchBlocksRange(ctx context.Context) []*types.BlockWithExtract
 	}
 
 	for _, p := range peers {
-		s.logger.Debug().Msgf("Requesting block %d from peer %s", lastBlock.Id+1, p)
+		s.logger.Trace().Msgf("Requesting blocks from %d from peer %s", lastBlock.Id+1, p)
 
-		const count = 100
-		blocks, err := RequestBlocks(ctx, s.networkManager, p, s.config.ShardId, lastBlock.Id+1, count)
+		blocksCh, err := RequestBlocks(ctx, s.networkManager, p, s.config.ShardId, lastBlock.Id+1, s.logger)
 		if err == nil {
-			return blocks
+			return blocksCh
 		}
 
 		if errors.As(err, &multistream.ErrNotSupported[network.ProtocolID]{}) {
@@ -293,92 +302,87 @@ func (s *Syncer) fetchBlocksRange(ctx context.Context) []*types.BlockWithExtract
 	return nil
 }
 
-func (s *Syncer) saveBlocks(ctx context.Context, blocks []*types.BlockWithExtractedData) error {
-	if len(blocks) == 0 {
+func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedData) error {
+	if block == nil {
 		return nil
 	}
 
-	for _, block := range blocks {
-		// TODO: zerostate block is not signed and its hash should be checked in a bit different way
-		// E.g. compare with network config value
-		if block.Block.Id == 0 {
-			continue
-		}
+	// TODO: zerostate block is not signed and its hash should be checked in a bit different way
+	// E.g. compare with network config value
+	if block.Block.Id == 0 {
+		return nil
+	}
 
-		if err := s.config.BlockVerifier.VerifyBlock(ctx, block.Block); err != nil {
-			s.logger.Error().
-				Uint64(logging.FieldBlockNumber, uint64(block.Id)).
-				Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
-				Stringer(logging.FieldShardId, s.config.ShardId).
-				Stringer(logging.FieldSignature, block.Signature).
-				Err(err).
-				Msg("Failed to verify block signature")
-			return err
-		}
+	if err := s.config.BlockVerifier.VerifyBlock(ctx, block.Block); err != nil {
+		s.logger.Error().
+			Uint64(logging.FieldBlockNumber, uint64(block.Id)).
+			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
+			Stringer(logging.FieldShardId, s.config.ShardId).
+			Stringer(logging.FieldSignature, block.Signature).
+			Err(err).
+			Msg("Failed to verify block signature")
+		return err
 	}
 
 	if s.config.ReplayBlocks {
-		if err := s.replayBlocks(ctx, blocks); err != nil {
+		if err := s.replayBlock(ctx, block); err != nil {
 			return err
 		}
 	} else {
-		if err := s.saveDirectly(ctx, blocks); err != nil {
+		if err := s.saveDirectly(ctx, block); err != nil {
 			return err
 		}
 	}
 	s.notify()
 
-	lastBlockNumber := blocks[len(blocks)-1].Block.Id
-	s.logger.Debug().
-		Stringer(logging.FieldBlockNumber, lastBlockNumber).
-		Msg("Blocks written")
+	s.logger.Trace().
+		Stringer(logging.FieldBlockNumber, block.Block.Id).
+		Msg("Block written")
 
 	return nil
 }
 
-func (s *Syncer) saveDirectly(ctx context.Context, blocks []*types.BlockWithExtractedData) error {
+func (s *Syncer) saveDirectly(ctx context.Context, block *types.BlockWithExtractedData) error {
 	tx, err := s.db.CreateRwTx(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	for _, block := range blocks {
-		blockHash := block.Block.Hash(s.config.ShardId)
-		if err := db.WriteBlock(tx, s.config.ShardId, blockHash, block.Block); err != nil {
-			return err
-		}
+	blockHash := block.Block.Hash(s.config.ShardId)
+	if err := db.WriteBlock(tx, s.config.ShardId, blockHash, block.Block); err != nil {
+		return err
+	}
 
-		txnRoot, err := s.saveTransactions(tx, block.OutTransactions)
+	txnRoot, err := s.saveTransactions(tx, block.OutTransactions)
+	if err != nil {
+		return err
+	}
+
+	if txnRoot != block.Block.OutTransactionsRoot {
+		transactionsJSON, err := json.Marshal(block.OutTransactions)
 		if err != nil {
-			return err
+			s.logger.Warn().Err(err).Msg("Failed to marshal transactions")
+			transactionsJSON = nil
 		}
-
-		if txnRoot != block.Block.OutTransactionsRoot {
-			transactionsJSON, err := json.Marshal(block.OutTransactions)
-			if err != nil {
-				s.logger.Warn().Err(err).Msg("Failed to marshal transactions")
-				transactionsJSON = nil
-			}
-			blockJSON, err := json.Marshal(block.Block)
-			if err != nil {
-				s.logger.Warn().Err(err).Msg("Failed to marshal block")
-				blockJSON = nil
-			}
-			s.logger.Debug().
-				Stringer("expected", block.Block.OutTransactionsRoot).
-				Stringer("got", txnRoot).
-				RawJSON("transactions", transactionsJSON).
-				RawJSON("block", blockJSON).
-				Msg("Out transactions root mismatch")
-			return fmt.Errorf("out transactions root mismatch. Expected %x, got %x",
-				block.Block.OutTransactionsRoot, txnRoot)
-		}
-
-		_, err = execution.PostprocessBlock(tx, s.config.ShardId, block.Block.BaseFee, blockHash)
+		blockJSON, err := json.Marshal(block.Block)
 		if err != nil {
-			return err
+			s.logger.Warn().Err(err).Msg("Failed to marshal block")
+			blockJSON = nil
 		}
+		s.logger.Debug().
+			Stringer("expected", block.Block.OutTransactionsRoot).
+			Stringer("got", txnRoot).
+			RawJSON("transactions", transactionsJSON).
+			RawJSON("block", blockJSON).
+			Msg("Out transactions root mismatch")
+		return fmt.Errorf("out transactions root mismatch. Expected %x, got %x",
+			block.Block.OutTransactionsRoot, txnRoot)
+	}
+
+	_, err = execution.PostprocessBlock(tx, s.config.ShardId, block.Block.BaseFee, blockHash)
+	if err != nil {
+		return err
 	}
 
 	return tx.Commit()
@@ -434,16 +438,6 @@ func validateRepliedBlock(
 	return nil
 }
 
-func (s *Syncer) replayBlocks(ctx context.Context, blocks []*types.BlockWithExtractedData) error {
-	for _, block := range blocks {
-		if err := s.replayBlock(ctx, block); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtractedData) error {
 	mainShardHash := block.Block.MainChainHash
 	if s.config.ShardId.IsMainShard() {
@@ -457,7 +451,7 @@ func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtracte
 	defer gen.Rollback()
 
 	blockHash := block.Block.Hash(s.config.ShardId)
-	s.logger.Debug().
+	s.logger.Trace().
 		Stringer(logging.FieldBlockNumber, block.Block.Id).
 		Stringer(logging.FieldBlockHash, blockHash).
 		Msg("Replaying block")

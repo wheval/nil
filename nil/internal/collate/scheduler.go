@@ -85,7 +85,7 @@ func (s *Scheduler) Run(ctx context.Context, syncer *Syncer, consensus Consensus
 	SetBootstrapHandler(ctx, s.networkManager, s.params.ShardId, s.txFabric)
 
 	// Enable handler for blocks relaying
-	SetRequestHandler(ctx, s.networkManager, s.params.ShardId, s.txFabric)
+	SetRequestHandler(ctx, s.networkManager, s.params.ShardId, s.txFabric, s.logger)
 
 	ticker := time.NewTicker(s.params.CollatorTickPeriod)
 	defer ticker.Stop()
