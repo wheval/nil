@@ -15,7 +15,13 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func StartRpcServer(ctx context.Context, cfg *httpcfg.HttpCfg, rpcAPI []transport.API, logger zerolog.Logger) error {
+func StartRpcServer(
+	ctx context.Context,
+	cfg *httpcfg.HttpCfg,
+	rpcAPI []transport.API,
+	logger zerolog.Logger,
+	started chan<- struct{},
+) error {
 	// register apis and create handler stack
 	srv := transport.NewServer(cfg.TraceRequests, cfg.DebugSingleRequest, logger, cfg.RPCSlowLogThreshold)
 
@@ -61,6 +67,10 @@ func StartRpcServer(ctx context.Context, cfg *httpcfg.HttpCfg, rpcAPI []transpor
 	}()
 
 	logger.Info().Stringer(logging.FieldUrl, httpAddr).Msg("JsonRPC endpoint opened.")
+
+	if started != nil {
+		close(started)
+	}
 
 	<-ctx.Done()
 	return nil

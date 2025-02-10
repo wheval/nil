@@ -114,7 +114,7 @@ func startRpcServer(ctx context.Context, cfg *Config, rawApi rawapi.NodeApi, db 
 		})
 	}
 
-	return rpc.StartRpcServer(ctx, httpConfig, apiList, logger)
+	return rpc.StartRpcServer(ctx, httpConfig, apiList, logger, nil)
 }
 
 func startAdminServer(ctx context.Context, cfg *Config) error {

@@ -58,5 +58,6 @@ func (l *TaskListener) Run(context context.Context) error {
 	}
 
 	l.logger.Info().Msgf("Open task listener endpoint %v", l.config.HttpEndpoint)
-	return rpc.StartRpcServer(context, httpConfig, apiList, l.logger)
+	// TODO: pass `started` channel in https://github.com/NilFoundation/nil/pull/114
+	return rpc.StartRpcServer(context, httpConfig, apiList, l.logger, nil)
 }
