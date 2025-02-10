@@ -125,7 +125,7 @@ func (s *Syncer) notify() {
 	}
 }
 
-func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
+func (s *Syncer) FetchSnapshot(ctx context.Context, wgFetch *sync.WaitGroup) error {
 	if s.config.ReplayBlocks {
 		if snapIsRequired, err := s.shardIsEmpty(ctx); err != nil {
 			return err
@@ -136,16 +136,11 @@ func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
 		}
 	}
 
-	if err := s.generateZerostate(ctx); err != nil {
-		return fmt.Errorf("Failed to generate zerostate for shard %s: %w", s.config.ShardId, err)
-	}
-
-	// Wait until snapshots for shards are fetched.
-	// It's impossible to load data and commit transactions at the same time.
-	// We also wait for zerostate generation, because otherwise consensus won't be able to access the config.
 	wgFetch.Done()
-	wgFetch.Wait()
+	return nil
+}
 
+func (s *Syncer) Run(ctx context.Context) error {
 	if s.networkManager == nil {
 		s.waitForSync.Done()
 		return nil
@@ -159,7 +154,6 @@ func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
 	s.logger.Debug().
 		Stringer(logging.FieldBlockHash, hash).
 		Uint64(logging.FieldBlockNumber, uint64(block.Id)).
-		Uint32(logging.FieldShardId, uint32(s.config.ShardId)).
 		Msg("Initialized sync proposer at starting block")
 
 	s.logger.Info().Msg("Starting sync")
@@ -213,7 +207,6 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 	s.logger.Debug().
 		Stringer(logging.FieldBlockNumber, block.Id).
 		Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
-		Uint32(logging.FieldShardId, uint32(s.config.ShardId)).
 		Msg("Received block")
 
 	lastBlock, lastHash, err := s.readLastBlock(ctx)
@@ -392,7 +385,7 @@ func (s *Syncer) saveDirectly(ctx context.Context, block *types.BlockWithExtract
 	return tx.Commit()
 }
 
-func (s *Syncer) generateZerostate(ctx context.Context) error {
+func (s *Syncer) GenerateZerostate(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, s.config.Timeout)
 	defer cancel()
 

@@ -69,7 +69,7 @@ func (s *ShardedSuite) Cancel() {
 	}
 }
 
-func zeroState(validators []config.ListValidators) *execution.ZeroStateConfig {
+func newZeroState(validators []config.ListValidators) *execution.ZeroStateConfig {
 	return &execution.ZeroStateConfig{
 		ConfigParams: execution.ConfigParams{
 			Validators: config.ParamValidators{
@@ -108,7 +108,7 @@ func createOneShardOneValidatorCfg(
 		Network:              netCfg,
 		ZeroStateYaml:        cfg.ZeroStateYaml,
 		ValidatorKeysPath:    validatorKeysPath,
-		ZeroState:            zeroState(validators),
+		ZeroState:            newZeroState(validators),
 	}
 }
 
@@ -144,7 +144,7 @@ func createShardAllValidatorsCfg(
 		Network:              netCfg,
 		ZeroStateYaml:        cfg.ZeroStateYaml,
 		ValidatorKeysPath:    validatorKeysPath,
-		ZeroState:            zeroState(validators),
+		ZeroState:            newZeroState(validators),
 	}
 }
 

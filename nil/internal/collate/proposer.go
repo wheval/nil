@@ -63,8 +63,14 @@ func newProposer(params Params, topology ShardTopology, pool TxnPool, logger zer
 	}
 }
 
-func (p *proposer) GenerateProposal(ctx context.Context, tx db.RoTx) (*execution.Proposal, error) {
+func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execution.Proposal, error) {
 	p.proposal = execution.NewEmptyProposal()
+
+	tx, err := txFabric.CreateRoTx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create transaction: %w", err)
+	}
+	defer tx.Rollback()
 
 	configAccessor, err := config.NewConfigAccessorTx(ctx, tx, nil)
 	if err != nil {
@@ -134,13 +140,14 @@ func (p *proposer) fetchLastBlockHashes(tx db.RoTx) error {
 
 			p.proposal.ShardHashes[i-1] = lastBlockHash
 		}
-	}
-	lastBlockHash, err := db.ReadLastBlockHash(tx, types.MainShardId)
-	if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
-		return err
+	} else {
+		lastBlockHash, err := db.ReadLastBlockHash(tx, types.MainShardId)
+		if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
+			return err
+		}
+		p.proposal.MainChainHash = lastBlockHash
 	}
 
-	p.proposal.MainChainHash = lastBlockHash
 	return nil
 }
 

@@ -21,9 +21,9 @@ type Validator struct {
 	logger zerolog.Logger
 }
 
-func (s *Validator) BuildProposal(ctx context.Context, tx db.RoTx) (*execution.Proposal, error) {
+func (s *Validator) BuildProposal(ctx context.Context) (*execution.Proposal, error) {
 	proposer := newProposer(s.params, s.params.Topology, s.pool, s.logger)
-	proposal, err := proposer.GenerateProposal(ctx, tx)
+	proposal, err := proposer.GenerateProposal(ctx, s.txFabric)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate proposal: %w", err)
 	}

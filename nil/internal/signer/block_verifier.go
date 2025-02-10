@@ -42,7 +42,7 @@ func (b *BlockVerifier) VerifyBlock(ctx context.Context, logger zerolog.Logger, 
 		// TODO(@isergeyam): create some subscription mechanism that will handle this correctly.
 		if errors.Is(err, db.ErrKeyNotFound) {
 			logger.Warn().
-				Str(logging.FieldBlockHash, block.MainChainHash.String()).
+				Stringer(logging.FieldBlockHash, block.MainChainHash).
 				Msg("Main chain block not found, using the latest accessible config")
 			accessor, err = config.NewConfigAccessorTx(ctx, tx, nil)
 		}
@@ -56,10 +56,6 @@ func (b *BlockVerifier) VerifyBlock(ctx context.Context, logger zerolog.Logger, 
 	validatorsList, err := config.GetParamValidators(accessor)
 	if err != nil {
 		return fmt.Errorf("%w: failed to get validators set: %w", errBlockVerify, err)
-	}
-
-	if b.shardId == 0 {
-		b.shardId = 0
 	}
 
 	// TODO: for now check that block is signed by one known validator

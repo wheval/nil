@@ -89,6 +89,10 @@ type ZeroStateConfig struct {
 	Contracts    []*ContractDescr `yaml:"contracts"`
 }
 
+func (cfg *ZeroStateConfig) GetValidators() []config.ListValidators {
+	return cfg.ConfigParams.Validators.Validators
+}
+
 func DumpMainKeys(fname string) error {
 	keys := MainKeys{"0x" + nilcrypto.PrivateKeyToEthereumFormat(MainPrivateKey), hexutil.Encode(MainPublicKey)}
 

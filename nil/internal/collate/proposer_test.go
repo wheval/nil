@@ -51,11 +51,7 @@ func newTestProposer(params Params, pool TxnPool) *proposer {
 func (s *ProposerTestSuite) generateProposal(p *proposer) *execution.Proposal {
 	s.T().Helper()
 
-	tx, err := s.db.CreateRoTx(s.ctx)
-	s.Require().NoError(err)
-	defer tx.Rollback()
-
-	proposal, err := p.GenerateProposal(s.ctx, tx)
+	proposal, err := p.GenerateProposal(s.ctx, s.db)
 	s.Require().NoError(err)
 	s.Require().NotNil(proposal)
 

@@ -2,14 +2,10 @@ package ibft
 
 import (
 	"bytes"
-	"fmt"
 	"slices"
 
-	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/go-ibft/messages"
-	"github.com/NilFoundation/nil/nil/go-ibft/messages/proto"
 	protoIBFT "github.com/NilFoundation/nil/nil/go-ibft/messages/proto"
 	"github.com/NilFoundation/nil/nil/internal/config"
 )
@@ -24,52 +20,14 @@ func (i *backendIBFT) IsValidProposal(rawProposal []byte) bool {
 	return err == nil
 }
 
-func mainBlockMapKey(height, round uint64) string {
-	return fmt.Sprintf("%d-%d", height, round)
-}
-
-func (i *backendIBFT) getMainBlockHash(msg *protoIBFT.IbftMessage) (*common.Hash, error) {
-	if msg.Type == proto.MessageType_ROUND_CHANGE {
-		// In case of round change we use the latest config
-		return nil, nil
-	}
-	key := mainBlockMapKey(msg.View.Height, msg.View.Round)
-	if msg.Type == proto.MessageType_PREPREPARE {
-		proposalData := messages.ExtractProposal(msg)
-		proposal, err := i.unmarshalProposal(proposalData.RawProposal)
-		if err != nil {
-			return nil, err
-		}
-		i.mainBlockMap.Store(key, proposal.MainChainHash)
-		return &proposal.MainChainHash, err
-	}
-	hashAny, ok := i.mainBlockMap.Load(key)
-	if !ok {
-		return nil, fmt.Errorf("Main block hash not found for height %d and round %d", msg.View.Height, msg.View.Round)
-	}
-	hash, ok := hashAny.(common.Hash)
-	check.PanicIfNotf(ok, "Failed to convert main block hash to common.Hash")
-	return &hash, nil
-}
-
 func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 	msgNoSig, err := msg.PayloadNoSig()
 	if err != nil {
 		return false
 	}
 
-	mainBlockHash, err := i.getMainBlockHash(msg)
-	if err != nil {
-		i.logger.Error().
-			Err(err).
-			Uint64(logging.FieldRound, msg.View.Round).
-			Uint64(logging.FieldHeight, msg.View.Height).
-			Msg("Failed to get main block hash")
-		return false
-	}
-
 	// Here we use transportCtx because this method could be called from the transport goroutine
-	validators, err := i.getValidators(i.transportCtx, mainBlockHash)
+	validators, err := i.validatorsCache.getValidators(i.transportCtx, msg.View.Height)
 	if err != nil {
 		i.logger.Error().
 			Err(err).

@@ -4,14 +4,11 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"math/big"
-	"sync"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/go-ibft/core"
 	"github.com/NilFoundation/nil/nil/go-ibft/messages"
 	protoIBFT "github.com/NilFoundation/nil/nil/go-ibft/messages/proto"
-	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
@@ -30,23 +27,26 @@ type ConsensusParams struct {
 }
 
 type validator interface {
-	BuildProposal(ctx context.Context, tx db.RoTx) (*execution.Proposal, error)
+	BuildProposal(ctx context.Context) (*execution.Proposal, error)
 	VerifyProposal(ctx context.Context, proposal *execution.Proposal) (*types.Block, error)
 	InsertProposal(ctx context.Context, proposal *execution.Proposal, sig types.Signature) error
 }
 
 type backendIBFT struct {
-	ctx          context.Context
-	transportCtx context.Context
-	db           db.DB
-	consensus    *core.IBFT
-	shardId      types.ShardId
-	validator    validator
-	logger       zerolog.Logger
-	nm           *network.Manager
-	transport    transport
-	signer       *Signer
-	mainBlockMap sync.Map
+	// `ctx` is the context bound to RunSequence
+	ctx context.Context
+	// `transportCtx`is the context bound to the transport goroutine
+	// It should be used in methods that are called from the transport goroutine with `AddMessage`
+	transportCtx    context.Context
+	db              db.DB
+	consensus       *core.IBFT
+	shardId         types.ShardId
+	validator       validator
+	logger          zerolog.Logger
+	nm              *network.Manager
+	transport       transport
+	signer          *Signer
+	validatorsCache *validatorsMap
 }
 
 var _ core.Backend = &backendIBFT{}
@@ -66,7 +66,7 @@ func (i *backendIBFT) BuildProposal(view *protoIBFT.View) []byte {
 	}
 	defer tx.Rollback()
 
-	proposal, err := i.validator.BuildProposal(i.ctx, tx)
+	proposal, err := i.validator.BuildProposal(i.ctx)
 	if err != nil {
 		return nil
 	}
@@ -84,11 +84,13 @@ func (i *backendIBFT) InsertProposal(proposal *protoIBFT.Proposal, committedSeal
 	if err != nil {
 		return
 	}
-	i.logger.Debug().
-		Uint64(logging.FieldBlockNumber, proposalBlock.PrevBlockId.Uint64()+1).
+
+	logger := i.logger.With().
+		Uint64(logging.FieldHeight, proposalBlock.PrevBlockId.Uint64()+1).
 		Uint64(logging.FieldRound, proposal.Round).
-		Uint32(logging.FieldShardId, uint32(i.shardId)).
-		Msg("Inserting proposal")
+		Logger()
+
+	logger.Trace().Msg("Inserting proposal")
 
 	var signature types.Signature
 	for _, seal := range committedSeals {
@@ -98,7 +100,7 @@ func (i *backendIBFT) InsertProposal(proposal *protoIBFT.Proposal, committedSeal
 	}
 
 	if err := i.validator.InsertProposal(i.ctx, proposalBlock, signature); err != nil {
-		i.logger.Error().Err(err).Msg("fail to insert proposal")
+		logger.Error().Err(err).Msg("failed to insert proposal")
 	}
 }
 
@@ -117,12 +119,13 @@ func NewConsensus(cfg *ConsensusParams) *backendIBFT {
 	}
 
 	backend := &backendIBFT{
-		db:        cfg.Db,
-		shardId:   cfg.ShardId,
-		validator: cfg.Validator,
-		logger:    logger,
-		nm:        cfg.NetManager,
-		signer:    NewSigner(cfg.PrivateKey),
+		db:              cfg.Db,
+		shardId:         cfg.ShardId,
+		validator:       cfg.Validator,
+		logger:          logger,
+		nm:              cfg.NetManager,
+		signer:          NewSigner(cfg.PrivateKey),
+		validatorsCache: newValidatorsMap(cfg.Db, cfg.ShardId),
 	}
 	backend.consensus = core.NewIBFT(l, backend, backend)
 	return backend
@@ -138,9 +141,7 @@ func (i *backendIBFT) Init(ctx context.Context) error {
 }
 
 func (i *backendIBFT) GetVotingPowers(height uint64) (map[string]*big.Int, error) {
-	// Here we take the latest config, but we should take the config based ot proposer that isn't available at this point
-	// TODO(@isergeyam): I think we should rewrite the ibft/core part to get voting powers after the proposer is calculated
-	validators, err := i.getValidators(i.ctx, nil)
+	validators, err := i.validatorsCache.getValidators(i.ctx, height)
 	if err != nil {
 		i.logger.Error().
 			Err(err).
@@ -154,26 +155,6 @@ func (i *backendIBFT) GetVotingPowers(height uint64) (map[string]*big.Int, error
 		result[string(v.PublicKey[:])] = big.NewInt(1)
 	}
 	return result, nil
-}
-
-func (i *backendIBFT) getValidators(ctx context.Context, mainBlockHash *common.Hash) (validators []config.ValidatorInfo, err error) {
-	tx, err := i.db.CreateRoTx(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	configAccessor, err := config.NewConfigAccessorTx(ctx, tx, mainBlockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	validatorsList, err := config.GetParamValidators(configAccessor)
-	if err != nil {
-		return nil, err
-	}
-
-	return validatorsList.Validators[i.shardId].List, nil
 }
 
 func (i *backendIBFT) RunSequence(ctx context.Context, height uint64) error {
