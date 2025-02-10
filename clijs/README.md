@@ -17,4 +17,4 @@
 
 ## License
 
-[MIT](./LICENSE)
+[MIT](./LICENCE)

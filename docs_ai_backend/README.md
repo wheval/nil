@@ -87,4 +87,4 @@ curl -X POST http://AI_HOST:8092/api/chat -d '{"messages": MESSAGES, "token": CA
 
 ## License
 
-[MIT](./LICENSE)
+[MIT](./LICENCE)

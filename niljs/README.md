@@ -44,7 +44,7 @@
 * [Usage](#usage)
 * [Tokens and bouncing](#tokens-and-bouncing)
 * [Accessing the dev environment](#accessing-the-dev-environment)
-* [License](#license)
+* [Licence](#licence)
 
 ## Installation
 
@@ -197,4 +197,4 @@ After that, it should be possible to run `npm run test` and other scripts specif
 
 ## Licence
 
-[MIT](./LICENSE)
+[MIT](./LICENCE)
