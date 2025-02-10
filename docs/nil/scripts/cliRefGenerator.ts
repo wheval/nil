@@ -5,7 +5,8 @@ import path from "path";
 import util from "node:util";
 import { exec as execCallback } from "node:child_process";
 import { fileURLToPath } from "url";
-import { NIL_GLOBAL } from "../../tests/globals";
+
+const NIL_CLI = process.env.NIL_CLI;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,13 +34,13 @@ async function prettifyCommandNames(key: string, commandNamesArray: string[]): P
     const formattedName = name.replace(".go", "");
     switch (formattedName) {
       case "command":
-        result.push(`${NIL_GLOBAL} ${key} -h`);
+        result.push(`${NIL_CLI} ${key} -h`);
         break;
       case `${key}`:
-        result.push(`${NIL_GLOBAL} ${key} -h`);
+        result.push(`${NIL_CLI} ${key} -h`);
         break;
       default:
-        result.push(`${NIL_GLOBAL} ${key} ${formattedName} -h`);
+        result.push(`${NIL_CLI} ${key} ${formattedName} -h`);
         break;
     }
   }
@@ -132,7 +133,7 @@ async function generateCommandSpec(commandName: string): Promise<CommandSpec | n
     const globalFlags = parseFlags(globalFlagsSection);
 
     return {
-      name: commandName.replace("-h", "").trim(),
+      name: commandName.replace("-h", "").replace(`${NIL_CLI}`, "nil").trim(),
       description: commandDescription,
       usage: usage,
       regularFlags: regularFlags,
