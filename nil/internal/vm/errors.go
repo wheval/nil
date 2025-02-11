@@ -37,10 +37,9 @@ var (
 	ErrGasUintOverflow          = types.NewVmError(types.ErrorGasUintOverflow)
 	ErrInvalidCode              = types.NewVmError(types.ErrorInvalidCode)
 	ErrNonceUintOverflow        = types.NewVmError(types.ErrorNonceUintOverflow)
-	ErrInvalidInputLength       = types.NewVmError(types.ErrorInvalidInputLength)
 	ErrCrossShardTransaction    = types.NewVmError(types.ErrorCrossShardTransaction)
 	ErrUnexpectedPrecompileType = types.NewVmError(types.ErrorUnexpectedPrecompileType)
-	ErrTransactionToMainShard   = types.NewVmError(types.ErrorMessageToMainShard)
+	ErrTransactionToMainShard   = types.NewVmError(types.ErrorTransactionToMainShard)
 	ErrShardIdIsTooBig          = types.NewVmError(types.ErrorShardIdIsTooBig)
 
 	// errStopToken is an internal token indicating interpreter loop termination,
