@@ -26,6 +26,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/admin"
 	"github.com/NilFoundation/nil/nil/services/cometa"
 	"github.com/NilFoundation/nil/nil/services/faucet"
+	"github.com/NilFoundation/nil/nil/services/rollup"
 	"github.com/NilFoundation/nil/nil/services/rpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/httpcfg"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
@@ -321,6 +322,10 @@ func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, i
 		return nil, err
 	}
 
+	if cfg.L1Fetcher == nil && (cfg.RunMode == NormalRunMode || cfg.RunMode == CollatorsOnlyRunMode) {
+		cfg.L1Fetcher = rollup.NewL1BlockFetcherRpc(ctx)
+	}
+
 	funcs := make([]concurrent.Func, 0, int(cfg.NShards)+2+len(workers))
 
 	if cfg.CollatorTickPeriodMs == 0 {
@@ -608,6 +613,7 @@ func createActiveCollator(shard types.ShardId, cfg *Config, collatorTickPeriod t
 		ZeroState:          execution.DefaultZeroStateConfig,
 		ZeroStateConfig:    cfg.ZeroState,
 		Topology:           collate.GetShardTopologyById(cfg.Topology),
+		L1Fetcher:          cfg.L1Fetcher,
 	}
 	if len(cfg.ZeroStateYaml) != 0 {
 		collatorCfg.ZeroState = cfg.ZeroStateYaml
