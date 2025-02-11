@@ -439,13 +439,7 @@ nav ul li {
 
   .navbar__items--left,
   .navbar__items--right {
-    order: 1;
-    flex: 1 1 auto;
     min-width: 0;
-  }
-
-  .navbar__items--right {
-    order: 3;
   }
 
   .navbar__items--left > *,
@@ -523,4 +517,27 @@ nav ul li {
 
 .aui-md-a {
   font-style: italic;
+}
+
+.toggle_ki11 {
+  height: 36px !important;
+  width: 36px !important;
+}
+
+@media (max-width: 768px) {
+  .toggle_ki11 {
+    margin-right: 10px;
+  }
+}
+
+.grecaptcha-badge { 
+    visibility: hidden !important;
+}
+
+.navbar-sidebar__brand {
+  background-color: #fff;
+}
+
+.aui-thread-welcome-message {
+  text-align: center;
 }

@@ -42,8 +42,10 @@
 		"@uiw/react-codemirror": "4.21.0",
 		"ai": "^4.0.11",
 		"clsx": "^2.0.0",
+		"custom-loader": "file:plugins/custom-loader",
 		"docusaurus": "^1.14.7",
 		"docusaurus-lunr-search": "^3.3.2",
+		"lottie-react": "^2.4.1",
 		"nil-docusaurus-plugin-typedoc": "1.1.4",
 		"nil-remark-code-snippets": "^1.4.1",
 		"postcss": "^8.4.49",
@@ -59,8 +61,7 @@
 		"react-tooltip": "^5.27.1",
 		"rehype-katex": "7",
 		"remark-math": "6",
-		"ts-jest": "^29.2.4",
-    "custom-loader": "file:plugins/custom-loader"
+		"ts-jest": "^29.2.4"
 	},
 	"devDependencies": {
 		"@svgr/webpack": "^8.1.0",

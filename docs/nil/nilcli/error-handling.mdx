@@ -46,7 +46,7 @@ The most probable causes of the error:
 To resolve the error:
 
 * Double-check the contract logic and, if possible, remove unnecessary `require()` statements
-* Ensure that the correct `FORWARD_KIND` is used in async calls, which should guarantee that contracts can pay [**for chains of two or more async calls**](../getting-started/gas-and-value.mdx)
+* Ensure that the correct `FORWARD_KIND` is used in async calls, which should guarantee that contracts can pay [**for chains of two or more async calls**](../key-principles/gas-and-value.mdx)
 * Remove `onlyInternal` or `onlyExternal` modifiers and rerun the transaction chain
 * Make sure that transactions with a non-zero `value` only call `payable` functions
 
@@ -103,7 +103,7 @@ The `"out of gas"` error is thrown when the transaction cannot pay for its own e
 To resolve the error:
 
 * Assign a higher `feeCredit` to the transaction
-* If the error is thrown during a chain of async calls, [**adjust the `FORWARD_KIND` used in the chain**](../getting-started/gas-and-value.mdx)
+* If the error is thrown during a chain of async calls, [**adjust the `FORWARD_KIND` used in the chain**](../key-principles/gas-and-value.mdx)
 
 ## Contract address collision
 
@@ -133,7 +133,7 @@ To resolve the error:
 
 ## Transaction fee forwarding failed
 
-The `"transaction fee forwarding failed"` error is thrown when there is an issue with [**gas forwarding**](../getting-started/gas-and-value.mdx) across several contracts.
+The `"transaction fee forwarding failed"` error is thrown when there is an issue with [**gas forwarding**](../key-principles/gas-and-value.mdx) across several contracts.
 
 To resolve the error:
 

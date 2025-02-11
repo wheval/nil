@@ -1,8 +1,16 @@
 .darkNavbarColorModeToggle {
-  background: #e5e5e5;
+  background: #eff0f2;
   border-radius: 5px;
+  height: 36px;
 }
 
 .darkNavbarColorModeToggle:hover {
-  background: #eff0f2;
+  background: #e5e5e5;
+}
+
+
+@media (max-width: 768px) {
+  .darkNavbarColorModeToggle {
+    margin-right: 10px;
+  }
 }
