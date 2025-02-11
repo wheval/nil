@@ -2,16 +2,22 @@ package collate
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
+	"time"
 
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi/pb"
+	"github.com/rs/zerolog"
 	"google.golang.org/protobuf/proto"
 )
+
+const requestTimeout = 10 * time.Second
 
 func topicShardBlocks(shardId types.ShardId) string {
 	return fmt.Sprintf("nil/shard/%s/blocks", shardId)
@@ -51,62 +57,102 @@ func PublishBlock(
 	return networkManager.PubSub().Publish(ctx, topicShardBlocks(shardId), data)
 }
 
+func logError(logger zerolog.Logger, err error, msg string) {
+	if err == nil || errors.Is(err, io.EOF) {
+		return
+	}
+	logger.Debug().Err(err).Msg(msg)
+}
+
+// Protocol for reading/writing blocks is pretty simple and straightforward:
+// 1. Write block size as 8 bytes (big-endian).
+// 2. Write block data (in protobuf format).
+// That's actually "Length-Delimited Messages".
+func readBlockFromStream(s network.Stream) (*types.BlockWithExtractedData, error) {
+	header := make([]byte, 8)
+	if _, err := io.ReadFull(s, header); err != nil {
+		return nil, fmt.Errorf("failed to read block size: %w", err)
+	}
+
+	length := binary.BigEndian.Uint64(header)
+	buf := make([]byte, length)
+	if _, err := io.ReadFull(s, buf); err != nil {
+		return nil, fmt.Errorf("failed to read block: %w", err)
+	}
+
+	var pbBlock pb.RawFullBlock
+	if err := proto.Unmarshal(buf, &pbBlock); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal block: %w", err)
+	}
+
+	return unmarshalBlockSSZ(&pbBlock)
+}
+
+func writeBlockToStream(s network.Stream, block *pb.RawFullBlock) error {
+	data, err := proto.Marshal(block)
+	if err != nil {
+		return fmt.Errorf("failed to marshal block to Protobuf: %w", err)
+	}
+
+	header := make([]byte, 8)
+	binary.BigEndian.PutUint64(header, uint64(len(data)))
+
+	if _, err := s.Write(header); err != nil {
+		return fmt.Errorf("failed to write block size to stream: %w", err)
+	}
+	if _, err := s.Write(data); err != nil {
+		return fmt.Errorf("failed to write block to stream: %w", err)
+	}
+	return nil
+}
+
 func RequestBlocks(ctx context.Context, networkManager *network.Manager, peerID network.PeerID,
-	shardId types.ShardId, blockNumber types.BlockNumber, count uint8,
-) ([]*types.BlockWithExtractedData, error) {
-	req, err := proto.Marshal(&pb.BlocksRangeRequest{Id: int64(blockNumber), Count: uint32(count)})
+	shardId types.ShardId, blockNumber types.BlockNumber, logger zerolog.Logger,
+) (<-chan *types.BlockWithExtractedData, error) {
+	var err error
+	req, err := proto.Marshal(&pb.BlocksRangeRequest{Id: int64(blockNumber)})
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal blocks request: %w", err)
 	}
 
-	resp, err := networkManager.SendRequestAndGetResponse(ctx, peerID, protocolShardBlock(shardId), req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to request blocks: %w", err)
-	}
-
-	var pbBlocks pb.RawFullBlocks
-	if err := proto.Unmarshal(resp, &pbBlocks); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal blocks: %w", err)
-	}
-	return unmarshalBlocksSSZ(&pbBlocks)
-}
-
-func getBlocksRange(
-	ctx context.Context, shardId types.ShardId, accessor *execution.StateAccessor, database db.DB, startId types.BlockNumber, count uint8,
-) (*pb.RawFullBlocks, error) {
-	tx, err := database.CreateRoTx(ctx)
+	stream, err := networkManager.NewStream(ctx, peerID, protocolShardBlock(shardId))
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
-
-	res := &pb.RawFullBlocks{
-		Blocks: make([]*pb.RawFullBlock, 0, count),
-	}
-	for i := range count {
-		resp, err := accessor.RawAccess(tx, shardId).
-			GetBlock().
-			WithOutTransactions().
-			WithInTransactions().
-			WithChildBlocks().
-			ByNumber(startId + types.BlockNumber(i))
+	defer func() {
 		if err != nil {
-			if !errors.Is(err, db.ErrKeyNotFound) {
-				return nil, err
-			}
-			break
+			stream.Close()
 		}
-
-		b := &pb.RawFullBlock{
-			BlockSSZ:           resp.Block(),
-			OutTransactionsSSZ: resp.OutTransactions(),
-			InTransactionsSSZ:  resp.InTransactions(),
-			ChildBlocks:        pb.PackHashes(resp.ChildBlocks()),
-		}
-		res.Blocks = append(res.Blocks, b)
+	}()
+	if err = stream.SetDeadline(time.Now().Add(requestTimeout)); err != nil {
+		return nil, err
+	}
+	if _, err = stream.Write(req); err != nil {
+		return nil, err
+	}
+	if err = stream.CloseWrite(); err != nil {
+		return nil, err
 	}
 
-	return res, nil
+	ch := make(chan *types.BlockWithExtractedData)
+	go func() {
+		defer stream.Close()
+		defer close(ch)
+
+		for {
+			block, err := readBlockFromStream(stream)
+			if err != nil {
+				logError(logger, err, "Failed to handle input block")
+				break
+			}
+			select {
+			case ch <- block:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return ch, nil
 }
 
 func marshalBlockSSZ(block *types.BlockWithExtractedData) (*pb.RawFullBlock, error) {
@@ -129,19 +175,9 @@ func unmarshalBlockSSZ(pbBlock *pb.RawFullBlock) (*types.BlockWithExtractedData,
 	return raw.DecodeSSZ()
 }
 
-func unmarshalBlocksSSZ(pbBlocks *pb.RawFullBlocks) ([]*types.BlockWithExtractedData, error) {
-	blocks := make([]*types.BlockWithExtractedData, len(pbBlocks.Blocks))
-	var err error
-	for i, pbBlock := range pbBlocks.Blocks {
-		blocks[i], err = unmarshalBlockSSZ(pbBlock)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return blocks, nil
-}
-
-func SetRequestHandler(ctx context.Context, networkManager *network.Manager, shardId types.ShardId, database db.DB) {
+func SetRequestHandler(
+	ctx context.Context, networkManager *network.Manager, shardId types.ShardId, database db.DB, logger zerolog.Logger,
+) {
 	if networkManager == nil {
 		// we don't always want to run the network
 		return
@@ -149,25 +185,59 @@ func SetRequestHandler(ctx context.Context, networkManager *network.Manager, sha
 
 	// Sharing accessor between all handlers enables caching.
 	accessor := execution.NewStateAccessor()
-	handler := func(ctx context.Context, req []byte) ([]byte, error) {
+	handler := func(s network.Stream) {
+		if err := s.SetDeadline(time.Now().Add(requestTimeout)); err != nil {
+			return
+		}
+
+		req, err := io.ReadAll(s)
+		if err != nil {
+			logError(logger, err, "Failed to read request")
+			return
+		}
+		if err = s.CloseRead(); err != nil {
+			logError(logger, err, "Failed to close stream for reading")
+		}
+
 		var blockReq pb.BlocksRangeRequest
 		if err := proto.Unmarshal(req, &blockReq); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal block range request: %w", err)
+			logError(logger, err, "Failed to unmarshal block request")
+			return
 		}
 
-		const maxBlockRequestCount = 100
-		if maxBlockRequestCount > blockReq.Count {
-			return nil, fmt.Errorf("invalid block request count: %d", blockReq.Count)
-		}
-
-		blocks, err := getBlocksRange(
-			ctx, shardId, accessor, database, types.BlockNumber(blockReq.Id), uint8(blockReq.Count))
+		tx, err := database.CreateRoTx(ctx)
 		if err != nil {
-			return nil, err
+			logError(logger, err, "Failed to create transaction")
+			return
 		}
+		defer tx.Rollback()
 
-		return proto.Marshal(blocks)
+		for id := blockReq.Id; ; id++ {
+			resp, err := accessor.RawAccess(tx, shardId).
+				GetBlock().
+				WithOutTransactions().
+				WithInTransactions().
+				WithChildBlocks().
+				ByNumber(types.BlockNumber(id))
+			if err != nil {
+				if !errors.Is(err, db.ErrKeyNotFound) {
+					logError(logger, err, "DB error")
+				}
+				break
+			}
+
+			b := &pb.RawFullBlock{
+				BlockSSZ:           resp.Block(),
+				OutTransactionsSSZ: resp.OutTransactions(),
+				InTransactionsSSZ:  resp.InTransactions(),
+				ChildBlocks:        pb.PackHashes(resp.ChildBlocks()),
+			}
+
+			if err := writeBlockToStream(s, b); err != nil {
+				logError(logger, err, "Failed to handle output block")
+			}
+		}
 	}
 
-	networkManager.SetRequestHandler(ctx, protocolShardBlock(shardId), handler)
+	networkManager.SetStreamHandler(ctx, protocolShardBlock(shardId), handler)
 }
