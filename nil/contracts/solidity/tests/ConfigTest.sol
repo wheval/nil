@@ -11,12 +11,17 @@ contract ConfigTest is NilBase {
 
     function testValidatorsEqual(Nil.ParamValidators memory inputValidators) public {
         Nil.ParamValidators memory realValidators = Nil.getValidators();
-        require(inputValidators.list.length == realValidators.list.length, "Lengths are not equal");
-        for (uint i = 0; i < inputValidators.list.length; i++) {
-            bytes32 a = keccak256(abi.encodePacked(inputValidators.list[i].PublicKey));
-            bytes32 b = keccak256(abi.encodePacked(realValidators.list[i].PublicKey));
-            require(a == b, "Public keys are not equal");
-            require(inputValidators.list[i].WithdrawalAddress == realValidators.list[i].WithdrawalAddress, "Withdraw addresses are not equal");
+        require(inputValidators.validators.length == realValidators.validators.length, "Lengths are not equal");
+        for (uint i = 0; i < inputValidators.validators.length; i++) {
+        require(inputValidators.validators[i].list.length == realValidators.validators[i].list.length, "Lengths are not equal");
+            for (uint j = 0; j < inputValidators.validators[i].list.length; j++) {
+                Nil.ValidatorInfo memory input = inputValidators.validators[i].list[j];
+                Nil.ValidatorInfo memory real = realValidators.validators[i].list[j];
+                bytes32 a = keccak256(abi.encodePacked(input.PublicKey));
+                bytes32 b = keccak256(abi.encodePacked(real.PublicKey));
+                require(a == b, "Public keys are not equal");
+                require(input.WithdrawalAddress == real.WithdrawalAddress, "Withdraw addresses are not equal");
+            }
         }
     }
 

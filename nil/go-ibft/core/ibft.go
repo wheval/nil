@@ -1112,11 +1112,6 @@ func (i *IBFT) AddMessage(message *proto.IbftMessage) {
 
 // isAcceptableMessage checks if the message can even be accepted
 func (i *IBFT) isAcceptableMessage(message *proto.IbftMessage) bool {
-	//	Make sure the message sender is ok
-	if !i.backend.IsValidValidator(message) {
-		return false
-	}
-
 	// Invalid messages are discarded
 	if message.View == nil {
 		return false
@@ -1125,6 +1120,11 @@ func (i *IBFT) isAcceptableMessage(message *proto.IbftMessage) bool {
 	// Make sure the message is in accordance with
 	// the current state height, or greater
 	if i.state.getHeight() > message.View.Height {
+		return false
+	}
+
+	//	Make sure the message sender is ok
+	if !i.backend.IsValidValidator(message) {
 		return false
 	}
 

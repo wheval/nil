@@ -153,11 +153,15 @@ func (g *BlockGenerator) GenerateZeroState(zeroStateYaml string, config *ZeroSta
 	g.logger.Info().Msg("Generating zero-state...")
 	g.executionState.BaseFee = types.DefaultGasPrice
 
-	if config != nil {
-		if err := g.executionState.GenerateZeroState(config); err != nil {
-			return nil, err
+	if !g.params.ShardId.IsMainShard() {
+		mainBlockHash, err := db.ReadBlockHashByNumber(g.rwTx, types.MainShardId, 0)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read main block hash: %w", err)
 		}
-	} else if err := g.executionState.GenerateZeroStateYaml(zeroStateYaml); err != nil {
+		g.executionState.MainChainHash = mainBlockHash
+	}
+
+	if err := g.executionState.GenerateMergedZeroState(config, zeroStateYaml); err != nil {
 		return nil, err
 	}
 

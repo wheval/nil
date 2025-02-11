@@ -36,8 +36,7 @@ type proposer struct {
 	proposal       *execution.Proposal
 	executionState *execution.ExecutionState
 
-	ctx  context.Context
-	roTx db.RoTx
+	ctx context.Context
 }
 
 func newProposer(params Params, topology ShardTopology, pool TxnPool, logger zerolog.Logger) *proposer {
@@ -67,18 +66,18 @@ func newProposer(params Params, topology ShardTopology, pool TxnPool, logger zer
 func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execution.Proposal, error) {
 	p.proposal = execution.NewEmptyProposal()
 
-	var err error
-	p.roTx, err = txFabric.CreateRoTx(ctx)
+	tx, err := txFabric.CreateRoTx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
 	}
-	defer p.roTx.Rollback()
+	defer tx.Rollback()
 
-	configAccessor, err := config.NewConfigAccessor(ctx, txFabric, nil)
+	configAccessor, err := config.NewConfigAccessorTx(ctx, tx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config accessor: %w", err)
 	}
-	p.executionState, err = execution.NewExecutionState(p.roTx, p.params.ShardId, execution.StateParams{
+
+	p.executionState, err = execution.NewExecutionState(tx, p.params.ShardId, execution.StateParams{
 		GetBlockFromDb: true,
 		GasPriceScale:  p.params.GasPriceScale,
 		ConfigAccessor: configAccessor,
@@ -93,19 +92,19 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 
 	p.logger.Trace().Msg("Collating...")
 
-	if err := p.fetchPrevBlock(); err != nil {
+	if err := p.fetchPrevBlock(tx); err != nil {
 		return nil, fmt.Errorf("failed to fetch previous block: %w", err)
 	}
 
-	if err := p.fetchLastBlockHashes(); err != nil {
+	if err := p.fetchLastBlockHashes(tx); err != nil {
 		return nil, fmt.Errorf("failed to fetch last block hashes: %w", err)
 	}
 
-	if err := p.handleTransactionsFromNeighbors(); err != nil {
+	if err := p.handleTransactionsFromNeighbors(tx); err != nil {
 		return nil, fmt.Errorf("failed to handle transactions from neighbors: %w", err)
 	}
 
-	if err := p.handleTransactionsFromPool(); err != nil {
+	if err := p.handleTransactionsFromPool(tx); err != nil {
 		return nil, fmt.Errorf("failed to handle transactions from pool: %w", err)
 	}
 
@@ -115,8 +114,8 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 	return p.proposal, nil
 }
 
-func (p *proposer) fetchPrevBlock() error {
-	b, hash, err := db.ReadLastBlock(p.roTx, p.params.ShardId)
+func (p *proposer) fetchPrevBlock(tx db.RoTx) error {
+	b, hash, err := db.ReadLastBlock(tx, p.params.ShardId)
 	if err != nil {
 		if errors.Is(err, db.ErrKeyNotFound) {
 			return nil
@@ -129,12 +128,12 @@ func (p *proposer) fetchPrevBlock() error {
 	return nil
 }
 
-func (p *proposer) fetchLastBlockHashes() error {
+func (p *proposer) fetchLastBlockHashes(tx db.RoTx) error {
 	if p.params.ShardId.IsMainShard() {
 		p.proposal.ShardHashes = make([]common.Hash, p.params.NShards-1)
 		for i := uint32(1); i < p.params.NShards; i++ {
 			shardId := types.ShardId(i)
-			lastBlockHash, err := db.ReadLastBlockHash(p.roTx, shardId)
+			lastBlockHash, err := db.ReadLastBlockHash(tx, shardId)
 			if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
 				return err
 			}
@@ -142,13 +141,13 @@ func (p *proposer) fetchLastBlockHashes() error {
 			p.proposal.ShardHashes[i-1] = lastBlockHash
 		}
 	} else {
-		lastBlockHash, err := db.ReadLastBlockHash(p.roTx, types.MainShardId)
+		lastBlockHash, err := db.ReadLastBlockHash(tx, types.MainShardId)
 		if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
 			return err
 		}
-
 		p.proposal.MainChainHash = lastBlockHash
 	}
+
 	return nil
 }
 
@@ -174,7 +173,7 @@ func (p *proposer) handleTransaction(txn *types.Transaction, payer execution.Pay
 	return nil
 }
 
-func (p *proposer) handleTransactionsFromPool() error {
+func (p *proposer) handleTransactionsFromPool(tx db.RoTx) error {
 	poolTxns, err := p.pool.Peek(p.ctx, maxTxnsFromPool)
 	if err != nil {
 		return err
@@ -186,7 +185,7 @@ func (p *proposer) handleTransactionsFromPool() error {
 	handle := func(txn *types.Transaction) (bool, error) {
 		hash := txn.Hash()
 
-		if txnData, err := sa.Access(p.roTx, p.params.ShardId).GetInTransaction().ByHash(hash); err != nil &&
+		if txnData, err := sa.Access(tx, p.params.ShardId).GetInTransaction().ByHash(hash); err != nil &&
 			!errors.Is(err, db.ErrKeyNotFound) {
 			return false, err
 		} else if err == nil && txnData.Transaction() != nil {
@@ -253,8 +252,8 @@ func (p *proposer) handleTransactionsFromPool() error {
 	return nil
 }
 
-func (p *proposer) handleTransactionsFromNeighbors() error {
-	state, err := db.ReadCollatorState(p.roTx, p.params.ShardId)
+func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
+	state, err := db.ReadCollatorState(tx, p.params.ShardId)
 	if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
 		return err
 	}
@@ -279,7 +278,7 @@ func (p *proposer) handleTransactionsFromNeighbors() error {
 		neighbor := &state.Neighbors[position]
 
 		var lastBlockNumber types.BlockNumber
-		lastBlock, _, err := db.ReadLastBlock(p.roTx, neighborId)
+		lastBlock, _, err := db.ReadLastBlock(tx, neighborId)
 		if !errors.Is(err, db.ErrKeyNotFound) {
 			if err != nil {
 				return err
@@ -293,7 +292,7 @@ func (p *proposer) handleTransactionsFromNeighbors() error {
 			if lastBlockNumber < neighbor.BlockNumber {
 				break
 			}
-			block, err := db.ReadBlockByNumber(p.roTx, neighborId, neighbor.BlockNumber)
+			block, err := db.ReadBlockByNumber(tx, neighborId, neighbor.BlockNumber)
 			if errors.Is(err, db.ErrKeyNotFound) {
 				break
 			}
@@ -301,7 +300,7 @@ func (p *proposer) handleTransactionsFromNeighbors() error {
 				return err
 			}
 
-			outTxnTrie := execution.NewDbTransactionTrieReader(p.roTx, neighborId)
+			outTxnTrie := execution.NewDbTransactionTrieReader(tx, neighborId)
 			outTxnTrie.SetRootHash(block.OutTransactionsRoot)
 			for ; neighbor.TransactionIndex < block.OutTransactionsNum; neighbor.TransactionIndex++ {
 				txn, err := outTxnTrie.Fetch(neighbor.TransactionIndex)

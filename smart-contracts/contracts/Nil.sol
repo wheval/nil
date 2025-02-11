@@ -396,8 +396,12 @@ library Nil {
         address WithdrawalAddress;
     }
 
-    struct ParamValidators {
+    struct ListValidators{
         ValidatorInfo[] list;
+    }
+
+    struct ParamValidators {
+        ListValidators[] validators;
     }
 
     struct ParamGasPrice {

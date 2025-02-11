@@ -30,7 +30,6 @@ type SyncerConfig struct {
 	BlockGeneratorParams execution.BlockGeneratorParams
 	ZeroState            string
 	ZeroStateConfig      *execution.ZeroStateConfig
-	BlockVerifier        *signer.BlockVerifier
 }
 
 type Syncer struct {
@@ -45,9 +44,10 @@ type Syncer struct {
 
 	waitForSync *sync.WaitGroup
 
-	subsMutex sync.Mutex
-	subsId    uint64
-	subs      map[uint64]chan struct{}
+	subsMutex     sync.Mutex
+	subsId        uint64
+	subs          map[uint64]chan struct{}
+	blockVerifier *signer.BlockVerifier
 }
 
 func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Syncer, error) {
@@ -62,8 +62,9 @@ func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Sy
 		logger: logging.NewLogger("sync").With().
 			Stringer(logging.FieldShardId, cfg.ShardId).
 			Logger(),
-		waitForSync: &waitForSync,
-		subs:        make(map[uint64]chan struct{}),
+		waitForSync:   &waitForSync,
+		subs:          make(map[uint64]chan struct{}),
+		blockVerifier: signer.NewBlockVerifier(cfg.ShardId, db),
 	}, nil
 }
 
@@ -124,7 +125,7 @@ func (s *Syncer) notify() {
 	}
 }
 
-func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
+func (s *Syncer) FetchSnapshot(ctx context.Context, wgFetch *sync.WaitGroup) error {
 	if s.config.ReplayBlocks {
 		if snapIsRequired, err := s.shardIsEmpty(ctx); err != nil {
 			return err
@@ -135,15 +136,11 @@ func (s *Syncer) Run(ctx context.Context, wgFetch *sync.WaitGroup) error {
 		}
 	}
 
-	// Wait until snapshots for shards are fetched.
-	// It's impossible to load data and commit transactions at the same time.
 	wgFetch.Done()
-	wgFetch.Wait()
+	return nil
+}
 
-	if err := s.generateZerostate(ctx); err != nil {
-		return fmt.Errorf("Failed to generate zerostate for shard %s: %w", s.config.ShardId, err)
-	}
-
+func (s *Syncer) Run(ctx context.Context) error {
 	if s.networkManager == nil {
 		s.waitForSync.Done()
 		return nil
@@ -313,7 +310,7 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 		return nil
 	}
 
-	if err := s.config.BlockVerifier.VerifyBlock(ctx, block.Block); err != nil {
+	if err := s.blockVerifier.VerifyBlock(ctx, s.logger, block.Block); err != nil {
 		s.logger.Error().
 			Uint64(logging.FieldBlockNumber, uint64(block.Id)).
 			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
@@ -388,7 +385,7 @@ func (s *Syncer) saveDirectly(ctx context.Context, block *types.BlockWithExtract
 	return tx.Commit()
 }
 
-func (s *Syncer) generateZerostate(ctx context.Context) error {
+func (s *Syncer) GenerateZerostate(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, s.config.Timeout)
 	defer cancel()
 

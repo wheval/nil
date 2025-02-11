@@ -48,6 +48,16 @@ func newTestProposer(params Params, pool TxnPool) *proposer {
 	return newProposer(params, new(TrivialShardTopology), pool, logging.NewLogger("proposer"))
 }
 
+func (s *ProposerTestSuite) generateProposal(p *proposer) *execution.Proposal {
+	s.T().Helper()
+
+	proposal, err := p.GenerateProposal(s.ctx, s.db)
+	s.Require().NoError(err)
+	s.Require().NotNil(proposal)
+
+	return proposal
+}
+
 func (s *ProposerTestSuite) TestBlockGas() {
 	s.Run("GenerateZeroState", func() {
 		execution.GenerateZeroState(s.T(), s.ctx, types.MainShardId, s.db)
@@ -64,10 +74,7 @@ func (s *ProposerTestSuite) TestBlockGas() {
 	s.Run("DefaultMaxGasInBlock", func() {
 		p := newTestProposer(params, pool)
 
-		proposal, err := p.GenerateProposal(s.ctx, s.db)
-		s.Require().NoError(err)
-		s.Require().NotNil(proposal)
-
+		proposal := s.generateProposal(p)
 		s.Equal(pool.Txns, proposal.ExternalTxns)
 	})
 
@@ -75,9 +82,7 @@ func (s *ProposerTestSuite) TestBlockGas() {
 		params.MaxGasInBlock = 5000
 		p := newTestProposer(params, pool)
 
-		proposal, err := p.GenerateProposal(s.ctx, s.db)
-		s.Require().NoError(err)
-		s.Require().NotNil(proposal)
+		proposal := s.generateProposal(p)
 
 		s.Equal(pool.Txns[:1], proposal.ExternalTxns)
 	})
@@ -93,9 +98,7 @@ func (s *ProposerTestSuite) TestCollator() {
 	shardId := p.params.ShardId
 
 	generateBlock := func() *execution.Proposal {
-		proposal, err := p.GenerateProposal(s.ctx, s.db)
-		s.Require().NoError(err)
-		s.Require().NotNil(proposal)
+		proposal := s.generateProposal(p)
 
 		blockGenerator, err := execution.NewBlockGenerator(s.ctx, params.BlockGeneratorParams, s.db, nil)
 		s.Require().NoError(err)

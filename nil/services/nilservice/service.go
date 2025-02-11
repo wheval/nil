@@ -13,6 +13,7 @@ import (
 	"github.com/NilFoundation/nil/nil/client"
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/collate"
@@ -21,7 +22,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
-	"github.com/NilFoundation/nil/nil/internal/signer"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/admin"
@@ -193,6 +193,24 @@ func validateArchiveNodeConfig(cfg *Config, nm *network.Manager) error {
 	return nil
 }
 
+func initSyncers(ctx context.Context, syncers []*collate.Syncer, wgInit *sync.WaitGroup) error {
+	var wgFetch sync.WaitGroup
+	wgFetch.Add(len(syncers))
+	for _, syncer := range syncers {
+		go func() {
+			check.PanicIfErr(syncer.FetchSnapshot(ctx, &wgFetch))
+		}()
+	}
+	wgFetch.Wait() // Wait for snapshots to avoid data races in DB
+	for _, syncer := range syncers {
+		if err := syncer.GenerateZerostate(ctx); err != nil {
+			return err
+		}
+	}
+	wgInit.Done()
+	return nil
+}
+
 func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logger zerolog.Logger) ([]concurrent.Func, error) {
 	if err := validateArchiveNodeConfig(cfg, nm); err != nil {
 		logger.Error().Err(err).Msg("Invalid configuration")
@@ -202,10 +220,11 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
 	syncerTimeout := syncTimeoutFactor * collatorTickPeriod
 
-	var wgFetch sync.WaitGroup
-	wgFetch.Add(int(cfg.NShards))
+	var wgInit sync.WaitGroup
+	wgInit.Add(1)
 
-	funcs := make([]concurrent.Func, 0, cfg.NShards)
+	funcs := make([]concurrent.Func, 0, cfg.NShards+1)
+	syncers := make([]*collate.Syncer, 0, cfg.NShards)
 
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
@@ -221,8 +240,6 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 			zeroState = cfg.ZeroStateYaml
 		}
 
-		blockVerifier := signer.NewBlockVerifier(shardId, cfg.Validators[shardId])
-
 		syncer, err := collate.NewSyncer(collate.SyncerConfig{
 			ShardId:              shardId,
 			Timeout:              syncerTimeout,
@@ -231,13 +248,14 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 			BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
 			ZeroState:            zeroState,
 			ZeroStateConfig:      zeroStateConfig,
-			BlockVerifier:        blockVerifier,
 		}, database, nm)
 		if err != nil {
 			return nil, err
 		}
+		syncers = append(syncers, syncer)
 		funcs = append(funcs, func(ctx context.Context) error {
-			if err := syncer.Run(ctx, &wgFetch); err != nil {
+			wgInit.Wait() // Wait for syncers initialization
+			if err := syncer.Run(ctx); err != nil {
 				logger.Error().
 					Err(err).
 					Stringer(logging.FieldShardId, shardId).
@@ -247,6 +265,13 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 			return nil
 		})
 	}
+	funcs = append(funcs, func(ctx context.Context) error {
+		err := initSyncers(ctx, syncers, &wgInit)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to initialize syncers")
+		}
+		return err
+	})
 	return funcs, nil
 }
 
@@ -453,6 +478,19 @@ func createNetworkManager(ctx context.Context, cfg *Config) (*network.Manager, e
 	return network.NewManager(ctx, cfg.Network)
 }
 
+func initDefaultValiator(cfg *Config) error {
+	validators := make([]config.ListValidators, 0, cfg.NShards)
+	pubkey, err := cfg.ValidatorKeysManager.GetPublicKey()
+	if err != nil {
+		return err
+	}
+	for range cfg.NShards {
+		validators = append(validators, config.ListValidators{List: []config.ValidatorInfo{{PublicKey: config.Pubkey(pubkey)}}})
+	}
+	cfg.ZeroState.ConfigParams.Validators = config.ParamValidators{Validators: validators}
+	return nil
+}
+
 func createShards(
 	ctx context.Context, cfg *Config,
 	database db.DB, networkManager *network.Manager,
@@ -461,33 +499,36 @@ func createShards(
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
 	syncerTimeout := syncTimeoutFactor * collatorTickPeriod
 
-	funcs := make([]concurrent.Func, 0, 2*cfg.NShards)
+	funcs := make([]concurrent.Func, 0, 2*cfg.NShards+1)
+	syncers := make([]*collate.Syncer, 0, cfg.NShards)
 	pools := make(map[types.ShardId]txnpool.Pool)
 
-	var wgFetch sync.WaitGroup
-	wgFetch.Add(int(cfg.NShards))
+	var wgInit sync.WaitGroup
+	wgInit.Add(1)
 
 	pKey, err := cfg.LoadValidatorPrivateKey()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if !cfg.SplitShards && len(cfg.Validators) == 0 {
-		pubkey, err := cfg.ValidatorKeysManager.GetPublicKey()
-		if err != nil {
+	if cfg.ZeroState == nil {
+		cfg.ZeroState = &execution.ZeroStateConfig{}
+	}
+
+	if !cfg.SplitShards && len(cfg.ZeroState.GetValidators()) == 0 {
+		if err := initDefaultValiator(cfg); err != nil {
 			return nil, nil, err
 		}
-		for i := range cfg.NShards {
-			cfg.Validators[types.ShardId(i)] = []config.ValidatorInfo{
-				{PublicKey: config.Pubkey(pubkey)},
-			}
-		}
+	}
+
+	validatorsNum := len(cfg.ZeroState.GetValidators())
+	if validatorsNum != int(cfg.NShards) {
+		return nil, nil, fmt.Errorf("number of shards mismatch in the config, expected %d, got %d",
+			cfg.NShards, validatorsNum)
 	}
 
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
-
-		blockVerifier := signer.NewBlockVerifier(shardId, cfg.Validators[shardId])
 
 		zeroState := execution.DefaultZeroStateConfig
 		zeroStateConfig := cfg.ZeroState
@@ -500,7 +541,6 @@ func createShards(
 			ReplayBlocks:         shardId.IsMainShard() || cfg.IsShardActive(shardId),
 			Timeout:              syncerTimeout,
 			BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
-			BlockVerifier:        blockVerifier,
 			ZeroState:            zeroState,
 			ZeroStateConfig:      zeroStateConfig,
 		}
@@ -513,9 +553,11 @@ func createShards(
 		if err != nil {
 			return nil, nil, err
 		}
+		syncers = append(syncers, syncer)
 
 		funcs = append(funcs, func(ctx context.Context) error {
-			if err := syncer.Run(ctx, &wgFetch); err != nil {
+			wgInit.Wait() // Wait for syncers initialization
+			if err := syncer.Run(ctx); err != nil {
 				logger.Error().
 					Err(err).
 					Stringer(logging.FieldShardId, shardId).
@@ -539,15 +581,14 @@ func createShards(
 				Validator:  collator.Validator(),
 				NetManager: networkManager,
 				PrivateKey: pKey,
-				Validators: cfg.Validators[shardId],
 			})
-			if err := consensus.Init(ctx); err != nil {
-				return nil, nil, err
-			}
 
 			pools[shardId] = txnPool
 			funcs = append(funcs, func(ctx context.Context) error {
-				wgFetch.Wait() // wait for all syncers to avoid data race in the DB
+				wgInit.Wait() // Wait for syncers initialization
+				if err := consensus.Init(ctx); err != nil {
+					return err
+				}
 				if err := collator.Run(ctx, syncer, consensus); err != nil {
 					logger.Error().
 						Err(err).
@@ -561,6 +602,14 @@ func createShards(
 			return nil, nil, errors.New("trying to start syncer without network configuration")
 		}
 	}
+
+	funcs = append(funcs, func(ctx context.Context) error {
+		err := initSyncers(ctx, syncers, &wgInit)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to initialize syncers")
+		}
+		return err
+	})
 
 	return funcs, pools, nil
 }

@@ -26,7 +26,18 @@ func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 		return false
 	}
 
-	index := slices.IndexFunc(i.validators, func(v config.ValidatorInfo) bool {
+	// Here we use transportCtx because this method could be called from the transport goroutine
+	validators, err := i.validatorsCache.getValidators(i.transportCtx, msg.View.Height)
+	if err != nil {
+		i.logger.Error().
+			Err(err).
+			Uint64(logging.FieldRound, msg.View.Round).
+			Uint64(logging.FieldHeight, msg.View.Height).
+			Msg("Failed to get validators")
+		return false
+	}
+
+	index := slices.IndexFunc(validators, func(v config.ValidatorInfo) bool {
 		return bytes.Equal(v.PublicKey[:], msg.From)
 	})
 	if index == -1 {
@@ -41,7 +52,7 @@ func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 		return false
 	}
 
-	validator := i.validators[index]
+	validator := validators[index]
 	if !i.signer.VerifyWithKey(validator.PublicKey[:], msgNoSig, msg.Signature) {
 		event := i.logger.Error()
 		if view := msg.GetView(); view != nil {
@@ -56,7 +67,15 @@ func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 }
 
 func (i *backendIBFT) IsProposer(id []byte, height, round uint64) bool {
-	proposer := i.calcProposer(height, round)
+	proposer, err := i.calcProposer(height, round)
+	if err != nil {
+		i.logger.Error().
+			Err(err).
+			Uint64(logging.FieldHeight, height).
+			Uint64(logging.FieldRound, round).
+			Msg("Failed to calculate proposer")
+		return false
+	}
 	return bytes.Equal(proposer.PublicKey[:], id)
 }
 

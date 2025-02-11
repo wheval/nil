@@ -41,7 +41,7 @@ func (s *SuiteArchiveNode) TestGetDebugBlock() {
 		b, err := debugBlock.DecodeSSZ()
 		s.Require().NoError(err)
 
-		s.Eventually(func() bool {
+		s.Require().Eventually(func() bool {
 			nextBlock, err := s.DefaultClient.GetDebugBlock(s.Context, types.ShardId(shardId), b.Block.Id.Uint64()+1, true)
 			s.Require().NoError(err)
 			return nextBlock != nil

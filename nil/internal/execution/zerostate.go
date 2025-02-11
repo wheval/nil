@@ -89,6 +89,10 @@ type ZeroStateConfig struct {
 	Contracts    []*ContractDescr `yaml:"contracts"`
 }
 
+func (cfg *ZeroStateConfig) GetValidators() []config.ListValidators {
+	return cfg.ConfigParams.Validators.Validators
+}
+
 func DumpMainKeys(fname string) error {
 	keys := MainKeys{"0x" + nilcrypto.PrivateKeyToEthereumFormat(MainPrivateKey), hexutil.Encode(MainPublicKey)}
 
@@ -154,6 +158,27 @@ func (es *ExecutionState) GenerateZeroStateYaml(configYaml string) error {
 		return err
 	}
 	return es.GenerateZeroState(config)
+}
+
+func (es *ExecutionState) GenerateMergedZeroState(leftConfig *ZeroStateConfig, configYaml string) error {
+	var rightConfig *ZeroStateConfig
+	var err error
+	if configYaml != "" {
+		if rightConfig, err = ParseZeroStateConfig(configYaml); err != nil {
+			return err
+		}
+	} else {
+		rightConfig = &ZeroStateConfig{}
+	}
+	if leftConfig == nil {
+		leftConfig = &ZeroStateConfig{}
+	}
+	return es.GenerateZeroState(
+		&ZeroStateConfig{
+			ConfigParams: leftConfig.ConfigParams,
+			Contracts:    append(leftConfig.Contracts, rightConfig.Contracts...),
+		},
+	)
 }
 
 func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error {

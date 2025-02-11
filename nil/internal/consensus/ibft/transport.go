@@ -59,6 +59,13 @@ func (i *backendIBFT) setupTransport(ctx context.Context) error {
 			case <-ctx.Done():
 				return
 			case data := <-ch:
+				if data == nil {
+					i.logger.Trace().
+						Str(logging.FieldTopic, protocol).
+						Msg("Received empty message")
+					continue
+				}
+
 				if !i.isActiveValidator() {
 					continue
 				}

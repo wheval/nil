@@ -104,7 +104,14 @@ func GetStubAccessor() ConfigAccessor {
 	return &ConfigAccessorStub{}
 }
 
-// NewConfigAccessor creates a new configAccessorImpl reading the whole trie from the MPT.
+func NewConfigAccessorByNumberTx(ctx context.Context, tx db.RoTx, mainShardBlockNumber types.BlockNumber) (ConfigAccessor, error) {
+	mainShardHash, err := db.ReadBlockHashByNumber(tx, types.MainShardId, mainShardBlockNumber)
+	if err != nil {
+		return nil, err
+	}
+	return NewConfigAccessorTx(ctx, tx, &mainShardHash)
+}
+
 func NewConfigAccessorTx(ctx context.Context, tx db.RoTx, mainShardHash *common.Hash) (ConfigAccessor, error) {
 	trie, err := getConfigTrie(tx, mainShardHash)
 	if err != nil {
