@@ -80,14 +80,17 @@ describe.sequential("Nil.js handles the full swap tutorial flow", async () => {
         await smartAccount.deployContract({
           bytecode: SWAP_MATCH_BYTECODE,
           value: 0n,
-          feeCredit: 100_000_000n,
+          feeCredit: 100_000_000_000_000n,
           salt: SALT,
           shardId: 4,
         });
 
       const receipts = await waitTillCompleted(client, deploymentTransactionHash);
       //endDeploymentOfSwapMatch
-
+      function bigIntReplacer(unusedKey, value) {
+        return typeof value === "bigint" ? value.toString() : value;
+      }
+      console.log("Deployment receipts: ", JSON.stringify(receipts, bigIntReplacer));
       expect(receipts.some((receipt) => !receipt.success)).toBe(false);
 
       const code = await client.getCode(swapMatchAddress, "latest");
