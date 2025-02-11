@@ -23,7 +23,7 @@ export default {
         },
         {
           type: "doc",
-          label: "=nil; 101",
+          label: "Quickstart",
           id: "nil-101",
         },
         {
@@ -35,35 +35,35 @@ export default {
     },
     {
       type: "category",
-      label: "Getting started",
+      label: "Key principles",
       collapsed: false,
       collapsible: true,
       items: [
         {
           type: "doc",
           label: "Account abstraction",
-          id: "getting-started/account-abstraction",
+          id: "key-principles/account-abstraction",
         },
         {
           type: "doc",
           label: "Async execution",
-          id: "getting-started/async-execution",
+          id: "key-principles/async-execution",
         },
         {
           type: "doc",
           label: "Gas and value",
-          id: "getting-started/gas-and-value",
+          id: "key-principles/gas-and-value",
         },
         {
           type: "doc",
           label: "Tokens",
-          id: "getting-started/tokens",
+          id: "key-principles/tokens",
         },
       ],
     },
     {
       type: "category",
-      label: "Smart contracts",
+      label: "=nil; Solidity library",
       collapsed: false,
       collapsible: true,
       items: [
@@ -294,34 +294,34 @@ export default {
     },
     {
       type: "category",
-      label: "Specification",
+      label: "Cluster architecture",
       collapsed: true,
       collapsible: true,
       items: [
         {
           type: "doc",
-          label: "Principles",
-          id: "specification/principles",
+          label: "Sharding",
+          id: "architecture/sharding",
         },
         {
           type: "doc",
           label: "Finality",
-          id: "specification/finality",
+          id: "architecture/finality",
         },
         {
           type: "doc",
           label: "Data availability",
-          id: "specification/data-availability",
+          id: "architecture/data-availability",
         },
         {
           type: "doc",
           label: "Sequencing",
-          id: "specification/sequencing",
+          id: "architecture/sequencing",
         },
         {
           type: "doc",
           label: "Contract placement",
-          id: "specification/contract-co-location",
+          id: "architecture/contract-co-location",
         },
       ],
     },
