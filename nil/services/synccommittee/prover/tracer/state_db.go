@@ -7,6 +7,7 @@ import (
 	"runtime/debug"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -698,7 +699,20 @@ func (tsdb *TracerStateDB) SaveVmState(state *types.EvmState, continuationGasCre
 }
 
 func (tsdb *TracerStateDB) GetConfigAccessor() config.ConfigAccessor {
-	panic("not implemented")
+	// TODO: implement (right now it's a stub to make tests pass)
+	accessor, err := config.NewConfigAccessorTx(context.Background(), tsdb.mptTracer.GetRwTx(), nil)
+	check.PanicIfErr(err)
+	check.PanicIfErr(config.SetParamGasPrice(accessor, &config.ParamGasPrice{
+		GasPriceScale: *types.NewUint256(10),
+		Shards: []types.Uint256{
+			*types.NewUint256(10),
+			*types.NewUint256(10),
+			*types.NewUint256(10),
+			*types.NewUint256(10),
+			*types.NewUint256(10),
+		},
+	}))
+	return accessor
 }
 
 func (tsdb *TracerStateDB) FinalizeTraces() error {

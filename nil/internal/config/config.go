@@ -105,13 +105,7 @@ func GetStubAccessor() ConfigAccessor {
 }
 
 // NewConfigAccessor creates a new configAccessorImpl reading the whole trie from the MPT.
-func NewConfigAccessor(ctx context.Context, db db.DB, mainShardHash *common.Hash) (ConfigAccessor, error) {
-	tx, err := db.CreateRoTx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create read-only transaction: %w", err)
-	}
-	defer tx.Rollback()
-
+func NewConfigAccessorTx(ctx context.Context, tx db.RoTx, mainShardHash *common.Hash) (ConfigAccessor, error) {
 	trie, err := getConfigTrie(tx, mainShardHash)
 	if err != nil {
 		return nil, err
@@ -124,6 +118,16 @@ func NewConfigAccessor(ctx context.Context, db db.DB, mainShardHash *common.Hash
 		data,
 		make(map[string][]byte),
 	}, nil
+}
+
+// NewConfigAccessor creates a new configAccessorImpl reading the whole trie from the MPT.
+func NewConfigAccessor(ctx context.Context, db db.DB, mainShardHash *common.Hash) (ConfigAccessor, error) {
+	tx, err := db.CreateRoTx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create read-only transaction: %w", err)
+	}
+	defer tx.Rollback()
+	return NewConfigAccessorTx(ctx, tx, mainShardHash)
 }
 
 // Commit updates the config trie with the current state of the configAccessorImpl.

@@ -175,8 +175,8 @@ func (s *SuiteConfigParams) TestConfigReadWriteGasPrice() {
 
 	// Manually set gas price for all shards. It is necessary because the initial prices are set only during the first
 	// block generation. But we will likely read config before that.
-	cfg.ConfigParams.GasPrice.Shards = make([]types.Uint256, s.ShardsNum-1)
-	for i := range s.ShardsNum - 1 {
+	cfg.ConfigParams.GasPrice.Shards = make([]types.Uint256, s.ShardsNum)
+	for i := range s.ShardsNum {
 		cfg.ConfigParams.GasPrice.Shards[i] = *types.DefaultGasPrice.Uint256
 	}
 

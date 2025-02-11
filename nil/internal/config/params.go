@@ -103,3 +103,11 @@ func GetParamGasPrice(c ConfigAccessor) (*ParamGasPrice, error) {
 func SetParamGasPrice(c ConfigAccessor, params *ParamGasPrice) error {
 	return setParamImpl(c, params)
 }
+
+func GetParamNShards(c ConfigAccessor) (uint32, error) {
+	param, err := getParamImpl[ParamGasPrice](c)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(len(param.Shards)), nil
+}
