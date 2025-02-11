@@ -297,6 +297,16 @@ func (c *sendRawTransaction) Run(state StateDB, input []byte, value *uint256.Int
 		return nil, types.NewWrapError(types.ErrorInvalidTransactionInputUnmarshalFailed, err)
 	}
 
+	cfgAccessor := state.GetConfigAccessor()
+	nShards, err := config.GetParamNShards(cfgAccessor)
+	if err != nil {
+		return nil, types.NewVmVerboseError(types.ErrorPrecompileConfigGetParamFailed, err.Error())
+	}
+
+	if uint32(payload.To.ShardId()) >= nShards {
+		return nil, ErrShardIdIsTooBig
+	}
+
 	if payload.To.ShardId().IsMainShard() {
 		return nil, ErrTransactionToMainShard
 	}
@@ -315,7 +325,7 @@ func (c *sendRawTransaction) Run(state StateDB, input []byte, value *uint256.Int
 	setRefundTo(&payload.RefundTo, state.GetInTransaction())
 	setBounceTo(&payload.BounceTo, state.GetInTransaction())
 
-	_, err := state.AddOutTransaction(caller.Address(), payload)
+	_, err = state.AddOutTransaction(caller.Address(), payload)
 
 	return nil, err
 }

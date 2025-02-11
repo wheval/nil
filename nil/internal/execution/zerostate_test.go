@@ -114,7 +114,8 @@ func TestZerostateFromConfig(t *testing.T) {
 	// Test config params
 	configYaml = `
 config:
-  gasPrices: [1, 2, 3]
+  gasPrice:
+    shards: ["1", "2", "3"]
 `
 	configAccessor, err := config.NewConfigAccessor(context.Background(), database, nil)
 	require.NoError(t, err)

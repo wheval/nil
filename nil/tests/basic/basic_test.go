@@ -318,6 +318,14 @@ func (s *SuiteRpc) TestRpcContractSendTransaction() {
 	s.Run("ToSameShard", func() {
 		checkForShard(types.BaseShardId)
 	})
+
+	s.Run("SendToNonExistingShard", func() {
+		shardId := types.ShardId(1050)
+		receipt := s.SendTransactionViaSmartAccountNoCheck(types.MainSmartAccountAddress, types.GenerateRandomAddress(shardId),
+			execution.MainPrivateKey, nil, types.NewFeePackFromGas(100_000), types.NewValueFromUint64(100_000), nil)
+		s.Require().False(receipt.Success)
+		s.Equal("ShardIdIsTooBig", receipt.Status)
+	})
 }
 
 func (s *SuiteRpc) TestRpcCallWithTransactionSend() { //nolint:maintidx

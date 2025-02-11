@@ -41,6 +41,7 @@ var (
 	ErrCrossShardTransaction    = types.NewVmError(types.ErrorCrossShardTransaction)
 	ErrUnexpectedPrecompileType = types.NewVmError(types.ErrorUnexpectedPrecompileType)
 	ErrTransactionToMainShard   = types.NewVmError(types.ErrorMessageToMainShard)
+	ErrShardIdIsTooBig          = types.NewVmError(types.ErrorShardIdIsTooBig)
 
 	// errStopToken is an internal token indicating interpreter loop termination,
 	// never returned to outside callers.

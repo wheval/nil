@@ -28,27 +28,27 @@ type SuiteExecutionState struct {
 	db  db.DB
 }
 
-func (suite *SuiteExecutionState) SetupSuite() {
-	suite.ctx = context.Background()
+func (s *SuiteExecutionState) SetupSuite() {
+	s.ctx = context.Background()
 }
 
-func (suite *SuiteExecutionState) SetupTest() {
+func (s *SuiteExecutionState) SetupTest() {
 	var err error
-	suite.db, err = db.NewBadgerDb(suite.Suite.T().TempDir() + "test.db")
-	suite.Require().NoError(err)
+	s.db, err = db.NewBadgerDb(s.Suite.T().TempDir() + "test.db")
+	s.Require().NoError(err)
 }
 
-func (suite *SuiteExecutionState) TearDownTest() {
-	suite.db.Close()
+func (s *SuiteExecutionState) TearDownTest() {
+	s.db.Close()
 }
 
-func (suite *SuiteExecutionState) TestExecState() {
+func (s *SuiteExecutionState) TestExecState() {
 	const shardId types.ShardId = 5
 	const numTransactions types.Seqno = 10
 	const code = "6004600c60003960046000f301020304"
 
-	tx, err := suite.db.CreateRwTx(suite.ctx)
-	suite.Require().NoError(err)
+	tx, err := s.db.CreateRwTx(s.ctx)
+	s.Require().NoError(err)
 	defer tx.Rollback()
 
 	addr := types.GenerateRandomAddress(shardId)
@@ -57,18 +57,18 @@ func (suite *SuiteExecutionState) TestExecState() {
 	es, err := NewExecutionState(tx, shardId, StateParams{
 		ConfigAccessor: config.GetStubAccessor(),
 	})
-	suite.Require().NoError(err)
+	s.Require().NoError(err)
 	es.BaseFee = types.DefaultGasPrice
 
-	suite.Run("CreateAccount", func() {
-		suite.Require().NoError(es.CreateAccount(addr))
-		suite.Require().NoError(es.SetState(addr, storageKey, common.IntToHash(123456)))
+	s.Run("CreateAccount", func() {
+		s.Require().NoError(es.CreateAccount(addr))
+		s.Require().NoError(es.SetState(addr, storageKey, common.IntToHash(123456)))
 	})
 
-	suite.Run("DeployTransactions", func() {
+	s.Run("DeployTransactions", func() {
 		from := types.GenerateRandomAddress(shardId)
 		for i := range numTransactions {
-			Deploy(suite.T(), suite.ctx, es,
+			Deploy(s.T(), s.ctx, es,
 				types.BuildDeployPayload(hexutil.FromHex(code), common.BytesToHash([]byte{byte(i)})),
 				shardId, from, i)
 		}
@@ -76,28 +76,28 @@ func (suite *SuiteExecutionState) TestExecState() {
 
 	var blockHash common.Hash
 
-	suite.Run("CommitBlock", func() {
+	s.Run("CommitBlock", func() {
 		blockHash, _, err = es.Commit(0, nil)
-		suite.Require().NoError(err)
+		s.Require().NoError(err)
 	})
 
-	suite.Run("CheckAccount", func() {
+	s.Run("CheckAccount", func() {
 		es, err := NewExecutionState(tx, shardId, StateParams{
 			BlockHash:      blockHash,
 			ConfigAccessor: config.GetStubAccessor(),
 		})
-		suite.Require().NoError(err)
+		s.Require().NoError(err)
 
 		storageVal, err := es.GetState(addr, storageKey)
-		suite.Require().NoError(err)
-		suite.Equal(storageVal, common.IntToHash(123456))
+		s.Require().NoError(err)
+		s.Equal(storageVal, common.IntToHash(123456))
 	})
 
-	suite.Run("CheckTransactions", func() {
+	s.Run("CheckTransactions", func() {
 		data, err := es.shardAccessor.GetBlock().ByHash(blockHash)
-		suite.Require().NoError(err)
-		suite.Require().NotNil(data)
-		suite.Require().NotNil(data.Block())
+		s.Require().NoError(err)
+		s.Require().NotNil(data)
+		s.Require().NotNil(data.Block())
 
 		transactionsRoot := NewDbTransactionTrieReader(tx, es.ShardId)
 		transactionsRoot.SetRootHash(data.Block().InTransactionsRoot)
@@ -110,95 +110,95 @@ func (suite *SuiteExecutionState) TestExecState() {
 			if errors.Is(err, db.ErrKeyNotFound) {
 				break
 			}
-			suite.Require().NoError(err)
+			s.Require().NoError(err)
 
 			deploy := types.BuildDeployPayload(hexutil.FromHex(code), common.BytesToHash([]byte{byte(transactionIndex)}))
-			suite.Equal(types.Code(deploy.Bytes()), m.Data)
+			s.Equal(types.Code(deploy.Bytes()), m.Data)
 
 			_, err = receiptsRoot.Fetch(transactionIndex)
-			suite.Require().NoError(err)
+			s.Require().NoError(err)
 
 			transactionIndex++
 		}
-		suite.Equal(types.TransactionIndex(numTransactions), transactionIndex)
+		s.Equal(types.TransactionIndex(numTransactions), transactionIndex)
 	})
 
-	suite.Run("CommitTx", func() {
-		suite.Require().NoError(tx.Commit())
+	s.Run("CommitTx", func() {
+		s.Require().NoError(tx.Commit())
 	})
 }
 
-func (suite *SuiteExecutionState) TestDeployAndCall() {
+func (s *SuiteExecutionState) TestDeployAndCall() {
 	shardId := types.ShardId(5)
 
-	payload := contracts.CounterDeployPayload(suite.T())
+	payload := contracts.CounterDeployPayload(s.T())
 	addrSmartAccount := types.CreateAddress(shardId, payload)
 
-	tx, err := suite.db.CreateRwTx(suite.ctx)
-	suite.Require().NoError(err)
+	tx, err := s.db.CreateRwTx(s.ctx)
+	s.Require().NoError(err)
 	defer tx.Rollback()
 
 	es, err := NewExecutionState(tx, shardId, StateParams{
 		ConfigAccessor: config.GetStubAccessor(),
 	})
-	suite.Require().NoError(err)
+	s.Require().NoError(err)
 	es.BaseFee = types.DefaultGasPrice
 
-	suite.Run("Deploy", func() {
+	s.Run("Deploy", func() {
 		seqno, err := es.GetSeqno(addrSmartAccount)
-		suite.Require().NoError(err)
-		suite.EqualValues(0, seqno)
+		s.Require().NoError(err)
+		s.EqualValues(0, seqno)
 
-		Deploy(suite.T(), suite.ctx, es, payload, shardId, types.Address{}, 0)
+		Deploy(s.T(), s.ctx, es, payload, shardId, types.Address{}, 0)
 
 		seqno, err = es.GetSeqno(addrSmartAccount)
-		suite.Require().NoError(err)
-		suite.EqualValues(1, seqno)
+		s.Require().NoError(err)
+		s.EqualValues(1, seqno)
 	})
 
-	suite.Run("Execute", func() {
+	s.Run("Execute", func() {
 		txn := NewExecutionTransaction(addrSmartAccount, addrSmartAccount, 1,
-			contracts.NewCounterAddCallData(suite.T(), 47))
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.Require().False(res.Failed())
+			contracts.NewCounterAddCallData(s.T(), 47))
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.Require().False(res.Failed())
 
 		seqno, err := es.GetSeqno(addrSmartAccount)
-		suite.Require().NoError(err)
-		suite.EqualValues(1, seqno)
+		s.Require().NoError(err)
+		s.EqualValues(1, seqno)
 
 		extSeqno, err := es.GetExtSeqno(addrSmartAccount)
-		suite.Require().NoError(err)
-		suite.EqualValues(1, extSeqno)
+		s.Require().NoError(err)
+		s.EqualValues(1, extSeqno)
 	})
 }
 
-func (suite *SuiteExecutionState) TestExecStateMultipleBlocks() {
+func (s *SuiteExecutionState) TestExecStateMultipleBlocks() {
 	txn1 := types.NewEmptyTransaction()
 	txn1.Data = []byte{1}
 	txn1.Seqno = 1
 	txn2 := types.NewEmptyTransaction()
 	txn2.Data = []byte{2}
 	txn2.Seqno = 2
-	blockHash1 := GenerateBlockFromTransactionsWithoutExecution(suite.T(), context.Background(),
-		types.BaseShardId, 0, common.EmptyHash, suite.db, txn1, txn2)
-	blockHash2 := GenerateBlockFromTransactionsWithoutExecution(suite.T(), context.Background(),
-		types.BaseShardId, 1, blockHash1, suite.db, txn2)
+	blockHash1 := GenerateBlockFromTransactionsWithoutExecution(s.T(), context.Background(),
+		types.BaseShardId, 0, common.EmptyHash, s.db, txn1, txn2)
+	blockHash2 := GenerateBlockFromTransactionsWithoutExecution(s.T(), context.Background(),
+		types.BaseShardId, 1, blockHash1, s.db, txn2)
 
-	tx, err := suite.db.CreateRoTx(suite.ctx)
-	suite.Require().NoError(err)
+	tx, err := s.db.CreateRoTx(s.ctx)
+	s.Require().NoError(err)
 	defer tx.Rollback()
 
 	check := func(blockHash common.Hash, idx types.TransactionIndex, txn *types.Transaction) {
 		block, err := db.ReadBlock(tx, types.BaseShardId, blockHash)
-		suite.Require().NoError(err)
-		suite.Require().NotNil(block)
+		s.Require().NoError(err)
+		s.Require().NotNil(block)
 
 		transactionsRoot := NewDbTransactionTrieReader(tx, types.BaseShardId)
 		transactionsRoot.SetRootHash(block.InTransactionsRoot)
 		txnRead, err := transactionsRoot.Fetch(idx)
-		suite.Require().NoError(err)
+		s.Require().NoError(err)
 
-		suite.EqualValues(txn, txnRead)
+		s.EqualValues(txn, txnRead)
 	}
 
 	check(blockHash1, 0, txn1)
@@ -215,12 +215,22 @@ func TestSuiteExecutionState(t *testing.T) {
 func newState(t *testing.T) *ExecutionState {
 	t.Helper()
 
+	ctx := context.Background()
 	database, err := db.NewBadgerDbInMemory()
 	require.NoError(t, err)
-	tx, err := database.CreateRwTx(context.Background())
+	tx, err := database.CreateRwTx(ctx)
 	require.NoError(t, err)
+
+	cfgAccessor, err := config.NewConfigAccessor(ctx, database, nil)
+	require.NoError(t, err)
+
+	require.NoError(t, config.SetParamGasPrice(cfgAccessor, &config.ParamGasPrice{
+		GasPriceScale: *types.NewUint256(10),
+		Shards:        []types.Uint256{*types.NewUint256(10), *types.NewUint256(10), *types.NewUint256(10)},
+	}))
+
 	state, err := NewExecutionState(tx, types.BaseShardId, StateParams{
-		ConfigAccessor: config.GetStubAccessor(),
+		ConfigAccessor: cfgAccessor,
 	})
 	state.BaseFee = types.DefaultGasPrice
 	require.NoError(t, err)
@@ -371,45 +381,45 @@ func TestAccountState(t *testing.T) {
 	assert.Equal(t, balance, acc.Balance)
 }
 
-func (suite *SuiteExecutionState) TestTransactionStatus() {
+func (s *SuiteExecutionState) TestTransactionStatus() {
 	shardId := types.ShardId(5)
 	var vmErrStub *types.VmError
 
-	tx, err := suite.db.CreateRwTx(suite.ctx)
-	suite.Require().NoError(err)
+	tx, err := s.db.CreateRwTx(s.ctx)
+	s.Require().NoError(err)
 	defer tx.Rollback()
 
 	es, err := NewExecutionState(tx, shardId, StateParams{
 		ConfigAccessor: config.GetStubAccessor(),
 	})
-	suite.Require().NoError(err)
+	s.Require().NoError(err)
 	es.BaseFee = types.DefaultGasPrice
 
 	var counterAddr, faucetAddr types.Address
 
-	suite.Run("Deploy", func() {
-		counterAddr = Deploy(suite.T(), suite.ctx, es,
-			contracts.CounterDeployPayload(suite.T()), shardId, types.Address{}, 0)
+	s.Run("Deploy", func() {
+		counterAddr = Deploy(s.T(), s.ctx, es,
+			contracts.CounterDeployPayload(s.T()), shardId, types.Address{}, 0)
 
-		faucetAddr = Deploy(suite.T(), suite.ctx, es,
-			contracts.FaucetDeployPayload(suite.T()), shardId, types.Address{}, 0)
-		suite.Require().NoError(es.SetBalance(faucetAddr, types.NewValueFromUint64(100_000_000)))
+		faucetAddr = Deploy(s.T(), s.ctx, es,
+			contracts.FaucetDeployPayload(s.T()), shardId, types.Address{}, 0)
+		s.Require().NoError(es.SetBalance(faucetAddr, types.NewValueFromUint64(100_000_000)))
 	})
 
-	suite.Run("ExecuteOutOfGas", func() {
+	s.Run("ExecuteOutOfGas", func() {
 		txn := types.NewEmptyTransaction()
 		txn.To = counterAddr
-		txn.Data = contracts.NewCounterAddCallData(suite.T(), 47)
+		txn.Data = contracts.NewCounterAddCallData(s.T(), 47)
 		txn.Seqno = 1
 		txn.FeeCredit = toGasCredit(0)
 		txn.MaxFeePerGas = types.MaxFeePerGasDefault
 		txn.From = counterAddr
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.Equal(types.ErrorOutOfGas, res.Error.Code())
-		suite.Require().ErrorAs(res.Error, &vmErrStub)
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.Equal(types.ErrorOutOfGas, res.Error.Code())
+		s.Require().ErrorAs(res.Error, &vmErrStub)
 	})
 
-	suite.Run("ExecuteReverted", func() {
+	s.Run("ExecuteReverted", func() {
 		txn := types.NewEmptyTransaction()
 		txn.To = counterAddr
 		txn.Data = []byte("wrong calldata")
@@ -417,66 +427,64 @@ func (suite *SuiteExecutionState) TestTransactionStatus() {
 		txn.FeeCredit = toGasCredit(1_000_000)
 		txn.MaxFeePerGas = types.MaxFeePerGasDefault
 		txn.From = counterAddr
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
 		fmt.Println(res.Error.Error())
-		suite.Equal(types.ErrorExecutionReverted, res.Error.Code())
-		suite.Require().ErrorAs(res.Error, &vmErrStub)
+		s.Equal(types.ErrorExecutionReverted, res.Error.Code())
+		s.Require().ErrorAs(res.Error, &vmErrStub)
 	})
 
-	suite.Run("CallToMainShard", func() {
+	s.Run("CallToMainShard", func() {
 		txn := types.NewEmptyTransaction()
 		txn.To = faucetAddr
-		txn.Data = contracts.NewFaucetWithdrawToCallData(suite.T(),
+		txn.Data = contracts.NewFaucetWithdrawToCallData(s.T(),
 			types.GenerateRandomAddress(types.MainShardId), types.NewValueFromUint64(1_000))
 		txn.Seqno = 1
 		txn.FeeCredit = toGasCredit(100_000)
 		txn.MaxFeePerGas = types.MaxFeePerGasDefault
 		txn.From = faucetAddr
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.Equal(types.ErrorMessageToMainShard, res.Error.Code())
-		suite.Require().ErrorAs(res.Error, &vmErrStub)
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.Equal(types.ErrorMessageToMainShard, res.Error.Code())
+		s.Require().ErrorAs(res.Error, &vmErrStub)
 	})
 
-	suite.Run("Errors with transactions", func() {
+	s.Run("Errors with transactions", func() {
 		err = vm.StackUnderflowError(0, 1, 2)
-		suite.Require().ErrorAs(err, &vmErrStub)
-		suite.Equal(types.ErrorStackUnderflow, types.GetErrorCode(err))
-		suite.Equal("StackUnderflow: stack:0 < required:1, opcode: MUL", err.Error())
+		s.Require().ErrorAs(err, &vmErrStub)
+		s.Equal(types.ErrorStackUnderflow, types.GetErrorCode(err))
+		s.Equal("StackUnderflow: stack:0 < required:1, opcode: MUL", err.Error())
 
 		err = vm.StackOverflowError(1, 0, 2)
-		suite.Require().ErrorAs(err, &vmErrStub)
-		suite.Equal(types.ErrorStackOverflow, types.GetErrorCode(err))
-		suite.Equal("StackOverflow: stack: 1, limit: 0, opcode: MUL", err.Error())
+		s.Require().ErrorAs(err, &vmErrStub)
+		s.Equal(types.ErrorStackOverflow, types.GetErrorCode(err))
+		s.Equal("StackOverflow: stack: 1, limit: 0, opcode: MUL", err.Error())
 
 		err = vm.InvalidOpCodeError(4)
-		suite.Require().ErrorAs(err, &vmErrStub)
-		suite.Equal(types.ErrorInvalidOpcode, types.GetErrorCode(err))
-		suite.Equal("InvalidOpcode: invalid opcode: DIV", err.Error())
+		s.Require().ErrorAs(err, &vmErrStub)
+		s.Equal(types.ErrorInvalidOpcode, types.GetErrorCode(err))
+		s.Equal("InvalidOpcode: invalid opcode: DIV", err.Error())
 	})
 }
 
-func (suite *SuiteExecutionState) TestPrecompiles() {
+func (s *SuiteExecutionState) TestPrecompiles() {
 	shardId := types.ShardId(1)
 
-	tx, err := suite.db.CreateRwTx(suite.ctx)
-	suite.Require().NoError(err)
+	tx, err := s.db.CreateRwTx(s.ctx)
+	s.Require().NoError(err)
 	defer tx.Rollback()
 	var testAddr types.Address
 
-	es, err := NewExecutionState(tx, shardId, StateParams{
-		ConfigAccessor: config.GetStubAccessor(),
-	})
+	es := newState(s.T())
 	es.BaseFee = types.DefaultGasPrice
-	suite.Require().NoError(err)
+	s.Require().NoError(err)
 
-	suite.Run("Deploy", func() {
+	s.Run("Deploy", func() {
 		code, err := contracts.GetCode(contracts.NamePrecompilesTest)
-		suite.Require().NoError(err)
-		testAddr = Deploy(suite.T(), suite.ctx, es, types.BuildDeployPayload(code, common.EmptyHash), shardId, types.Address{}, 0)
+		s.Require().NoError(err)
+		testAddr = Deploy(s.T(), s.ctx, es, types.BuildDeployPayload(code, common.EmptyHash), shardId, types.Address{}, 0)
 	})
 
 	abi, err := contracts.GetAbi(contracts.NamePrecompilesTest)
-	suite.Require().NoError(err)
+	s.Require().NoError(err)
 
 	txn := types.NewEmptyTransaction()
 	txn.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
@@ -487,91 +495,91 @@ func (suite *SuiteExecutionState) TestPrecompiles() {
 	txn.MaxFeePerGas = types.MaxFeePerGasDefault
 	txn.From = testAddr
 
-	suite.Run("testAsyncCall: success", func() {
+	s.Run("testAsyncCall: success", func() {
 		txn.Data, err = abi.Pack("testAsyncCall", testAddr, types.EmptyAddress, types.EmptyAddress, big.NewInt(0),
 			uint8(types.ForwardKindNone), big.NewInt(0), []byte{})
-		suite.Require().NoError(err)
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.False(res.Failed())
+		s.Require().NoError(err)
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.False(res.Failed())
 	})
 
-	suite.Run("testAsyncCall: Send to main shard", func() {
+	s.Run("testAsyncCall: Send to main shard", func() {
 		txn.Data, err = abi.Pack("testAsyncCall", types.EmptyAddress, types.EmptyAddress, types.EmptyAddress, big.NewInt(0),
 			uint8(types.ForwardKindNone), big.NewInt(0), []byte{1, 2, 3, 4})
-		suite.Require().NoError(err)
+		s.Require().NoError(err)
 
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.True(res.Failed())
-		suite.Equal(types.ErrorMessageToMainShard, res.Error.Code())
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.True(res.Failed())
+		s.Equal(types.ErrorMessageToMainShard, res.Error.Code())
 	})
 
-	suite.Run("testAsyncCall: withdrawFunds failed", func() {
+	s.Run("testAsyncCall: withdrawFunds failed", func() {
 		txn.Data, err = abi.Pack("testAsyncCall", testAddr, types.EmptyAddress, types.EmptyAddress, big.NewInt(0),
 			uint8(types.ForwardKindNone), big.NewInt(1_000_000_000_000_000), []byte{1, 2, 3, 4})
-		suite.Require().NoError(err)
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.True(res.Failed())
-		suite.Equal(types.ErrorInsufficientBalance, res.Error.Code())
+		s.Require().NoError(err)
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.True(res.Failed())
+		s.Equal(types.ErrorInsufficientBalance, res.Error.Code())
 	})
 
 	payload := &types.InternalTransactionPayload{
 		To: testAddr,
 	}
 
-	suite.Run("testSendRawTxn: invalid transaction", func() {
+	s.Run("testSendRawTxn: invalid transaction", func() {
 		txn.Data, err = abi.Pack("testSendRawTxn", []byte{1, 2})
-		suite.Require().NoError(err)
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.True(res.Failed())
-		suite.Equal(types.ErrorInvalidTransactionInputUnmarshalFailed, res.Error.Code())
+		s.Require().NoError(err)
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.True(res.Failed())
+		s.Equal(types.ErrorInvalidTransactionInputUnmarshalFailed, res.Error.Code())
 	})
 
-	suite.Run("testSendRawTxn: send to main shard", func() {
+	s.Run("testSendRawTxn: send to main shard", func() {
 		payload.To = types.GenerateRandomAddress(0)
 		data, err := payload.MarshalSSZ()
-		suite.Require().NoError(err)
+		s.Require().NoError(err)
 		txn.Data, err = abi.Pack("testSendRawTxn", data)
-		suite.Require().NoError(err)
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.True(res.Failed())
-		suite.Equal(types.ErrorMessageToMainShard, res.Error.Code())
+		s.Require().NoError(err)
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.True(res.Failed())
+		s.Equal(types.ErrorMessageToMainShard, res.Error.Code())
 		payload.To = testAddr
 	})
 
-	suite.Run("testSendRawTxn: withdraw value failed", func() {
+	s.Run("testSendRawTxn: withdraw value failed", func() {
 		payload.Value = types.NewValueFromUint64(1_000_000_000_000_000)
 		data, err := payload.MarshalSSZ()
-		suite.Require().NoError(err)
+		s.Require().NoError(err)
 		txn.Data, err = abi.Pack("testSendRawTxn", data)
-		suite.Require().NoError(err)
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.True(res.Failed())
-		suite.Equal(types.ErrorInsufficientBalance, res.Error.Code())
+		s.Require().NoError(err)
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.True(res.Failed())
+		s.Equal(types.ErrorInsufficientBalance, res.Error.Code())
 	})
 
-	suite.Run("testSendRawTxn: withdraw feeCredit failed", func() {
+	s.Run("testSendRawTxn: withdraw feeCredit failed", func() {
 		payload.Value = types.NewZeroValue()
 		payload.FeeCredit = types.NewValueFromUint64(1_000_000_000_000_000)
 		payload.ForwardKind = types.ForwardKindNone
 		data, err := payload.MarshalSSZ()
-		suite.Require().NoError(err)
+		s.Require().NoError(err)
 		txn.Data, err = abi.Pack("testSendRawTxn", data)
-		suite.Require().NoError(err)
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.True(res.Failed())
-		suite.Equal(types.ErrorInsufficientBalance, res.Error.Code())
+		s.Require().NoError(err)
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.True(res.Failed())
+		s.Equal(types.ErrorInsufficientBalance, res.Error.Code())
 	})
 
-	suite.Run("testTokenBalance: cross shard", func() {
+	s.Run("testTokenBalance: cross shard", func() {
 		txn.Data, err = abi.Pack("testTokenBalance", types.GenerateRandomAddress(0),
 			types.TokenId(types.HexToAddress("0x0a")))
-		suite.Require().NoError(err)
-		res := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-		suite.True(res.Failed())
-		suite.Equal(types.ErrorCrossShardTransaction, res.Error.Code())
+		s.Require().NoError(err)
+		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+		s.True(res.Failed())
+		s.Equal(types.ErrorCrossShardTransaction, res.Error.Code())
 	})
 
-	suite.Run("Test required gas for outbound transactions", func() {
+	s.Run("Test required gas for outbound transactions", func() {
 		gasPrice := types.DefaultGasPrice
 		gasScale := types.DefaultGasPrice.Div(types.Value100)
 
@@ -581,25 +589,25 @@ func (suite *SuiteExecutionState) TestPrecompiles() {
 			},
 		}
 		gas := vm.GetExtraGasForOutboundTransaction(state, types.ShardId(2))
-		suite.Zero(gas)
+		s.Zero(gas)
 
 		gasPrice = types.DefaultGasPrice.Sub(gasScale.Mul(types.Value10))
 		gas = vm.GetExtraGasForOutboundTransaction(state, types.ShardId(2))
-		suite.Zero(gas)
+		s.Zero(gas)
 
 		gasPrice = types.DefaultGasPrice.Add(gasScale.Mul(types.Value10))
 		gas = vm.GetExtraGasForOutboundTransaction(state, types.ShardId(2))
-		suite.EqualValues(vm.ExtraForwardFeeStep*10, gas)
+		s.EqualValues(vm.ExtraForwardFeeStep*10, gas)
 
 		gasPrice = types.DefaultGasPrice.Add(gasScale.Mul(types.NewValueFromUint64(101)))
 		gas = vm.GetExtraGasForOutboundTransaction(state, types.ShardId(2))
-		suite.EqualValues(vm.ExtraForwardFeeStep*101, gas)
+		s.EqualValues(vm.ExtraForwardFeeStep*101, gas)
 	})
 }
 
-func (suite *SuiteExecutionState) TestPanic() {
-	tx, err := suite.db.CreateRwTx(suite.ctx)
-	suite.Require().NoError(err)
+func (s *SuiteExecutionState) TestPanic() {
+	tx, err := s.db.CreateRwTx(s.ctx)
+	s.Require().NoError(err)
 	defer tx.Rollback()
 
 	txMock := db.NewTxMock(tx)
@@ -607,24 +615,24 @@ func (suite *SuiteExecutionState) TestPanic() {
 	es, err := NewExecutionState(txMock, types.ShardId(1), StateParams{
 		ConfigAccessor: config.GetStubAccessor(),
 	})
-	suite.Require().NoError(err)
+	s.Require().NoError(err)
 	es.BaseFee = types.DefaultGasPrice
 
 	// Check normal execution is ok
 	txn := NewExecutionTransaction(types.MainSmartAccountAddress, types.MainSmartAccountAddress, 1,
-		contracts.NewSmartAccountSendCallData(suite.T(), []byte(""), types.Gas(500_000), types.Value0, nil,
+		contracts.NewSmartAccountSendCallData(s.T(), []byte(""), types.Gas(500_000), types.Value0, nil,
 			types.MainSmartAccountAddress, types.ExecutionTransactionKind))
-	execResult := es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-	suite.False(execResult.Failed())
+	execResult := es.HandleTransaction(s.ctx, txn, dummyPayer{})
+	s.False(execResult.Failed())
 
 	// Check panic is handled correctly
 	txMock.GetFromShardFunc = func(shardId types.ShardId, tableName db.ShardedTableName, key []byte) ([]byte, error) {
 		panic("test panic")
 	}
-	execResult = es.HandleTransaction(suite.ctx, txn, dummyPayer{})
-	suite.True(execResult.Failed())
-	suite.False(execResult.IsFatal())
-	suite.Equal("PanicDuringExecution: panic transaction: test panic", execResult.Error.Error())
+	execResult = es.HandleTransaction(s.ctx, txn, dummyPayer{})
+	s.True(execResult.Failed())
+	s.False(execResult.IsFatal())
+	s.Equal("PanicDuringExecution: panic transaction: test panic", execResult.Error.Error())
 }
 
 func BenchmarkBlockGeneration(b *testing.B) {

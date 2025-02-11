@@ -50,6 +50,7 @@ func newTestProposer(params Params, pool TxnPool) *proposer {
 
 func (s *ProposerTestSuite) TestBlockGas() {
 	s.Run("GenerateZeroState", func() {
+		execution.GenerateZeroState(s.T(), s.ctx, types.MainShardId, s.db)
 		execution.GenerateZeroState(s.T(), s.ctx, s.shardId, s.db)
 	})
 
@@ -107,6 +108,7 @@ func (s *ProposerTestSuite) TestCollator() {
 	}
 
 	s.Run("GenerateZeroState", func() {
+		execution.GenerateZeroState(s.T(), s.ctx, types.MainShardId, s.db)
 		execution.GenerateZeroState(s.T(), s.ctx, shardId, s.db)
 	})
 

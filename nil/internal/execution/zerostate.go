@@ -80,7 +80,6 @@ type MainKeys struct {
 }
 
 type ConfigParams struct {
-	GasPrices  []int                  `yaml:"gasPrices"`
 	Validators config.ParamValidators `yaml:"validators,omitempty"`
 	GasPrice   config.ParamGasPrice   `yaml:"gasPrice"`
 }
@@ -171,9 +170,9 @@ func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error 
 		}
 	}
 
-	if stateConfig.ConfigParams.GasPrices != nil {
-		check.PanicIfNot(len(stateConfig.ConfigParams.GasPrices) > int(es.ShardId))
-		es.GasPrice = types.NewValueFromUint64(uint64(stateConfig.ConfigParams.GasPrices[es.ShardId]))
+	if len(stateConfig.ConfigParams.GasPrice.Shards) != 0 {
+		check.PanicIfNot(len(stateConfig.ConfigParams.GasPrice.Shards) > int(es.ShardId))
+		es.GasPrice = types.Value{Uint256: &stateConfig.ConfigParams.GasPrice.Shards[es.ShardId]}
 	} else {
 		es.GasPrice = types.DefaultGasPrice
 	}

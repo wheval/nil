@@ -34,7 +34,17 @@ func GenerateZeroState(t *testing.T, ctx context.Context,
 		txFabric, nil)
 	require.NoError(t, err)
 	defer g.Rollback()
-	block, err := g.GenerateZeroState(DefaultZeroStateConfig, nil)
+
+	zerostateCfg, err := ParseZeroStateConfig(DefaultZeroStateConfig)
+	require.NoError(t, err)
+	zerostateCfg.ConfigParams = ConfigParams{
+		GasPrice: config.ParamGasPrice{
+			GasPriceScale: *types.NewUint256(10),
+			Shards:        []types.Uint256{*types.NewUint256(10), *types.NewUint256(10), *types.NewUint256(10)},
+		},
+	}
+
+	block, err := g.GenerateZeroState("", zerostateCfg)
 	require.NoError(t, err)
 	require.NotNil(t, block)
 	return block.Hash(shardId)
