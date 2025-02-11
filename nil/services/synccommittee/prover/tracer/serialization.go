@@ -24,6 +24,7 @@ type PbTracesSet struct {
 	copy     *pb.CopyTraces
 	mpt      *pb.MPTTraces
 	exp      *pb.ExpTraces
+	keccaks  *pb.KeccakTraces
 }
 
 // Each message is serialized into file with corresponding extension added to base file path
@@ -34,6 +35,7 @@ const (
 	copyExtension     = "copy"
 	mptExtension      = "mpt"
 	expExtension      = "exp"
+	keccakExtension   = "keccak"
 )
 
 func SerializeToFile(proofs ExecutionTraces, mode MarshalMode, baseFileName string) error {
@@ -88,6 +90,11 @@ func SerializeToFile(proofs ExecutionTraces, mode MarshalMode, baseFileName stri
 			return marshalToFile(pbTraces.exp,
 				marshalFunc, fmt.Sprintf("%s.%s.%s", baseFileName, expExtension, ext))
 		})
+
+		eg.Go(func() error {
+			return marshalToFile(pbTraces.keccaks,
+				marshalFunc, fmt.Sprintf("%s.%s.%s", baseFileName, keccakExtension, ext))
+		})
 	}
 
 	return eg.Wait()
@@ -101,6 +108,7 @@ func DeserializeFromFile(baseFileName string, mode MarshalMode) (ExecutionTraces
 		copy:     &pb.CopyTraces{},
 		mpt:      &pb.MPTTraces{},
 		exp:      &pb.ExpTraces{},
+		keccaks:  &pb.KeccakTraces{},
 	}
 
 	unmarshal, ok := marshalModeToUnmarshaller[mode]
@@ -149,6 +157,11 @@ func DeserializeFromFile(baseFileName string, mode MarshalMode) (ExecutionTraces
 			unmarshal, pbTraces.exp)
 	})
 
+	eg.Go(func() error {
+		return unmarshalFromFile(fmt.Sprintf("%s.%s.%s", baseFileName, keccakExtension, ext),
+			unmarshal, pbTraces.keccaks)
+	})
+
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
@@ -166,6 +179,7 @@ func FromProto(traces *PbTracesSet) (ExecutionTraces, error) {
 		ZKEVMStates:       make([]ZKEVMState, len(traces.zkevm.ZkevmStates)),
 		ContractsBytecode: make(map[types.Address][]byte, len(traces.bytecode.ContractBytecodes)),
 		CopyEvents:        make([]CopyEvent, len(traces.copy.CopyEvents)),
+		KeccakTraces:      make([]KeccakBuffer, len(traces.keccaks.HashedBuffers)),
 	}
 
 	for i, pbStackOp := range traces.rw.StackOps {
@@ -213,6 +227,14 @@ func FromProto(traces *PbTracesSet) (ExecutionTraces, error) {
 			Result:   (*uint256.Int)(&result),
 			PC:       pbExpOp.Pc,
 			TxnId:    uint(pbExpOp.TxnId),
+		}
+	}
+
+	for i, pbKeccakOp := range traces.keccaks.HashedBuffers {
+		hash := pb.ProtoUint256ToUint256(pbKeccakOp.GetKeccakHash())
+		ep.KeccakTraces[i] = KeccakBuffer{
+			buf:  pbKeccakOp.GetBuffer(),
+			hash: common.BytesToHash(hash.Bytes()),
 		}
 	}
 
@@ -284,9 +306,10 @@ func ToProto(tr ExecutionTraces, traceIdx uint64) (*PbTracesSet, error) {
 			TraceIdx:   traceIdx,
 			ProtoHash:  constants.ProtoHash,
 		},
-		exp:   &pb.ExpTraces{ExpOps: make([]*pb.ExpOp, len(traces.ExpOps)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
-		zkevm: &pb.ZKEVMTraces{ZkevmStates: make([]*pb.ZKEVMState, len(traces.ZKEVMStates)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
-		copy:  &pb.CopyTraces{CopyEvents: make([]*pb.CopyEvent, len(traces.CopyEvents)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
+		exp:     &pb.ExpTraces{ExpOps: make([]*pb.ExpOp, len(traces.ExpOps)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
+		zkevm:   &pb.ZKEVMTraces{ZkevmStates: make([]*pb.ZKEVMState, len(traces.ZKEVMStates)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
+		copy:    &pb.CopyTraces{CopyEvents: make([]*pb.CopyEvent, len(traces.CopyEvents)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
+		keccaks: &pb.KeccakTraces{HashedBuffers: make([]*pb.KeccakBuffer, len(traces.KeccakTraces)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
 	}
 
 	// Convert StackOps
@@ -334,6 +357,14 @@ func ToProto(tr ExecutionTraces, traceIdx uint64) (*PbTracesSet, error) {
 			Result:   pb.Uint256ToProtoUint256(types.Uint256(*expOp.Result)),
 			Pc:       expOp.PC,
 			TxnId:    uint64(expOp.TxnId),
+		}
+	}
+
+	for i, keccakOp := range traces.KeccakTraces {
+		hash := keccakOp.hash.Uint256()
+		pbTraces.keccaks.HashedBuffers[i] = &pb.KeccakBuffer{
+			Buffer:     keccakOp.buf,
+			KeccakHash: pb.Uint256ToProtoUint256(types.Uint256(*hash)),
 		}
 	}
 

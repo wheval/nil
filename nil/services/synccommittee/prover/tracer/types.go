@@ -10,6 +10,7 @@ type ExecutionTraces interface {
 	AddStackOps(ops []StackOp)
 	AddStorageOps(ops []StorageOp)
 	AddExpOps(ops []ExpOp)
+	AddKeccakOps(ops []KeccakBuffer)
 	AddZKEVMStates(states []ZKEVMState)
 	AddCopyEvents(events []CopyEvent)
 	AddContractBytecode(addr types.Address, code []byte)
@@ -18,13 +19,14 @@ type ExecutionTraces interface {
 
 type executionTracesImpl struct {
 	// Stack/Memory/State Ops are handled for entire block, they share the same counter (rw_circuit)
-	StackOps    []StackOp
-	MemoryOps   []MemoryOp
-	StorageOps  []StorageOp
-	ExpOps      []ExpOp
-	ZKEVMStates []ZKEVMState
-	CopyEvents  []CopyEvent
-	MPTTraces   *mpttracer.MPTTraces
+	StackOps     []StackOp
+	MemoryOps    []MemoryOp
+	StorageOps   []StorageOp
+	ExpOps       []ExpOp
+	ZKEVMStates  []ZKEVMState
+	CopyEvents   []CopyEvent
+	KeccakTraces []KeccakBuffer
+	MPTTraces    *mpttracer.MPTTraces
 
 	ContractsBytecode map[types.Address][]byte
 }
@@ -65,6 +67,10 @@ func (tr *executionTracesImpl) AddExpOps(ops []ExpOp) {
 	tr.ExpOps = append(tr.ExpOps, ops...)
 }
 
+func (tr *executionTracesImpl) AddKeccakOps(ops []KeccakBuffer) {
+	tr.KeccakTraces = append(tr.KeccakTraces, ops...)
+}
+
 func (tr *executionTracesImpl) SetMptTraces(mptTraces *mpttracer.MPTTraces) {
 	tr.MPTTraces = mptTraces
 }
@@ -77,5 +83,6 @@ type Stats struct {
 	StateOpsN          uint
 	CopyOpsN           uint
 	ExpOpsN            uint
+	KeccakOpsN         uint
 	AffectedContractsN uint
 }

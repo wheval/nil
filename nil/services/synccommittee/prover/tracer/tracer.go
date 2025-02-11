@@ -131,6 +131,7 @@ func (rt *RemoteTracerImpl) GetBlockTraces(
 		Uint("stateOperations", stats.StateOpsN).
 		Uint("copyOperations", stats.CopyOpsN).
 		Uint("expOperations", stats.ExpOpsN).
+		Uint("keccakOperations", stats.KeccakOpsN).
 		Uint("affectedContracts", stats.AffectedContractsN).
 		Msg("Tracer stats")
 
