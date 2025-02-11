@@ -1,10 +1,10 @@
-import { Client, createClient } from "@libsql/client";
+import { type Client, createClient } from "@libsql/client";
 
 class DBClient {
   client: Client;
   constructor() {
     this.client = createClient({
-      url: `https://${process.env.DB_URL}`
+      url: `https://${process.env.DB_URL}`,
     });
   }
 
@@ -16,7 +16,7 @@ class DBClient {
           hash TEXT,
           stage INTEGER
         )
-      `
+      `,
     );
   }
 
@@ -25,8 +25,8 @@ class DBClient {
       `
         INSERT INTO USER_HASHES (hash, stage)
         VALUES (${hash}, 0);
-      `
-    )
+      `,
+    );
   }
 
   public async updateProgress(hash: string, newStage: number) {
@@ -35,7 +35,7 @@ class DBClient {
         UPDATE USER_HASHES
         SET stage = ${newStage}
         WHERE hash = ${hash};
-      `
+      `,
     );
   }
 
@@ -45,7 +45,7 @@ class DBClient {
         SELECT stage
         FROM USER_HASHES
         WHERE hash = ${hash}; 
-      `
+      `,
     );
 
     return result;
@@ -56,7 +56,7 @@ class DBClient {
       `
         DELETE FROM USER_HASHES
         WHERE hash = ${hash};
-      `
+      `,
     );
   }
 }

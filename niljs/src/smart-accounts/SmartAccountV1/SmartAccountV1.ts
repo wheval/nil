@@ -395,7 +395,7 @@ export class SmartAccountV1 implements SmartAccountInterface {
         "latest",
       );
 
-      refinedCredit = estimatedFee.feeCredit;
+      refinedCredit = refinedCredit || estimatedFee.feeCredit;
       maxPriorityFeePerGas =
         maxPriorityFeePerGas === undefined ? estimatedFee.averagePriorityFee : maxPriorityFeePerGas;
       maxFeePerGas = maxFeePerGas || estimatedFee.maxBaseFee;
@@ -597,7 +597,7 @@ export class SmartAccountV1 implements SmartAccountInterface {
         "latest",
       );
 
-      refinedCredit = estimatedFee.feeCredit;
+      refinedCredit = refinedCredit || estimatedFee.feeCredit;
       maxPriorityFeePerGas =
         maxPriorityFeePerGas === undefined ? estimatedFee.averagePriorityFee : maxPriorityFeePerGas;
       maxFeePerGas = maxFeePerGas || estimatedFee.maxBaseFee;

@@ -1,5 +1,4 @@
 import { describe, expect } from "vitest";
-import { DefualtNewSmartAccountAmount } from "../../../src/commands/smart-account/new.js";
 import ConfigManager from "../../../src/common/config.js";
 import { ConfigKeys } from "../../../src/common/config.js";
 import { CliTest } from "../../setup.js";
