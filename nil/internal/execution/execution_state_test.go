@@ -443,7 +443,7 @@ func (s *SuiteExecutionState) TestTransactionStatus() {
 		txn.MaxFeePerGas = types.MaxFeePerGasDefault
 		txn.From = faucetAddr
 		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
-		s.Equal(types.ErrorMessageToMainShard, res.Error.Code())
+		s.Equal(types.ErrorTransactionToMainShard, res.Error.Code())
 		s.Require().ErrorAs(res.Error, &vmErrStub)
 	})
 
@@ -510,7 +510,7 @@ func (s *SuiteExecutionState) TestPrecompiles() {
 
 		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
 		s.True(res.Failed())
-		s.Equal(types.ErrorMessageToMainShard, res.Error.Code())
+		s.Equal(types.ErrorTransactionToMainShard, res.Error.Code())
 	})
 
 	s.Run("testAsyncCall: withdrawFunds failed", func() {
@@ -542,7 +542,7 @@ func (s *SuiteExecutionState) TestPrecompiles() {
 		s.Require().NoError(err)
 		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
 		s.True(res.Failed())
-		s.Equal(types.ErrorMessageToMainShard, res.Error.Code())
+		s.Equal(types.ErrorTransactionToMainShard, res.Error.Code())
 		payload.To = testAddr
 	})
 

@@ -24,42 +24,70 @@ const (
 	ErrorUnknown
 	ErrorExecution
 
+	// ErrorOutOfGasStart is auxiliary code, should never be returned
 	ErrorOutOfGasStart
+	// ErrorOutOfGas is general out of gas error
 	ErrorOutOfGas
+	// ErrorOutOfGasDynamic is out of gas error happened during charge of dynamic gas
 	ErrorOutOfGasDynamic
+	// ErrorOutOfGasForPrecompile is out of gas error happened during precompile contract execution
 	ErrorOutOfGasForPrecompile
+	// ErrorOutOfGasStorage is returned if there are no funds for paying code storage fee during deployment
 	ErrorOutOfGasStorage
+	// ErrorOutOfGasEnd is auxiliary code, should never be returned
 	ErrorOutOfGasEnd
-
-	ErrorBounce
+	// ErrorBuyGas is returned when purchasing sufficient gas is not possible for some reason
 	ErrorBuyGas
+	// ErrorValidation is returned if the transaction is invalid
 	ErrorValidation
+	// ErrorInsufficientBalance is returned if the account does not have enough money to pay for a some operation
 	ErrorInsufficientBalance
+	// ErrorNoAccount is returned if the account does not exist
 	ErrorNoAccount
-	ErrorCodeStoreOutOfGas
+	// ErrorCallDepthExceeded is returned if the sync call depth is exceeded
 	ErrorCallDepthExceeded
+	// ErrorContractAddressCollision is returned if the contract address is already in use
 	ErrorContractAddressCollision
+	// ErrorExecutionReverted is returned if the EVM execution was reverted
 	ErrorExecutionReverted
+	// ErrorMaxCodeSizeExceeded is returned if the code size is too big (EIP-158)
 	ErrorMaxCodeSizeExceeded
+	// ErrorMaxInitCodeSizeExceeded is returned if the init code size is too big
 	ErrorMaxInitCodeSizeExceeded
+	// ErrorInvalidJump is returned if during EVM execution the jump destination is invalid
 	ErrorInvalidJump
+	// ErrorWriteProtection is returned if the contract tries to change state during a read-only execution
 	ErrorWriteProtection
+	// ErrorReturnDataOutOfBounds is returned if the contract tries to return data outside the valid bounds
 	ErrorReturnDataOutOfBounds
+	// ErrorGasUintOverflow is returned if the gas overflows uint64
 	ErrorGasUintOverflow
+	// ErrorInvalidCode is returned if the code is started with 0xEF (EIP-3541)
 	ErrorInvalidCode
+	// ErrorNonceUintOverflow is returned if the nonce value overflows uint64
 	ErrorNonceUintOverflow
-	ErrorInvalidInputLength
+	// ErrorCrossShardTransaction is returned if the sync operation is performed between shards
 	ErrorCrossShardTransaction
+	// ErrorStopToken is an internal error, should never be returned
 	ErrorStopToken
+	// ErrorForwardingFailed is returned if the message forwarding failed
 	ErrorForwardingFailed
-	ErrorMessageToMainShard
+	// ErrorTransactionToMainShard is returned if the transaction tries to make an async call to the main shard
+	ErrorTransactionToMainShard
+	// ErrorExternalVerificationFailed is returned if verification of the external failed
 	ErrorExternalVerificationFailed
-	ErrorInvalidTransaction
+	// ErrorInvalidTransactionInputUnmarshalFailed is returned from SendRaw precompile if the given transaction cannot
+	// be unmarshal
 	ErrorInvalidTransactionInputUnmarshalFailed
+	// ErrorOnlyResponseCheckFailed is returned from `onlyResponse` precompile if inbound transaction is not a response
 	ErrorOnlyResponseCheckFailed
+	// ErrorUnexpectedPrecompileType is returned if the precompile type is invalid
 	ErrorUnexpectedPrecompileType
+	// ErrorStackUnderflow is returned if the EVM stack underflows
 	ErrorStackUnderflow
+	// ErrorStackOverflow is returned if the EVM stack overflows
 	ErrorStackOverflow
+	// ErrorInvalidOpcode is returned if the EVM execution encounters an invalid opcode
 	ErrorInvalidOpcode
 
 	// ErrorInsufficientFunds is returned if the total cost of executing a transaction
@@ -96,24 +124,46 @@ const (
 
 	// ErrorDeployToMainShard is returned when a non-system smart account requests deploy to the main shard.
 	ErrorDeployToMainShard
+	// ErrorShardIdIsTooBig is returned when the specified shard id is greater than available shards.
 	ErrorShardIdIsTooBig
+	// ErrorAbiPackFailed is returned when some precompile fails to pack the ABI.
 	ErrorAbiPackFailed
+	// ErrorAbiUnpackFailed is returned when some precompile fails to unpack the ABI.
 	ErrorAbiUnpackFailed
 
+	// ErrorIncorrectDeploymentAddress is returned when trying to deploy contract to address which is not equal to one
+	// calculated from deployed code and salt.
 	ErrorIncorrectDeploymentAddress
-	ErrorMessageFeeForwardingFailed
+	// ErrorRefundTransactionIsNotAllowedInExternalTransactions is returned when the external transaction contains a
+	// refund flag
 	ErrorRefundTransactionIsNotAllowedInExternalTransactions
+	// ErrorPrecompileTooShortCallData is returned when the call data is too short for the precompile
 	ErrorPrecompileTooShortCallData
+	// ErrorPrecompileWrongNumberOfArguments is returned when the number of arguments is incorrect for the precompile
 	ErrorPrecompileWrongNumberOfArguments
+	// ErrorPrecompileInvalidTokenArray is returned when the token array argument, passed to the precompile, is invalid
 	ErrorPrecompileInvalidTokenArray
+	// ErrorPrecompileTokenArrayIsTooBig is returned when the token array size is greater than 256
 	ErrorPrecompileTokenArrayIsTooBig
+	// ErrorPrecompileStateDbReturnedError is an internal error indicating that the Execution returned an error
 	ErrorPrecompileStateDbReturnedError
+	// ErrorOnlyMainShardContractsCanChangeConfig is returned when a contract from a shard other than the main one tries
+	// to change on-cahin config
 	ErrorOnlyMainShardContractsCanChangeConfig
+	// ErrorPrecompileConfigSetParamFailed is returned when the precompile fails to set the config parameter
 	ErrorPrecompileConfigSetParamFailed
+	// ErrorPrecompileConfigGetParamFailed is returned when the precompile fails to get the config parameter
 	ErrorPrecompileConfigGetParamFailed
+	// ErrorAwaitCallCalledFromNotTopLevel is returned when the await call is called from a contract which was
+	// synchronously called from another contract.
 	ErrorAwaitCallCalledFromNotTopLevel
+	// ErrorAwaitCallTooLowResponseProcessingGas is returned when the response processing gas is too low for the await
+	// call.
 	ErrorAwaitCallTooLowResponseProcessingGas
+	// ErrorAwaitCallTooShortContextData is returned when the context data is too short for the await call.
 	ErrorAwaitCallTooShortContextData
+	// ErrorAsyncDeployMustNotHaveToken is returned when the async deploy transaction contains custom token. It is not
+	// allowed to transfer custom tokens within async deploy transaction.
 	ErrorAsyncDeployMustNotHaveToken
 
 	// ErrorEmitLogFailed is returned when the execution state fails to add a log. Probably the limit of logs is
