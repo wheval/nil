@@ -14,7 +14,7 @@ import (
 
 func writeTestBlock(t *testing.T, tx db.RwTx, shardId types.ShardId, blockNumber types.BlockNumber,
 	transactions []*types.Transaction, receipts []*types.Receipt, outTransactions []*types.Transaction,
-) common.Hash {
+) *execution.BlockGenerationResult {
 	t.Helper()
 	block := types.Block{
 		BlockData: types.BlockData{
@@ -31,7 +31,7 @@ func writeTestBlock(t *testing.T, tx db.RwTx, shardId types.ShardId, blockNumber
 	}
 	hash := block.Hash(types.BaseShardId)
 	require.NoError(t, db.WriteBlock(tx, types.BaseShardId, hash, &block))
-	return hash
+	return &execution.BlockGenerationResult{BlockHash: hash, Block: &block}
 }
 
 func writeTransactions(t *testing.T, tx db.RwTx, shardId types.ShardId, transactions []*types.Transaction) *execution.TransactionTrie {

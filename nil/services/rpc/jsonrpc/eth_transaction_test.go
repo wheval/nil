@@ -44,10 +44,11 @@ func (s *SuiteEthTransaction) SetupSuite() {
 	s.transaction.To = types.GenerateRandomAddress(types.BaseShardId)
 	receipt := types.Receipt{TxnHash: s.transaction.Hash()}
 
-	s.lastBlockHash = writeTestBlock(
+	blockRes := writeTestBlock(
 		s.T(), tx, types.BaseShardId, types.BlockNumber(0), []*types.Transaction{s.transaction}, []*types.Receipt{&receipt}, []*types.Transaction{})
-	_, err = execution.PostprocessBlock(tx, types.BaseShardId, types.DefaultGasPrice, s.lastBlockHash)
+	err = execution.PostprocessBlock(tx, types.BaseShardId, blockRes)
 	s.Require().NoError(err)
+	s.lastBlockHash = blockRes.BlockHash
 
 	err = tx.Commit()
 	s.Require().NoError(err)

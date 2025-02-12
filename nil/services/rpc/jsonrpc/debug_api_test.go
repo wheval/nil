@@ -63,7 +63,8 @@ func TestDebugGetBlock(t *testing.T) {
 		err = db.WriteBlock(tx, types.MainShardId, hash, b)
 		require.NoError(t, err)
 
-		_, err = execution.PostprocessBlock(tx, types.MainShardId, types.DefaultGasPrice, hash)
+		blockResult := &execution.BlockGenerationResult{BlockHash: hash, Block: b}
+		err = execution.PostprocessBlock(tx, types.MainShardId, blockResult)
 		require.NoError(t, err)
 	}
 
@@ -140,12 +141,12 @@ func (suite *SuiteDbgContracts) SetupSuite() {
 	suite.Require().NoError(es.SetBalance(suite.smcAddr, types.NewValueFromUint64(1234)))
 	suite.Require().NoError(es.SetExtSeqno(suite.smcAddr, 567))
 
-	blockHash, _, err := es.Commit(0, nil)
+	blockRes, err := es.Commit(0, nil)
 	suite.Require().NoError(err)
-	suite.blockHash = blockHash
+	suite.blockHash = blockRes.BlockHash
 
-	block, err := execution.PostprocessBlock(tx, shardId, types.DefaultGasPrice, blockHash)
-	suite.Require().NotNil(block)
+	err = execution.PostprocessBlock(tx, shardId, blockRes)
+	suite.Require().NotNil(blockRes.Block)
 	suite.Require().NoError(err)
 
 	err = tx.Commit()

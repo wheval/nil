@@ -186,6 +186,7 @@ func analyzeReceiptRec(t *testing.T, ctx context.Context, client client.Client, 
 	}
 	txn, err := client.GetInTransactionByHash(ctx, receipt.TxnHash)
 	require.NoError(t, err)
+	require.NotNil(t, txn)
 
 	value.ValueUsed = value.ValueUsed.Add(receipt.GasUsed.ToValue(receipt.GasPrice))
 	value.ValueForwarded = value.ValueForwarded.Add(receipt.Forwarded)

@@ -56,6 +56,7 @@ func (s *SuiteConsensus) TestConsensus() {
 		for _, instance := range s.Instances {
 			instanceBlock, err := instance.Client.GetBlock(s.Context, block.ShardId, uint64(block.Number), false)
 			s.Require().NoError(err)
+			s.Require().NotNil(instanceBlock)
 			s.Equal(block.Hash, instanceBlock.Hash)
 		}
 	}

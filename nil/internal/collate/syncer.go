@@ -216,7 +216,7 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 	if block.Id != lastBlock.Id+1 {
 		s.logger.Debug().
 			Stringer(logging.FieldBlockNumber, block.Id).
-			Msgf("Received block is out of order with the last block %d", lastBlock.Id)
+			Msgf("Received block %d is out of order with the last block %d", block.Id, lastBlock.Id)
 
 		// todo: queue the block for later processing
 		return false, nil
@@ -376,7 +376,12 @@ func (s *Syncer) saveDirectly(ctx context.Context, block *types.BlockWithExtract
 			block.Block.OutTransactionsRoot, txnRoot)
 	}
 
-	_, err = execution.PostprocessBlock(tx, s.config.ShardId, block.Block.BaseFee, blockHash)
+	blockRes := &execution.BlockGenerationResult{
+		Block:     block.Block,
+		BlockHash: blockHash,
+	}
+
+	err = execution.PostprocessBlock(tx, s.config.ShardId, blockRes)
 	if err != nil {
 		return err
 	}
@@ -415,19 +420,19 @@ func (s *Syncer) GenerateZerostate(ctx context.Context) error {
 }
 
 func validateRepliedBlock(
-	in, replied *types.Block, inHash, repliedHash common.Hash, inTxns, repliedTxns []*types.Transaction,
+	in *types.Block, replied *execution.BlockGenerationResult, inHash common.Hash, inTxns []*types.Transaction,
 ) error {
-	if replied.OutTransactionsRoot != in.OutTransactionsRoot {
+	if replied.Block.OutTransactionsRoot != in.OutTransactionsRoot {
 		return fmt.Errorf("out transactions root mismatch. Expected %x, got %x",
-			in.OutTransactionsRoot, replied.OutTransactionsRoot)
+			in.OutTransactionsRoot, replied.Block.OutTransactionsRoot)
 	}
-	if len(repliedTxns) != len(inTxns) {
+	if len(replied.OutTxns) != len(inTxns) {
 		return fmt.Errorf("out transactions count mismatch. Expected %d, got %d",
-			len(inTxns), len(repliedTxns))
+			len(inTxns), len(replied.InTxns))
 	}
-	if repliedHash != inHash {
+	if replied.BlockHash != inHash {
 		return fmt.Errorf("block hash mismatch. Expected %x, got %x",
-			inHash, repliedHash)
+			inHash, replied.BlockHash)
 	}
 	return nil
 }
@@ -436,6 +441,16 @@ func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtracte
 	mainShardHash := block.Block.MainChainHash
 	if s.config.ShardId.IsMainShard() {
 		mainShardHash = block.Block.PrevBlock
+	}
+	if !s.config.ShardId.IsMainShard() {
+		roTx, err := s.db.CreateRoTx(ctx)
+		if err != nil {
+			return err
+		}
+		defer roTx.Rollback()
+		if _, err = db.ReadBlock(roTx, types.MainShardId, mainShardHash); err != nil {
+			return fmt.Errorf("failed to read main shard block: %w", err)
+		}
 	}
 
 	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, &block.Block.PrevBlock, &mainShardHash)
@@ -458,14 +473,24 @@ func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtracte
 	}
 	proposal.InternalTxns, proposal.ExternalTxns = execution.SplitInTransactions(block.InTransactions)
 	proposal.ForwardTxns, _ = execution.SplitOutTransactions(block.OutTransactions, s.config.ShardId)
-	res, err := gen.GenerateBlock(proposal, s.logger, block.Signature)
+
+	// First we build block without writing it into the database, because we need to check that the resulted block is
+	// the same as the proposed one.
+	resBlock, err := gen.BuildBlock(proposal, s.logger)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to build block: %w", err)
 	}
 
-	if err := validateRepliedBlock(block.Block, res.Block, blockHash, res.Block.Hash(s.config.ShardId), block.OutTransactions, res.OutTxns); err != nil {
-		return err
+	// Check generated block and proposed are equal
+	if err = validateRepliedBlock(block.Block, resBlock, blockHash, block.OutTransactions); err != nil {
+		return fmt.Errorf("failed to validate replied block: %w", err)
 	}
+
+	// Finally, write generated block into the database
+	if err = gen.Finalize(resBlock, block.Signature); err != nil {
+		return fmt.Errorf("failed to finalize block: %w", err)
+	}
+
 	return nil
 }
 

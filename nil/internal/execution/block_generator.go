@@ -49,9 +49,10 @@ type BlockGenerator struct {
 }
 
 type BlockGenerationResult struct {
-	Block   *types.Block
-	InTxns  []*types.Transaction
-	OutTxns []*types.Transaction
+	Block     *types.Block
+	BlockHash common.Hash
+	OutTxns   []*types.Transaction
+	InTxns    []*types.Transaction
 }
 
 func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabric db.DB, blockHash, mainShardHash *common.Hash) (*BlockGenerator, error) {
@@ -276,16 +277,11 @@ func (g *BlockGenerator) handleTxn(txn *types.Transaction) error {
 	return nil
 }
 
-func (g *BlockGenerator) BuildBlock(proposal *Proposal, logger zerolog.Logger) (*types.Block, error) {
+func (g *BlockGenerator) BuildBlock(proposal *Proposal, logger zerolog.Logger) (*BlockGenerationResult, error) {
 	if err := g.prepareExecutionState(proposal, logger); err != nil {
 		return nil, err
 	}
-
-	block, _, err := g.executionState.BuildBlock(proposal.PrevBlockId + 1)
-	if err != nil {
-		return nil, err
-	}
-	return block, err
+	return g.executionState.BuildBlock(proposal.PrevBlockId + 1)
 }
 
 func (g *BlockGenerator) GenerateBlock(proposal *Proposal, logger zerolog.Logger, sig types.Signature) (*BlockGenerationResult, error) {
@@ -370,38 +366,41 @@ func (g *BlockGenerator) addReceipt(execResult *ExecutionResult) {
 }
 
 func (g *BlockGenerator) finalize(blockId types.BlockNumber, sig types.Signature) (*BlockGenerationResult, error) {
-	blockHash, outTxns, err := g.executionState.Commit(blockId, sig)
+	blockRes, err := g.executionState.Commit(blockId, sig)
 	if err != nil {
 		return nil, err
 	}
 
-	block, err := PostprocessBlock(g.rwTx, g.params.ShardId, g.params.GasBasePrice, blockHash)
-	if err != nil {
-		return nil, err
+	return blockRes, g.Finalize(blockRes, sig)
+}
+
+func (g *BlockGenerator) Finalize(blockRes *BlockGenerationResult, sig types.Signature) error {
+	if err := g.executionState.CommitBlock(blockRes.Block, sig); err != nil {
+		return err
+	}
+
+	if err := PostprocessBlock(g.rwTx, g.params.ShardId, blockRes); err != nil {
+		return err
 	}
 
 	ts, err := g.rwTx.CommitWithTs()
 	if err != nil {
-		return nil, fmt.Errorf("failed to commit block: %w", err)
+		return fmt.Errorf("failed to commit block: %w", err)
 	}
 
 	// TODO: We should perform block commit and timestamp write atomically.
 	tx, err := g.txFabric.CreateRwTx(g.ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if err := db.WriteBlockTimestamp(tx, g.params.ShardId, blockHash, uint64(ts)); err != nil {
-		return nil, err
+	if err := db.WriteBlockTimestamp(tx, g.params.ShardId, blockRes.BlockHash, uint64(ts)); err != nil {
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit block timestamp: %w", err)
+		return fmt.Errorf("failed to commit block timestamp: %w", err)
 	}
 
-	return &BlockGenerationResult{
-		Block:   block,
-		InTxns:  g.executionState.InTransactions,
-		OutTxns: outTxns,
-	}, nil
+	return nil
 }
