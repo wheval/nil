@@ -1,8 +1,12 @@
 package logging
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common/check"
@@ -11,6 +15,65 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/term"
 )
+
+var (
+	componentsFilter = make(map[string]bool)
+	all              = true
+	lock             = sync.Mutex{}
+)
+
+type ComponentFilterWriter struct {
+	Writer io.Writer
+	Name   string
+}
+
+func (w ComponentFilterWriter) Write(p []byte) (n int, err error) {
+	var log map[string]any
+	if err := json.Unmarshal(p, &log); err != nil {
+		return 0, err
+	}
+
+	lock.Lock()
+	defer lock.Unlock()
+
+	enabled, found := componentsFilter[w.Name]
+	if !found {
+		enabled = all
+	}
+	if enabled {
+		return w.Writer.Write(p)
+	}
+
+	return len(p), nil
+}
+
+func ApplyComponentsFilter(filter string) {
+	comps := strings.Split(filter, ":")
+
+	lock.Lock()
+	defer lock.Unlock()
+
+	for _, comp := range comps {
+		if comp == "" {
+			continue
+		}
+
+		enabled := true
+		if comp[0] == '-' {
+			enabled = false
+			comp = comp[1:]
+		}
+
+		if comp == "all" {
+			all = enabled
+			for k := range componentsFilter {
+				componentsFilter[k] = enabled
+			}
+		} else {
+			componentsFilter[comp] = enabled
+		}
+	}
+}
 
 func SetupGlobalLogger(level string) {
 	check.PanicIfErr(TrySetupGlobalLevel(level))
@@ -60,9 +123,21 @@ func NewLogger(component string) zerolog.Logger {
 	if isSystemd() {
 		logger = newJournalDLogger()
 	} else {
-		logger = newConsoleLogger()
+		logger = newConsoleLogger(component)
 	}
 
+	return logger.With().
+		Str(FieldComponent, component).
+		Caller().
+		Timestamp().
+		Logger()
+}
+
+func NewLoggerWithWriter(component string, writer io.Writer) zerolog.Logger {
+	logger := zerolog.New(ComponentFilterWriter{
+		Writer: writer,
+		Name:   component,
+	})
 	return logger.With().
 		Str(FieldComponent, component).
 		Caller().
@@ -74,9 +149,10 @@ func newJournalDLogger() zerolog.Logger {
 	return zerolog.New(journald.NewJournalDWriter())
 }
 
-func newConsoleLogger() zerolog.Logger {
+func newConsoleLogger(component string) zerolog.Logger {
 	noColor := os.Getenv("NO_COLOR") != "" || !term.IsTerminal(int(os.Stdout.Fd()))
-	return zerolog.New(zerolog.ConsoleWriter{
+
+	consoleWriter := zerolog.ConsoleWriter{
 		Out:        os.Stderr,
 		TimeFormat: time.DateTime,
 		PartsOrder: []string{
@@ -89,5 +165,10 @@ func newConsoleLogger() zerolog.Logger {
 		FieldsExclude:    []string{FieldComponent},
 		FormatFieldValue: makeComponentFormatter(noColor),
 		NoColor:          noColor,
-	})
+	}
+	writer := ComponentFilterWriter{
+		Writer: consoleWriter,
+		Name:   component,
+	}
+	return zerolog.New(writer)
 }

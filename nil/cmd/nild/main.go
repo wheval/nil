@@ -27,10 +27,14 @@ const (
 	appTitle = "=;Nil"
 )
 
+var logFilter string
+
 func main() {
 	logger := logging.NewLogger("nild")
 
 	cfg := parseArgs()
+
+	logging.ApplyComponentsFilter(logFilter)
 
 	profiling.Start(profiling.DefaultPort)
 
@@ -142,6 +146,7 @@ func parseArgs() *nildconfig.Config {
 	rootCmd.PersistentFlags().StringVar(&cfg.AdminSocketPath, "admin-socket-path", cfg.AdminSocketPath, "unix socket path to start admin server on (disabled if empty)}")
 	rootCmd.PersistentFlags().StringVar(&cfg.ReadThrough.SourceAddr, "read-through-db-addr", cfg.ReadThrough.SourceAddr, "address of the read-through database server. If provided, the local node will be run in read-through mode.")
 	rootCmd.PersistentFlags().Var(&cfg.ReadThrough.ForkMainAtBlock, "read-through-fork-main-at-block", "all blocks generated later than this MainChain block won't be fetched; latest block by default")
+	rootCmd.PersistentFlags().StringVar(&logFilter, "log-filter", "", "filter logs by component, e.g. 'all:-sync:-rpc' - enable all logs, but disable sync and rpc logs")
 
 	// For backward compatibility
 	rootCmd.PersistentFlags().IntVar(&cfg.RPCPort, "port", cfg.RPCPort, "http port for rpc server")
