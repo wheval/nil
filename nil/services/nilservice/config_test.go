@@ -39,13 +39,3 @@ func TestValidateInvalidNShards(t *testing.T) {
 	cfg.NShards = 2
 	require.NoError(t, cfg.Validate())
 }
-
-func TestValidateInvalidGasPriceScale(t *testing.T) {
-	t.Parallel()
-
-	cfg := NewDefaultConfig()
-	cfg.GasPriceScale = -5
-
-	err := cfg.Validate()
-	require.ErrorContains(t, err, "GasPriceScale must be >= 0")
-}

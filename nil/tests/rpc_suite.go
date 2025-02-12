@@ -57,9 +57,6 @@ func PatchConfigWithTestDefaults(cfg *nilservice.Config) {
 	if cfg.CollatorTickPeriodMs == 0 {
 		cfg.CollatorTickPeriodMs = 100
 	}
-	if cfg.GasBasePrice == 0 {
-		cfg.GasBasePrice = 10
-	}
 }
 
 func (s *RpcSuite) Start(cfg *nilservice.Config) {

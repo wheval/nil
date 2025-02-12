@@ -32,7 +32,6 @@ contract ConfigTest is NilBase {
 
     function testParamGasPriceEqual(Nil.ParamGasPrice memory param) public {
         Nil.ParamGasPrice memory realParam = Nil.getParamGasPrice();
-        require(param.gasPriceScale == realParam.gasPriceScale, "Gas price scales are not equal");
         require(param.shards.length == realParam.shards.length, "Gas price shards length mismatch");
         for (uint i = 0; i < param.shards.length; i++) {
             require(param.shards[i] == realParam.shards[i], "Gas prices are not equal");
@@ -46,10 +45,10 @@ contract ConfigTest is NilBase {
 
     function readParamAfterWrite() public {
         Nil.ParamGasPrice memory param = Nil.getParamGasPrice();
-        param.gasPriceScale = 0x1234567890abcdef;
+        param.shards[0] = 0x1234567890abcdef;
         bytes memory data = abi.encode(param);
         Nil.setConfigParam("gas_price", data);
         Nil.ParamGasPrice memory readParam = Nil.getParamGasPrice();
-        require(readParam.gasPriceScale == 0x1234567890abcdef, "Gas price scale is not equal");
+        require(readParam.shards[0] == 0x1234567890abcdef, "Gas price is not equal");
     }
 }

@@ -61,8 +61,7 @@ func (p *ParamValidators) Accessor() *ParamAccessor {
 }
 
 type ParamGasPrice struct {
-	GasPriceScale types.Uint256   `json:"gasPriceScale" yaml:"gasPriceScale"`
-	Shards        []types.Uint256 `json:"shards" ssz-max:"4096" yaml:"shards"`
+	Shards []types.Uint256 `json:"shards" ssz-max:"4096" yaml:"shards"`
 }
 
 var _ IConfigParam = new(ParamGasPrice)

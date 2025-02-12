@@ -225,8 +225,7 @@ func newState(t *testing.T) *ExecutionState {
 	require.NoError(t, err)
 
 	require.NoError(t, config.SetParamGasPrice(cfgAccessor, &config.ParamGasPrice{
-		GasPriceScale: *types.NewUint256(10),
-		Shards:        []types.Uint256{*types.NewUint256(10), *types.NewUint256(10), *types.NewUint256(10)},
+		Shards: []types.Uint256{*types.NewUint256(10), *types.NewUint256(10), *types.NewUint256(10)},
 	}))
 
 	state, err := NewExecutionState(tx, types.BaseShardId, StateParams{
@@ -653,7 +652,7 @@ contracts:
   contract: tests/Counter
 `, address.Hex())
 
-	params := NewBlockGeneratorParams(1, 2, types.DefaultGasPrice, 0)
+	params := NewBlockGeneratorParams(1, 2)
 
 	gen, err := NewBlockGenerator(ctx, params, database, nil, nil)
 	require.NoError(b, err)

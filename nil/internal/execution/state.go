@@ -231,7 +231,6 @@ func NewEVMBlockContext(es *ExecutionState) (*vm.BlockContext, error) {
 type StateParams struct {
 	BlockHash      common.Hash
 	GetBlockFromDb bool
-	GasPriceScale  float64
 	Timer          common.Timer
 	ConfigAccessor config.ConfigAccessor
 }

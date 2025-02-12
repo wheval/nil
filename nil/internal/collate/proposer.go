@@ -79,7 +79,6 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 
 	p.executionState, err = execution.NewExecutionState(tx, p.params.ShardId, execution.StateParams{
 		GetBlockFromDb: true,
-		GasPriceScale:  p.params.GasPriceScale,
 		ConfigAccessor: configAccessor,
 	})
 	if err != nil {

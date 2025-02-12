@@ -42,7 +42,6 @@ func (s *SyncCommitteeTestSuite) SetupSuite() {
 		HttpUrl:              url,
 		Topology:             collate.TrivialShardTopologyId,
 		CollatorTickPeriodMs: 100,
-		GasBasePrice:         10,
 	}
 
 	nilContext, nilCancel := context.WithCancel(s.ctx)

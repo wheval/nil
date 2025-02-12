@@ -92,7 +92,7 @@ func (s *SuiteConfigParams) makeParamValidators(vals ...config.ValidatorInfo) co
 func (s *SuiteConfigParams) TestConfigReadWriteGasPrice() {
 	cfg := execution.ZeroStateConfig{
 		ConfigParams: execution.ConfigParams{
-			GasPrice:   config.ParamGasPrice{GasPriceScale: *types.NewUint256(10)},
+			GasPrice:   config.ParamGasPrice{},
 			Validators: s.makeParamValidators(s.validatorInfo),
 		},
 		Contracts: []*execution.ContractDescr{
@@ -133,27 +133,11 @@ func (s *SuiteConfigParams) TestConfigReadWriteGasPrice() {
 	)
 
 	gasPrice := s.readGasPrices()
-	gasPrice.GasPriceScale = *types.NewUint256(10)
 
 	s.Run("Check initial gas price param", func() {
 		data = s.AbiPack(s.abiTest, "testParamGasPriceEqual", gasPrice)
 		receipt = s.SendExternalTransactionNoCheck(data, s.testAddress)
 		s.Require().True(receipt.AllSuccess())
-	})
-
-	s.Run("Modify param", func() {
-		gasPrice.GasPriceScale = *types.NewUint256(123)
-		data = s.AbiPack(s.abiTest, "setParamGasPrice", gasPrice)
-		receipt = s.SendExternalTransactionNoCheck(data, s.testAddressMain)
-		s.Require().True(receipt.AllSuccess())
-
-		data = s.AbiPack(s.abiTest, "testParamGasPriceEqual", gasPrice)
-		receipt = s.SendExternalTransactionNoCheck(data, s.testAddressMain)
-		s.Require().True(receipt.AllSuccess())
-
-		realGasPrice := s.readGasPrices()
-
-		s.Require().Equal(gasPrice.GasPriceScale, realGasPrice.GasPriceScale)
 	})
 
 	s.Run("Read param after write", func() {

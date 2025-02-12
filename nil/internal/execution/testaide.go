@@ -30,7 +30,7 @@ func GenerateZeroState(t *testing.T, ctx context.Context,
 	t.Helper()
 
 	g, err := NewBlockGenerator(ctx,
-		NewBlockGeneratorParams(shardId, 1, types.DefaultGasPrice, 0),
+		NewBlockGeneratorParams(shardId, 1),
 		txFabric, nil, nil)
 	require.NoError(t, err)
 	defer g.Rollback()
@@ -39,8 +39,7 @@ func GenerateZeroState(t *testing.T, ctx context.Context,
 	require.NoError(t, err)
 	zerostateCfg.ConfigParams = ConfigParams{
 		GasPrice: config.ParamGasPrice{
-			GasPriceScale: *types.NewUint256(10),
-			Shards:        []types.Uint256{*types.NewUint256(10), *types.NewUint256(10), *types.NewUint256(10)},
+			Shards: []types.Uint256{*types.NewUint256(10), *types.NewUint256(10), *types.NewUint256(10)},
 		},
 	}
 

@@ -703,7 +703,6 @@ func (tsdb *TracerStateDB) GetConfigAccessor() config.ConfigAccessor {
 	accessor, err := config.NewConfigAccessorTx(context.Background(), tsdb.mptTracer.GetRwTx(), nil)
 	check.PanicIfErr(err)
 	check.PanicIfErr(config.SetParamGasPrice(accessor, &config.ParamGasPrice{
-		GasPriceScale: *types.NewUint256(10),
 		Shards: []types.Uint256{
 			*types.NewUint256(10),
 			*types.NewUint256(10),

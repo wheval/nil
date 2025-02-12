@@ -405,7 +405,6 @@ library Nil {
     }
 
     struct ParamGasPrice {
-        uint256 gasPriceScale;
         uint256[] shards;
     }
 
