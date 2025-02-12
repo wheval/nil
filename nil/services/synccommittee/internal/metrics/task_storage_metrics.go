@@ -67,19 +67,22 @@ func (h *taskStorageMetricsHandler) init(attributes metric.MeasurementOption, me
 }
 
 func (h *taskStorageMetricsHandler) RecordTaskAdded(ctx context.Context, taskEntry *types.TaskEntry) {
-	taskAttributes := getTaskAttributes(taskEntry)
+	taskAttributes := h.getAttrTypeOnly(taskEntry)
 	h.totalTasksCreated.Add(ctx, 1, h.attributes, taskAttributes)
 	h.currentPendingTasks.Add(ctx, 1, h.attributes, taskAttributes)
 }
 
 func (h *taskStorageMetricsHandler) RecordTaskStarted(ctx context.Context, taskEntry *types.TaskEntry) {
-	taskAttributes := getTaskAttributes(taskEntry)
-	h.currentPendingTasks.Add(ctx, -1, h.attributes, taskAttributes)
-	h.currentActiveTasks.Add(ctx, 1, h.attributes, taskAttributes)
+	pendingAttributes := h.getAttrTypeOnly(taskEntry)
+	h.currentPendingTasks.Add(ctx, -1, h.attributes, pendingAttributes)
+
+	activeAttributes := h.getAttrTypeAndOwner(taskEntry)
+	h.currentActiveTasks.Add(ctx, 1, h.attributes, activeAttributes)
 }
 
 func (h *taskStorageMetricsHandler) RecordTaskTerminated(ctx context.Context, taskEntry *types.TaskEntry, taskResult *types.TaskResult) {
-	taskAttributes := getTaskAttributes(taskEntry)
+	taskAttributes := h.getAttrTypeAndOwner(taskEntry)
+
 	h.currentActiveTasks.Add(ctx, -1, h.attributes, taskAttributes)
 
 	if taskResult.IsSuccess() {
@@ -99,17 +102,22 @@ func (h *taskStorageMetricsHandler) RecordTaskRescheduled(ctx context.Context, t
 
 	h.totalTasksRescheduled.Add(ctx, 1, h.attributes, taskAttributes)
 	h.currentActiveTasks.Add(ctx, -1, h.attributes, taskAttributes)
-	h.currentPendingTasks.Add(ctx, 1, h.attributes, taskAttributes)
+
+	pendingAttributes := telattr.With(
+		attribute.Stringer(attrTaskType, taskType),
+	)
+	h.currentPendingTasks.Add(ctx, 1, h.attributes, pendingAttributes)
 }
 
-func getTaskAttributes(task *types.TaskEntry) metric.MeasurementOption {
-	attributes := []attribute.KeyValue{
-		attribute.Stringer(attrTaskType, task.Task.TaskType),
-	}
+func (h *taskStorageMetricsHandler) getAttrTypeOnly(taskEntry *types.TaskEntry) metric.MeasurementOption {
+	return telattr.With(
+		attribute.Stringer(attrTaskType, taskEntry.Task.TaskType),
+	)
+}
 
-	if task.Owner != types.UnknownExecutorId {
-		attributes = append(attributes, attribute.Int64(attrTaskExecutor, int64(task.Owner)))
-	}
-
-	return telattr.With(attributes...)
+func (h *taskStorageMetricsHandler) getAttrTypeAndOwner(taskEntry *types.TaskEntry) metric.MeasurementOption {
+	return telattr.With(
+		attribute.Stringer(attrTaskType, taskEntry.Task.TaskType),
+		attribute.Int64(attrTaskExecutor, int64(taskEntry.Owner)),
+	)
 }
