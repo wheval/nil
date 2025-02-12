@@ -54,7 +54,7 @@ type BlockGenerationResult struct {
 	OutTxns []*types.Transaction
 }
 
-func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabric db.DB, mainShardHash *common.Hash) (*BlockGenerator, error) {
+func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabric db.DB, blockHash, mainShardHash *common.Hash) (*BlockGenerator, error) {
 	rwTx, err := txFabric.CreateRwTx(ctx)
 	if err != nil {
 		return nil, err
@@ -64,8 +64,16 @@ func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabri
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config accessor: %w", err)
 	}
+
+	getBlockFromDb := false
+	if blockHash == nil {
+		getBlockFromDb = true
+		blockHash = &common.EmptyHash
+	}
+
 	executionState, err := NewExecutionState(rwTx, params.ShardId, StateParams{
-		GetBlockFromDb: true,
+		BlockHash:      *blockHash,
+		GetBlockFromDb: getBlockFromDb,
 		Timer:          params.Timer,
 		GasPriceScale:  params.GasPriceScale,
 		ConfigAccessor: configAccessor,
@@ -194,8 +202,12 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, logger zerolo
 			RawJSON("proposal", proposalJson).
 			Msg("Proposed previous block hash doesn't match the current state")
 
-		return fmt.Errorf("proposed previous block hash doesn't match the current state. Expected: %s, got: %s",
+		err = fmt.Errorf("proposed previous block hash doesn't match the current state. Expected: %s, got: %s",
 			g.executionState.PrevBlock, proposal.PrevBlockHash)
+		if assert.Enable {
+			panic(err)
+		}
+		return err
 	}
 
 	if err := g.collectGasPrices(proposal.PrevBlockHash, proposal.ShardHashes); err != nil {

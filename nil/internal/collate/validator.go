@@ -31,7 +31,8 @@ func (s *Validator) BuildProposal(ctx context.Context) (*execution.Proposal, err
 }
 
 func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Proposal) (*types.Block, error) {
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, proposal.GetMainShardHash(s.params.ShardId))
+	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric,
+		&proposal.PrevBlockHash, proposal.GetMainShardHash(s.params.ShardId))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create block generator: %w", err)
 	}
@@ -45,7 +46,8 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 }
 
 func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Proposal, sig types.Signature) error {
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, proposal.GetMainShardHash(s.params.ShardId))
+	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric,
+		&proposal.PrevBlockHash, proposal.GetMainShardHash(s.params.ShardId))
 	if err != nil {
 		return fmt.Errorf("failed to create block generator: %w", err)
 	}
