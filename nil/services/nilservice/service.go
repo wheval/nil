@@ -447,6 +447,8 @@ func Run(ctx context.Context, cfg *Config, database db.DB, interop chan<- Servic
 		ctx = signalCtx
 	}
 
+	logging.ApplyComponentsFilterEnv()
+
 	node, err := CreateNode(ctx, "nil", cfg, database, interop, workers...)
 	if err != nil {
 		return 1
