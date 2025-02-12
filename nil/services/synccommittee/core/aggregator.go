@@ -8,7 +8,6 @@ import (
 
 	"github.com/NilFoundation/nil/nil/client"
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	coreTypes "github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
@@ -16,6 +15,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/blob"
 	v1 "github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/encode/v1"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/rs/zerolog"
@@ -28,6 +28,8 @@ type AggregatorMetrics interface {
 }
 
 type Aggregator struct {
+	srv.WorkerLoop
+
 	logger         zerolog.Logger
 	rpcClient      client.Client
 	blockStorage   storage.BlockStorage
@@ -46,9 +48,8 @@ func NewAggregator(
 	logger zerolog.Logger,
 	metrics AggregatorMetrics,
 	pollingDelay time.Duration,
-) (*Aggregator, error) {
-	return &Aggregator{
-		logger:       logger,
+) *Aggregator {
+	agg := &Aggregator{
 		rpcClient:    rpcClient,
 		blockStorage: blockStorage,
 		taskStorage:  taskStorage,
@@ -62,30 +63,25 @@ func NewAggregator(
 		timer:        timer,
 		metrics:      metrics,
 		pollingDelay: pollingDelay,
-	}, nil
+	}
+
+	agg.WorkerLoop = srv.NewWorkerLoop("aggregator", pollingDelay, agg.runIteration)
+	agg.logger = srv.WorkerLogger(logger, agg)
+	return agg
 }
 
-func (agg *Aggregator) Run(ctx context.Context) error {
-	agg.logger.Info().Msg("starting blocks fetching")
+func (agg *Aggregator) runIteration(ctx context.Context) {
+	err := agg.processNewBlocks(ctx)
 
-	concurrent.RunTickerLoop(ctx, agg.pollingDelay,
-		func(ctx context.Context) {
-			err := agg.processNewBlocks(ctx)
+	if errors.Is(err, types.ErrBatchNotReady) {
+		agg.logger.Warn().Err(err).Msg("received unready block batch, skipping")
+		return
+	}
 
-			if errors.Is(err, types.ErrBatchNotReady) {
-				agg.logger.Warn().Err(err).Msg("received unready block batch, skipping")
-				return
-			}
-
-			if err != nil {
-				agg.logger.Error().Err(err).Msg("error during processing new blocks")
-				agg.metrics.RecordError(ctx, "aggregator")
-			}
-		},
-	)
-
-	agg.logger.Info().Msg("blocks fetching stopped")
-	return nil
+	if err != nil {
+		agg.logger.Error().Err(err).Msg("error during processing new blocks")
+		agg.metrics.RecordError(ctx, agg.Name())
+	}
 }
 
 // processNewBlocks fetches and processes new blocks for all shards.

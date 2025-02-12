@@ -87,6 +87,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) SetupSuite() {
 		logger,
 	)
 
+	started := make(chan struct{})
 	go func() {
 		taskListener := NewTaskListener(
 			&TaskListenerConfig{HttpEndpoint: listenerEndpoint},
@@ -94,12 +95,11 @@ func (s *TaskSchedulerDebugRpcTestSuite) SetupSuite() {
 			logger,
 		)
 
-		err := taskListener.Run(s.context)
+		err := taskListener.Run(s.context, started)
 		s.NoError(err)
 	}()
-
-	err = testaide.WaitForEndpoint(s.context, listenerEndpoint)
-	s.Require().NoError(err)
+	err = testaide.WaitFor(s.context, started, 10*time.Second)
+	s.Require().NoError(err, "task listener did not start in time")
 
 	s.rpcClient = NewTaskDebugRpcClient(listenerEndpoint, logger)
 }

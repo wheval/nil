@@ -50,7 +50,7 @@ func (t *Executor[P]) Run(
 	executorParams := t.params.GetExecutorParams()
 	client := debug.NewClient(executorParams.DebugRpcEndpoint, t.logger)
 
-	runOnce := func(ctx context.Context) {
+	runIteration := func(ctx context.Context) {
 		output, err := command(ctx, t.params, client)
 		if err != nil {
 			t.onCommandError(err)
@@ -63,7 +63,7 @@ func (t *Executor[P]) Run(
 		}
 	}
 
-	runOnce(ctx)
+	runIteration(ctx)
 
 	if !executorParams.AutoRefresh {
 		return nil
@@ -72,7 +72,7 @@ func (t *Executor[P]) Run(
 	concurrent.RunTickerLoop(ctx, executorParams.RefreshInterval, func(ctx context.Context) {
 		t.clearScreen()
 		t.logger.Info().Msg("refreshing data")
-		runOnce(ctx)
+		runIteration(ctx)
 	})
 
 	return nil

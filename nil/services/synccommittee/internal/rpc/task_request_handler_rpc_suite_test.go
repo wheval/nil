@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
@@ -13,6 +14,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+const listenerHttpEndpoint = "tcp://127.0.0.1:8530"
+
 type TaskRequestHandlerTestSuite struct {
 	suite.Suite
 	context       context.Context
@@ -23,16 +26,15 @@ type TaskRequestHandlerTestSuite struct {
 
 func (s *TaskRequestHandlerTestSuite) SetupSuite() {
 	s.context, s.cancellation = context.WithCancel(context.Background())
-	listenerHttpEndpoint := "tcp://127.0.0.1:8530"
 	s.scheduler = newTaskSchedulerMock()
 
+	started := make(chan struct{})
 	go func() {
-		err := runTaskListener(s.context, listenerHttpEndpoint, s.scheduler)
+		err := runTaskListener(s.context, s.scheduler, started)
 		s.NoError(err)
 	}()
-
-	err := testaide.WaitForEndpoint(s.context, listenerHttpEndpoint)
-	s.Require().NoError(err)
+	err := testaide.WaitFor(s.context, started, 10*time.Second)
+	s.Require().NoError(err, "task listener did not start in time")
 
 	s.clientHandler = NewTaskRequestRpcClient(
 		listenerHttpEndpoint,
@@ -48,14 +50,14 @@ func (s *TaskRequestHandlerTestSuite) TearDownSuite() {
 	s.cancellation()
 }
 
-func runTaskListener(ctx context.Context, httpEndpoint string, scheduler scheduler.TaskScheduler) error {
+func runTaskListener(ctx context.Context, scheduler scheduler.TaskScheduler, started chan<- struct{}) error {
 	taskListener := NewTaskListener(
-		&TaskListenerConfig{HttpEndpoint: httpEndpoint},
+		&TaskListenerConfig{HttpEndpoint: listenerHttpEndpoint},
 		scheduler,
 		logging.NewLogger("sync-committee-task-rpc"),
 	)
 
-	return taskListener.Run(ctx)
+	return taskListener.Run(ctx, started)
 }
 
 func newTaskSchedulerMock() *scheduler.TaskSchedulerMock {
