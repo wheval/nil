@@ -74,16 +74,16 @@ func (s *SuiteExecutionState) TestExecState() {
 		}
 	})
 
-	var blockHash common.Hash
+	var blockRes *BlockGenerationResult
 
 	s.Run("CommitBlock", func() {
-		blockHash, _, err = es.Commit(0, nil)
+		blockRes, err = es.Commit(0, nil)
 		s.Require().NoError(err)
 	})
 
 	s.Run("CheckAccount", func() {
 		es, err := NewExecutionState(tx, shardId, StateParams{
-			BlockHash:      blockHash,
+			BlockHash:      blockRes.BlockHash,
 			ConfigAccessor: config.GetStubAccessor(),
 		})
 		s.Require().NoError(err)
@@ -94,7 +94,7 @@ func (s *SuiteExecutionState) TestExecState() {
 	})
 
 	s.Run("CheckTransactions", func() {
-		data, err := es.shardAccessor.GetBlock().ByHash(blockHash)
+		data, err := es.shardAccessor.GetBlock().ByHash(blockRes.BlockHash)
 		s.Require().NoError(err)
 		s.Require().NotNil(data)
 		s.Require().NotNil(data.Block())
@@ -369,7 +369,7 @@ func TestAccountState(t *testing.T) {
 	code := types.Code([]byte{'c', 'a', 'f', 'e'})
 	acc.SetCode(code.Hash(), code)
 
-	_, _, err = state.Commit(0, nil)
+	_, err = state.Commit(0, nil)
 	require.NoError(t, err)
 
 	// Drop local state account cache

@@ -52,9 +52,9 @@ func (suite *SuiteSendTransaction) SetupSuite() {
 	suite.Require().NoError(es.SetBalance(suite.smcAddr, types.NewValueFromUint64(1234)))
 	suite.Require().NoError(es.SetSeqno(suite.smcAddr, 567))
 
-	blockHash, _, err := es.Commit(0, nil)
+	blockRes, err := es.Commit(0, nil)
 	suite.Require().NoError(err)
-	suite.blockHash = blockHash
+	suite.blockHash = blockRes.BlockHash
 
 	err = tx.Commit()
 	suite.Require().NoError(err)

@@ -1,33 +1,25 @@
 package execution
 
 import (
+	"errors"
+
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 )
 
-func PostprocessBlock(tx db.RwTx, shardId types.ShardId, defaultGasPrice types.Value, blockHash common.Hash) (*types.Block, error) {
-	postprocessor, err := newBlockPostprocessor(tx, shardId, defaultGasPrice, blockHash)
-	if err != nil {
-		return nil, err
+func PostprocessBlock(tx db.RwTx, shardId types.ShardId, blockResult *BlockGenerationResult) error {
+	if blockResult.Block == nil {
+		return errors.New("block is not set")
 	}
-	return postprocessor.block, postprocessor.Postprocess()
+	postprocessor := blockPostprocessor{tx, shardId, blockResult}
+	return postprocessor.Postprocess()
 }
 
 type blockPostprocessor struct {
-	tx              db.RwTx
-	shardId         types.ShardId
-	blockHash       common.Hash
-	block           *types.Block
-	defaultGasPrice types.Value
-}
-
-func newBlockPostprocessor(tx db.RwTx, shardId types.ShardId, defaultGasPrice types.Value, blockHash common.Hash) (*blockPostprocessor, error) {
-	block, err := db.ReadBlock(tx, shardId, blockHash)
-	if err != nil {
-		return nil, err
-	}
-	return &blockPostprocessor{tx, shardId, blockHash, block, defaultGasPrice}, nil
+	tx          db.RwTx
+	shardId     types.ShardId
+	blockResult *BlockGenerationResult
 }
 
 func (pp *blockPostprocessor) Postprocess() error {
@@ -44,14 +36,11 @@ func (pp *blockPostprocessor) Postprocess() error {
 }
 
 func (pp *blockPostprocessor) fillLastBlockTable() error {
-	return db.WriteLastBlockHash(pp.tx, pp.shardId, pp.blockHash)
+	return db.WriteLastBlockHash(pp.tx, pp.shardId, pp.blockResult.BlockHash)
 }
 
 func (pp *blockPostprocessor) fillBlockHashByNumberIndex() error {
-	if err := pp.tx.PutToShard(pp.shardId, db.BlockHashByNumberIndex, pp.block.Id.Bytes(), pp.blockHash.Bytes()); err != nil {
-		return err
-	}
-	return nil
+	return pp.tx.PutToShard(pp.shardId, db.BlockHashByNumberIndex, pp.blockResult.Block.Id.Bytes(), pp.blockResult.BlockHash.Bytes())
 }
 
 func (pp *blockPostprocessor) fillBlockHashAndTransactionIndexByTransactionHash() error {
@@ -64,7 +53,7 @@ func (pp *blockPostprocessor) fillBlockHashAndTransactionIndexByTransactionHash(
 		}
 
 		for _, kv := range txns {
-			blockHashAndTransactionIndex := db.BlockHashAndTransactionIndex{BlockHash: pp.blockHash, TransactionIndex: kv.Key}
+			blockHashAndTransactionIndex := db.BlockHashAndTransactionIndex{BlockHash: pp.blockResult.BlockHash, TransactionIndex: kv.Key}
 			value, err := blockHashAndTransactionIndex.MarshalSSZ()
 			if err != nil {
 				return err
@@ -77,8 +66,8 @@ func (pp *blockPostprocessor) fillBlockHashAndTransactionIndexByTransactionHash(
 		return nil
 	}
 
-	if err := fill(pp.block.InTransactionsRoot, db.BlockHashAndInTransactionIndexByTransactionHash); err != nil {
+	if err := fill(pp.blockResult.Block.InTransactionsRoot, db.BlockHashAndInTransactionIndexByTransactionHash); err != nil {
 		return err
 	}
-	return fill(pp.block.OutTransactionsRoot, db.BlockHashAndOutTransactionIndexByTransactionHash)
+	return fill(pp.blockResult.Block.OutTransactionsRoot, db.BlockHashAndOutTransactionIndexByTransactionHash)
 }

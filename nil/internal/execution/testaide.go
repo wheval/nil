@@ -106,18 +106,18 @@ func generateBlockFromTransactions(t *testing.T, ctx context.Context, execute bo
 
 	es.ChildChainBlocks = childChainBlocks
 
-	blockHash, _, err := es.Commit(blockId, nil)
+	blockRes, err := es.Commit(blockId, nil)
 	require.NoError(t, err)
 
-	block, err := PostprocessBlock(tx, shardId, types.DefaultGasPrice, blockHash)
+	err = PostprocessBlock(tx, shardId, blockRes)
 	require.NoError(t, err)
-	require.NotNil(t, block)
+	require.NotNil(t, blockRes.Block)
 
-	require.NoError(t, db.WriteBlockTimestamp(tx, shardId, blockHash, 0))
+	require.NoError(t, db.WriteBlockTimestamp(tx, shardId, blockRes.BlockHash, 0))
 
 	require.NoError(t, tx.Commit())
 
-	return blockHash
+	return blockRes.BlockHash
 }
 
 func NewDeployTransaction(payload types.DeployPayload,

@@ -1272,27 +1272,27 @@ func GetOutTransactions(es *ExecutionState) []*types.Transaction {
 	return res
 }
 
-func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*types.Block, []*types.Transaction, error) {
+func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGenerationResult, error) {
 	keys := make([]common.Hash, 0, len(es.Accounts))
 	values := make([]*types.SmartContract, 0, len(es.Accounts))
 	for k, acc := range es.Accounts {
 		v, err := acc.Commit()
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		keys = append(keys, k.Hash())
 		values = append(values, v)
 	}
 	if err := es.ContractTree.UpdateBatch(keys, values); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	treeShardsRootHash := common.EmptyHash
 	if len(es.ChildChainBlocks) > 0 {
 		treeShards := NewDbShardBlocksTrie(es.tx, es.ShardId, blockId)
 		if err := UpdateFromMap(treeShards, es.ChildChainBlocks, func(v common.Hash) *common.Hash { return &v }); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		treeShardsRootHash = treeShards.RootHash()
 	}
@@ -1311,10 +1311,10 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*types.Block, [
 	}
 
 	if err := es.InTransactionTree.UpdateBatch(inTxnKeys, inTxnValues); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if err := es.OutTransactionTree.UpdateBatch(outTxnKeys, outTxnValues); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if assert.Enable {
@@ -1332,16 +1332,16 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*types.Block, [
 				}
 			}
 			if !found {
-				return nil, nil, fmt.Errorf("outbound transaction %v does not belong to any inbound transaction", outTxnHash)
+				return nil, fmt.Errorf("outbound transaction %v does not belong to any inbound transaction", outTxnHash)
 			}
 		}
 	}
 	if len(es.InTransactions) != len(es.Receipts) {
-		return nil, nil, fmt.Errorf("number of transactions does not match number of receipts: %d != %d", len(es.InTransactions), len(es.Receipts))
+		return nil, fmt.Errorf("number of transactions does not match number of receipts: %d != %d", len(es.InTransactions), len(es.Receipts))
 	}
 	for i, txnHash := range es.InTransactionHashes {
 		if txnHash != es.Receipts[i].TxnHash {
-			return nil, nil, fmt.Errorf("receipt hash doesn't match its transaction #%d", i)
+			return nil, fmt.Errorf("receipt hash doesn't match its transaction #%d", i)
 		}
 	}
 
@@ -1359,7 +1359,7 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*types.Block, [
 		txnStart += len(es.OutTransactions[txnHash])
 	}
 	if err := es.ReceiptTree.UpdateBatch(receiptKeys, receiptValues); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	configRoot := common.EmptyHash
@@ -1367,17 +1367,17 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*types.Block, [
 		var err error
 		prevBlock, err := db.ReadBlock(es.tx, es.ShardId, es.PrevBlock)
 		if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
-			return nil, nil, fmt.Errorf("failed to read previous block: %w", err)
+			return nil, fmt.Errorf("failed to read previous block: %w", err)
 		}
 		if prevBlock != nil {
 			configRoot = prevBlock.ConfigRoot
 		}
 		if configRoot, err = es.GetConfigAccessor().Commit(es.tx, configRoot); err != nil {
-			return nil, nil, fmt.Errorf("failed to update config trie: %w", err)
+			return nil, fmt.Errorf("failed to update config trie: %w", err)
 		}
 	}
 
-	return &types.Block{
+	block := &types.Block{
 		BlockData: types.BlockData{
 			Id:                  blockId,
 			PrevBlock:           es.PrevBlock,
@@ -1395,15 +1395,25 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*types.Block, [
 			Timestamp: 0,
 		},
 		LogsBloom: types.CreateBloom(es.Receipts),
-	}, outTxnValues, nil
-}
-
-func (es *ExecutionState) Commit(blockId types.BlockNumber, sig types.Signature) (common.Hash, []*types.Transaction, error) {
-	block, outTxnValues, err := es.BuildBlock(blockId)
-	if err != nil {
-		return common.EmptyHash, nil, err
 	}
 
+	return &BlockGenerationResult{
+		Block:     block,
+		BlockHash: block.Hash(es.ShardId),
+		InTxns:    es.InTransactions,
+		OutTxns:   outTxnValues,
+	}, nil
+}
+
+func (es *ExecutionState) Commit(blockId types.BlockNumber, sig types.Signature) (*BlockGenerationResult, error) {
+	blockRes, err := es.BuildBlock(blockId)
+	if err != nil {
+		return nil, err
+	}
+	return blockRes, es.CommitBlock(blockRes.Block, sig)
+}
+
+func (es *ExecutionState) CommitBlock(block *types.Block, sig types.Signature) error {
 	block.Signature = sig
 
 	if TraceBlocksEnabled {
@@ -1412,22 +1422,22 @@ func (es *ExecutionState) Commit(blockId types.BlockNumber, sig types.Signature)
 
 	for k, v := range es.Errors {
 		if err := db.WriteError(es.tx, k, v.Error()); err != nil {
-			return common.EmptyHash, nil, err
+			return err
 		}
 	}
 
 	blockHash := block.Hash(es.ShardId)
 	if err := db.WriteBlock(es.tx, es.ShardId, blockHash, block); err != nil {
-		return common.EmptyHash, nil, err
+		return err
 	}
 
 	logger.Trace().
 		Stringer(logging.FieldShardId, es.ShardId).
-		Stringer(logging.FieldBlockNumber, blockId).
+		Stringer(logging.FieldBlockNumber, block.Id).
 		Stringer(logging.FieldBlockHash, blockHash).
 		Msgf("Committed new block with %d in-txns and %d out-txns", len(es.InTransactions), block.OutTransactionsNum)
 
-	return blockHash, outTxnValues, nil
+	return nil
 }
 
 func (es *ExecutionState) CalculateGasForwarding(initialAvailValue types.Value) (types.Value, error) {

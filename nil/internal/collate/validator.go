@@ -42,7 +42,7 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate block: %w", err)
 	}
-	return res, nil
+	return res.Block, nil
 }
 
 func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Proposal, sig types.Signature) error {

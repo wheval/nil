@@ -258,7 +258,6 @@ func (s *SuiteFilters) TestBlocksRange() {
 	s.NotNil(filters)
 	s.filters = filters
 	address := types.HexToAddress("0x1111111111")
-	defaultGasPrice := types.DefaultGasPrice
 
 	receiptsMpt := mpt.NewDbMPT(tx, 0, db.ReceiptTrieTable)
 
@@ -290,7 +289,8 @@ func (s *SuiteFilters) TestBlocksRange() {
 	}
 	blockHash := block.Hash(types.MainShardId)
 	s.Require().NoError(db.WriteBlock(tx, types.MainShardId, blockHash, &block))
-	_, err = execution.PostprocessBlock(tx, types.MainShardId, defaultGasPrice, blockHash)
+	blockResult := &execution.BlockGenerationResult{BlockHash: blockHash, Block: &block}
+	err = execution.PostprocessBlock(tx, types.MainShardId, blockResult)
 	s.Require().NoError(err)
 
 	block = types.Block{
@@ -301,7 +301,8 @@ func (s *SuiteFilters) TestBlocksRange() {
 	}
 	blockHash = block.Hash(types.MainShardId)
 	s.Require().NoError(db.WriteBlock(tx, types.MainShardId, blockHash, &block))
-	_, err = execution.PostprocessBlock(tx, types.MainShardId, defaultGasPrice, blockHash)
+	blockResult = &execution.BlockGenerationResult{BlockHash: blockHash, Block: &block}
+	err = execution.PostprocessBlock(tx, types.MainShardId, blockResult)
 	s.Require().NoError(err)
 
 	block = types.Block{
@@ -312,7 +313,8 @@ func (s *SuiteFilters) TestBlocksRange() {
 	}
 	blockHash = block.Hash(types.MainShardId)
 	s.Require().NoError(db.WriteBlock(tx, types.MainShardId, blockHash, &block))
-	_, err = execution.PostprocessBlock(tx, types.MainShardId, defaultGasPrice, blockHash)
+	blockResult = &execution.BlockGenerationResult{BlockHash: blockHash, Block: &block}
+	err = execution.PostprocessBlock(tx, types.MainShardId, blockResult)
 	s.Require().NoError(err)
 
 	block = types.Block{
@@ -323,7 +325,8 @@ func (s *SuiteFilters) TestBlocksRange() {
 	}
 	blockHash = block.Hash(types.MainShardId)
 	s.Require().NoError(db.WriteBlock(tx, types.MainShardId, blockHash, &block))
-	_, err = execution.PostprocessBlock(tx, types.MainShardId, defaultGasPrice, blockHash)
+	blockResult = &execution.BlockGenerationResult{BlockHash: blockHash, Block: &block}
+	err = execution.PostprocessBlock(tx, types.MainShardId, blockResult)
 	s.Require().NoError(err)
 	s.Require().NoError(tx.Commit())
 
@@ -386,7 +389,8 @@ func (s *SuiteFilters) TestBlocksRange() {
 	}
 	blockHash = block.Hash(types.MainShardId)
 	s.Require().NoError(db.WriteBlock(tx, types.MainShardId, blockHash, &block))
-	_, err = execution.PostprocessBlock(tx, types.MainShardId, defaultGasPrice, blockHash)
+	blockResult = &execution.BlockGenerationResult{BlockHash: blockHash, Block: &block}
+	err = execution.PostprocessBlock(tx, types.MainShardId, blockResult)
 	s.Require().NoError(err)
 	s.Require().NoError(tx.Commit())
 
