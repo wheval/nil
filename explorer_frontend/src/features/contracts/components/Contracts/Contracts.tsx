@@ -12,7 +12,7 @@ import {
   Spinner,
 } from "@nilfoundation/ui-kit";
 import { useStyletron } from "styletron-react";
-import { LayoutComponent, setActiveComponent } from "../../../../pages/sandbox/model";
+import { LayoutComponent, setActiveComponent } from "../../../../pages/playground/model";
 import { compileCodeFx } from "../../../code/model";
 import { useMobile } from "../../../shared";
 import { Contract } from "./Contract";

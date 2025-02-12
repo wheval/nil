@@ -9,7 +9,7 @@ import {
 import { Link, useRouter } from "atomic-router-react";
 import type { Items, MenuOverrides } from "baseui/menu";
 import { useUnit } from "effector-react";
-import { sandboxRoute } from "../../../routing";
+import { playgroundRoute } from "../../../routing";
 import { explorerRoute } from "../../../routing/routes/explorerRoute";
 import { BackRouterNavigationButton } from "../BackRouterNavigationButton";
 
@@ -27,7 +27,7 @@ export const Navigation = () => {
 
   const [activeRoute] = useUnit(router.$activeRoutes);
   const isMainPage = activeRoute === explorerRoute;
-  const isSandbox = activeRoute === sandboxRoute;
+  const isPlayground = activeRoute === playgroundRoute;
 
   const items: Items = [
     {
@@ -41,11 +41,11 @@ export const Navigation = () => {
       )) as LinkComponentRenderFunction,
     },
     {
-      label: "Sandbox",
+      label: "Playground",
       startEnhancer: <CodeIcon $color={COLORS.gray100} />,
-      isHighlighted: isSandbox,
+      isHighlighted: isPlayground,
       linkComponent: (({ children, className }) => (
-        <Link to={sandboxRoute} className={className}>
+        <Link to={playgroundRoute} className={className}>
           {children}
         </Link>
       )) as LinkComponentRenderFunction,

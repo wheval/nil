@@ -116,7 +116,7 @@ const TopUpPanel = () => {
         })}
       >
         <a
-          href={getRuntimeConfigOrThrow().SANDBOX_MULTIToken_URL}
+          href={getRuntimeConfigOrThrow().PLAYGROUND_MULTI_TOKEN_URL}
           target="_blank"
           rel="noreferrer"
           className={css({

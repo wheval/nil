@@ -10,7 +10,7 @@ featureMap.set(LayoutComponent.Code, Code);
 featureMap.set(LayoutComponent.Logs, Logs);
 featureMap.set(LayoutComponent.Contracts, ContractsContainer);
 
-const SandboxMobileLayout = () => {
+const PlaygroundMobileLayout = () => {
   const activeComponent = useUnit($activeComponent);
   const Component = activeComponent ? featureMap.get(activeComponent) : null;
   const handlers = useSwipeable({
@@ -25,4 +25,4 @@ const SandboxMobileLayout = () => {
   );
 };
 
-export { SandboxMobileLayout };
+export { PlaygroundMobileLayout };

@@ -23,18 +23,19 @@ const menuOverrides: MenuOverrides = {
 export const QuestionButton = () => {
   const [css] = useStyletron();
   const [isMobile] = useMobile();
-  const { SANDBOX_FEEDBACK_URL, SANDBOX_SUPPORT_URL, SANDBOX_DOCS_URL } = getRuntimeConfigOrThrow();
+  const { PLAYGROUND_FEEDBACK_URL, PLAYGROUND_SUPPORT_URL, PLAYGROUND_DOCS_URL } =
+    getRuntimeConfigOrThrow();
 
   const items: Items = [
     {
       label: "Documentation",
       endEnhancer: <ArrowUpRightIcon />,
-      href: SANDBOX_DOCS_URL,
+      href: PLAYGROUND_DOCS_URL,
     },
     {
       label: "Support",
       endEnhancer: <ArrowUpRightIcon />,
-      href: SANDBOX_SUPPORT_URL,
+      href: PLAYGROUND_SUPPORT_URL,
     },
     {
       label: (
@@ -46,7 +47,7 @@ export const QuestionButton = () => {
           {"Share feedback"}
         </span>
       ),
-      href: SANDBOX_FEEDBACK_URL,
+      href: PLAYGROUND_FEEDBACK_URL,
     },
   ];
 

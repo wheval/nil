@@ -12,7 +12,7 @@ Welcome to the **=nil; Wallet Extension** — a user-friendly way to manage acco
     - Check your balance
     - Top-up test currencies
 - [ ] **Wallet SDK for dApp Developers**
-- [ ] **Sandbox Integration**
+- [ ] **Playground Integration**
 - [ ] **Further Improvements & Feature Requests**
 
 ---

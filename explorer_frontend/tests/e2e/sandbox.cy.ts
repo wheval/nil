@@ -1,5 +1,5 @@
 beforeEach(() => {
-  cy.visit("/sandbox");
+  cy.visit("/playground");
 });
 
 const counter = `contract Counter {
@@ -23,7 +23,7 @@ Cypress.Commands.add("compileCounterContract", () => {
   cy.get("[data-testid='compile-button']").click();
 });
 
-describe("sandbox page", () => {
+describe("playground page", () => {
   it("the h3 contains the correct text", () => {
     cy.get("[data-testid=code-field]").should("exist");
   });
@@ -65,7 +65,7 @@ describe("examples", () => {
 
 describe("logs", () => {
   it("a user can view logs", () => {
-    cy.get("[data-testid=sandbox-logs]").should("exist");
+    cy.get("[data-testid=playground-logs]").should("exist");
   });
 
   it("logs can be cleared", () => {

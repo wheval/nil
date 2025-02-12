@@ -3,12 +3,12 @@ import { createRoutesView } from "atomic-router-react";
 import { AddressPage } from "../../../pages/address";
 import { BlockPage } from "../../../pages/block";
 import { ExplorerPage } from "../../../pages/explorer";
-import { SandboxPage } from "../../../pages/sandbox";
+import { PlaygroundPage } from "../../../pages/playground";
 import { TransactionPage } from "../../../pages/transaction";
 import { addressRoute, addressTransactionsRoute } from "../routes/addressRoute";
 import { blockDetailsRoute, blockRoute } from "../routes/blockRoute";
 import { explorerRoute } from "../routes/explorerRoute";
-import { sandboxRoute, sandboxWithHashRoute } from "../routes/sandboxRoute";
+import { playgroundRoute, playgroundWithHashRoute } from "../routes/playgroundRoute";
 import { transactionRoute } from "../routes/transactionRoute";
 
 export const RoutesView = createRoutesView({
@@ -26,12 +26,12 @@ export const RoutesView = createRoutesView({
       view: AddressPage,
     },
     {
-      route: sandboxRoute,
-      view: SandboxPage,
+      route: playgroundRoute,
+      view: PlaygroundPage,
     },
     {
-      route: sandboxWithHashRoute,
-      view: SandboxPage,
+      route: playgroundWithHashRoute,
+      view: PlaygroundPage,
     },
   ],
   otherwise() {

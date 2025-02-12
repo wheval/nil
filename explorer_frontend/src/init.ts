@@ -7,6 +7,6 @@ import "./features/transaction-stat/init";
 import "./features/shards/init";
 import "./features/latest-blocks/init";
 import "./features/account-connector/init";
-import "./pages/sandbox/init";
+import "./pages/playground/init";
 import "./features/tokens/init";
 import "./features/cometa/init";

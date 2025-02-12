@@ -13,9 +13,9 @@ import { useMobile } from "../../features/shared";
 import { Navbar } from "../../features/shared/components/Layout/Navbar";
 import { mobileContainerStyle, styles } from "../../features/shared/components/Layout/styles";
 import { fetchSolidityCompiler } from "../../services/compiler";
-import { SandboxMobileLayout } from "./SandboxMobileLayout";
+import { PlaygroundMobileLayout } from "./PlaygroundMobileLayout";
 
-export const SandboxPage = () => {
+export const PlaygroundPage = () => {
   const [isDownloading] = useUnit([fetchSolidityCompiler.pending]);
   const [css] = useStyletron();
   const [isMobile] = useMobile();
@@ -46,12 +46,12 @@ export const SandboxPage = () => {
           })}
         >
           {isMobile ? (
-            <SandboxMobileLayout />
+            <PlaygroundMobileLayout />
           ) : (
             <>
-              <PanelGroup direction="horizontal" autoSaveId="sandbox-layout-horizontal">
+              <PanelGroup direction="horizontal" autoSaveId="playground-layout-horizontal">
                 <Panel>
-                  <PanelGroup direction="vertical" autoSaveId="sandbox-layout-vertical">
+                  <PanelGroup direction="vertical" autoSaveId="playground-layout-vertical">
                     <Panel
                       className={css({
                         ...expandProperty("borderRadius", "12px"),
