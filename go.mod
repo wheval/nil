@@ -59,6 +59,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	golang.org/x/term v0.29.0
 	golang.org/x/text v0.22.0
+	go.dedis.ch/kyber/v3 v3.1.0
 )
 
 require (
@@ -238,6 +239,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
+	go.dedis.ch/fixbuf v1.0.3 // indirect
 	go.uber.org/dig v1.18.0 // indirect
 	go.uber.org/fx v1.23.0 // indirect
 	go.uber.org/mock v0.5.0 // indirect
