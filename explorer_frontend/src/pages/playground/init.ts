@@ -5,5 +5,5 @@ $activeComponent.on(setActiveComponent, (_, payload) => payload);
 
 persist({
   store: $activeComponent,
-  key: "activeComponentSandbox",
+  key: "activeComponentPlayground",
 });

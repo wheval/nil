@@ -14,7 +14,7 @@ import { useUnit } from "effector-react";
 import "../init";
 import { useStyletron } from "baseui";
 import { useCallback, useEffect, useRef } from "react";
-import { LayoutComponent, setActiveComponent } from "../../../pages/sandbox/model";
+import { LayoutComponent, setActiveComponent } from "../../../pages/playground/model";
 import { getMobileStyles } from "../../../styleHelpers";
 import { ClearIcon, useMobile } from "../../shared";
 import { $logs, clearLogs } from "../model";
@@ -44,7 +44,7 @@ export const Logs = () => {
           height: "calc(100vh - 109px)",
         }),
       })}
-      data-testid="sandbox-logs"
+      data-testid="playground-logs"
     >
       {isMobile && (
         <div

@@ -7,7 +7,7 @@ import type { EditorView } from "@codemirror/view";
 import { useStyletron } from "baseui";
 import { expandProperty } from "inline-style-expand-shorthand";
 import { memo, useMemo } from "react";
-import { LayoutComponent, setActiveComponent } from "../../pages/sandbox/model";
+import { LayoutComponent, setActiveComponent } from "../../pages/playground/model";
 import { fetchSolidityCompiler } from "../../services/compiler";
 import { getMobileStyles } from "../../styleHelpers";
 import { useMobile } from "../shared";

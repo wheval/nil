@@ -11,7 +11,7 @@ import { useUnit } from "effector-react";
 import { expandProperty } from "inline-style-expand-shorthand";
 import type { FC } from "react";
 import { useStyletron } from "styletron-react";
-import { sandboxWithHashRoute } from "../../routing";
+import { playgroundWithHashRoute } from "../../routing";
 import { HyperlinkIcon, Link, OverflowEllipsis, StatefulPopover, useMobile } from "../../shared";
 import {
   $codeSnippetHash,
@@ -32,7 +32,7 @@ export const HyperlinkButton: FC<HyperlinkButtonProps> = ({ disabled }) => {
     $codeSnippetHash,
     $shareCodeSnippetError,
   ]);
-  const link = !codeHash ? null : `${window.location.origin}/sandbox/${codeHash}`;
+  const link = !codeHash ? null : `${window.location.origin}/playground/${codeHash}`;
 
   return (
     <StatefulPopover
@@ -69,7 +69,7 @@ export const HyperlinkButton: FC<HyperlinkButtonProps> = ({ disabled }) => {
                   })}
                 >
                   <Link
-                    to={sandboxWithHashRoute}
+                    to={playgroundWithHashRoute}
                     params={{ snippetHash: codeHash }}
                     target="_blank"
                   >

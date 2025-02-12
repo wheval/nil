@@ -21,7 +21,7 @@ const PGButton = ({ name }) => {
     const jsonResponse = await data.json();
 
     const hash = jsonResponse[0]?.result?.data?.hash;
-    const url = `https://explore.nil.foundation/sandbox/${hash}`;
+    const url = `https://explore.nil.foundation/playground/${hash}`;
 
     window.open(url, "_blank");
     setIsLoading(false);

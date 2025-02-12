@@ -4,7 +4,7 @@ import { combine, sample } from "effector";
 import { persist } from "effector-storage/local";
 import { fetchSolidityCompiler } from "../../services/compiler";
 import type { App } from "../../types";
-import { sandboxRoute, sandboxWithHashRoute } from "../routing/routes/sandboxRoute";
+import { playgroundRoute, playgroundWithHashRoute } from "../routing/routes/playgroundRoute";
 import { getRuntimeConfigOrThrow } from "../runtime-config";
 import {
   $code,
@@ -144,8 +144,8 @@ $shareCodeSnippetError.on(setCodeSnippetFx.fail, () => true);
 $shareCodeSnippetError.reset(setCodeSnippetFx.doneData);
 
 sample({
-  clock: sandboxWithHashRoute.navigated,
-  source: sandboxWithHashRoute.$params,
+  clock: playgroundWithHashRoute.navigated,
+  source: playgroundWithHashRoute.$params,
   fn: (params) => params.snippetHash,
   filter: (hash) => !!hash,
   target: fetchCodeSnippetFx,
@@ -166,7 +166,7 @@ $codeSnippetHash.on(fetchCodeSnippetFx.doneData, () => null);
 
 redirect({
   clock: fetchCodeSnippetFx.doneData,
-  route: sandboxRoute,
+  route: playgroundRoute,
   params: {},
 });
 
@@ -183,7 +183,10 @@ persist({
 
 sample({
   clock: updateRecentProjects,
-  source: combine($code, $recentProjects, (code, projects) => ({ code, projects })),
+  source: combine($code, $recentProjects, (code, projects) => ({
+    code,
+    projects,
+  })),
   filter: ({ code }) => code.trim().length > 0,
   target: $recentProjects,
   fn: ({ code, projects }) => {

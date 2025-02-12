@@ -3,7 +3,7 @@ import { createBrowserHistory } from "history";
 import { addressRoute, addressTransactionsRoute } from "./addressRoute";
 import { blockDetailsRoute, blockRoute } from "./blockRoute";
 import { explorerRoute } from "./explorerRoute";
-import { sandboxRoute, sandboxWithHashRoute } from "./sandboxRoute";
+import { playgroundRoute, playgroundWithHashRoute } from "./playgroundRoute";
 import { transactionRoute } from "./transactionRoute";
 
 export const notFoundRoute = createRoute();
@@ -34,12 +34,12 @@ export const routes = [
     route: addressTransactionsRoute,
   },
   {
-    path: "/sandbox",
-    route: sandboxRoute,
+    path: "/playground",
+    route: playgroundRoute,
   },
   {
-    path: "/sandbox/:snippetHash",
-    route: sandboxWithHashRoute,
+    path: "/playground/:snippetHash",
+    route: playgroundWithHashRoute,
   },
 ];
 

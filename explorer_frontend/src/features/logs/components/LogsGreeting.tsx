@@ -23,7 +23,7 @@ const LogsGreeting: FC<LogsGreetingProps> = ({ className }) => {
 
   return (
     <div className={className}>
-      <MonoParagraphMedium color={COLORS.gray400}>Welcome to =nil; sandbox!</MonoParagraphMedium>
+      <MonoParagraphMedium color={COLORS.gray400}>Welcome to =nil; playground!</MonoParagraphMedium>
       <MonoParagraphMedium color={COLORS.gray400}>
         You can use this terminal to:
       </MonoParagraphMedium>
@@ -70,7 +70,7 @@ const LogsGreeting: FC<LogsGreetingProps> = ({ className }) => {
               className={css({
                 textDecoration: "underline",
               })}
-              href={getRuntimeConfigOrThrow().SANDBOX_NILJS_URL}
+              href={getRuntimeConfigOrThrow().PLAYGROUND_NILJS_URL}
               target="_blank"
               rel="noreferrer"
             >

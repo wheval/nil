@@ -9,7 +9,7 @@ This project is an implementation of =nil; in Go.
 <p align="center">
   <a href="https://docs.nil.foundation"><strong>Documentation</strong></a> ·
   <a href="https://explore.nil.foundation/"><strong>Block explorer</strong></a> ·
-  <a href="https://explore.nil.foundation/sandbox"><strong>Sandbox</strong></a>
+  <a href="https://explore.nil.foundation/playground"><strong>Playground</strong></a>
 </p>
 
 ## Table of contents
