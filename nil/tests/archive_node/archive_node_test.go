@@ -18,7 +18,7 @@ type SuiteArchiveNode struct {
 }
 
 func (s *SuiteArchiveNode) SetupTest() {
-	nshards := uint32(5)
+	nshards := uint32(3)
 
 	s.Start(&nilservice.Config{
 		NShards:              nshards,
@@ -33,7 +33,7 @@ func (s *SuiteArchiveNode) TearDownTest() {
 }
 
 func (s *SuiteArchiveNode) TestGetDebugBlock() {
-	for shardId := range len(s.Shards) {
+	for shardId := range s.GetNShards() {
 		debugBlock, err := s.DefaultClient.GetDebugBlock(s.Context, types.ShardId(shardId), "latest", true)
 		s.Require().NoError(err)
 		s.NotNil(debugBlock)

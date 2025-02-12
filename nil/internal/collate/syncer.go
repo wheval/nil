@@ -22,6 +22,7 @@ import (
 )
 
 type SyncerConfig struct {
+	Name          string
 	ShardId       types.ShardId
 	Timeout       time.Duration // pull blocks if no new blocks appear in the topic for this duration
 	BootstrapPeer *network.AddrInfo
@@ -59,7 +60,7 @@ func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Sy
 		topic:          topicShardBlocks(cfg.ShardId),
 		db:             db,
 		networkManager: networkManager,
-		logger: logging.NewLogger("sync").With().
+		logger: logging.NewLogger(cfg.Name).With().
 			Stringer(logging.FieldShardId, cfg.ShardId).
 			Logger(),
 		waitForSync:   &waitForSync,
@@ -125,18 +126,16 @@ func (s *Syncer) notify() {
 	}
 }
 
-func (s *Syncer) FetchSnapshot(ctx context.Context, wgFetch *sync.WaitGroup) error {
+func (s *Syncer) FetchSnapshot(ctx context.Context) error {
 	if s.config.ReplayBlocks {
 		if snapIsRequired, err := s.shardIsEmpty(ctx); err != nil {
 			return err
 		} else if snapIsRequired {
-			if err := FetchSnapshot(ctx, s.networkManager, s.config.BootstrapPeer, s.config.ShardId, s.db); err != nil {
+			if err := fetchSnapshot(ctx, s.networkManager, s.config.BootstrapPeer, s.config.ShardId, s.db); err != nil {
 				return fmt.Errorf("failed to fetch snapshot: %w", err)
 			}
 		}
 	}
-
-	wgFetch.Done()
 	return nil
 }
 
@@ -310,7 +309,7 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 		return nil
 	}
 
-	if err := s.blockVerifier.VerifyBlock(ctx, s.logger, block.Block); err != nil {
+	if err := s.blockVerifier.VerifyBlock(ctx, block.Block, s.logger); err != nil {
 		s.logger.Error().
 			Uint64(logging.FieldBlockNumber, uint64(block.Id)).
 			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
@@ -403,18 +402,16 @@ func (s *Syncer) GenerateZerostate(ctx context.Context) error {
 
 	s.logger.Info().Msg("Generating zero-state...")
 
-	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, &common.EmptyHash)
+	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, nil)
 	if err != nil {
 		return err
 	}
 	defer gen.Rollback()
 
-	block, err := gen.GenerateZeroState(s.config.ZeroState, s.config.ZeroStateConfig)
-	if err != nil {
+	if _, err := gen.GenerateZeroState(s.config.ZeroState, s.config.ZeroStateConfig); err != nil {
 		return err
 	}
-
-	return PublishBlock(ctx, s.networkManager, s.config.ShardId, &types.BlockWithExtractedData{Block: block})
+	return nil
 }
 
 func validateRepliedBlock(

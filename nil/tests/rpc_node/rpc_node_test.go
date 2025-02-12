@@ -17,7 +17,7 @@ type SuiteRpcNode struct {
 
 func (s *SuiteRpcNode) SetupTest() {
 	port := 11001
-	nShards := uint32(5)
+	nShards := uint32(3)
 
 	s.Start(&nilservice.Config{
 		NShards: nShards,

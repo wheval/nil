@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 	"github.com/NilFoundation/nil/nil/tests"
@@ -26,25 +27,27 @@ func (s *BasicShardSuite) TearDownSuite() {
 
 func (s *BasicShardSuite) TestBasic() {
 	// get latest blocks from all shards
-	for i := range s.Shards {
-		shard := &s.Shards[i]
-		rpcBlock, err := shard.Client.GetBlock(s.Context, shard.Id, "latest", false)
-		s.Require().NoError(err)
-		s.Require().NotNil(rpcBlock)
+	for i, instance := range s.Instances {
+		for _, id := range instance.Config.MyShards {
+			shardId := types.ShardId(id)
 
-		// check that the block makes it to other shards
-		for j := range s.Shards {
-			if i == j {
-				continue
-			}
-			otherShard := &s.Shards[j]
-			s.Require().Eventually(func() bool {
-				otherBlock, err := otherShard.Client.GetBlock(s.Context, shard.Id, transport.BlockNumber(rpcBlock.Number), false)
-				if err != nil || otherBlock == nil {
-					return false
+			rpcBlock, err := instance.Client.GetBlock(s.Context, shardId, "latest", false)
+			s.Require().NoError(err)
+			s.Require().NotNil(rpcBlock)
+
+			// check that the block makes it to other shards
+			for j, otherShard := range s.Instances {
+				if i == j {
+					continue
 				}
-				return otherBlock.Hash == rpcBlock.Hash
-			}, tests.BlockWaitTimeout, tests.BlockPollInterval)
+				s.Require().Eventually(func() bool {
+					otherBlock, err := otherShard.Client.GetBlock(s.Context, shardId, transport.BlockNumber(rpcBlock.Number), false)
+					if err != nil || otherBlock == nil {
+						return false
+					}
+					return otherBlock.Hash == rpcBlock.Hash
+				}, tests.BlockWaitTimeout, tests.BlockPollInterval)
+			}
 		}
 	}
 }

@@ -33,9 +33,10 @@ const (
 	FieldAccountAddress = "accountAddress"
 	FieldAccountSeqno   = "accountSeqno"
 
-	FieldBlockHash   = "blockHash"
-	FieldBlockNumber = "blockNumber"
-	FieldBatchId     = "batchId"
+	FieldBlockHash          = "blockHash"
+	FieldBlockMainChainHash = "blockMainChainHash"
+	FieldBlockNumber        = "blockNumber"
+	FieldBatchId            = "batchId"
 
 	FieldTaskId         = "taskId"
 	FieldTaskParentId   = "taskParentId"

@@ -457,7 +457,8 @@ func (s *SuiteAsyncAwait) TestOnlyResponse() {
 func (s *SuiteAsyncAwait) checkAsyncContextEmpty(address types.Address) {
 	s.T().Helper()
 
-	contract := tests.GetContract(s.T(), s.Context, s.Shards[address.ShardId()].Db, address)
+	index := tests.InstanceId(address.ShardId()) - 1
+	contract := tests.GetContract(s.T(), s.Context, s.Instances[index].Db, address)
 	s.Require().Equal(common.EmptyHash, contract.AsyncContextRoot)
 }
 

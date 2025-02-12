@@ -72,7 +72,7 @@ func fetchShardSnap(ctx context.Context, nm *network.Manager, peerId network.Pee
 }
 
 // Fetch DB snapshot via libp2p.
-func FetchSnapshot(ctx context.Context, nm *network.Manager, peerAddr *network.AddrInfo, shardId types.ShardId, db db.DB) error {
+func fetchSnapshot(ctx context.Context, nm *network.Manager, peerAddr *network.AddrInfo, shardId types.ShardId, db db.DB) error {
 	if nm == nil {
 		return nil
 	}

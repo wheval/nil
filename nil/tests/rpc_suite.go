@@ -94,8 +94,9 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 
 	s.Wg.Add(1)
 	go func() {
-		nilservice.Run(s.Context, cfg, s.Db, serviceInterop)
-		s.Wg.Done()
+		defer s.Wg.Done()
+		rc := nilservice.Run(s.Context, cfg, s.Db, serviceInterop)
+		s.Require().Zero(rc)
 	}()
 
 	if cfg.RunMode == nilservice.CollatorsOnlyRunMode {

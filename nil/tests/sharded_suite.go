@@ -25,8 +25,9 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type Shard struct {
-	Id         types.ShardId
+type InstanceId uint
+
+type Instance struct {
 	Db         db.DB
 	RpcUrl     string
 	P2pAddress network.AddrInfo
@@ -35,7 +36,7 @@ type Shard struct {
 	Config     *nilservice.Config
 }
 
-func getShardAddress(s Shard) network.AddrInfo {
+func getShardAddress(s Instance) network.AddrInfo {
 	return s.P2pAddress
 }
 
@@ -49,7 +50,7 @@ type ShardedSuite struct {
 
 	dbInit func() db.DB
 
-	Shards []Shard
+	Instances []Instance
 }
 
 type DhtBootstrapByValidators int
@@ -64,7 +65,7 @@ func (s *ShardedSuite) Cancel() {
 
 	s.ctxCancel()
 	s.Wg.Wait()
-	for _, shard := range s.Shards {
+	for _, shard := range s.Instances {
 		shard.Db.Close()
 	}
 }
@@ -80,28 +81,29 @@ func newZeroState(validators []config.ListValidators) *execution.ZeroStateConfig
 }
 
 func createOneShardOneValidatorCfg(
-	s *ShardedSuite, shardId types.ShardId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[types.ShardId]*keys.ValidatorKeysManager,
+	s *ShardedSuite, index InstanceId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[InstanceId]*keys.ValidatorKeysManager,
 ) *nilservice.Config {
-	validators := make([]config.ListValidators, 0, cfg.NShards)
-	for i := range cfg.NShards {
-		km := keyManagers[types.ShardId(i)]
+	validators := make([]config.ListValidators, cfg.NShards-1)
+	for i := range validators {
+		km := keyManagers[InstanceId(i)]
 		pkey, err := km.GetPublicKey()
 		s.Require().NoError(err)
-		validators = append(validators, config.ListValidators{
+		validators[i] = config.ListValidators{
 			List: []config.ValidatorInfo{
 				{PublicKey: config.Pubkey(pkey)},
 			},
-		})
+		}
 	}
 
-	validatorKeysPath := keyManagers[shardId].GetKeysPath()
+	validatorKeysPath := keyManagers[index].GetKeysPath()
 	s.Require().NotEmpty(validatorKeysPath)
 
+	shardId := uint(index + 1)
 	return &nilservice.Config{
 		NShards:              cfg.NShards,
-		MyShards:             []uint{uint(shardId)},
+		MyShards:             []uint{uint(types.MainShardId), shardId},
 		SplitShards:          true,
-		HttpUrl:              s.Shards[shardId].RpcUrl,
+		HttpUrl:              s.Instances[index].RpcUrl,
 		Topology:             cfg.Topology,
 		CollatorTickPeriodMs: cfg.CollatorTickPeriodMs,
 		GasBasePrice:         cfg.GasBasePrice,
@@ -113,21 +115,20 @@ func createOneShardOneValidatorCfg(
 }
 
 func createShardAllValidatorsCfg(
-	s *ShardedSuite, shardId types.ShardId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[types.ShardId]*keys.ValidatorKeysManager,
+	s *ShardedSuite, index InstanceId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[InstanceId]*keys.ValidatorKeysManager,
 ) *nilservice.Config {
 	myShards := slices.Collect(common.Range(0, uint(cfg.NShards)))
 
-	validatorKeysPath := keyManagers[shardId].GetKeysPath()
-	validators := make([]config.ListValidators, cfg.NShards)
+	validatorKeysPath := keyManagers[index].GetKeysPath()
+	validators := make([]config.ListValidators, cfg.NShards-1)
 
 	// Order of validators is important and should be the same for all instances
-	for kmId := range cfg.NShards {
-		pubkey, err := keyManagers[types.ShardId(kmId)].GetPublicKey()
+	for kmId := InstanceId(0); kmId < InstanceId(len(keyManagers)); kmId++ {
+		pubkey, err := keyManagers[kmId].GetPublicKey()
 		s.Require().NoError(err)
 
-		for i := range cfg.NShards {
-			id := types.ShardId(i)
-			validators[id].List = append(validators[id].List, config.ValidatorInfo{
+		for i := range validators {
+			validators[i].List = append(validators[i].List, config.ValidatorInfo{
 				PublicKey: config.Pubkey(pubkey),
 			})
 		}
@@ -137,7 +138,7 @@ func createShardAllValidatorsCfg(
 		NShards:              cfg.NShards,
 		MyShards:             myShards,
 		SplitShards:          true,
-		HttpUrl:              s.Shards[shardId].RpcUrl,
+		HttpUrl:              s.Instances[index].RpcUrl,
 		Topology:             cfg.Topology,
 		CollatorTickPeriodMs: cfg.CollatorTickPeriodMs,
 		GasBasePrice:         cfg.GasBasePrice,
@@ -150,7 +151,7 @@ func createShardAllValidatorsCfg(
 
 func (s *ShardedSuite) start(
 	cfg *nilservice.Config, port int,
-	shardCfgGen func(*ShardedSuite, types.ShardId, *nilservice.Config, *network.Config, map[types.ShardId]*keys.ValidatorKeysManager) *nilservice.Config,
+	shardCfgGen func(*ShardedSuite, InstanceId, *nilservice.Config, *network.Config, map[InstanceId]*keys.ValidatorKeysManager) *nilservice.Config,
 ) {
 	s.T().Helper()
 	s.Context, s.ctxCancel = context.WithCancel(context.Background())
@@ -163,38 +164,36 @@ func (s *ShardedSuite) start(
 		}
 	}
 
-	networkConfigs, p2pAddresses := network.GenerateConfigs(s.T(), cfg.NShards, port)
+	instanceCount := cfg.NShards - 1
+	networkConfigs, p2pAddresses := network.GenerateConfigs(s.T(), instanceCount, port)
+	keysManagers := make(map[InstanceId]*keys.ValidatorKeysManager)
+	s.Instances = make([]Instance, instanceCount)
 
-	keysManagers := make(map[types.ShardId]*keys.ValidatorKeysManager)
-	s.Shards = make([]Shard, 0, cfg.NShards)
-	for i := range cfg.NShards {
-		shardId := types.ShardId(i)
-
-		keysPath := s.T().TempDir() + fmt.Sprintf("/validator-keys-%d.yaml", i)
+	for index := range InstanceId(instanceCount) {
+		keysPath := s.T().TempDir() + fmt.Sprintf("/validator-keys-%d.yaml", index)
 		km := keys.NewValidatorKeyManager(keysPath)
 		s.Require().NotNil(km)
 		s.Require().NoError(km.InitKey())
-		keysManagers[shardId] = km
+		keysManagers[index] = km
 
-		url := rpc.GetSockPathIdx(s.T(), int(i))
-		shard := Shard{
-			Id:         shardId,
+		url := rpc.GetSockPathIdx(s.T(), int(index))
+		s.Instances[index] = Instance{
 			Db:         s.dbInit(),
 			RpcUrl:     url,
-			P2pAddress: p2pAddresses[i],
+			P2pAddress: p2pAddresses[index],
+			Client:     rpc_client.NewClient(url, zerolog.New(os.Stderr)),
 		}
-		shard.Client = rpc_client.NewClient(shard.RpcUrl, zerolog.New(os.Stderr))
-		s.Shards = append(s.Shards, shard)
 	}
 
 	PatchConfigWithTestDefaults(cfg)
-	for i := range types.ShardId(cfg.NShards) {
-		shardConfig := shardCfgGen(s, i, cfg, networkConfigs[i], keysManagers)
 
-		node, err := nilservice.CreateNode(s.Context, fmt.Sprintf("shard-%d", i), shardConfig, s.Shards[i].Db, nil)
+	for index := range InstanceId(instanceCount) {
+		shardConfig := shardCfgGen(s, index, cfg, networkConfigs[index], keysManagers)
+
+		node, err := nilservice.CreateNode(s.Context, fmt.Sprintf("shard-%d", index), shardConfig, s.Instances[index].Db, nil)
 		s.Require().NoError(err)
-		s.Shards[i].nm = node.NetworkManager
-		s.Shards[i].Config = shardConfig
+		s.Instances[index].nm = node.NetworkManager
+		s.Instances[index].Config = shardConfig
 
 		s.Wg.Add(1)
 		go func() {
@@ -204,11 +203,12 @@ func (s *ShardedSuite) start(
 		}()
 	}
 
-	for _, shard := range s.Shards {
-		s.connectToShards(shard.nm)
+	for _, shard := range s.Instances {
+		s.connectToInstances(shard.nm)
 	}
 
 	s.waitZerostate()
+	s.waitShardsTick(cfg.NShards)
 }
 
 func (s *ShardedSuite) Start(cfg *nilservice.Config, port int) {
@@ -223,11 +223,11 @@ func (s *ShardedSuite) StartShardAllValidators(cfg *nilservice.Config, port int)
 	s.start(cfg, port, createShardAllValidatorsCfg)
 }
 
-func (s *ShardedSuite) connectToShards(nm *network.Manager) {
+func (s *ShardedSuite) connectToInstances(nm *network.Manager) {
 	s.T().Helper()
 
 	var wg sync.WaitGroup
-	for _, shard := range s.Shards {
+	for _, shard := range s.Instances {
 		if shard.nm != nm {
 			wg.Add(1)
 			go func() {
@@ -239,30 +239,36 @@ func (s *ShardedSuite) connectToShards(nm *network.Manager) {
 	wg.Wait()
 }
 
+func (s *ShardedSuite) GetNShards() uint32 {
+	return s.Instances[0].Config.NShards
+}
+
 func (s *ShardedSuite) StartArchiveNode(port int, withBootstrapPeers bool) (client.Client, network.AddrInfo) {
 	s.T().Helper()
 
-	s.Require().NotEmpty(s.Shards)
+	s.Require().NotEmpty(s.Instances)
 	netCfg, addr := network.GenerateConfig(s.T(), port)
 	serviceName := fmt.Sprintf("archive-%d", port)
 
 	cfg := &nilservice.Config{
-		NShards:   uint32(len(s.Shards)),
+		NShards:   s.GetNShards(),
 		Network:   netCfg,
 		HttpUrl:   rpc.GetSockPathService(s.T(), serviceName),
 		RunMode:   nilservice.ArchiveRunMode,
-		ZeroState: s.Shards[0].Config.ZeroState,
+		ZeroState: s.Instances[0].Config.ZeroState,
 	}
 
 	cfg.MyShards = slices.Collect(common.Range(0, uint(cfg.NShards)))
-	netCfg.DHTBootstrapPeers = slices.Collect(common.Transform(slices.Values(s.Shards), getShardAddress))
+	netCfg.DHTBootstrapPeers = slices.Collect(common.Transform(slices.Values(s.Instances), getShardAddress))
 	if withBootstrapPeers {
-		cfg.BootstrapPeers = netCfg.DHTBootstrapPeers
+		bootstrapPeers := slices.Clone(netCfg.DHTBootstrapPeers)
+		bootstrapPeers = append(bootstrapPeers[0:1], bootstrapPeers...)
+		cfg.BootstrapPeers = bootstrapPeers
 	}
 
 	node, err := nilservice.CreateNode(s.Context, serviceName, cfg, s.dbInit(), nil)
 	s.Require().NoError(err)
-	s.connectToShards(node.NetworkManager)
+	s.connectToInstances(node.NetworkManager)
 
 	s.Wg.Add(1)
 	go func() {
@@ -282,8 +288,9 @@ func (s *ShardedSuite) StartRPCNode(dhtBootstrapByValidators DhtBootstrapByValid
 	netCfg, _ := network.GenerateConfig(s.T(), 0)
 	const serviceName = "rpc"
 
+	s.Require().NotEmpty(s.Instances)
 	cfg := &nilservice.Config{
-		NShards: uint32(len(s.Shards)),
+		NShards: s.GetNShards(),
 		Network: netCfg,
 		HttpUrl: rpc.GetSockPathService(s.T(), serviceName),
 		RunMode: nilservice.RpcRunMode,
@@ -291,14 +298,14 @@ func (s *ShardedSuite) StartRPCNode(dhtBootstrapByValidators DhtBootstrapByValid
 	}
 
 	if dhtBootstrapByValidators == WithDhtBootstrapByValidators {
-		netCfg.DHTBootstrapPeers = slices.Collect(common.Transform(slices.Values(s.Shards), getShardAddress))
+		netCfg.DHTBootstrapPeers = slices.Collect(common.Transform(slices.Values(s.Instances), getShardAddress))
 	}
 	cfg.RpcNode.ArchiveNodeList = archiveNodes
 
 	node, err := nilservice.CreateNode(s.Context, serviceName, cfg, s.dbInit(), nil)
 	s.Require().NoError(err)
 	if dhtBootstrapByValidators == WithDhtBootstrapByValidators {
-		s.connectToShards(node.NetworkManager)
+		s.connectToInstances(node.NetworkManager)
 	}
 
 	s.Wg.Add(1)
@@ -353,14 +360,25 @@ func (s *ShardedSuite) waitZerostate() {
 	s.T().Helper()
 
 	var wg sync.WaitGroup
-	wg.Add(len(s.Shards))
-	for _, shard := range s.Shards {
+	wg.Add(len(s.Instances))
+	for _, instance := range s.Instances {
 		go func() {
 			defer wg.Done()
-			WaitZerostate(s.T(), s.Context, shard.Client, shard.Id)
+
+			for _, shard := range instance.Config.MyShards {
+				WaitZerostate(s.T(), s.Context, instance.Client, types.ShardId(shard))
+			}
 		}()
 	}
 	wg.Wait()
+}
+
+func (s *ShardedSuite) waitShardsTick(nShards uint32) {
+	for _, instance := range s.Instances {
+		for shardId := range types.ShardId(nShards) {
+			WaitShardTick(s.T(), s.Context, instance.Client, shardId)
+		}
+	}
 }
 
 func (s *ShardedSuite) LoadContract(path string, name string) (types.Code, abi.ABI) {

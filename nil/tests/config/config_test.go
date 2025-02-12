@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/rand"
 	"testing"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/collate"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
-	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -58,13 +56,6 @@ func (s *SuiteConfigParams) SetupSuite() {
 	}
 }
 
-func (s *SuiteConfigParams) SetupTest() {
-	var err error
-	s.Db, err = db.NewBadgerDbInMemory()
-	s.Require().NoError(err)
-	s.Context, s.CtxCancel = context.WithCancel(context.Background())
-}
-
 func (s *SuiteConfigParams) TearDownTest() {
 	s.Cancel()
 }
@@ -89,9 +80,9 @@ func (s *SuiteConfigParams) NewValidator() *config.ValidatorInfo {
 func (s *SuiteConfigParams) makeParamValidators(vals ...config.ValidatorInfo) config.ParamValidators {
 	s.T().Helper()
 
-	validators := make([]config.ListValidators, 0, s.ShardsNum)
-	for range s.ShardsNum {
-		validators = append(validators, config.ListValidators{List: vals})
+	validators := make([]config.ListValidators, s.ShardsNum-1)
+	for i := range validators {
+		validators[i] = config.ListValidators{List: vals}
 	}
 	return config.ParamValidators{Validators: validators}
 }
