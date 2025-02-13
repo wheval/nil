@@ -42,9 +42,10 @@ jobs:
           - os: macos-latest
             arch: aarch64
             nixArch: aarch64-darwin
-          - os: macos-15-large
-            arch: x64
-            nixArch: x86_64-darwin
+          # we're out of CI runners capacity right now. this needs to be returned later
+          # - os: macos-15-large
+          #   arch: x64
+          #   nixArch: x86_64-darwin
     steps:
       - name: checkout local actions
         uses: actions/checkout@v4
