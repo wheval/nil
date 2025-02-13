@@ -47,6 +47,12 @@ func (w ComponentFilterWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+func ApplyComponentsFilterEnv() {
+	if logFilter := os.Getenv("NIL_LOG_FILTER"); logFilter != "" {
+		ApplyComponentsFilter(logFilter)
+	}
+}
+
 func ApplyComponentsFilter(filter string) {
 	comps := strings.Split(filter, ":")
 
