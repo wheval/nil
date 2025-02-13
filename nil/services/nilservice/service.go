@@ -602,22 +602,15 @@ func createShards(
 func createActiveCollator(shard types.ShardId, cfg *Config, collatorTickPeriod time.Duration, database db.DB, networkManager *network.Manager, txnPool txnpool.Pool) *collate.Scheduler {
 	collatorCfg := collate.Params{
 		BlockGeneratorParams: execution.BlockGeneratorParams{
-			ShardId:         shard,
-			NShards:         cfg.NShards,
-			TraceEVM:        cfg.TraceEVM,
-			Timer:           common.NewTimer(),
-			MainKeysOutPath: cfg.MainKeysOutPath,
+			ShardId:  shard,
+			NShards:  cfg.NShards,
+			TraceEVM: cfg.TraceEVM,
+			Timer:    common.NewTimer(),
 		},
 		CollatorTickPeriod: collatorTickPeriod,
 		Timeout:            collatorTickPeriod,
-		ZeroState:          execution.DefaultZeroStateConfig,
-		ZeroStateConfig:    cfg.ZeroState,
 		Topology:           collate.GetShardTopologyById(cfg.Topology),
 		L1Fetcher:          cfg.L1Fetcher,
 	}
-	if len(cfg.ZeroStateYaml) != 0 {
-		collatorCfg.ZeroState = cfg.ZeroStateYaml
-	}
-
 	return collate.NewScheduler(database, txnPool, collatorCfg, networkManager)
 }

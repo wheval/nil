@@ -35,9 +35,6 @@ type Params struct {
 	CollatorTickPeriod time.Duration
 	Timeout            time.Duration
 
-	ZeroState       string
-	ZeroStateConfig *execution.ZeroStateConfig
-
 	Topology ShardTopology
 
 	L1Fetcher rollup.L1BlockFetcher
