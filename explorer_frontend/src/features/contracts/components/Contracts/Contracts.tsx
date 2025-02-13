@@ -11,20 +11,27 @@ import {
   SPACE,
   Spinner,
 } from "@nilfoundation/ui-kit";
+import { memo } from "react";
 import { useStyletron } from "styletron-react";
 import { LayoutComponent, setActiveComponent } from "../../../../pages/playground/model";
+import { $smartAccount } from "../../../account-connector/model";
 import { compileCodeFx } from "../../../code/model";
 import { useMobile } from "../../../shared";
 import { Contract } from "./Contract";
+import { SmartAccountNotConnectedWarning } from "./SmartAccountNotConnectedWarning";
+
+const MemoizedWarning = memo(SmartAccountNotConnectedWarning);
 
 export const Contracts = () => {
-  const [deployedApps, contracts, compilingContracts] = useUnit([
+  const [deployedApps, contracts, compilingContracts, smartAccount] = useUnit([
     $contractWithState,
     $contracts,
     compileCodeFx.pending,
+    $smartAccount,
   ]);
   const [css] = useStyletron();
   const [isMobile] = useMobile();
+  const smartAccountExists = smartAccount !== null;
 
   return (
     <div
@@ -75,6 +82,7 @@ export const Contracts = () => {
           height: "100%",
         })}
       >
+        {!smartAccountExists && <MemoizedWarning />}
         {contracts.length === 0 && (
           <div
             className={css({
@@ -97,11 +105,15 @@ export const Contracts = () => {
           </div>
         )}
         {contracts.map((contract, i) => {
+          const appsToShow = smartAccountExists
+            ? deployedApps.filter((app) => app.bytecode === contract.bytecode)
+            : [];
           return (
             <Contract
               key={`${contract.bytecode}-${i}`}
               contract={contract}
-              deployedApps={deployedApps.filter((app) => app.bytecode === contract.bytecode)}
+              deployedApps={appsToShow}
+              disabled={!smartAccountExists}
             />
           );
         })}

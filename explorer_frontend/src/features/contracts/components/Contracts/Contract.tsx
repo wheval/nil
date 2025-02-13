@@ -17,9 +17,10 @@ import { RemoveAppButton } from "../RemoveAppButton";
 type ContractProps = {
   contract: App;
   deployedApps: Array<App & { address?: Hex }>;
+  disabled?: boolean;
 };
 
-export const Contract: FC<ContractProps> = ({ contract, deployedApps }) => {
+export const Contract: FC<ContractProps> = ({ contract, deployedApps, disabled }) => {
   const [css] = useStyletron();
 
   return (
@@ -44,6 +45,7 @@ export const Contract: FC<ContractProps> = ({ contract, deployedApps }) => {
         })}
       >
         <HeadingMedium
+          color={disabled ? COLORS.gray400 : COLORS.gray50}
           className={css({
             wordBreak: "break-word",
             paddingRight: SPACE[8],
@@ -58,6 +60,7 @@ export const Contract: FC<ContractProps> = ({ contract, deployedApps }) => {
             });
           }}
           kind={BUTTON_KIND.primary}
+          disabled={disabled}
         >
           Deploy
         </Button>
