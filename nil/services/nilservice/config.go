@@ -173,7 +173,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func (c *Config) loadValidatorKeys() error {
+func (c *Config) LoadValidatorKeys() error {
 	if c.ValidatorKeysPath == "" {
 		return nil
 	}
@@ -196,7 +196,7 @@ func (c *Config) LoadValidatorPrivateKey() (key *ecdsa.PrivateKey, err error) {
 				Msg("Loaded validator key")
 		}
 	}()
-	if err := c.loadValidatorKeys(); err != nil {
+	if err := c.LoadValidatorKeys(); err != nil {
 		return nil, err
 	}
 	return c.ValidatorKeysManager.GetKey()
