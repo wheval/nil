@@ -211,51 +211,59 @@ func initSyncers(ctx context.Context, syncers []*collate.Syncer) error {
 	return nil
 }
 
-func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logger zerolog.Logger) ([]concurrent.Func, error) {
-	if err := validateArchiveNodeConfig(cfg, nm); err != nil {
-		logger.Error().Err(err).Msg("Invalid configuration")
-		return nil, err
-	}
-
+func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) collate.SyncerConfig {
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
 	syncerTimeout := syncTimeoutFactor * collatorTickPeriod
 
-	var wgInit sync.WaitGroup
-	wgInit.Add(1)
+	var bootstrapPeer *network.AddrInfo
+	if len(cfg.BootstrapPeers) > 0 {
+		bootstrapPeer = &cfg.BootstrapPeers[shardId]
+	}
 
-	funcs := make([]concurrent.Func, 0, cfg.NShards+1)
-	syncers := make([]*collate.Syncer, 0, cfg.NShards)
+	zeroState := execution.DefaultZeroStateConfig
+	zeroStateConfig := cfg.ZeroState
+	if len(cfg.ZeroStateYaml) != 0 {
+		zeroState = cfg.ZeroStateYaml
+	}
+
+	return collate.SyncerConfig{
+		Name:                 name,
+		ShardId:              shardId,
+		Timeout:              syncerTimeout,
+		BootstrapPeer:        bootstrapPeer,
+		ReplayBlocks:         shardId.IsMainShard() || cfg.IsShardActive(shardId),
+		BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
+		ZeroState:            zeroState,
+		ZeroStateConfig:      zeroStateConfig,
+	}
+}
+
+type syncersResult struct {
+	funcs   []concurrent.Func
+	syncers []*collate.Syncer
+	wgInit  sync.WaitGroup
+}
+
+func (s *syncersResult) Wait() {
+	s.wgInit.Wait()
+}
+
+func createSyncers(name string, cfg *Config, nm *network.Manager, database db.DB, logger zerolog.Logger) (*syncersResult, error) {
+	res := &syncersResult{
+		funcs:   make([]concurrent.Func, 0, cfg.NShards+1),
+		syncers: make([]*collate.Syncer, 0, cfg.NShards),
+	}
+	res.wgInit.Add(1)
 
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
-
-		var bootstrapPeer *network.AddrInfo
-		if len(cfg.BootstrapPeers) > 0 {
-			bootstrapPeer = &cfg.BootstrapPeers[i]
-		}
-
-		zeroState := execution.DefaultZeroStateConfig
-		zeroStateConfig := cfg.ZeroState
-		if len(cfg.ZeroStateYaml) != 0 {
-			zeroState = cfg.ZeroStateYaml
-		}
-
-		syncer, err := collate.NewSyncer(collate.SyncerConfig{
-			Name:                 "archive-sync",
-			ShardId:              shardId,
-			Timeout:              syncerTimeout,
-			BootstrapPeer:        bootstrapPeer,
-			ReplayBlocks:         cfg.IsShardActive(shardId),
-			BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
-			ZeroState:            zeroState,
-			ZeroStateConfig:      zeroStateConfig,
-		}, database, nm)
+		syncer, err := collate.NewSyncer(getSyncerConfig(name, cfg, shardId), database, nm)
 		if err != nil {
 			return nil, err
 		}
-		syncers = append(syncers, syncer)
-		funcs = append(funcs, func(ctx context.Context) error {
-			wgInit.Wait() // Wait for syncers initialization
+		res.syncers = append(res.syncers, syncer)
+		res.funcs = append(res.funcs, func(ctx context.Context) error {
+			res.Wait() // Wait for syncers initialization
 			if err := syncer.Run(ctx); err != nil {
 				logger.Error().
 					Err(err).
@@ -266,15 +274,15 @@ func createArchiveSyncers(cfg *Config, nm *network.Manager, database db.DB, logg
 			return nil
 		})
 	}
-	funcs = append(funcs, func(ctx context.Context) error {
-		defer wgInit.Done()
-		if err := initSyncers(ctx, syncers); err != nil {
+	res.funcs = append(res.funcs, func(ctx context.Context) error {
+		defer res.wgInit.Done()
+		if err := initSyncers(ctx, res.syncers); err != nil {
 			logger.Error().Err(err).Msg("Failed to initialize syncers")
 			return err
 		}
 		return nil
 	})
-	return funcs, nil
+	return res, nil
 }
 
 type Node struct {
@@ -329,10 +337,31 @@ func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, i
 		return nil, err
 	}
 
+	var syncersResult *syncersResult
 	switch cfg.RunMode {
 	case NormalRunMode, CollatorsOnlyRunMode:
+		if err := cfg.LoadValidatorKeys(); err != nil {
+			return nil, err
+		}
+
+		if cfg.ZeroState == nil {
+			cfg.ZeroState = &execution.ZeroStateConfig{}
+		}
+
+		if !cfg.SplitShards && len(cfg.ZeroState.GetValidators()) == 0 {
+			if err := initDefaultValiator(cfg); err != nil {
+				return nil, err
+			}
+		}
+
+		syncersResult, err = createSyncers("sync", cfg, networkManager, database, logger)
+		if err != nil {
+			return nil, err
+		}
+		funcs = append(funcs, syncersResult.funcs...)
+
 		var shardFuncs []concurrent.Func
-		shardFuncs, txnPools, err = createShards(ctx, cfg, database, networkManager, logger)
+		shardFuncs, txnPools, err = createShards(ctx, cfg, database, networkManager, syncersResult, logger)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to create collators")
 			return nil, err
@@ -340,11 +369,15 @@ func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, i
 
 		funcs = append(funcs, shardFuncs...)
 	case ArchiveRunMode:
-		archiveNodeFunc, err := createArchiveSyncers(cfg, networkManager, database, logger)
+		if err := validateArchiveNodeConfig(cfg, networkManager); err != nil {
+			logger.Error().Err(err).Msg("Invalid configuration")
+			return nil, err
+		}
+		syncersResult, err = createSyncers("archive-sync", cfg, networkManager, database, logger)
 		if err != nil {
 			return nil, err
 		}
-		funcs = append(funcs, archiveNodeFunc...)
+		funcs = append(funcs, syncersResult.funcs...)
 	case BlockReplayRunMode:
 		replayer := collate.NewReplayScheduler(database, collate.ReplayParams{
 			BlockGeneratorParams: cfg.BlockGeneratorParams(cfg.Replay.ShardId),
@@ -397,6 +430,10 @@ func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, i
 
 	if (cfg.RPCPort != 0 || cfg.HttpUrl != "") && rawApi != nil {
 		funcs = append(funcs, func(ctx context.Context) error {
+			if syncersResult != nil {
+				syncersResult.Wait() // Wait for syncers initialization
+			}
+
 			var cl client.Client
 			if cfg.Cometa != nil || cfg.IsFaucetApiEnabled() {
 				cl, err = client.NewEthClient(ctx, database, types.ShardId(cfg.NShards), txnPools, logger)
@@ -498,32 +535,12 @@ func initDefaultValiator(cfg *Config) error {
 func createShards(
 	ctx context.Context, cfg *Config,
 	database db.DB, networkManager *network.Manager,
-	logger zerolog.Logger,
+	syncers *syncersResult, logger zerolog.Logger,
 ) ([]concurrent.Func, map[types.ShardId]txnpool.Pool, error) {
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
-	syncerTimeout := syncTimeoutFactor * collatorTickPeriod
 
-	funcs := make([]concurrent.Func, 0, 2*cfg.NShards+1)
-	syncers := make([]*collate.Syncer, 0, cfg.NShards)
+	funcs := make([]concurrent.Func, 0, cfg.NShards)
 	pools := make(map[types.ShardId]txnpool.Pool)
-
-	var wgInit sync.WaitGroup
-	wgInit.Add(1)
-
-	pKey, err := cfg.LoadValidatorPrivateKey()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if cfg.ZeroState == nil {
-		cfg.ZeroState = &execution.ZeroStateConfig{}
-	}
-
-	if !cfg.SplitShards && len(cfg.ZeroState.GetValidators()) == 0 {
-		if err := initDefaultValiator(cfg); err != nil {
-			return nil, nil, err
-		}
-	}
 
 	validatorsNum := len(cfg.ZeroState.GetValidators())
 	if validatorsNum != int(cfg.NShards)-1 {
@@ -534,46 +551,13 @@ func createShards(
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
 
-		zeroState := execution.DefaultZeroStateConfig
-		zeroStateConfig := cfg.ZeroState
-		if len(cfg.ZeroStateYaml) != 0 {
-			zeroState = cfg.ZeroStateYaml
-		}
-
-		syncerCfg := collate.SyncerConfig{
-			Name:                 "sync",
-			ShardId:              shardId,
-			ReplayBlocks:         shardId.IsMainShard() || cfg.IsShardActive(shardId),
-			Timeout:              syncerTimeout,
-			BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
-			ZeroState:            zeroState,
-			ZeroStateConfig:      zeroStateConfig,
-		}
-
-		if int(shardId) < len(cfg.BootstrapPeers) {
-			syncerCfg.BootstrapPeer = &cfg.BootstrapPeers[shardId]
-		}
-
-		syncer, err := collate.NewSyncer(syncerCfg, database, networkManager)
-		if err != nil {
-			return nil, nil, err
-		}
-		syncers = append(syncers, syncer)
-
-		funcs = append(funcs, func(ctx context.Context) error {
-			wgInit.Wait() // Wait for syncers initialization
-			if err := syncer.Run(ctx); err != nil {
-				logger.Error().
-					Err(err).
-					Stringer(logging.FieldShardId, shardId).
-					Msg("Syncer goroutine failed")
-				return err
-			}
-			return nil
-		})
-
 		if cfg.IsShardActive(shardId) {
 			txnPool, err := txnpool.New(ctx, txnpool.NewConfig(shardId), networkManager)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			pKey, err := cfg.ValidatorKeysManager.GetKey()
 			if err != nil {
 				return nil, nil, err
 			}
@@ -590,11 +574,11 @@ func createShards(
 
 			pools[shardId] = txnPool
 			funcs = append(funcs, func(ctx context.Context) error {
-				wgInit.Wait() // Wait for syncers initialization
+				syncers.Wait() // Wait for syncers initialization
 				if err := consensus.Init(ctx); err != nil {
 					return err
 				}
-				if err := collator.Run(ctx, syncer, consensus); err != nil {
+				if err := collator.Run(ctx, syncers.syncers[i], consensus); err != nil {
 					logger.Error().
 						Err(err).
 						Stringer(logging.FieldShardId, shardId).
@@ -607,16 +591,6 @@ func createShards(
 			return nil, nil, errors.New("trying to start syncer without network configuration")
 		}
 	}
-
-	funcs = append(funcs, func(ctx context.Context) error {
-		defer wgInit.Done()
-		if err := initSyncers(ctx, syncers); err != nil {
-			logger.Error().Err(err).Msg("Failed to initialize syncers")
-			return err
-		}
-		return nil
-	})
-
 	return funcs, pools, nil
 }
 

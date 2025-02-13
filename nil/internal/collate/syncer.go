@@ -213,6 +213,13 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 		return false, err
 	}
 
+	if block.Id <= lastBlock.Id {
+		s.logger.Trace().
+			Stringer(logging.FieldBlockNumber, block.Id).
+			Msg("Received old block")
+		return false, nil
+	}
+
 	if block.Id != lastBlock.Id+1 {
 		s.logger.Debug().
 			Stringer(logging.FieldBlockNumber, block.Id).
