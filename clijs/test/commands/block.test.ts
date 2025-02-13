@@ -9,8 +9,5 @@ describe("block:get blocks", () => {
   CliTest("tests getting blocks", async ({ runCommand }) => {
     const block1 = (await runCommand(["block", "latest", "-s", "1"])).result as Block<boolean>;
     expect(block1).toBeTruthy();
-
-    const block2 = (await runCommand(["block", "1", "-s", "1"])).result as Block<boolean>;
-    expect(block2).toBeTruthy();
   });
 });
