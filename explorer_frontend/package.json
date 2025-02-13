@@ -11,7 +11,7 @@
 		"lint:fix": "biome check --write src",
 		"build": "vite build",
 		"analyze-bundle": "npx vite-bundle-visualizer --port 5000 --open",
-    "serve": "serve -s dist -l 3000",
+		"serve": "serve -s dist -l 3000",
 		"test:e2e": "wait-on http://localhost:3000 && cypress open",
 		"test:e2e:ci": "wait-on http://localhost:3000 && cypress run --headless"
 	},
@@ -42,11 +42,13 @@
 		"effector": "^22.8.6",
 		"effector-react": "^22.5.3",
 		"effector-storage": "^6.1.1",
+		"ethers": "^6.13.1",
 		"eventemitter3": "^5.0.1",
 		"history": "^5.3.0",
 		"inline-style-expand-shorthand": "^1.6.0",
 		"jszip": "^3.10.1",
 		"lightweight-charts": "^4.1.1",
+		"lottie-web": "^5.12.2",
 		"nanoid": "^5.0.7",
 		"patronum": "^1.18.0",
 		"react": "^18.2.0",
@@ -60,9 +62,8 @@
 		"styletron-react": "^6.1.0",
 		"typescript": "^5.5.4",
 		"viem": "2.17.3",
-		"vite": "^6.0.3",
-    "ethers": "^6.13.1"
-  },
+		"vite": "^6.0.3"
+	},
 	"devDependencies": {
 		"@types/loadable__component": "^5.13.6",
 		"cypress": "^13.17.0",

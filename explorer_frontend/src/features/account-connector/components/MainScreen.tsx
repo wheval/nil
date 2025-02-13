@@ -3,29 +3,35 @@ import {
   Button,
   COLORS,
   CopyButton,
+  Input,
   LabelLarge,
   LabelMedium,
   LabelSmall,
+  NOTIFICATION_KIND,
+  Notification,
   PlusIcon,
+  StatefulTooltip,
 } from "@nilfoundation/ui-kit";
 import type { ButtonOverrides } from "baseui/button";
 import { useUnit } from "effector-react";
+import { useEffect, useState } from "react";
 import { useStyletron } from "styletron-react";
 import { formatEther } from "viem";
-import { OverflowEllipsis } from "../../shared";
+import { OverflowEllipsis, useMobile } from "../../shared";
 import { ActiveComponent } from "../ActiveComponent";
+import CheckmarkIcon from "../assets/checkmark.svg";
+import Linkicon from "../assets/link.svg";
 import {
   $balance,
   $balanceToken,
-  $initializingSmartAccountError,
-  $initializingSmartAccountState,
+  $endpoint,
+  $latestActivity,
   $smartAccount,
+  clearLatestActivity,
   createSmartAccountFx,
-  regenrateAccountEvent,
   setActiveComponent,
   topUpSmartAccountBalanceFx,
 } from "../model";
-import { EndpointInput } from "./EndpointInput";
 import { Token } from "./Token";
 import { styles } from "./styles";
 
@@ -33,30 +39,62 @@ const btnOverrides: ButtonOverrides = {
   Root: {
     style: ({ $disabled }) => ({
       backgroundColor: $disabled ? `${COLORS.gray400}!important` : "",
-      width: "50%",
+      width: "100%",
     }),
   },
 };
 
 const MainScreen = () => {
   const [css] = useStyletron();
-  const [isPendingSmartAccountCreation] = useUnit([createSmartAccountFx.pending]);
-  const [
-    smartAccount,
-    balance,
-    balanceToken,
-    initializingSmartAccountState,
-    initializingSmartAccountError,
-  ] = useUnit([
+  const [copied, setCopied] = useState(false);
+  const endpoint = useUnit($endpoint);
+  const latestActivity = useUnit($latestActivity);
+  const [smartAccount, balance, balanceToken, isPendingSmartAccountCreation] = useUnit([
     $smartAccount,
     $balance,
     $balanceToken,
-    $initializingSmartAccountState,
-    $initializingSmartAccountError,
+    createSmartAccountFx.pending,
   ]);
   const [isPendingTopUp] = useUnit([topUpSmartAccountBalanceFx.pending]);
   const displayBalance = balance === null ? "-" : formatEther(balance);
+  const [isMobile] = useMobile();
+  const formattedBalance =
+    isMobile && displayBalance !== "-" ? displayBalance.slice(0, 9) : displayBalance;
   const address = smartAccount ? smartAccount.address : null;
+
+  useEffect(() => {
+    if (latestActivity) {
+      console.log("New activity detected:", latestActivity);
+
+      // Auto-hide the notification after 15 seconds
+      const timeoutId = setTimeout(() => {
+        clearLatestActivity();
+      }, 15000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [latestActivity]);
+
+  const handleNavigate = () => {
+    const endpointUrl = window.location.origin;
+    if (endpointUrl) {
+      window.open(`${endpointUrl}/tx/${latestActivity.txHash}`, "_blank");
+    } else {
+      console.error("VITE_GET_ENDPOINT_URL is not set.");
+    }
+  };
+
+  // Handle copy functionality
+  const handleCopy = async () => {
+    if (endpoint && typeof endpoint === "string") {
+      await navigator.clipboard.writeText(endpoint);
+
+      setCopied(true);
+
+      // Reset text after 2 seconds
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <div
@@ -68,7 +106,9 @@ const MainScreen = () => {
         maxHeight: "531px",
         overflowY: "auto",
         overscrollBehavior: "contain",
-        paddingRight: "24px",
+        "@media (max-width: 419px)": {
+          width: "calc(100vw - 48px)",
+        },
       })}
     >
       <div
@@ -84,61 +124,101 @@ const MainScreen = () => {
         })}
       >
         <LabelLarge>Smart Account</LabelLarge>
-        <div>
-          {address !== null && (
-            <div
-              className={css({
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "1ch",
-              })}
-            >
-              <LabelMedium width="250px" color={COLORS.gray200}>
-                {isPendingSmartAccountCreation ? (
-                  <LabelMedium
-                    className={css({
-                      textAlign: "center",
-                    })}
-                  >
-                    Creating new smart account
-                  </LabelMedium>
-                ) : (
-                  <OverflowEllipsis>{address}</OverflowEllipsis>
-                )}
-              </LabelMedium>
-              <CopyButton textToCopy={address} disabled={address === null} color={COLORS.gray200} />
-            </div>
-          )}
+        {address !== null && (
           <div
             className={css({
-              height: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "1ch",
             })}
           >
-            {(isPendingSmartAccountCreation || initializingSmartAccountError) && (
-              <LabelSmall
-                color={initializingSmartAccountError ? COLORS.red200 : COLORS.gray400}
-                className={css({
-                  textAlign: "center",
-                })}
-              >
-                {initializingSmartAccountError
-                  ? initializingSmartAccountError
-                  : initializingSmartAccountState}
-              </LabelSmall>
-            )}
+            <LabelMedium width="250px" color={COLORS.gray200}>
+              <OverflowEllipsis>{address}</OverflowEllipsis>
+            </LabelMedium>
+            <CopyButton textToCopy={address} disabled={address === null} color={COLORS.gray200} />
           </div>
-        </div>
-        <EndpointInput />
+        )}
+        {endpoint !== null && (
+          <div
+            className={css({
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+              gap: "12px",
+            })}
+          >
+            {/* Read-Only Input */}
+            <Input
+              placeholder="Enter your RPC URL"
+              value={endpoint}
+              readOnly
+              overrides={{
+                Root: {
+                  style: {
+                    flex: 1, // Makes input take full available width
+                    height: "48px",
+                    background: COLORS.gray700,
+                    ":hover": {
+                      background: COLORS.gray600,
+                    },
+                  },
+                },
+              }}
+            />
+
+            {/* Copy Button */}
+            <Button
+              kind={BUTTON_KIND.secondary}
+              onClick={handleCopy}
+              overrides={{
+                Root: {
+                  style: {
+                    width: "120px",
+                    padding: "0 12px",
+                    height: "48px",
+                    backgroundColor: COLORS.gray50,
+                    color: COLORS.gray800,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    ":hover": {
+                      backgroundColor: COLORS.gray100,
+                      color: COLORS.gray800,
+                    },
+                  },
+                },
+              }}
+            >
+              {copied ? <img src={CheckmarkIcon} alt="Copied" width={20} height={20} /> : null}
+              {copied ? "Copied!" : "Copy"}
+            </Button>
+          </div>
+        )}
       </div>
+
       <ul
         className={css({
           width: "100%",
+          maxWidth: "100vw",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          overflowX: "auto",
+          overflowY: "auto",
+          maxHeight: "250px",
+          scrollbarWidth: "none",
+          "-ms-overflow-style": "none",
+          "&::-webkit-scrollbar": { display: "none" },
         })}
       >
-        <li className={css(styles.menuItem)}>
-          <Token balance={displayBalance} name="NIL" isMain />
-        </li>
+        {displayBalance !== "-" && (
+          <li className={css(styles.menuItem)}>
+            <Token balance={formattedBalance} name="NIL" isMain />
+          </li>
+        )}
+
         {balanceToken !== null &&
           Object.keys(balanceToken).length !== 0 &&
           Object.entries(balanceToken).map(([name, balance]) => (
@@ -149,49 +229,105 @@ const MainScreen = () => {
               </li>
             </>
           ))}
-        <li
-          className={css({
-            ...styles.menuItem,
-            paddingTop: "24px",
-            paddingLeft: 0,
-            paddingRight: 0,
-            position: "sticky",
-            bottom: 0,
-            backgroundColor: COLORS.gray800,
-          })}
+      </ul>
+
+      {latestActivity != null && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "70px",
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            display: "flex",
+            justifyContent: "center",
+            boxSizing: "border-box",
+          }}
         >
-          <Button
-            kind={BUTTON_KIND.primary}
-            onClick={() => setActiveComponent(ActiveComponent.Topup)}
-            isLoading={isPendingTopUp}
-            disabled={isPendingTopUp || isPendingSmartAccountCreation || !smartAccount}
-            overrides={btnOverrides}
-            className={css({
-              whiteSpace: "nowrap",
-            })}
-          >
-            <PlusIcon size={24} />
-            Top up
-          </Button>
-          <Button
-            kind={BUTTON_KIND.toggle}
-            onClick={() => regenrateAccountEvent()}
-            className={css({
-              whiteSpace: "nowrap",
-            })}
-            disabled={isPendingTopUp || isPendingSmartAccountCreation}
+          <Notification
+            closeable={true}
+            kind={
+              latestActivity.successful ? NOTIFICATION_KIND.positive : NOTIFICATION_KIND.negative
+            }
+            hideIcon={true}
+            icon={
+              <StatefulTooltip
+                content="Open in Explorer"
+                showArrow={true}
+                placement="top"
+                overrides={{
+                  Body: { style: { zIndex: 3000 } },
+                  Inner: { style: { backgroundColor: COLORS.gray50 } },
+                }}
+              >
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={handleNavigate}
+                >
+                  <img src={Linkicon} alt="Link" width={24} height={24} />
+                </div>
+              </StatefulTooltip>
+            }
             overrides={{
-              Root: {
+              Body: {
                 style: {
-                  width: "50%",
+                  backgroundColor: COLORS.gray700,
+                  color: COLORS.gray200,
+                  width: "100%",
+                  maxWidth: "calc(100% - 48px)",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontWeight: "bold",
+                  boxSizing: "border-box",
                 },
               },
             }}
           >
-            Regenerate account
-          </Button>
-        </li>
-      </ul>
+            {/* Notification Content */}
+            <div>
+              <LabelSmall
+                style={{ color: latestActivity.successful ? COLORS.green500 : COLORS.red500 }}
+                onClick={handleNavigate}
+              >
+                {latestActivity.successful ? "Topped Up Successfully" : "Top-Up Failed"}
+              </LabelSmall>
+              <LabelSmall
+                style={{
+                  color: COLORS.gray200,
+                  cursor: "pointer",
+                  transition: "color 0.2s ease-in-out",
+                  ":hover": { color: COLORS.gray300 },
+                }}
+                onClick={handleNavigate}
+              >
+                {`${latestActivity.txHash.slice(0, 6)}...${latestActivity.txHash.slice(-4)}`}
+              </LabelSmall>
+            </div>
+          </Notification>
+        </div>
+      )}
+      <Button
+        kind={BUTTON_KIND.primary}
+        onClick={() => setActiveComponent(ActiveComponent.Topup)}
+        isLoading={isPendingTopUp}
+        disabled={isPendingTopUp || isPendingSmartAccountCreation || !smartAccount}
+        overrides={btnOverrides}
+        className={css({
+          whiteSpace: "nowrap",
+        })}
+      >
+        <PlusIcon size={24} />
+        Top up
+      </Button>
     </div>
   );
 };
