@@ -8,19 +8,19 @@ import { useStyletron } from "styletron-react";
 import { $smartAccount } from "../../../account-connector/model";
 import {
   $activeAppWithState,
-  $assignedSmartContractAddress,
   $deployedContracts,
-  assignSmartContract,
-  assignSmartContractFx,
-  setAssignedSmartContractAddress,
+  $importedSmartContractAddress,
+  importSmartContract,
+  importSmartContractFx,
+  setImportedSmartContractAddress,
 } from "../../models/base";
 
 export const ImportContractTab = () => {
-  const [smartAccount, pending, deployedContracts, assignedAddress, activeApp] = useUnit([
+  const [smartAccount, pending, deployedContracts, importedAddress, activeApp] = useUnit([
     $smartAccount,
-    assignSmartContractFx.pending,
+    importSmartContractFx.pending,
     $deployedContracts,
-    $assignedSmartContractAddress,
+    $importedSmartContractAddress,
     $activeAppWithState,
   ]);
 
@@ -33,8 +33,10 @@ export const ImportContractTab = () => {
         setError(null);
         return;
       }
+
       const existingAddresses = Object.values(deployedContracts).flat();
-      if (existingAddresses.includes(address)) {
+
+      if (existingAddresses.includes(address as Hex)) {
         setError(`Contract with address ${address} already exists.`);
       } else {
         setError(null);
@@ -44,11 +46,11 @@ export const ImportContractTab = () => {
   );
 
   useEffect(() => {
-    validateAddress(assignedAddress);
-  }, [assignedAddress, validateAddress]);
+    validateAddress(importedAddress);
+  }, [importedAddress, validateAddress]);
 
   useEffect(() => {
-    setAssignedSmartContractAddress("0x" as Hex);
+    setImportedSmartContractAddress("0x" as Hex);
     setError(null);
   }, []);
 
@@ -67,9 +69,9 @@ export const ImportContractTab = () => {
             overrides={inputOverrides}
             onChange={(e) => {
               const value = e.target.value as Hex;
-              setAssignedSmartContractAddress(value);
+              setImportedSmartContractAddress(value);
             }}
-            value={assignedAddress && assignedAddress !== "0x" ? assignedAddress : ""}
+            value={importedAddress && importedAddress !== "0x" ? importedAddress : ""}
           />
         </FormControl>
         {error && (
@@ -94,7 +96,7 @@ export const ImportContractTab = () => {
       <div>
         <Button
           onClick={() => {
-            if (!error) assignSmartContract();
+            if (!error) importSmartContract();
           }}
           isLoading={pending}
           disabled={pending || !smartAccount || !!error}

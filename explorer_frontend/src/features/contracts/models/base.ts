@@ -75,7 +75,7 @@ export const setDeploymentArg = createEvent<{
   key: string;
   value: string | boolean;
 }>();
-export const $assignedAddress = createStore<string>("");
+export const $importedAddress = createStore<string>("");
 export const setAssignAddress = createEvent<string>();
 
 export const $shardId = createStore<number | null>(1);
@@ -148,36 +148,39 @@ export const registerContractInCometaFx = createEffect<
   await cometaService.registerContract(JSON.stringify(refinedResult), address);
 });
 
-export const $assignedSmartContractAddress = createStore<Hex>("0x");
-export const setAssignedSmartContractAddress = createEvent<Hex>();
-export const assignSmartContract = createEvent();
-export const assignSmartContractFx = createEffect<
+export const $importedSmartContractAddress = createStore<Hex>("0x");
+export const setImportedSmartContractAddress = createEvent<Hex>();
+export const importSmartContract = createEvent();
+export const importSmartContractFx = createEffect<
   {
     app: App;
     smartAccount: SmartAccountV1;
-    assignedSmartContractAddress: Hex;
+    importedSmartContractAddress: Hex;
   },
   {
-    assignedSmartContractAddress: Hex;
+    importedSmartContractAddress: Hex;
     app: Hex;
   }
->(async ({ app, smartAccount, assignedSmartContractAddress }) => {
+>(async ({ app, smartAccount, importedSmartContractAddress }) => {
   const source = removeHexPrefix(
-    bytesToHex(await smartAccount.client.getCode(assignedSmartContractAddress, "latest")),
+    bytesToHex(await smartAccount.client.getCode(importedSmartContractAddress, "latest")),
   );
+
+  if (source === "0x") {
+    throw new Error(`Contract with address ${importedSmartContractAddress} does not exist`);
+  }
+
   if (!app.bytecode.includes(source)) {
     throw new Error(
-      `Interface of the contract with address ${assignedSmartContractAddress} is not compatible with ${app.name}`,
+      `Interface of the contract with address ${importedSmartContractAddress} is not compatible with ${app.name}`,
     );
   }
 
   return {
-    assignedSmartContractAddress,
+    importedSmartContractAddress,
     app: app.bytecode,
   };
 });
-
-export const assignAdress = createEvent();
 
 export const $balance = createStore<bigint>(0n);
 export const $tokens = createStore<Record<`0x${string}`, bigint>>({});
@@ -269,7 +272,13 @@ export const sendMethodFx = createEffect<
     value?: string;
     tokens?: Token[];
   },
-  { functionName: string; hash: Hex; sendFrom: Hex; appName?: string; txLogs: string[] }
+  {
+    functionName: string;
+    hash: Hex;
+    sendFrom: Hex;
+    appName?: string;
+    txLogs: string[];
+  }
 >(async ({ abi, functionName, args, smartAccount, address, value, tokens, appName }) => {
   const hash = await smartAccount.sendTransaction({
     abi,
@@ -342,7 +351,7 @@ export const setValueInput = createEvent<{
 export const addValueInput = createEvent<string[]>();
 export const removeValueInput = createEvent<number>();
 
-export const $activeComponent = createStore<ActiveComponent | null>(ActiveComponent.Deploy);
+export const $activeComponent = createStore<ActiveComponent>(ActiveComponent.Deploy);
 export const setActiveComponent = createEvent<ActiveComponent>();
 
 export const $shardIdIsValid = createStore<boolean>(true);

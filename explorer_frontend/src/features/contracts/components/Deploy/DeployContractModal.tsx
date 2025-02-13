@@ -9,9 +9,9 @@ import {
 } from "@nilfoundation/ui-kit";
 import {} from "@nilfoundation/ui-kit";
 import type { TabsOverrides } from "baseui/tabs";
-import { useStore } from "effector-react";
+import { useUnit } from "effector-react";
 import type { FC } from "react";
-import {} from "../../models/base";
+import { deploySmartContractFx, importSmartContractFx } from "../../models/base";
 import { $activeComponent, setActiveComponent } from "../../models/base";
 import { ActiveComponent } from "./ActiveComponent";
 import { DeployTab } from "./DeployTab";
@@ -24,7 +24,12 @@ type DeployContractModalProps = {
 };
 
 export const DeployContractModal: FC<DeployContractModalProps> = ({ onClose, isOpen, name }) => {
-  const activeComponent = useStore($activeComponent) || ActiveComponent.Deploy;
+  const [activeComponent, deployPending, importExistingPending] = useUnit([
+    $activeComponent,
+    deploySmartContractFx.pending,
+    importSmartContractFx.pending,
+  ]);
+  const tabsDisabled = deployPending || importExistingPending;
 
   return (
     <Modal
@@ -58,6 +63,7 @@ export const DeployContractModal: FC<DeployContractModalProps> = ({ onClose, isO
             activeKey={activeComponent}
             overrides={tabsOverrides}
             onChange={({ activeKey }) => setActiveComponent(activeKey as ActiveComponent)}
+            disabled={tabsDisabled}
           >
             <Tab
               title="Deploy"

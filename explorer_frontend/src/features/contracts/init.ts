@@ -3,7 +3,6 @@ import type { AbiFunction } from "abitype";
 import { combine, merge, sample } from "effector";
 import { persist } from "effector-storage/local";
 import { debug } from "patronum";
-import { isAddress } from "viem";
 import type { App } from "../../types";
 import { $endpoint, $smartAccount } from "../account-connector/model";
 import { $solidityVersion, compileCodeFx } from "../code/model";
@@ -15,8 +14,6 @@ import {
   $activeAppWithState,
   $activeComponent,
   $activeKeys,
-  $assignedAddress,
-  $assignedSmartContractAddress,
   $balance,
   $callParams,
   $callResult,
@@ -25,6 +22,8 @@ import {
   $deploymentArgs,
   $error,
   $errors,
+  $importedAddress,
+  $importedSmartContractAddress,
   $loading,
   $shardId,
   $shardIdIsValid,
@@ -32,9 +31,6 @@ import {
   $txHashes,
   $valueInputs,
   addValueInput,
-  assignAdress,
-  assignSmartContract,
-  assignSmartContractFx,
   callFx,
   callMethod,
   choseApp,
@@ -43,6 +39,8 @@ import {
   deploySmartContract,
   deploySmartContractFx,
   fetchBalanceFx,
+  importSmartContract,
+  importSmartContractFx,
   incrementShardId,
   registerContractInCometaFx,
   removeValueInput,
@@ -50,8 +48,8 @@ import {
   sendMethodFx,
   setActiveComponent,
   setAssignAddress,
-  setAssignedSmartContractAddress,
   setDeploymentArg,
+  setImportedSmartContractAddress,
   setParams,
   setShardId,
   setValueInput,
@@ -89,33 +87,8 @@ $deploymentArgs.on(setDeploymentArg, (args, { key, value }) => {
 });
 $deploymentArgs.reset($activeApp);
 
-$assignedAddress.on(setAssignAddress, (_, address) => address);
-$assignedAddress.reset($activeApp);
-
-$deployedContracts.on(
-  sample({
-    source: combine($assignedAddress, $activeApp, (address, app) => {
-      return {
-        address,
-        app,
-      };
-    }),
-    clock: assignAdress,
-  }),
-  (state, { address, app }) => {
-    if (!app) {
-      return state;
-    }
-    if (!isAddress(address)) {
-      return state;
-    }
-    const addresses = state[app.bytecode] ? [...state[app.bytecode], address] : [address];
-    return {
-      ...state,
-      [app.bytecode]: addresses,
-    };
-  },
-);
+$importedAddress.on(setAssignAddress, (_, address) => address);
+$importedAddress.reset($activeApp);
 
 export const $constructor = $activeAppWithState.map((app) => {
   if (!app) {
@@ -221,38 +194,38 @@ sample({
   target: deploySmartContractFx,
 });
 
-$assignedSmartContractAddress.on(setAssignedSmartContractAddress, (_, address) => address);
+$importedSmartContractAddress.on(setImportedSmartContractAddress, (_, address) => address);
 
 sample({
   source: combine(
     $activeAppWithState,
     $smartAccount,
-    $assignedSmartContractAddress,
-    (app, smartAccount, assignedSmartContractAddress) => {
+    $importedSmartContractAddress,
+    (app, smartAccount, importedSmartContractAddress) => {
       return {
         app,
         smartAccount,
-        assignedSmartContractAddress,
+        importedSmartContractAddress,
       };
     },
   ),
   filter: combine(
     $smartAccount,
     $activeApp,
-    $assignedSmartContractAddress,
-    (smartAccount, app, assignedSmartContractAddress) =>
-      !!smartAccount && !!app && !!assignedSmartContractAddress,
+    $importedSmartContractAddress,
+    (smartAccount, app, importedSmartContractAddress) =>
+      !!smartAccount && !!app && !!importedSmartContractAddress,
   ),
   fn: (data) => {
-    const { app, smartAccount, assignedSmartContractAddress } = data!;
+    const { app, smartAccount, importedSmartContractAddress } = data!;
     return {
       app: app as App,
       smartAccount: smartAccount as SmartAccountV1,
-      assignedSmartContractAddress: assignedSmartContractAddress as Hex,
+      importedSmartContractAddress: importedSmartContractAddress as Hex,
     };
   },
-  clock: assignSmartContract,
-  target: assignSmartContractFx,
+  clock: importSmartContract,
+  target: importSmartContractFx,
 });
 
 sample({
@@ -275,11 +248,11 @@ $deployedContracts.on(deploySmartContractFx.doneData, (state, { app, address }) 
 });
 
 $deployedContracts.on(
-  assignSmartContractFx.doneData,
-  (state, { app, assignedSmartContractAddress }) => {
+  importSmartContractFx.doneData,
+  (state, { app, importedSmartContractAddress }) => {
     const addresses = state[app]
-      ? [...state[app], assignedSmartContractAddress]
-      : [assignedSmartContractAddress];
+      ? [...state[app], importedSmartContractAddress]
+      : [importedSmartContractAddress];
     return {
       ...state,
       [app]: addresses,
@@ -513,10 +486,10 @@ $activeApp.on(deploySmartContractFx.doneData, (_, { address, app }) => {
   };
 });
 
-$activeApp.on(assignSmartContractFx.doneData, (_, { assignedSmartContractAddress, app }) => {
+$activeApp.on(importSmartContractFx.doneData, (_, { importedSmartContractAddress, app }) => {
   return {
     bytecode: app,
-    address: assignedSmartContractAddress,
+    address: importedSmartContractAddress,
   };
 });
 
