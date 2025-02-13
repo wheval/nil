@@ -20,18 +20,14 @@ type BlockGeneratorParams struct {
 	NShards         uint32
 	TraceEVM        bool
 	Timer           common.Timer
-	GasBasePrice    types.Value
-	GasPriceScale   float64
 	MainKeysOutPath string
 }
 
-func NewBlockGeneratorParams(shardId types.ShardId, nShards uint32, gasBasePrice types.Value, gasPriceScale float64) BlockGeneratorParams {
+func NewBlockGeneratorParams(shardId types.ShardId, nShards uint32) BlockGeneratorParams {
 	return BlockGeneratorParams{
-		ShardId:       shardId,
-		NShards:       nShards,
-		Timer:         common.NewTimer(),
-		GasBasePrice:  gasBasePrice,
-		GasPriceScale: gasPriceScale,
+		ShardId: shardId,
+		NShards: nShards,
+		Timer:   common.NewTimer(),
 	}
 }
 
@@ -76,7 +72,6 @@ func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabri
 		BlockHash:      *blockHash,
 		GetBlockFromDb: getBlockFromDb,
 		Timer:          params.Timer,
-		GasPriceScale:  params.GasPriceScale,
 		ConfigAccessor: configAccessor,
 	})
 	if err != nil {

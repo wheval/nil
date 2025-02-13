@@ -627,8 +627,6 @@ func createActiveCollator(shard types.ShardId, cfg *Config, collatorTickPeriod t
 			NShards:         cfg.NShards,
 			TraceEVM:        cfg.TraceEVM,
 			Timer:           common.NewTimer(),
-			GasBasePrice:    types.NewValueFromUint64(cfg.GasBasePrice),
-			GasPriceScale:   cfg.GasPriceScale,
 			MainKeysOutPath: cfg.MainKeysOutPath,
 		},
 		CollatorTickPeriod: collatorTickPeriod,

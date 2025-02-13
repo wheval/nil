@@ -40,7 +40,7 @@ func (s *ProposerTestSuite) TearDownTest() {
 
 func (s *ProposerTestSuite) newParams() Params {
 	return Params{
-		BlockGeneratorParams: execution.NewBlockGeneratorParams(s.shardId, 2, types.DefaultGasPrice, 0),
+		BlockGeneratorParams: execution.NewBlockGeneratorParams(s.shardId, 2),
 	}
 }
 
@@ -94,7 +94,6 @@ func (s *ProposerTestSuite) TestCollator() {
 	pool := &MockTxnPool{}
 	params := s.newParams()
 	p := newTestProposer(params, pool)
-	gasPrice := p.params.GasBasePrice
 	shardId := p.params.ShardId
 
 	generateBlock := func() *execution.Proposal {
@@ -134,8 +133,8 @@ func (s *ProposerTestSuite) TestCollator() {
 
 		// Each transaction subtracts its value + actual gas used from the balance.
 		balance = balance.
-			Sub(txnValue).Sub(r1.GasUsed.ToValue(gasPrice)).Sub(feeCredit).
-			Sub(txnValue).Sub(r2.GasUsed.ToValue(gasPrice)).Sub(feeCredit)
+			Sub(txnValue).Sub(r1.GasUsed.ToValue(types.DefaultGasPrice)).Sub(feeCredit).
+			Sub(txnValue).Sub(r2.GasUsed.ToValue(types.DefaultGasPrice)).Sub(feeCredit)
 		s.Equal(balance, s.getMainBalance())
 		s.Equal(types.Value{}, s.getBalance(shardId, to))
 	})

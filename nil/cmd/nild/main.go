@@ -139,8 +139,6 @@ func parseArgs() *nildconfig.Config {
 	rootCmd.PersistentFlags().StringVar(&cfg.DB.Path, "db-path", cfg.DB.Path, "path to database")
 	rootCmd.PersistentFlags().Float64Var(&cfg.DB.DiscardRatio, "db-discard-ratio", cfg.DB.DiscardRatio, "discard ratio for badger GC")
 	rootCmd.PersistentFlags().DurationVar(&cfg.DB.GcFrequency, "db-gc-interval", cfg.DB.GcFrequency, "frequency for badger GC")
-	rootCmd.PersistentFlags().Float64Var(&cfg.GasPriceScale, "gas-price-scale", cfg.GasPriceScale, "gas price scale factor for each transaction")
-	rootCmd.PersistentFlags().Uint64Var(&cfg.GasBasePrice, "gas-base-price", cfg.GasBasePrice, "base gas price for each transaction")
 	rootCmd.PersistentFlags().IntVar(&cfg.RPCPort, "http-port", cfg.RPCPort, "http port for rpc server")
 	rootCmd.PersistentFlags().Var(&cfg.BootstrapPeers, "bootstrap-peers", "peers for snapshot fetching or transaction sending, must go in the order of shards")
 	rootCmd.PersistentFlags().StringVar(&cfg.AdminSocketPath, "admin-socket-path", cfg.AdminSocketPath, "unix socket path to start admin server on (disabled if empty)}")

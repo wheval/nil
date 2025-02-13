@@ -53,9 +53,6 @@ type Config struct {
 	ValidatorKeysPath    string                     `yaml:"validatorKeysPath,omitempty"`
 	ValidatorKeysManager *keys.ValidatorKeysManager `yaml:"-"`
 
-	GasPriceScale float64 `yaml:"gasPriceScale,omitempty"`
-	GasBasePrice  uint64  `yaml:"gasBasePrice,omitempty"`
-
 	// HttpUrl is calculated from RPCPort
 	HttpUrl string `yaml:"-"`
 
@@ -88,8 +85,6 @@ func NewDefaultConfig() *Config {
 		MainKeysOutPath:   "keys.yaml",
 		NetworkKeysPath:   "network-keys.yaml",
 		ValidatorKeysPath: "validator-keys.yaml",
-		GasPriceScale:     0.0,
-		GasBasePrice:      10,
 
 		GracefulShutdown: true,
 		Topology:         collate.TrivialShardTopologyId,
@@ -166,10 +161,6 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	if c.GasPriceScale < 0 {
-		return errors.New("GasPriceScale must be >= 0")
-	}
-
 	return nil
 }
 
@@ -204,11 +195,9 @@ func (c *Config) LoadValidatorPrivateKey() (key *ecdsa.PrivateKey, err error) {
 
 func (c *Config) BlockGeneratorParams(shardId types.ShardId) execution.BlockGeneratorParams {
 	return execution.BlockGeneratorParams{
-		ShardId:       shardId,
-		NShards:       c.NShards,
-		TraceEVM:      c.TraceEVM,
-		Timer:         common.NewTimer(),
-		GasBasePrice:  types.NewValueFromUint64(c.GasBasePrice),
-		GasPriceScale: c.GasPriceScale,
+		ShardId:  shardId,
+		NShards:  c.NShards,
+		TraceEVM: c.TraceEVM,
+		Timer:    common.NewTimer(),
 	}
 }

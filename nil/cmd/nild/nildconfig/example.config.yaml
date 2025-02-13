@@ -19,10 +19,6 @@
 #mainKeysPath: "keys.yaml"
 #networkKeysPath: "network-keys.yaml"
 
-## Gas settings
-#gasPriceScale: 0.0
-#gasBasePrice: 10
-
 ## Zero-state settings
 ## TODO: describe zero-state settings
 #zeroState:

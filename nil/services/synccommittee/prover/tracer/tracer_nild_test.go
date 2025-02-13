@@ -53,7 +53,6 @@ func (s *TracerNildTestSuite) SetupSuite() {
 		HttpUrl:              rpctest.GetSockPath(s.T()),
 		Topology:             collate.TrivialShardTopologyId,
 		CollatorTickPeriodMs: 100,
-		GasBasePrice:         10,
 	}
 
 	s.Start(nilserviceCfg)
