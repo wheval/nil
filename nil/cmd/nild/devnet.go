@@ -13,7 +13,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
-	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -107,7 +106,7 @@ func (spec *devnetSpec) ensureValidatorKeys(srv *server) (*keys.ValidatorKeysMan
 }
 
 func (devnet devnet) generateZeroState(nShards uint32, servers []server) (*execution.ZeroStateConfig, error) {
-	validators := make([]config.ListValidators, nShards)
+	validators := make([]config.ListValidators, nShards-1)
 	for _, srv := range servers {
 		key, err := srv.vkm.GetPublicKey()
 		if err != nil {
@@ -115,8 +114,11 @@ func (devnet devnet) generateZeroState(nShards uint32, servers []server) (*execu
 		}
 
 		for _, id := range srv.nodeSpec.Shards {
-			shardId := types.ShardId(id)
-			validators[shardId].List = append(validators[shardId].List, config.ValidatorInfo{
+			if id == 0 {
+				continue
+			}
+			idx := id - 1
+			validators[idx].List = append(validators[idx].List, config.ValidatorInfo{
 				PublicKey: config.Pubkey(key),
 			})
 		}
