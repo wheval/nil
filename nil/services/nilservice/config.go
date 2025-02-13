@@ -198,9 +198,10 @@ func (c *Config) LoadValidatorPrivateKey() (key *ecdsa.PrivateKey, err error) {
 
 func (c *Config) BlockGeneratorParams(shardId types.ShardId) execution.BlockGeneratorParams {
 	return execution.BlockGeneratorParams{
-		ShardId:  shardId,
-		NShards:  c.NShards,
-		TraceEVM: c.TraceEVM,
-		Timer:    common.NewTimer(),
+		ShardId:         shardId,
+		NShards:         c.NShards,
+		TraceEVM:        c.TraceEVM,
+		Timer:           common.NewTimer(),
+		MainKeysOutPath: c.MainKeysOutPath,
 	}
 }
