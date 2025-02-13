@@ -72,3 +72,36 @@ func TestSubsetSignature(t *testing.T) {
 	err = aggregatedSig.Verify(aggregatedKey, msg)
 	require.NoError(t, err)
 }
+
+func TestMarshal(t *testing.T) {
+	t.Parallel()
+
+	msg := []byte("Hello Boneh-Lynn-Shacham")
+	private1 := NewRandomKey()
+	marshaledPrivate, err := private1.Marshal()
+	require.NoError(t, err)
+
+	private2, err := PrivateKeyFromBytes(marshaledPrivate)
+	require.NoError(t, err)
+	require.Equal(t, private1, private2)
+
+	sig1, err := private1.Sign(msg)
+	require.NoError(t, err)
+
+	marshaledSig, err := sig1.Marshal()
+	require.NoError(t, err)
+
+	sig2, err := SignatureFromBytes(marshaledSig)
+	require.NoError(t, err)
+
+	require.Equal(t, sig1, sig2)
+
+	public1 := private1.PublicKey()
+	marshaledPublic, err := public1.Marshal()
+	require.NoError(t, err)
+
+	public2, err := PublicKeyFromBytes(marshaledPublic)
+	require.NoError(t, err)
+
+	require.True(t, public1.Equal(public2))
+}

@@ -7,7 +7,7 @@ import (
 	"go.dedis.ch/kyber/v3/sign/bdn"
 )
 
-// Implement PublicKey interface
+// PublicKey interface
 type PublicKey struct{ p kyberPublicKey }
 
 var _ common.PublicKey = (*PublicKey)(nil)
@@ -16,7 +16,23 @@ func (pk *PublicKey) Marshal() ([]byte, error) {
 	return pk.p.MarshalBinary()
 }
 
-// Implement Mask interface
+func (pk *PublicKey) Equal(other common.PublicKey) bool {
+	otherPK, ok := other.(*PublicKey)
+	if !ok {
+		return false
+	}
+	return pk.p.Equal(otherPK.p)
+}
+
+func PublicKeyFromBytes(data []byte) (common.PublicKey, error) {
+	p := suite.G2().Point()
+	if err := p.UnmarshalBinary(data); err != nil {
+		return nil, err
+	}
+	return &PublicKey{p: p}, nil
+}
+
+// Mask interface
 type Mask struct{ m *kyberMask }
 
 var _ common.Mask = (*Mask)(nil)
@@ -42,6 +58,18 @@ func (m *Mask) AggregatePublicKeys() (common.PublicKey, error) {
 	return &PublicKey{p: pk}, nil
 }
 
+func (m *Mask) SetBit(index uint32, bit bool) error {
+	return m.m.SetBit(int(index), bit)
+}
+
+func (m *Mask) Bytes() []byte {
+	return m.m.Mask()
+}
+
+func (m *Mask) SetBytes(data []byte) error {
+	return m.m.SetMask(data)
+}
+
 func NewMask(publics []common.PublicKey) (*Mask, error) {
 	kyberPublics := make([]kyberPublicKey, len(publics))
 	for i, p := range publics {
@@ -57,7 +85,7 @@ func NewMask(publics []common.PublicKey) (*Mask, error) {
 	return &Mask{mask}, nil
 }
 
-// Implement Signature interface
+// Signature interface
 type Signature struct {
 	s []byte
 }
@@ -74,7 +102,11 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) error {
 	return bdn.Verify(suite, p.p, msg, s.s)
 }
 
-// Implement PrivateKey interface
+func SignatureFromBytes(data []byte) (common.Signature, error) {
+	return &Signature{s: data}, nil
+}
+
+// PrivateKey interface
 type PrivateKey struct {
 	s kyberPrivateKey
 	p PublicKey
@@ -103,6 +135,16 @@ func NewRandomKey() common.PrivateKey {
 	return &PrivateKey{s: sk, p: PublicKey{pk}}
 }
 
+func PrivateKeyFromBytes(data []byte) (common.PrivateKey, error) {
+	sk := suite.G2().Scalar()
+	if err := sk.UnmarshalBinary(data); err != nil {
+		return nil, err
+	}
+	pk := suite.G2().Point().Mul(sk, nil)
+	return &PrivateKey{s: sk, p: PublicKey{p: pk}}, nil
+}
+
+// AggregateSignatures
 func AggregateSignatures(sigs []common.Signature, mask common.Mask) (common.Signature, error) {
 	kyberSigs := make([][]byte, len(sigs))
 	for i, s := range sigs {
