@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { AccountPane } from "../../features/account-connector";
 import { Code } from "../../features/code/Code";
-import { loadedPage } from "../../features/code/model";
+import { loadedPlaygroundPage } from "../../features/code/model";
 import { ContractsContainer, closeApp } from "../../features/contracts";
 import { Logs } from "../../features/logs/components/Logs";
 import { useMobile } from "../../features/shared";
@@ -21,7 +21,7 @@ export const PlaygroundPage = () => {
   const [isMobile] = useMobile();
 
   useEffect(() => {
-    loadedPage();
+    loadedPlaygroundPage();
 
     return () => {
       closeApp();

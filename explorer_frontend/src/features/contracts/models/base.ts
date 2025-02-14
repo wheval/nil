@@ -344,3 +344,5 @@ export const removeValueInput = createEvent<number>();
 
 export const $activeComponent = createStore<ActiveComponent | null>(ActiveComponent.Deploy);
 export const setActiveComponent = createEvent<ActiveComponent>();
+
+export const $shardIdIsValid = createStore<boolean>(true);

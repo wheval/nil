@@ -13,7 +13,7 @@ import {
 import { combine, forward, sample } from "effector";
 import { persist as persistLocalStorage } from "effector-storage/local";
 import { persist as persistSessionStorage } from "effector-storage/session";
-import { loadedPage } from "../code/model";
+import { loadedPlaygroundPage } from "../code/model";
 import { sendMethodFx } from "../contracts/models/base";
 import { playgroundRoute, playgroundWithHashRoute } from "../routing";
 import { getRuntimeConfigOrThrow } from "../runtime-config";
@@ -319,7 +319,7 @@ sample({
 });
 
 sample({
-  clock: loadedPage,
+  clock: loadedPlaygroundPage,
   source: combine(playgroundRoute.$query, playgroundWithHashRoute.$query, (query1, query2) => {
     const user = query1.user ?? query2.user;
     const token = query1.token ?? query2.token;

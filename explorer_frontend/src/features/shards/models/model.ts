@@ -9,6 +9,7 @@ const createStore = explorerShardsList.createStore.bind(explorerShardsList);
 const createEffect = explorerShardsList.createEffect.bind(explorerShardsList);
 
 export const $shards = createStore<Shards>([]);
+export const $shardsAmount = $shards.map((shards) => shards.length - 1);
 
 export const fetchShardsFx = createEffect<void, Shards, Error>();
 

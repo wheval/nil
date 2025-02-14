@@ -48,7 +48,7 @@ fetchCodeSnippetFx.use((hash) => {
   return fetchCodeSnippet(hash);
 });
 
-export const loadedPage = codeDomain.createEvent();
+export const loadedPlaygroundPage = codeDomain.createEvent();
 
 export const $recentProjects = codeDomain.createStore<Record<string, string>>({});
 

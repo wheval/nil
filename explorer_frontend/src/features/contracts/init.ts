@@ -1,6 +1,6 @@
 import type { CometaService, Hex, SmartAccountV1, Token } from "@nilfoundation/niljs";
 import type { AbiFunction } from "abitype";
-import { combine, sample } from "effector";
+import { combine, merge, sample } from "effector";
 import { persist } from "effector-storage/local";
 import { debug } from "patronum";
 import { isAddress } from "viem";
@@ -8,6 +8,7 @@ import type { App } from "../../types";
 import { $endpoint, $smartAccount } from "../account-connector/model";
 import { $solidityVersion, compileCodeFx } from "../code/model";
 import { $cometaService } from "../cometa/model";
+import { $shardsAmount } from "../shards/models/model";
 import { getTokenAddressBySymbol } from "../tokens";
 import {
   $activeApp,
@@ -26,6 +27,7 @@ import {
   $errors,
   $loading,
   $shardId,
+  $shardIdIsValid,
   $tokens,
   $txHashes,
   $valueInputs,
@@ -501,6 +503,7 @@ $callParams.on(setParams, (state, { functionName, paramName, value }) => {
 });
 
 $shardId.reset($activeAppWithState);
+$shardIdIsValid.reset($activeAppWithState);
 $shardId.on(setShardId, (_, shardId) => shardId);
 
 $activeApp.on(deploySmartContractFx.doneData, (_, { address, app }) => {
@@ -595,5 +598,20 @@ sample({
       cometaService: cometaService as CometaService,
       solidityVersion,
     };
+  },
+});
+
+sample({
+  source: combine({
+    shardId: $shardId,
+    shardsAmount: $shardsAmount,
+  }),
+  clock: merge([incrementShardId, decrementShardId, setShardId]),
+  target: $shardIdIsValid,
+  fn: ({ shardId, shardsAmount }) => {
+    if (shardId === null) {
+      return true;
+    }
+    return shardId <= shardsAmount && shardId >= 1;
   },
 });
