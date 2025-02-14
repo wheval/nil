@@ -19,7 +19,7 @@ import {
   compileCodeFx,
   fetchCodeSnippetEvent,
   fetchCodeSnippetFx,
-  loadedPage,
+  loadedPlaygroundPage,
   setCodeSnippetEvent,
   setCodeSnippetFx,
   updateRecentProjects,
@@ -157,7 +157,7 @@ sample({
 });
 
 sample({
-  clock: loadedPage,
+  clock: loadedPlaygroundPage,
   filter: $code.map((code) => !(code.trim().length === 0)),
   target: compile,
 });

@@ -8,9 +8,11 @@ import {
   ParagraphXSmall,
   PlusIcon,
 } from "@nilfoundation/ui-kit";
+import { useUnit } from "effector-react";
 import type { FC } from "react";
 import { useStyletron } from "styletron-react";
-import { decrementShardId, incrementShardId } from "../../models/base";
+import { $shardsAmount } from "../../../shards/models/model";
+import { $shardIdIsValid, decrementShardId, incrementShardId } from "../../models/base";
 
 type ShardIdInputProps = {
   shardId: number | null;
@@ -30,6 +32,7 @@ const btnOverrides = {
 
 export const ShardIdInput: FC<ShardIdInputProps> = ({ shardId, setShardId, disabled }) => {
   const [css] = useStyletron();
+  const [shardsAmount, shardIdIsValid] = useUnit([$shardsAmount, $shardIdIsValid]);
 
   return (
     <div
@@ -48,7 +51,7 @@ export const ShardIdInput: FC<ShardIdInputProps> = ({ shardId, setShardId, disab
         })}
       >
         <div>
-          <FormControl label="Shard ID">
+          <FormControl label={`Shard ID (1 to ${shardsAmount})`} error={!shardIdIsValid}>
             <Input
               value={shardId?.toString() ?? ""}
               onChange={(e) => {
@@ -105,7 +108,12 @@ export const ShardIdInput: FC<ShardIdInputProps> = ({ shardId, setShardId, disab
           disabled={disabled}
         />
       </div>
-      <ParagraphXSmall color={COLORS.gray400} marginTop="-16px">
+      {shardIdIsValid ? null : (
+        <ParagraphXSmall color={COLORS.red400} marginTop="-8px">
+          {`That Shard ID doesn't exist. Please select from 1 to ${shardsAmount}.`}
+        </ParagraphXSmall>
+      )}
+      <ParagraphXSmall color={COLORS.gray400}>
         <div>Choosing a shard can help reduce transaction gas fees.</div>
         <div>
           Learn how to select or check shards in the{" "}

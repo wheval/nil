@@ -5,7 +5,6 @@ import {
   FormControl,
   HeadingMedium,
   Input,
-  ParagraphSmall,
   SPACE,
 } from "@nilfoundation/ui-kit";
 import { useUnit } from "effector-react";
@@ -15,6 +14,7 @@ import { $constructor } from "../../init";
 import {
   $deploymentArgs,
   $shardId,
+  $shardIdIsValid,
   deploySmartContract,
   deploySmartContractFx,
   setDeploymentArg,
@@ -23,12 +23,13 @@ import {
 import { ShardIdInput } from "./ShardIdInput";
 
 export const DeployTab = () => {
-  const [smartAccount, args, constuctorAbi, pending, shardId] = useUnit([
+  const [smartAccount, args, constuctorAbi, pending, shardId, shardIdIsValid] = useUnit([
     $smartAccount,
     $deploymentArgs,
     $constructor,
     deploySmartContractFx.pending,
     $shardId,
+    $shardIdIsValid,
   ]);
   const [css] = useStyletron();
 
@@ -122,16 +123,14 @@ export const DeployTab = () => {
             })}
           </div>
         ) : (
-          <ParagraphSmall marginBottom="24px" color={COLORS.gray400}>
-            No deployment arguments
-          </ParagraphSmall>
+          <></>
         )}
         <Button
           onClick={() => {
             deploySmartContract();
           }}
           isLoading={pending}
-          disabled={pending || !smartAccount || shardId === null}
+          disabled={pending || !smartAccount || shardId === null || !shardIdIsValid}
         >
           Deploy
         </Button>
