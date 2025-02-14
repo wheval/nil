@@ -109,7 +109,7 @@ export async function sendCurrency({
   tokenSymbol: string;
 }): Promise<void> {
   let txHash: Hex | null = null;
-  const feeCredit = 100_000_000n * 10n;
+  const feeCredit = 100_000_000_000_000n * 10n;
 
   try {
     // Determine transaction parameters
