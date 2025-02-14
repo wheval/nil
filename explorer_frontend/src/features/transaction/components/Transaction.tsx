@@ -31,6 +31,11 @@ export const Transaction = () => {
     $transactionChilds,
     fetchTransactionChildsFx.pending,
   ]);
+
+  useEffect(() => {
+    if (transaction) setActiveKey("0");
+  }, [transaction]);
+
   const [activeKey, setActiveKey] = useState<Key>("0");
   const onChangeHandler: OnChangeHandler = (currentKey) => {
     setActiveKey(currentKey.activeKey);
