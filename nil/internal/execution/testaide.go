@@ -77,7 +77,6 @@ func generateBlockFromTransactions(t *testing.T, ctx context.Context, execute bo
 
 	es, err := NewExecutionState(tx, shardId, StateParams{
 		BlockHash:      prevBlock,
-		Timer:          common.NewTestTimer(0),
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)

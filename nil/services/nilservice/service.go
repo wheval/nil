@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/client"
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
@@ -605,7 +604,6 @@ func createActiveCollator(shard types.ShardId, cfg *Config, collatorTickPeriod t
 			ShardId:  shard,
 			NShards:  cfg.NShards,
 			TraceEVM: cfg.TraceEVM,
-			Timer:    common.NewTimer(),
 		},
 		CollatorTickPeriod: collatorTickPeriod,
 		Timeout:            collatorTickPeriod,

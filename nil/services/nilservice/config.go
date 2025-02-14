@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/collate"
 	"github.com/NilFoundation/nil/nil/internal/config"
@@ -201,7 +200,6 @@ func (c *Config) BlockGeneratorParams(shardId types.ShardId) execution.BlockGene
 		ShardId:         shardId,
 		NShards:         c.NShards,
 		TraceEVM:        c.TraceEVM,
-		Timer:           common.NewTimer(),
 		MainKeysOutPath: c.MainKeysOutPath,
 	}
 }

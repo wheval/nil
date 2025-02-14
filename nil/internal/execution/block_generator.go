@@ -19,7 +19,6 @@ type BlockGeneratorParams struct {
 	ShardId         types.ShardId
 	NShards         uint32
 	TraceEVM        bool
-	Timer           common.Timer
 	MainKeysOutPath string
 }
 
@@ -27,7 +26,6 @@ func NewBlockGeneratorParams(shardId types.ShardId, nShards uint32) BlockGenerat
 	return BlockGeneratorParams{
 		ShardId: shardId,
 		NShards: nShards,
-		Timer:   common.NewTimer(),
 	}
 }
 
@@ -71,7 +69,6 @@ func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabri
 	executionState, err := NewExecutionState(rwTx, params.ShardId, StateParams{
 		BlockHash:      *blockHash,
 		GetBlockFromDb: getBlockFromDb,
-		Timer:          params.Timer,
 		ConfigAccessor: configAccessor,
 	})
 	if err != nil {

@@ -49,7 +49,6 @@ func init() {
 
 type ExecutionState struct {
 	tx                 db.RwTx
-	Timer              common.Timer
 	ContractTree       *ContractTrie
 	InTransactionTree  *TransactionTrie
 	OutTransactionTree *TransactionTrie
@@ -231,7 +230,6 @@ func NewEVMBlockContext(es *ExecutionState) (*vm.BlockContext, error) {
 type StateParams struct {
 	BlockHash      common.Hash
 	GetBlockFromDb bool
-	Timer          common.Timer
 	ConfigAccessor config.ConfigAccessor
 }
 
@@ -272,7 +270,6 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 
 	res := &ExecutionState{
 		tx:               resTx,
-		Timer:            params.Timer,
 		PrevBlock:        params.BlockHash,
 		ShardId:          shardId,
 		ChildChainBlocks: map[types.ShardId]common.Hash{},

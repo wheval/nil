@@ -141,7 +141,6 @@ func (api *LocalShardApi) Call(
 		return nil, err
 	}
 
-	timer := common.NewTimer()
 	shardId := txn.To.ShardId()
 	if shardId != api.ShardId {
 		return nil, fmt.Errorf("destination shard %d is not equal to the instance shard %d", shardId, api.ShardId)
@@ -181,7 +180,6 @@ func (api *LocalShardApi) Call(
 	}
 	es, err := execution.NewExecutionState(tx, shardId, execution.StateParams{
 		BlockHash:      hash,
-		Timer:          timer,
 		ConfigAccessor: configAccessor,
 	})
 	if err != nil {
