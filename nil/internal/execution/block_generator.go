@@ -16,10 +16,10 @@ import (
 )
 
 type BlockGeneratorParams struct {
-	ShardId         types.ShardId
-	NShards         uint32
-	TraceEVM        bool
-	MainKeysOutPath string
+	ShardId      types.ShardId
+	NShards      uint32
+	TraceEVM     bool
+	MainKeysPath string
 }
 
 func NewBlockGeneratorParams(shardId types.ShardId, nShards uint32) BlockGeneratorParams {

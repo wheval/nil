@@ -2,7 +2,6 @@ package collate
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -22,12 +21,10 @@ import (
 )
 
 type SyncerConfig struct {
-	Name          string
-	ShardId       types.ShardId
-	Timeout       time.Duration // pull blocks if no new blocks appear in the topic for this duration
-	BootstrapPeer *network.AddrInfo
-	ReplayBlocks  bool // replay blocks (archive node) or store headers and transactions only
-
+	Name                 string
+	ShardId              types.ShardId
+	Timeout              time.Duration // pull blocks if no new blocks appear in the topic for this duration
+	BootstrapPeer        *network.AddrInfo
 	BlockGeneratorParams execution.BlockGeneratorParams
 	ZeroState            string
 	ZeroStateConfig      *execution.ZeroStateConfig
@@ -127,13 +124,11 @@ func (s *Syncer) notify() {
 }
 
 func (s *Syncer) FetchSnapshot(ctx context.Context) error {
-	if s.config.ReplayBlocks {
-		if snapIsRequired, err := s.shardIsEmpty(ctx); err != nil {
-			return err
-		} else if snapIsRequired {
-			if err := fetchSnapshot(ctx, s.networkManager, s.config.BootstrapPeer, s.config.ShardId, s.db); err != nil {
-				return fmt.Errorf("failed to fetch snapshot: %w", err)
-			}
+	if snapIsRequired, err := s.shardIsEmpty(ctx); err != nil {
+		return err
+	} else if snapIsRequired {
+		if err := fetchSnapshot(ctx, s.networkManager, s.config.BootstrapPeer, s.config.ShardId, s.db); err != nil {
+			return fmt.Errorf("failed to fetch snapshot: %w", err)
 		}
 	}
 	return nil
@@ -327,14 +322,8 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 		return err
 	}
 
-	if s.config.ReplayBlocks {
-		if err := s.replayBlock(ctx, block); err != nil {
-			return err
-		}
-	} else {
-		if err := s.saveDirectly(ctx, block); err != nil {
-			return err
-		}
+	if err := s.replayBlock(ctx, block); err != nil {
+		return err
 	}
 	s.notify()
 
@@ -343,57 +332,6 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 		Msg("Block written")
 
 	return nil
-}
-
-func (s *Syncer) saveDirectly(ctx context.Context, block *types.BlockWithExtractedData) error {
-	tx, err := s.db.CreateRwTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	blockHash := block.Block.Hash(s.config.ShardId)
-	if err := db.WriteBlock(tx, s.config.ShardId, blockHash, block.Block); err != nil {
-		return err
-	}
-
-	txnRoot, err := s.saveTransactions(tx, block.OutTransactions)
-	if err != nil {
-		return err
-	}
-
-	if txnRoot != block.Block.OutTransactionsRoot {
-		transactionsJSON, err := json.Marshal(block.OutTransactions)
-		if err != nil {
-			s.logger.Warn().Err(err).Msg("Failed to marshal transactions")
-			transactionsJSON = nil
-		}
-		blockJSON, err := json.Marshal(block.Block)
-		if err != nil {
-			s.logger.Warn().Err(err).Msg("Failed to marshal block")
-			blockJSON = nil
-		}
-		s.logger.Debug().
-			Stringer("expected", block.Block.OutTransactionsRoot).
-			Stringer("got", txnRoot).
-			RawJSON("transactions", transactionsJSON).
-			RawJSON("block", blockJSON).
-			Msg("Out transactions root mismatch")
-		return fmt.Errorf("out transactions root mismatch. Expected %x, got %x",
-			block.Block.OutTransactionsRoot, txnRoot)
-	}
-
-	blockRes := &execution.BlockGenerationResult{
-		Block:     block.Block,
-		BlockHash: blockHash,
-	}
-
-	err = execution.PostprocessBlock(tx, s.config.ShardId, blockRes)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
 }
 
 func (s *Syncer) GenerateZerostate(ctx context.Context) error {
@@ -406,9 +344,11 @@ func (s *Syncer) GenerateZerostate(ctx context.Context) error {
 		return nil
 	}
 
-	if len(s.config.BlockGeneratorParams.MainKeysOutPath) != 0 && s.config.ShardId == types.BaseShardId {
-		if err := execution.DumpMainKeys(s.config.BlockGeneratorParams.MainKeysOutPath); err != nil {
-			return err
+	if len(s.config.BlockGeneratorParams.MainKeysPath) != 0 && s.config.ShardId == types.BaseShardId {
+		if err := execution.LoadMainKeys(s.config.BlockGeneratorParams.MainKeysPath); err != nil {
+			if err := execution.DumpMainKeys(s.config.BlockGeneratorParams.MainKeysPath); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -499,16 +439,4 @@ func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtracte
 	}
 
 	return nil
-}
-
-func (s *Syncer) saveTransactions(tx db.RwTx, transactions []*types.Transaction) (common.Hash, error) {
-	transactionTree := execution.NewDbTransactionTrie(tx, s.config.ShardId)
-	indexes := make([]types.TransactionIndex, len(transactions))
-	for i := range transactions {
-		indexes[i] = types.TransactionIndex(i)
-	}
-	if err := transactionTree.UpdateBatch(indexes, transactions); err != nil {
-		return common.EmptyHash, err
-	}
-	return transactionTree.RootHash(), nil
 }

@@ -252,6 +252,7 @@ func NewRPCInTransaction(
 		BounceTo:             transaction.BounceTo,
 		Index:                hexutil.Uint64(index),
 		Value:                transaction.Value,
+		Token:                transaction.Token,
 		ChainID:              transaction.ChainId,
 		Signature:            transaction.Signature,
 	}
