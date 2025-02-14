@@ -25,8 +25,27 @@ By default, everything is in **English**. However, we plan to support multiple l
 
 ## How to Use ⚙️
 
-1. **Clone** this repository to your local machine.
-2. Open your terminal and run `npm run build` to create the production files.
-3. Head to your **Chrome Extensions** page, enable **Developer Mode**, and load the generated folder as an unpacked extension.
+1. **Clone** this repository to your local machine
+2. Install dependencies:
+   ```sh
+   npm install
+   ```
+3. Build the `smart contracts`:
+   ```sh
+   cd smart-contracts && npm run build && cd ..
+   ```
+4. Build `niljs`:
+   ```sh
+   cd niljs && npm run build && cd ..
+   ```
+5. Build the `wallet extension`:
+   ```sh
+   cd wallet-extension && npm run build
+   ```
+   This generates the production files.
+6. Load the extension in Chrome:
+  - Open **Chrome Extensions** (`chrome://extensions/`)
+  - Enable **Developer Mode**
+  - Load the generated folder as an **unpacked extension**
 
 That’s it! Enjoy managing your tokens and exploring dApps on the **=nil;** blockchain. If you have questions or suggestions, feel free to open an issue or reach out. 💡
