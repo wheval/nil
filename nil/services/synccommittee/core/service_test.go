@@ -22,6 +22,8 @@ import (
 
 type SyncCommitteeTestSuite struct {
 	tests.RpcSuite
+
+	url           string
 	nShards       uint32
 	blockStorage  storage.BlockStorage
 	syncCommittee *SyncCommittee
@@ -31,27 +33,24 @@ type SyncCommitteeTestSuite struct {
 func (s *SyncCommitteeTestSuite) SetupSuite() {
 	s.nShards = 4
 
-	url := rpctest.GetSockPath(s.T())
+	s.url = rpctest.GetSockPath(s.T())
 
 	// Setup nilservice
 	nilserviceCfg := &nilservice.Config{
 		NShards:              s.nShards,
-		HttpUrl:              url,
+		HttpUrl:              s.url,
 		Topology:             collate.TrivialShardTopologyId,
 		CollatorTickPeriodMs: 100,
 	}
 
 	s.Start(nilserviceCfg)
 
-	cfg := NewDefaultConfig()
-	cfg.RpcEndpoint = url
-
 	var err error
 	s.scDb, err = db.NewBadgerDbInMemory()
 	s.Require().NoError(err)
-	ethClientMock := &rollupcontract.EthClientMock{ChainIDFunc: func(ctx context.Context) (*big.Int, error) { return big.NewInt(0), errors.New("Empty mocked call") }}
-	s.syncCommittee, err = New(cfg, s.scDb, ethClientMock)
-	s.Require().NoError(err)
+
+	s.syncCommittee = s.newService()
+
 	syncCommitteeMetrics, err := metrics.NewSyncCommitteeMetrics()
 	s.Require().NoError(err)
 	s.blockStorage = storage.NewBlockStorage(s.scDb, common.NewTimer(), syncCommitteeMetrics, logging.NewLogger("sync_committee_srv_test"))
@@ -66,6 +65,19 @@ func (s *SyncCommitteeTestSuite) TearDownSuite() {
 func (s *SyncCommitteeTestSuite) SetupTest() {
 	err := s.scDb.DropAll()
 	s.Require().NoError(err)
+
+	s.syncCommittee = s.newService()
+}
+
+func (s *SyncCommitteeTestSuite) newService() *SyncCommittee {
+	s.T().Helper()
+
+	cfg := NewDefaultConfig()
+	cfg.RpcEndpoint = s.url
+	ethClientMock := &rollupcontract.EthClientMock{ChainIDFunc: func(ctx context.Context) (*big.Int, error) { return big.NewInt(0), errors.New("Empty mocked call") }}
+	syncCommittee, err := New(cfg, s.scDb, ethClientMock)
+	s.Require().NoError(err)
+	return syncCommittee
 }
 
 func (s *SyncCommitteeTestSuite) waitMainShardToProcess() {

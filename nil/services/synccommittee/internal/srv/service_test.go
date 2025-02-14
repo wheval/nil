@@ -343,6 +343,42 @@ func (s *ServiceTestSuite) runWorkerWithErrAfterStarted(waitForOthersToStart boo
 	)
 }
 
+func (s *ServiceTestSuite) Test_Stop_Service() {
+	var startedWorkersCnt atomic.Int32
+	var stoppedWorkersCnt atomic.Int32
+
+	newWorker := func(name string) Worker {
+		return newWorkerMock(name, func(ctx context.Context, started chan<- struct{}) error {
+			close(started)
+			startedWorkersCnt.Add(1)
+			<-ctx.Done()
+			stoppedWorkersCnt.Add(1)
+			return ctx.Err()
+		})
+	}
+
+	service := NewService(s.logger, newWorker("worker_0"), newWorker("worker_1"), newWorker("worker_2"))
+	errorCh := make(chan error, 1)
+	go func() {
+		errorCh <- service.Run(s.ctx)
+		close(errorCh)
+	}()
+
+	s.Require().Eventually(func() bool {
+		return startedWorkersCnt.Load() == 3
+	}, 3*time.Second, 10*time.Millisecond)
+
+	select {
+	case <-time.After(serviceTerminateTimeout):
+		s.Fail("service did not stop in time")
+	case <-service.Stop():
+	}
+
+	err := s.waitWithTimeout(s.ctx, errorCh)
+	s.Require().ErrorIs(err, context.Canceled)
+	s.Require().Equal(int32(3), stoppedWorkersCnt.Load())
+}
+
 func (s *ServiceTestSuite) runInBackground(ctx context.Context, workers ...Worker) <-chan error {
 	service := NewService(s.logger, workers...)
 	errorCh := make(chan error, 1)
