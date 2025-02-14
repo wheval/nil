@@ -11,6 +11,7 @@ import type { AbiFunction } from "abitype";
 import { useUnit } from "effector-react";
 import { useMemo } from "react";
 import { useStyletron } from "styletron-react";
+import { formatEther } from "viem";
 import { addressRoute } from "../../../routing";
 import { Link, ShareIcon, useMobile } from "../../../shared";
 import { getTokenSymbolByAddress } from "../../../tokens";
@@ -146,7 +147,7 @@ export const ContractManagement = () => {
           })}
           color={COLORS.gray50}
         >
-          {`${balance.toString(10)} NIL`}
+          {`${formatEther(balance)} NIL`}
         </LabelMedium>
         <LabelMedium
           className={css({
