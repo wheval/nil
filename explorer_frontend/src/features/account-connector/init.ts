@@ -10,7 +10,7 @@ import {
   generateRandomPrivateKey,
   removeHexPrefix,
 } from "@nilfoundation/niljs";
-import { combine, forward, sample } from "effector";
+import { combine, sample } from "effector";
 import { persist as persistLocalStorage } from "effector-storage/local";
 import { persist as persistSessionStorage } from "effector-storage/session";
 import { loadedPage } from "../code/model";
@@ -19,6 +19,7 @@ import { playgroundRoute, playgroundWithHashRoute } from "../routing";
 import { getRuntimeConfigOrThrow } from "../runtime-config";
 import { nilAddress } from "../tokens";
 import { $faucets } from "../tokens/model";
+import { ActiveComponent } from "./ActiveComponent.ts";
 import {
   $accountConnectorWithEndpoint,
   $activeComponent,
@@ -27,9 +28,13 @@ import {
   $endpoint,
   $initializingSmartAccountError,
   $initializingSmartAccountState,
+  $latestActivity,
   $privateKey,
   $smartAccount,
+  $topUpError,
   $topupInput,
+  addActivity,
+  clearLatestActivity,
   createSmartAccountFx,
   defaultPrivateKey,
   fetchBalanceFx,
@@ -37,6 +42,7 @@ import {
   initializePrivateKey,
   initilizeSmartAccount,
   regenrateAccountEvent,
+  resetTopUpError,
   setActiveComponent,
   setEndpoint,
   setInitializingSmartAccountState,
@@ -62,6 +68,7 @@ $privateKey.on(setPrivateKey, (_, privateKey) => privateKey);
 $endpoint.on(setEndpoint, (_, endpoint) => endpoint);
 
 createSmartAccountFx.use(async ({ privateKey, endpoint }) => {
+  if (endpoint === "") return;
   const signer = new LocalECDSAKeySigner({ privateKey });
   const client = new PublicClient({
     transport: new HttpTransport({ endpoint }),
@@ -174,15 +181,6 @@ createSmartAccountFx.failData.watch((error) => {
   console.error(error);
 });
 
-forward({
-  from: combine($privateKey, $endpoint, $faucets, (privateKey, endpoint, faucets) => ({
-    privateKey,
-    endpoint,
-    faucets,
-  })),
-  to: createSmartAccountFx,
-});
-
 $smartAccount.reset($privateKey);
 $smartAccount.on(createSmartAccountFx.doneData, (_, smartAccount) => smartAccount);
 
@@ -269,7 +267,7 @@ topupSmartAccountTokenFx.use(async ({ smartAccount, topupInput, faucets, endpoin
 
   const tokenFaucetAddress = faucets[token];
 
-  await faucetClient.topUpAndWaitUntilCompletion(
+  const txHash = await faucetClient.topUpAndWaitUntilCompletion(
     {
       smartAccountAddress: smartAccount.address,
       faucetAddress: tokenFaucetAddress,
@@ -277,6 +275,14 @@ topupSmartAccountTokenFx.use(async ({ smartAccount, topupInput, faucets, endpoin
     },
     publicClient,
   );
+
+  // Verify transaction receipt
+  const receipt = await smartAccount.client.getTransactionReceiptByHash(txHash as Hex);
+  if (!receipt?.success) {
+    addActivity({ txHash, successful: false });
+  }
+
+  addActivity({ txHash, successful: true });
 });
 
 sample({
@@ -348,7 +354,29 @@ $initializingSmartAccountState.reset(createSmartAccountFx.done);
 $initializingSmartAccountError.reset(createSmartAccountFx.done);
 $initializingSmartAccountError.reset($accountConnectorWithEndpoint);
 
-$initializingSmartAccountError.on(
-  createSmartAccountFx.fail,
-  () => "Failed to initialize smart account",
-);
+$activeComponent.on(topupSmartAccountTokenFx.done, () => ActiveComponent.Main);
+
+$topUpError
+  .on(topupSmartAccountTokenFx.fail, () => "Top-up failed. Please try again")
+  .on(resetTopUpError, () => "");
+
+$initializingSmartAccountError
+  .on(createSmartAccountFx.fail, () => "Failed to initialize smart account")
+  .on(createSmartAccountFx, () => "");
+
+let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+$latestActivity.on(addActivity, (_, payload) => {
+  // Clear any existing timeout
+  if (timeoutId) clearTimeout(timeoutId);
+
+  // Set new activity
+  timeoutId = setTimeout(() => {
+    clearLatestActivity();
+    timeoutId = null;
+  }, 10000);
+
+  return payload;
+});
+
+$latestActivity.on(clearLatestActivity, () => null);

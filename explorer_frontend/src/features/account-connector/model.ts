@@ -15,6 +15,9 @@ export const $smartAccount = createStore<SmartAccountV1 | null>(null);
 export const $balance = createStore<bigint | null>(null);
 export const $balanceToken = createStore<Record<string, bigint> | null>(null);
 export const $endpoint = createStore<string>("");
+export const $topUpError = createStore<string>("");
+
+export const $latestActivity = createStore<{ txHash: string; successful: boolean } | null>(null);
 
 export const $accountConnectorWithEndpoint = combine(
   $privateKey,
@@ -53,7 +56,7 @@ export const regenrateAccountEvent = createEvent();
 
 export const topUpEvent = createEvent();
 
-export const $activeComponent = createStore<ActiveComponent | null>(ActiveComponent.Main);
+export const $activeComponent = createStore<ActiveComponent | null>(ActiveComponent.Endpoint);
 
 export const setActiveComponent = createEvent<ActiveComponent>();
 
@@ -90,3 +93,9 @@ export const $initializingSmartAccountState = accountConnectorDomain.createStore
 export const setInitializingSmartAccountState = accountConnectorDomain.createEvent<string>();
 
 export const $initializingSmartAccountError = accountConnectorDomain.createStore<string>("");
+
+export const resetTopUpError = createEvent();
+
+export const addActivity = createEvent<{ txHash: string; successful: boolean }>();
+
+export const clearLatestActivity = createEvent();

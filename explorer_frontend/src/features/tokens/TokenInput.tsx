@@ -29,6 +29,7 @@ const TokenInput: FC<TokenInputProps> = ({
       <FormControl label={label} caption={caption}>
         <Input
           disabled={disabled}
+          placeholder="Enter amount"
           overrides={{
             Input: {
               style: {

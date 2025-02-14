@@ -11,6 +11,12 @@
       },
       "complexity": {
         "noForEach": "warn"
+      },
+      "a11y": {
+        "useKeyWithClickEvents": "off"
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "off"
       }
     }
   },

@@ -26,6 +26,10 @@ const Token: FC<TokenProps> = ({ name, balance, isMain = false }) => {
         columnGap: "20px",
         rowGap: "4px",
         height: "48px",
+        "@media (max-width: 420px)": {
+          gridTemplateColumns: "40px 84px minmax(120px, 140px)",
+          columnGap: "15px",
+        },
       })}
     >
       <div
@@ -83,7 +87,7 @@ const Token: FC<TokenProps> = ({ name, balance, isMain = false }) => {
         })}
         color={isMain ? COLORS.green200 : COLORS.gray400}
       >
-        {isMain ? "Main" : "Mock token"}
+        {isMain ? "Gas Fee token" : "Mock token"}
       </LabelSmall>
       <LabelSmall
         className={css({
@@ -92,7 +96,7 @@ const Token: FC<TokenProps> = ({ name, balance, isMain = false }) => {
           gridRow: "1 / 3",
           alignItems: "center",
           justifyContent: "flex-end",
-          width: "200px",
+          maxWidth: "200px",
           display: "flex",
           overflow: "hidden",
         })}
