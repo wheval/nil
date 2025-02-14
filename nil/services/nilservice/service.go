@@ -211,7 +211,7 @@ func initSyncers(ctx context.Context, syncers []*collate.Syncer) error {
 	return nil
 }
 
-func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) collate.SyncerConfig {
+func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) (collate.SyncerConfig, error) {
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
 	syncerTimeout := syncTimeoutFactor * collatorTickPeriod
 
@@ -220,22 +220,27 @@ func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) collate.Sy
 		bootstrapPeer = &cfg.BootstrapPeers[shardId]
 	}
 
-	zeroState := execution.DefaultZeroStateConfig
-	zeroStateConfig := cfg.ZeroState
+	var zeroState string
 	if len(cfg.ZeroStateYaml) != 0 {
 		zeroState = cfg.ZeroStateYaml
+	} else {
+		var err error
+		zeroState, err = execution.CreateZeroStateConfigWithMainPublicKey(cfg.MainKeysPath)
+		if err != nil {
+			return collate.SyncerConfig{}, err
+		}
 	}
+	zeroStateConfig := cfg.ZeroState
 
 	return collate.SyncerConfig{
 		Name:                 name,
 		ShardId:              shardId,
 		Timeout:              syncerTimeout,
 		BootstrapPeer:        bootstrapPeer,
-		ReplayBlocks:         shardId.IsMainShard() || cfg.IsShardActive(shardId),
 		BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
 		ZeroState:            zeroState,
 		ZeroStateConfig:      zeroStateConfig,
-	}
+	}, nil
 }
 
 type syncersResult struct {
@@ -257,7 +262,12 @@ func createSyncers(name string, cfg *Config, nm *network.Manager, database db.DB
 
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
-		syncer, err := collate.NewSyncer(getSyncerConfig(name, cfg, shardId), database, nm)
+
+		syncerConfig, err := getSyncerConfig(name, cfg, shardId)
+		if err != nil {
+			return nil, err
+		}
+		syncer, err := collate.NewSyncer(syncerConfig, database, nm)
 		if err != nil {
 			return nil, err
 		}
@@ -554,7 +564,6 @@ func createShards(
 
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
-
 		if cfg.IsShardActive(shardId) {
 			txnPool, err := txnpool.New(ctx, txnpool.NewConfig(shardId), networkManager)
 			if err != nil {

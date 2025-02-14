@@ -48,7 +48,7 @@ type Config struct {
 	AdminSocketPath string `yaml:"adminSocket,omitempty"`
 
 	// Keys
-	MainKeysOutPath      string                     `yaml:"mainKeysPath,omitempty"`
+	MainKeysPath         string                     `yaml:"mainKeysPath,omitempty"`
 	NetworkKeysPath      string                     `yaml:"networkKeysPath,omitempty"`
 	ValidatorKeysPath    string                     `yaml:"validatorKeysPath,omitempty"`
 	ValidatorKeysManager *keys.ValidatorKeysManager `yaml:"-"`
@@ -84,7 +84,7 @@ func NewDefaultConfig() *Config {
 		RunMode: NormalRunMode,
 
 		NShards:           uint32(DefaultNShards),
-		MainKeysOutPath:   "keys.yaml",
+		MainKeysPath:      "keys.yaml",
 		NetworkKeysPath:   "network-keys.yaml",
 		ValidatorKeysPath: "validator-keys.yaml",
 
@@ -197,9 +197,9 @@ func (c *Config) LoadValidatorPrivateKey() (key *ecdsa.PrivateKey, err error) {
 
 func (c *Config) BlockGeneratorParams(shardId types.ShardId) execution.BlockGeneratorParams {
 	return execution.BlockGeneratorParams{
-		ShardId:         shardId,
-		NShards:         c.NShards,
-		TraceEVM:        c.TraceEVM,
-		MainKeysOutPath: c.MainKeysOutPath,
+		ShardId:      shardId,
+		NShards:      c.NShards,
+		TraceEVM:     c.TraceEVM,
+		MainKeysPath: c.MainKeysPath,
 	}
 }

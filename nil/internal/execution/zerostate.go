@@ -28,45 +28,7 @@ func init() {
 	MainPrivateKey, MainPublicKey, err = nilcrypto.GenerateKeyPair()
 	check.PanicIfErr(err)
 
-	zerostate := `
-contracts:
-- name: MainSmartAccount
-  address: {{ .MainSmartAccountAddress }}
-  value: 10000000000000000000000
-  contract: SmartAccount
-  ctorArgs: [{{ .MainPublicKey }}]
-- name: Faucet
-  address: {{ .FaucetAddress }}
-  value: 20000000000000000000000
-  contract: Faucet
-- name: EthFaucet
-  address: {{ .EthFaucetAddress }}
-  value: 100000000000000
-  contract: FaucetToken
-- name: UsdtFaucet
-  address: {{ .UsdtFaucetAddress }}
-  value: 100000000000000
-  contract: FaucetToken
-- name: BtcFaucet
-  address: {{ .BtcFaucetAddress }}
-  value: 100000000000000
-  contract: FaucetToken
-- name: L1BlockInfo
-  address: {{ .L1BlockInfoAddress }}
-  value: 0
-  contract: system/L1BlockInfo
-`
-
-	DefaultZeroStateConfig, err = common.ParseTemplate(zerostate, map[string]interface{}{
-		"MainSmartAccountAddress": types.MainSmartAccountAddress.Hex(),
-		"L1BlockInfoAddress":      types.L1BlockInfoAddress.Hex(),
-		"MainPublicKey":           hexutil.Encode(MainPublicKey),
-		"MainSmartAccountPubKey":  hexutil.Encode(MainPublicKey),
-		"FaucetAddress":           types.FaucetAddress.Hex(),
-		"EthFaucetAddress":        types.EthFaucetAddress.Hex(),
-		"UsdtFaucetAddress":       types.UsdtFaucetAddress.Hex(),
-		"BtcFaucetAddress":        types.BtcFaucetAddress.Hex(),
-	})
+	DefaultZeroStateConfig, err = CreateDefaultZeroStateConfig(MainPublicKey)
 	check.PanicIfErr(err)
 }
 
@@ -96,6 +58,48 @@ type ZeroStateConfig struct {
 
 func (cfg *ZeroStateConfig) GetValidators() []config.ListValidators {
 	return cfg.ConfigParams.Validators.Validators
+}
+
+func CreateDefaultZeroStateConfig(mainPublicKey []byte) (string, error) {
+	zerostate := `
+contracts:
+- name: MainSmartAccount
+  address: {{ .MainSmartAccountAddress }}
+  value: 10000000000000000000000
+  contract: SmartAccount
+  ctorArgs: [{{ .MainPublicKey }}]
+- name: Faucet
+  address: {{ .FaucetAddress }}
+  value: 20000000000000000000000
+  contract: Faucet
+- name: EthFaucet
+  address: {{ .EthFaucetAddress }}
+  value: 100000000000000
+  contract: FaucetToken
+- name: UsdtFaucet
+  address: {{ .UsdtFaucetAddress }}
+  value: 100000000000000
+  contract: FaucetToken
+- name: BtcFaucet
+  address: {{ .BtcFaucetAddress }}
+  value: 100000000000000
+  contract: FaucetToken
+- name: L1BlockInfo
+  address: {{ .L1BlockInfoAddress }}
+  value: 0
+  contract: system/L1BlockInfo
+`
+
+	return common.ParseTemplate(zerostate, map[string]interface{}{
+		"MainSmartAccountAddress": types.MainSmartAccountAddress.Hex(),
+		"L1BlockInfoAddress":      types.L1BlockInfoAddress.Hex(),
+		"MainPublicKey":           hexutil.Encode(MainPublicKey),
+		"MainSmartAccountPubKey":  hexutil.Encode(MainPublicKey),
+		"FaucetAddress":           types.FaucetAddress.Hex(),
+		"EthFaucetAddress":        types.EthFaucetAddress.Hex(),
+		"UsdtFaucetAddress":       types.UsdtFaucetAddress.Hex(),
+		"BtcFaucetAddress":        types.BtcFaucetAddress.Hex(),
+	})
 }
 
 func DumpMainKeys(fname string) error {
@@ -132,6 +136,13 @@ func LoadMainKeys(fname string) error {
 	}
 	MainPublicKey, err = hexutil.Decode(keys.MainPublicKey)
 	return err
+}
+
+func CreateZeroStateConfigWithMainPublicKey(mainKeysPath string) (string, error) {
+	if err := LoadMainKeys(mainKeysPath); err != nil {
+		logger.Debug().Str("path", mainKeysPath).Msg("Failed to load main keys, using default")
+	}
+	return CreateDefaultZeroStateConfig(MainPublicKey)
 }
 
 func (c *ZeroStateConfig) FindContractByName(name string) *ContractDescr {
