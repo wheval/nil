@@ -18,7 +18,7 @@ import (
 func CreateTestAccount(t *testing.T) (types.Address, *MPTTracer) {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	database, err := db.NewBadgerDbInMemory()
 	require.NoError(t, err)
 

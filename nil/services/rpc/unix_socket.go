@@ -15,7 +15,9 @@ import (
 func getSockDir(t *testing.T) string {
 	t.Helper()
 
-	dir, err := os.MkdirTemp("/tmp", strings.ReplaceAll(t.Name(), "/", "_")+"_*")
+	// Use os.MkdirTemp instead of t.TempDir() to avoid issues with
+	// max unix socket name length on MacOS
+	dir, err := os.MkdirTemp("/tmp", strings.ReplaceAll(t.Name(), "/", "_")+"_*") //nolint: usetesting
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	return dir

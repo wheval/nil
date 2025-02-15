@@ -2,7 +2,6 @@ package transport
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -90,7 +89,7 @@ func TestHandlerDoesNotDoubleWriteNull(t *testing.T) {
 			stream := jsoniter.NewStream(jsoniter.ConfigDefault, &buf, 4096)
 
 			h := handler{}
-			h.runMethod(context.Background(), &txn, cb, args, stream)
+			h.runMethod(t.Context(), &txn, cb, args, stream)
 
 			output := buf.String()
 			assert.Equal(t, testParams.expected, output, "expected output should match")

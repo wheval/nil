@@ -21,7 +21,7 @@ import (
 func TestDebugGetBlock(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	database, err := db.NewBadgerDbInMemory()
 	require.NoError(t, err)
