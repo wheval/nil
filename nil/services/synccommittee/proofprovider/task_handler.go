@@ -12,24 +12,49 @@ import (
 )
 
 type taskHandler struct {
-	taskStorage storage.TaskStorage
-	timer       common.Timer
-	logger      zerolog.Logger
+	taskStorage   storage.TaskStorage
+	resultStorage storage.TaskResultStorage
+	skipRate      int
+	taskNum       int
+	timer         common.Timer
+	logger        zerolog.Logger
 }
 
 func newTaskHandler(
-	taskStorage storage.TaskStorage, timer common.Timer, logger zerolog.Logger,
+	taskStorage storage.TaskStorage, resultStorage storage.TaskResultStorage, skipRate int, timer common.Timer, logger zerolog.Logger,
 ) api.TaskHandler {
 	return &taskHandler{
-		taskStorage: taskStorage,
-		timer:       timer,
-		logger:      logger,
+		taskStorage:   taskStorage,
+		resultStorage: resultStorage,
+		skipRate:      skipRate,
+		taskNum:       0,
+		timer:         timer,
+		logger:        logger,
 	}
 }
 
-func (h *taskHandler) Handle(ctx context.Context, _ types.TaskExecutorId, task *types.Task) error {
+func (h *taskHandler) Handle(ctx context.Context, executorId types.TaskExecutorId, task *types.Task) error {
 	if (task.TaskType != types.ProofBlock) && (task.TaskType != types.AggregateProofs) {
 		return types.NewTaskErrNotSupportedType(task.TaskType)
+	}
+	// skip task
+	taskIdx := h.taskNum % 10
+	h.taskNum++
+	if taskIdx < h.skipRate {
+		log.NewTaskEvent(h.logger, zerolog.InfoLevel, task).Msg("Skip task")
+		skippedTaskResult := types.NewSuccessProviderTaskResult(
+			task.Id,
+			executorId,
+			types.TaskOutputArtifacts{},
+			task.BlockHash.Bytes(),
+		)
+		err := h.resultStorage.Put(ctx, skippedTaskResult)
+		if err != nil {
+			log.NewTaskEvent(h.logger, zerolog.ErrorLevel, task).
+				Err(err).
+				Msgf("Failed to send skipped task result")
+		}
+		return nil
 	}
 
 	log.NewTaskEvent(h.logger, zerolog.InfoLevel, task).Msg("Creating proof tasks for block")

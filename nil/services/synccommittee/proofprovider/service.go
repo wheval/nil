@@ -19,6 +19,7 @@ import (
 type Config struct {
 	SyncCommitteeRpcEndpoint string
 	TaskListenerRpcEndpoint  string
+	SkipRate                 int
 	Telemetry                *telemetry.Config
 }
 
@@ -26,6 +27,7 @@ func NewDefaultConfig() *Config {
 	return &Config{
 		SyncCommitteeRpcEndpoint: "tcp://127.0.0.1:8530",
 		TaskListenerRpcEndpoint:  "tcp://127.0.0.1:8531",
+		SkipRate:                 0,
 		Telemetry: &telemetry.Config{
 			ServiceName: "proof_provider",
 		},
@@ -59,7 +61,7 @@ func New(config *Config, database db.DB) (*ProofProvider, error) {
 	taskExecutor, err := executor.New(
 		executor.DefaultConfig(),
 		taskRpcClient,
-		newTaskHandler(taskStorage, timer, logger),
+		newTaskHandler(taskStorage, taskResultStorage, config.SkipRate, timer, logger),
 		metricsHandler,
 		logger,
 	)
