@@ -2,8 +2,6 @@ import type { Hex } from "@nilfoundation/niljs";
 import { Args, Flags } from "@oclif/core";
 
 export const bigintFlag = Flags.custom<bigint>({
-  char: "m",
-  description: "The amount",
   parse: async (input) => BigInt(input),
 });
 
