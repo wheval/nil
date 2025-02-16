@@ -280,6 +280,7 @@ func (rb *RawFullBlock) PackProtoMessage(block *types.RawBlockWithExtractedData)
 		Errors:             packErrorMap(block.Errors),
 		ChildBlocks:        PackHashes(block.ChildBlocks),
 		DbTimestamp:        block.DbTimestamp,
+		Config:             block.Config,
 	}
 	return nil
 }
@@ -313,6 +314,7 @@ func (rb *RawFullBlock) UnpackProtoMessage() (*types.RawBlockWithExtractedData, 
 		Errors:          unpackErrorMap(rb.Errors),
 		ChildBlocks:     UnpackHashes(rb.ChildBlocks),
 		DbTimestamp:     rb.DbTimestamp,
+		Config:          rb.Config,
 	}, nil
 }
 

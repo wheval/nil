@@ -33,6 +33,7 @@ message RawFullBlock {
   map<string, Error> errors = 5;
   repeated Hash childBlocks = 6;
   uint64 dbTimestamp = 7;
+  map<string, bytes> config = 8;
 }
 
 message RawFullBlocks {
