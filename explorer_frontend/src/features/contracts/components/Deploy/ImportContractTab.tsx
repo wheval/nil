@@ -3,56 +3,31 @@ import { Button, COLORS, FormControl, Input, LabelSmall, SPACE } from "@nilfound
 import { INPUT_KIND, INPUT_SIZE } from "@nilfoundation/ui-kit";
 import type { InputOverrides } from "baseui/input";
 import { useUnit } from "effector-react";
-import { useCallback, useEffect, useState } from "react";
 import { useStyletron } from "styletron-react";
 import { $smartAccount } from "../../../account-connector/model";
 import {
   $activeAppWithState,
-  $deployedContracts,
   $importedSmartContractAddress,
+  $importedSmartContractAddressError,
+  $importedSmartContractAddressIsValid,
   importSmartContract,
   importSmartContractFx,
   setImportedSmartContractAddress,
 } from "../../models/base";
 
 export const ImportContractTab = () => {
-  const [smartAccount, pending, deployedContracts, importedAddress, activeApp] = useUnit([
-    $smartAccount,
-    importSmartContractFx.pending,
-    $deployedContracts,
-    $importedSmartContractAddress,
-    $activeAppWithState,
-  ]);
-
-  const [css] = useStyletron();
-  const [error, setError] = useState<string | null>(null);
-
-  const validateAddress = useCallback(
-    (address: string) => {
-      if (!address || address === "0x") {
-        setError(null);
-        return;
-      }
-
-      const existingAddresses = Object.values(deployedContracts).flat();
-
-      if (existingAddresses.includes(address as Hex)) {
-        setError(`Contract with address ${address} already exists.`);
-      } else {
-        setError(null);
-      }
-    },
-    [deployedContracts],
+  const [smartAccount, pending, importedAddress, activeApp, addressIsValid, errorMessage] = useUnit(
+    [
+      $smartAccount,
+      importSmartContractFx.pending,
+      $importedSmartContractAddress,
+      $activeAppWithState,
+      $importedSmartContractAddressIsValid,
+      $importedSmartContractAddressError,
+    ],
   );
 
-  useEffect(() => {
-    validateAddress(importedAddress);
-  }, [importedAddress, validateAddress]);
-
-  useEffect(() => {
-    setImportedSmartContractAddress("0x" as Hex);
-    setError(null);
-  }, []);
+  const [css] = useStyletron();
 
   return (
     <>
@@ -71,17 +46,18 @@ export const ImportContractTab = () => {
               const value = e.target.value as Hex;
               setImportedSmartContractAddress(value);
             }}
-            value={importedAddress && importedAddress !== "0x" ? importedAddress : ""}
+            value={importedAddress}
+            placeholder="0x"
           />
         </FormControl>
-        {error && (
+        {errorMessage && (
           <LabelSmall
             className={css({
-              color: COLORS.red500,
+              color: COLORS.red400,
               marginTop: SPACE[4],
             })}
           >
-            {error}
+            {errorMessage}
           </LabelSmall>
         )}
         <LabelSmall
@@ -96,10 +72,10 @@ export const ImportContractTab = () => {
       <div>
         <Button
           onClick={() => {
-            if (!error) importSmartContract();
+            importSmartContract();
           }}
           isLoading={pending}
-          disabled={pending || !smartAccount || !!error}
+          disabled={pending || !smartAccount || !addressIsValid}
         >
           Import
         </Button>

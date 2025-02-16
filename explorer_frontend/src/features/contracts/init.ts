@@ -24,6 +24,8 @@ import {
   $errors,
   $importedAddress,
   $importedSmartContractAddress,
+  $importedSmartContractAddressError,
+  $importedSmartContractAddressIsValid,
   $loading,
   $shardId,
   $shardIdIsValid,
@@ -50,11 +52,14 @@ import {
   setAssignAddress,
   setDeploymentArg,
   setImportedSmartContractAddress,
+  setImportedSmartContractAddressError,
+  setImportedSmartContractAddressIsValid,
   setParams,
   setShardId,
   setValueInput,
   toggleActiveKey,
   unlinkApp,
+  validateSmartContractAddressFx,
 } from "./models/base";
 import { exportApp, exportAppFx } from "./models/exportApp";
 
@@ -195,6 +200,20 @@ sample({
 });
 
 $importedSmartContractAddress.on(setImportedSmartContractAddress, (_, address) => address);
+$importedSmartContractAddress.reset($activeApp);
+
+$importedSmartContractAddressIsValid.reset($activeApp);
+$importedSmartContractAddressIsValid.reset(setImportedSmartContractAddress);
+$importedSmartContractAddressIsValid.on(
+  setImportedSmartContractAddressIsValid,
+  (_, isValid) => isValid,
+);
+
+$importedSmartContractAddressError.reset($activeApp);
+$importedSmartContractAddressError.reset(setImportedSmartContractAddress);
+$importedSmartContractAddressError.on(setImportedSmartContractAddressError, (_, err) => {
+  return err;
+});
 
 sample({
   source: combine(
@@ -224,8 +243,17 @@ sample({
       importedSmartContractAddress: importedSmartContractAddress as Hex,
     };
   },
-  clock: importSmartContract,
+  clock: validateSmartContractAddressFx.doneData,
   target: importSmartContractFx,
+});
+
+sample({
+  clock: importSmartContract,
+  source: combine({
+    address: $importedSmartContractAddress,
+    deployedContracts: $deployedContracts,
+  }),
+  target: validateSmartContractAddressFx,
 });
 
 sample({
