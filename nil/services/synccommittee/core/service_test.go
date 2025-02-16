@@ -20,19 +20,15 @@ import (
 )
 
 type SyncCommitteeTestSuite struct {
-	suite.Suite
-
-	server        tests.RpcSuite
+	tests.RpcSuite
 	nShards       uint32
 	blockStorage  storage.BlockStorage
 	syncCommittee *SyncCommittee
-	ctx           context.Context
 	scDb          db.DB
 }
 
 func (s *SyncCommitteeTestSuite) SetupSuite() {
 	s.nShards = 4
-	s.ctx = context.Background()
 
 	url := rpctest.GetSockPath(s.T())
 
@@ -44,11 +40,7 @@ func (s *SyncCommitteeTestSuite) SetupSuite() {
 		CollatorTickPeriodMs: 100,
 	}
 
-	nilContext, nilCancel := context.WithCancel(s.ctx)
-	s.server.SetT(s.T())
-	s.server.Context = nilContext
-	s.server.CtxCancel = nilCancel
-	s.server.Start(nilserviceCfg)
+	s.Start(nilserviceCfg)
 
 	cfg := NewDefaultConfig()
 	cfg.RpcEndpoint = url
@@ -66,7 +58,7 @@ func (s *SyncCommitteeTestSuite) SetupSuite() {
 }
 
 func (s *SyncCommitteeTestSuite) TearDownSuite() {
-	s.server.Cancel()
+	s.Cancel()
 	s.scDb.Close()
 }
 
@@ -79,7 +71,7 @@ func (s *SyncCommitteeTestSuite) waitMainShardToProcess() {
 	s.T().Helper()
 	s.Require().Eventually(
 		func() bool {
-			lastFetched, err := s.blockStorage.TryGetLatestFetched(s.ctx)
+			lastFetched, err := s.blockStorage.TryGetLatestFetched(s.Context)
 			return err == nil && lastFetched != nil && lastFetched.Number > 0
 		},
 		5*time.Second,
@@ -89,7 +81,7 @@ func (s *SyncCommitteeTestSuite) waitMainShardToProcess() {
 
 func (s *SyncCommitteeTestSuite) TestProcessingLoop() {
 	// Run processing loop for a short time
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(s.Context, 5*time.Second)
 	defer cancel()
 
 	errCh := make(chan error)
@@ -104,7 +96,7 @@ func (s *SyncCommitteeTestSuite) TestProcessingLoop() {
 }
 
 func (s *SyncCommitteeTestSuite) TestRun() {
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(s.Context, 5*time.Second)
 	defer cancel()
 
 	errCh := make(chan error)

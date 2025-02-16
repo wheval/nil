@@ -18,7 +18,7 @@ func TestAdminServer(t *testing.T) {
 
 	socketPath := t.TempDir() + "/admin_socket"
 	cfg := &ServerConfig{Enabled: true, UnixSocketPath: socketPath}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	go func() {
 		_ = StartAdminServer(ctx, cfg, logging.NewLogger("admin"))

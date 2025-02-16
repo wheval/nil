@@ -1,6 +1,6 @@
 { lib
 , stdenv
-, buildGo123Module
+, buildGo124Module
 , enableRaceDetector ? false
 , enableTesting ? false
 , parallelTesting ? false
@@ -20,9 +20,9 @@
 , protobuf
 }:
 let inherit (lib) optional;
-  overrideBuildGoModule = pkg: pkg.override { buildGoModule = buildGo123Module; };
+  overrideBuildGoModule = pkg: pkg.override { buildGoModule = buildGo124Module; };
 in
-buildGo123Module rec {
+buildGo124Module rec {
   name = "nil";
   pname = "nil";
 
@@ -49,7 +49,7 @@ buildGo123Module rec {
   ];
 
   # to obtain run `nix build` with vendorHash = "";
-  vendorHash = "sha256-+MTNJpLy68Mw/WyzsXf3HjcS58+8t7YBusiewVIElbk=";
+  vendorHash = "sha256-zIsIT7hYnkr3eQyFGUyuDlKX2f3RoRWZaUu43TKXp84=";
   hardeningDisable = [ "all" ];
 
   postInstall = ''
@@ -71,7 +71,7 @@ buildGo123Module rec {
     (overrideBuildGoModule gotools)
     (overrideBuildGoModule go-tools)
     (overrideBuildGoModule gopls)
-    golangci-lint
+    (overrideBuildGoModule golangci-lint)
     (overrideBuildGoModule gofumpt)
     (overrideBuildGoModule gci)
     (overrideBuildGoModule delve)

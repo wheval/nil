@@ -1,7 +1,6 @@
 package execution
 
 import (
-	"context"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -23,7 +22,7 @@ var defaultMaxFeePerGas = types.MaxFeePerGasDefault
 func deployContract(t *testing.T, contract *compiler.Contract, state *ExecutionState, seqno types.Seqno) types.Address {
 	t.Helper()
 
-	return Deploy(t, context.Background(), state,
+	return Deploy(t, t.Context(), state,
 		types.BuildDeployPayload(hexutil.FromHex(contract.Code), common.EmptyHash),
 		types.BaseShardId, types.Address{}, seqno)
 }
@@ -109,7 +108,7 @@ func toGasCredit(gas types.Gas) types.Value {
 func TestCall(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	state := newState(t)
 	defer state.tx.Rollback()
 
@@ -175,7 +174,7 @@ func TestCall(t *testing.T) {
 func TestDelegate(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	state := newState(t)
 	defer state.tx.Rollback()
 
@@ -230,7 +229,7 @@ func TestDelegate(t *testing.T) {
 func TestAsyncCall(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	state := newState(t)
 	defer state.tx.Rollback()
 
@@ -302,7 +301,7 @@ func TestAsyncCall(t *testing.T) {
 func TestSendTransaction(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	state := newState(t)
 	defer state.tx.Rollback()
 

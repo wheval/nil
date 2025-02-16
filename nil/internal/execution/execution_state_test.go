@@ -215,7 +215,7 @@ func TestSuiteExecutionState(t *testing.T) {
 func newState(t *testing.T) *ExecutionState {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	database, err := db.NewBadgerDbInMemory()
 	require.NoError(t, err)
 	tx, err := database.CreateRwTx(ctx)
@@ -635,7 +635,7 @@ func (s *SuiteExecutionState) TestPanic() {
 }
 
 func BenchmarkBlockGeneration(b *testing.B) {
-	ctx := context.Background()
+	ctx := b.Context()
 	database, err := db.NewBadgerDbInMemory()
 	require.NoError(b, err)
 	logging.SetupGlobalLogger("error")

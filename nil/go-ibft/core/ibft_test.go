@@ -224,7 +224,7 @@ func TestRunNewRound_Proposer(t *testing.T) { //nolint:maintidx
 		func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancelFn := context.WithCancel(context.Background())
+			ctx, cancelFn := context.WithCancel(t.Context())
 
 			var (
 				newRawProposal                         = []byte("new block")
@@ -308,7 +308,7 @@ func TestRunNewRound_Proposer(t *testing.T) { //nolint:maintidx
 			t.Parallel()
 
 			quorum := uint64(4)
-			ctx, cancelFn := context.WithCancel(context.Background())
+			ctx, cancelFn := context.WithCancel(t.Context())
 
 			roundChangeMessages := generateMessages(quorum, proto.MessageType_ROUND_CHANGE)
 			setRoundForMessages(roundChangeMessages, 1)
@@ -439,7 +439,7 @@ func TestRunNewRound_Proposer(t *testing.T) { //nolint:maintidx
 			}
 
 			quorum := uint64(4)
-			ctx, cancelFn := context.WithCancel(context.Background())
+			ctx, cancelFn := context.WithCancel(t.Context())
 
 			roundChangeMessages := generateMessagesWithUniqueSender(quorum, proto.MessageType_ROUND_CHANGE)
 			prepareMessages := generateMessages(quorum-1, proto.MessageType_PREPARE)
@@ -607,7 +607,7 @@ func TestRunNewRound_Proposer(t *testing.T) { //nolint:maintidx
 func TestRunNewRound_Validator_Zero(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancelFn := context.WithCancel(context.Background())
+	ctx, cancelFn := context.WithCancel(t.Context())
 
 	var (
 		proposer                              = []byte("proposer")
@@ -776,7 +776,7 @@ func TestRunNewRound_Validator_NonZero(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancelFn := context.WithCancel(context.Background())
+			ctx, cancelFn := context.WithCancel(t.Context())
 			defer cancelFn()
 
 			var (
@@ -877,7 +877,7 @@ func TestRunPrepare(t *testing.T) {
 		func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancelFn := context.WithCancel(context.Background())
+			ctx, cancelFn := context.WithCancel(t.Context())
 
 			var (
 				multicastedCommit *proto.IbftMessage = nil
@@ -1057,7 +1057,7 @@ func TestRunCommit(t *testing.T) {
 			i.state.roundStarted = true
 			i.state.name = commit
 
-			ctx, cancelFn := context.WithCancel(context.Background())
+			ctx, cancelFn := context.WithCancel(t.Context())
 
 			wg.Add(1)
 
@@ -1232,7 +1232,7 @@ func TestIBFT_StartRoundTimer(t *testing.T) {
 
 		i := NewIBFT(log, backend, transport)
 
-		ctx, cancelFn := context.WithCancel(context.Background())
+		ctx, cancelFn := context.WithCancel(t.Context())
 
 		wg.Add(1)
 		i.wg.Add(1)
@@ -1262,7 +1262,7 @@ func TestIBFT_StartRoundTimer(t *testing.T) {
 		i := NewIBFT(log, backend, transport)
 		i.baseRoundTimeout = 0 * time.Second
 
-		ctx, cancelFn := context.WithCancel(context.Background())
+		ctx, cancelFn := context.WithCancel(t.Context())
 
 		wg.Add(1)
 		go func() {
@@ -1407,7 +1407,7 @@ func TestIBFT_FutureProposal(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancelFn := context.WithCancel(context.Background())
+			ctx, cancelFn := context.WithCancel(t.Context())
 			validProposal := generateValidProposal(
 				testCase.proposalView,
 				testCase.roundChangeMessages,
@@ -2860,7 +2860,7 @@ func TestIBFT_WatchForFutureRCC(t *testing.T) {
 
 	i.messages = messages
 
-	ctx, cancelFn := context.WithCancel(context.Background())
+	ctx, cancelFn := context.WithCancel(t.Context())
 
 	wg.Add(1)
 
@@ -2918,7 +2918,7 @@ func TestState_String(t *testing.T) {
 func TestIBFT_RunSequence_NewProposal(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancelFn := context.WithCancel(context.Background())
+	ctx, cancelFn := context.WithCancel(t.Context())
 	defer cancelFn()
 
 	var (
@@ -2979,7 +2979,7 @@ func TestIBFT_RunSequence_NewProposal(t *testing.T) {
 func TestIBFT_RunSequence_FutureRCC(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancelFn := context.WithCancel(context.Background())
+	ctx, cancelFn := context.WithCancel(t.Context())
 	defer cancelFn()
 
 	var (

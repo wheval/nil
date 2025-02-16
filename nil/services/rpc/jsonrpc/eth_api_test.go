@@ -43,7 +43,7 @@ func NewTestEthAPI(t *testing.T, ctx context.Context, db db.DB, nShards int) *AP
 func TestGetTransactionReceipt(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	badger, err := db.NewBadgerDbInMemory()
 	require.NoError(t, err)

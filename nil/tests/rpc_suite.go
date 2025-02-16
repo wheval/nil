@@ -128,9 +128,13 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 func (s *RpcSuite) Cancel() {
 	s.T().Helper()
 
-	s.CtxCancel()
+	if s.CtxCancel != nil {
+		s.CtxCancel()
+	}
 	s.Wg.Wait()
-	s.Db.Close()
+	if s.Db != nil {
+		s.Db.Close()
+	}
 }
 
 func (s *RpcSuite) WaitForReceipt(hash common.Hash) *jsonrpc.RPCReceipt {

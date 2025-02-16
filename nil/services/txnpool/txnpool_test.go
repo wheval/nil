@@ -266,7 +266,7 @@ func TestSuiteTxnpool(t *testing.T) {
 
 func BenchmarkTxnPoolAdd(b *testing.B) {
 	shardId := types.ShardId(0)
-	ctx := context.Background()
+	ctx := b.Context()
 	pool, err := New(ctx, NewConfig(shardId), nil)
 	if err != nil {
 		b.Fatalf("Failed to create transaction pool: %s", err)

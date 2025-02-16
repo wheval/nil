@@ -1,7 +1,6 @@
 package cliservice
 
 import (
-	"context"
 	"encoding/binary"
 	"fmt"
 	"testing"
@@ -141,7 +140,7 @@ func TestDebugBlockToText(t *testing.T) {
 		},
 	}
 
-	s := NewService(context.Background(), nil, nil, nil)
+	s := NewService(t.Context(), nil, nil, nil)
 	t.Run("FilledBlock", func(t *testing.T) {
 		t.Parallel()
 

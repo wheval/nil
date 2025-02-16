@@ -107,7 +107,7 @@ func TestZerostateFromConfig(t *testing.T) {
 
 	database, err := db.NewBadgerDbInMemory()
 	require.NoError(t, err)
-	tx, err := database.CreateRwTx(context.Background())
+	tx, err := database.CreateRwTx(t.Context())
 	require.NoError(t, err)
 	defer tx.Rollback()
 
@@ -117,7 +117,7 @@ config:
   gasPrice:
     shards: ["1", "2", "3"]
 `
-	configAccessor, err := config.NewConfigAccessor(context.Background(), database, nil)
+	configAccessor, err := config.NewConfigAccessor(t.Context(), database, nil)
 	require.NoError(t, err)
 	state, err = NewExecutionState(tx, 0, StateParams{ConfigAccessor: configAccessor})
 	require.NoError(t, err)

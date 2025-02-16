@@ -143,7 +143,7 @@ func TestGetBlockByNumberOnEmptyBase(t *testing.T) {
 	d, err := db.NewBadgerDbInMemory()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	api := NewTestEthAPI(t, ctx, d, 1)
 
 	_, err = api.GetBlockByNumber(ctx, shardId, transport.EarliestBlockNumber, false)
