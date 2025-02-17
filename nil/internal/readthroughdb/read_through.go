@@ -196,7 +196,7 @@ func NewReadThroughDb(client client.DbClient, baseDb db.DB) (db.DB, error) {
 	return db, nil
 }
 
-func NewReadThroughDbWithMasterChain(ctx context.Context, client client.Client, cacheDb db.DB, masterBlockNumber transport.BlockNumber) (db.DB, error) {
+func NewReadThroughDbWithMainShard(ctx context.Context, client client.Client, cacheDb db.DB, masterBlockNumber transport.BlockNumber) (db.DB, error) {
 	block, err := client.GetBlock(ctx, types.MainShardId, masterBlockNumber, false)
 	if err != nil {
 		return nil, err
@@ -257,5 +257,5 @@ func NewReadThroughDbWithMasterChain(ctx context.Context, client client.Client, 
 // Construct from endpoint string and db.DB
 func NewReadThroughWithEndpoint(ctx context.Context, endpoint string, cacheDb db.DB, masterBlockNumber transport.BlockNumber) (db.DB, error) {
 	client := rpc.NewClient(endpoint, logging.NewLogger("db_client"))
-	return NewReadThroughDbWithMasterChain(ctx, client, cacheDb, masterBlockNumber)
+	return NewReadThroughDbWithMainShard(ctx, client, cacheDb, masterBlockNumber)
 }

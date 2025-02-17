@@ -238,6 +238,7 @@ func SetRequestHandler(
 
 			if err := writeBlockToStream(s, b); err != nil {
 				logError(logger, err, "Failed to handle output block")
+				return
 			}
 		}
 	}

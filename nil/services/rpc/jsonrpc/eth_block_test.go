@@ -33,7 +33,7 @@ func (suite *SuiteEthBlock) SetupSuite() {
 	suite.db, err = db.NewBadgerDbInMemory()
 	suite.Require().NoError(err)
 
-	suite.lastBlockHash = execution.GenerateZeroState(suite.T(), suite.ctx, types.MainShardId, suite.db)
+	suite.lastBlockHash = execution.GenerateZeroState(suite.T(), types.MainShardId, suite.db).Hash(types.MainShardId)
 	for i := 1; i < int(types.BlockNumber(2)); i++ {
 		txns := make([]*types.Transaction, 0, i)
 		for j := range i {

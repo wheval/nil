@@ -8,6 +8,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/config"
+	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
@@ -174,12 +175,18 @@ func (api *LocalShardApi) Call(
 		hash = mainBlockHash
 	}
 
-	configAccessor, err := config.NewConfigReader(tx, nil)
+	block, err := db.ReadBlock(tx, shardId, hash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read block %s: %w", hash, err)
+	}
+
+	configAccessor, err := config.NewConfigAccessorFromBlockWithTx(tx, block, shardId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config accessor: %w", err)
 	}
+
 	es, err := execution.NewExecutionState(tx, shardId, execution.StateParams{
-		BlockHash:      hash,
+		Block:          block,
 		ConfigAccessor: configAccessor,
 	})
 	if err != nil {
@@ -234,7 +241,7 @@ func (api *LocalShardApi) Call(
 	}
 
 	esOld, err := execution.NewExecutionState(tx, shardId, execution.StateParams{
-		BlockHash:      hash,
+		Block:          block,
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	if err != nil {

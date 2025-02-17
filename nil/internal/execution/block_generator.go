@@ -51,26 +51,19 @@ type BlockGenerationResult struct {
 	ConfigParams map[string][]byte
 }
 
-func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabric db.DB, blockHash, mainShardHash *common.Hash) (*BlockGenerator, error) {
+func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabric db.DB, block *types.Block) (*BlockGenerator, error) {
 	rwTx, err := txFabric.CreateRwTx(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	configAccessor, err := config.NewConfigAccessor(ctx, txFabric, mainShardHash)
+	configAccessor, err := config.NewConfigAccessorFromBlock(ctx, txFabric, block, params.ShardId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config accessor: %w", err)
 	}
 
-	getBlockFromDb := false
-	if blockHash == nil {
-		getBlockFromDb = true
-		blockHash = &common.EmptyHash
-	}
-
 	executionState, err := NewExecutionState(rwTx, params.ShardId, StateParams{
-		BlockHash:      *blockHash,
-		GetBlockFromDb: getBlockFromDb,
+		Block:          block,
 		ConfigAccessor: configAccessor,
 	})
 	if err != nil {
@@ -102,9 +95,29 @@ func (g *BlockGenerator) Rollback() {
 	g.rwTx.Rollback()
 }
 
-func (p *BlockGenerator) CollectGasPrices(prevBlockHash common.Hash, shardHashes []common.Hash) []types.Uint256 {
+func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) []types.Uint256 {
 	if !p.params.ShardId.IsMainShard() {
 		return nil
+	}
+
+	// Basically we load configuration from block.MainChainHash.
+	// But for main shard this value should be block.PrevBlock.
+	// The first block uses configuration from itself.
+	configBlockId := prevBlockId
+	if prevBlockId != 0 {
+		configBlockId--
+	}
+
+	mainBlock, err := db.ReadBlockByNumber(p.rwTx, types.MainShardId, configBlockId)
+	if err != nil {
+		return nil
+	}
+
+	treeShards := NewDbShardBlocksTrieReader(p.rwTx, types.MainShardId, mainBlock.Id)
+	treeShards.SetRootHash(mainBlock.ChildBlocksRootHash)
+	shardHashes := make(map[types.ShardId]common.Hash)
+	for key, value := range treeShards.Iterate() {
+		shardHashes[types.BytesToShardId(key)] = common.BytesToHash(value)
 	}
 
 	// In main shard we collect gas prices from all shards. Gas price for the main shard is not required.
@@ -113,16 +126,17 @@ func (p *BlockGenerator) CollectGasPrices(prevBlockHash common.Hash, shardHashes
 		shardId := types.ShardId(i)
 		var shardHash common.Hash
 		if shardId.IsMainShard() {
-			shardHash = prevBlockHash
+			shardHash = mainBlock.PrevBlock
 		} else {
-			shardHash = shardHashes[i-1]
+			shardHash = shardHashes[shardId]
 		}
 
 		block, err := db.ReadBlock(p.rwTx, shardId, shardHash)
 		if err != nil {
 			p.logger.Err(err).
 				Stringer(logging.FieldShardId, shardId).
-				Msg("Get gas price from shard: failed to read last block")
+				Stringer(logging.FieldBlockHash, shardHash).
+				Msg("Get gas price from shard: failed to read block")
 			shards[shardId] = *types.DefaultGasPrice.Uint256
 		} else {
 			shards[shardId] = *block.BaseFee.Uint256
@@ -278,7 +292,7 @@ func (g *BlockGenerator) GenerateBlock(proposal *Proposal, sig *types.BlsAggrega
 	g.mh.StartProcessingMeasurement(g.ctx, g.executionState.GasPrice, proposal.PrevBlockId+1)
 	defer func() { g.mh.EndProcessingMeasurement(g.ctx, g.counters) }()
 
-	gasPrices := g.CollectGasPrices(proposal.PrevBlockHash, proposal.ShardHashes)
+	gasPrices := g.CollectGasPrices(proposal.PrevBlockId)
 	if err := g.prepareExecutionState(proposal, gasPrices); err != nil {
 		return nil, err
 	}

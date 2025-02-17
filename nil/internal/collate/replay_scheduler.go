@@ -68,13 +68,12 @@ func (s *ReplayScheduler) doReplay(ctx context.Context, blockId types.BlockNumbe
 	ctx, cancel := context.WithTimeout(ctx, s.params.Timeout)
 	defer cancel()
 
-	proposal, err := s.buildProposalFromPrevBlock(ctx, blockId)
+	proposal, prevBlock, err := s.buildProposalFromPrevBlock(ctx, blockId)
 	if err != nil {
 		return err
 	}
 
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric,
-		&proposal.PrevBlockHash, proposal.GetMainShardHash(s.params.ShardId))
+	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, prevBlock)
 	if err != nil {
 		return err
 	}
@@ -107,36 +106,38 @@ func (s *ReplayScheduler) switchLastBlock(ctx context.Context, blockId types.Blo
 	return blockHash, rwTx.Commit()
 }
 
-func (s *ReplayScheduler) buildProposalFromPrevBlock(ctx context.Context, blockId types.BlockNumber) (*execution.Proposal, error) {
+func (s *ReplayScheduler) buildProposalFromPrevBlock(
+	ctx context.Context, blockId types.BlockNumber,
+) (*execution.Proposal, *types.Block, error) {
 	if s.params.ShardId == types.MainShardId {
-		return nil, errors.New("replay for masterchain is not supported")
+		return nil, nil, errors.New("replay for main shard is not supported")
 	}
 	if blockId == types.BlockNumber(0) {
-		return nil, errors.New("replay for zerostate-block is not supported")
+		return nil, nil, errors.New("replay for zerostate-block is not supported")
 	}
 
 	proposal := &execution.Proposal{PrevBlockId: blockId - 1}
 
-	// NOTE: masterchain last block isn't switched now
+	// NOTE: main shard last block isn't switched now
 	if hash, err := s.switchLastBlock(ctx, proposal.PrevBlockId); err != nil {
-		return nil, err
+		return nil, nil, err
 	} else {
 		proposal.PrevBlockHash = hash
 	}
 
 	roTx, err := s.txFabric.CreateRoTx(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer roTx.Rollback()
 
 	prevBlock, err := db.ReadBlock(roTx, s.params.ShardId, proposal.PrevBlockHash)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	blockToReplay, err := db.ReadBlockByNumber(roTx, s.params.ShardId, blockId)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	proposal.MainChainHash = prevBlock.MainChainHash
@@ -147,17 +148,17 @@ func (s *ReplayScheduler) buildProposalFromPrevBlock(ctx context.Context, blockI
 	// however it's not a purpose of replay mode (at least now)
 	inTxns, err := s.collectTxns(roTx, blockToReplay.InTransactionsRoot)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	proposal.InternalTxns, proposal.ExternalTxns = execution.SplitInTransactions(inTxns)
 
 	forwardTxns, err := s.collectTxns(roTx, blockToReplay.OutTransactionsRoot)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	proposal.ForwardTxns, _ = execution.SplitOutTransactions(forwardTxns, s.params.ShardId)
 
-	return proposal, nil
+	return proposal, prevBlock, nil
 }
 
 func (s *ReplayScheduler) collectTxns(roTx db.RoTx, root common.Hash) ([]*types.Transaction, error) {

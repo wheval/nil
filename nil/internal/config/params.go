@@ -11,7 +11,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/crypto/bls"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 const ValidatorPubkeySize = 128
@@ -152,8 +152,53 @@ func mergeValidators(input []ListValidators) []ValidatorInfo {
 	return result
 }
 
+func NewConfigAccessorFromBlock(ctx context.Context, database db.DB, block *types.Block, shardId types.ShardId) (ConfigAccessor, error) {
+	tx, err := database.CreateRoTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	return NewConfigAccessorFromBlockWithTx(tx, block, shardId)
+}
+
+func NewConfigAccessorFromBlockWithTx(tx db.RoTx, block *types.Block, shardId types.ShardId) (ConfigAccessor, error) {
+	var mainShardHash *common.Hash
+	if block != nil {
+		mainShardHash = &block.MainChainHash
+		// For the main shard MainChainHash is empty. So we use the hash of the previous block.
+		if shardId.IsMainShard() {
+			mainShardHash = &block.PrevBlock
+			// The first block uses configuration from itself.
+			if mainShardHash.Empty() {
+				h := block.Hash(types.MainShardId)
+				mainShardHash = &h
+			}
+		}
+	}
+
+	c, err := NewConfigAccessorTx(tx, mainShardHash)
+	if err != nil {
+		return nil, err
+	}
+
+	if mainShardHash != nil {
+		if _, err := db.ReadBlock(tx, types.MainShardId, *mainShardHash); errors.Is(err, db.ErrKeyNotFound) {
+			// It is possible that the needed main chain block has not arrived yet, or that this one is some byzantine block.
+			// Because right now the config is actually constant, we can use whatever version we like in this case,
+			// so we use the latest accessible config.
+			// TODO(@isergeyam): create some subscription mechanism that will handle this correctly.
+			log.Warn().
+				Stringer(logging.FieldBlockNumber, block.Id).
+				Stringer(logging.FieldBlockMainChainHash, mainShardHash).
+				Msg("Main chain block not found, using the latest accessible config")
+			return NewConfigAccessorTx(tx, nil)
+		}
+	}
+	return c, err
+}
+
 func GetValidatorListForShard(
-	ctx context.Context, database db.DB, height types.BlockNumber, shardId types.ShardId, logger zerolog.Logger,
+	ctx context.Context, database db.DB, height types.BlockNumber, shardId types.ShardId,
 ) ([]ValidatorInfo, error) {
 	tx, err := database.CreateRoTx(ctx)
 	if err != nil {
@@ -166,26 +211,7 @@ func GetValidatorListForShard(
 		return nil, err
 	}
 
-	mainShardHash := block.MainChainHash
-	if shardId.IsMainShard() {
-		mainShardHash = block.PrevBlock
-		if mainShardHash.Empty() {
-			mainShardHash = block.Hash(types.MainShardId)
-		}
-	}
-
-	c, err := NewConfigAccessorTx(tx, &mainShardHash)
-	if errors.Is(err, db.ErrKeyNotFound) {
-		// It is possible that the needed main chain block has not arrived yet, or that this one is some byzantine block.
-		// Because right now the config is actually constant, we can use whatever version we like in this case,
-		// so we use the latest accessible config.
-		// TODO(@isergeyam): create some subscription mechanism that will handle this correctly.
-		logger.Warn().
-			Stringer(logging.FieldBlockNumber, block.Id).
-			Stringer(logging.FieldBlockMainChainHash, mainShardHash).
-			Msg("Main chain block not found, using the latest accessible config")
-		c, err = NewConfigAccessorTx(tx, nil)
-	}
+	c, err := NewConfigAccessorFromBlockWithTx(tx, block, shardId)
 	if err != nil {
 		return nil, err
 	}

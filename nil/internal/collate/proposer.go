@@ -83,13 +83,13 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 		return nil, fmt.Errorf("failed to fetch previous block: %w", err)
 	}
 
-	configAccessor, err := config.NewConfigAccessorTx(tx, nil)
+	configAccessor, err := config.NewConfigAccessorFromBlockWithTx(tx, block, p.params.ShardId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config accessor: %w", err)
 	}
 
 	p.executionState, err = execution.NewExecutionState(tx, p.params.ShardId, execution.StateParams{
-		GetBlockFromDb: true,
+		Block:          block,
 		ConfigAccessor: configAccessor,
 	})
 	if err != nil {

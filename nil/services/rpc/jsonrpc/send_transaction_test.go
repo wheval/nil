@@ -26,20 +26,20 @@ type SuiteSendTransaction struct {
 
 func (suite *SuiteSendTransaction) SetupSuite() {
 	shardId := types.MainShardId
-	ctx := context.Background()
+	ctx := suite.T().Context()
 
 	var err error
 	suite.db, err = db.NewBadgerDbInMemory()
 	suite.Require().NoError(err)
 
-	mainBlockHash := execution.GenerateZeroState(suite.T(), ctx, types.MainShardId, suite.db)
+	mainBlock := execution.GenerateZeroState(suite.T(), types.MainShardId, suite.db)
 
 	tx, err := suite.db.CreateRwTx(ctx)
 	suite.Require().NoError(err)
 	defer tx.Rollback()
 
 	es, err := execution.NewExecutionState(tx, shardId, execution.StateParams{
-		BlockHash:      mainBlockHash,
+		Block:          mainBlock,
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	suite.Require().NoError(err)

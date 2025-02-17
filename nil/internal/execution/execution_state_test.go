@@ -82,7 +82,7 @@ func (s *SuiteExecutionState) TestExecState() {
 
 	s.Run("CheckAccount", func() {
 		es, err := NewExecutionState(tx, shardId, StateParams{
-			BlockHash:      blockRes.BlockHash,
+			Block:          blockRes.Block,
 			ConfigAccessor: config.GetStubAccessor(),
 		})
 		s.Require().NoError(err)
@@ -220,7 +220,7 @@ func newState(t *testing.T) *ExecutionState {
 	tx, err := database.CreateRwTx(ctx)
 	require.NoError(t, err)
 
-	cfgAccessor, err := config.NewConfigAccessor(ctx, database, nil)
+	cfgAccessor, err := config.NewConfigAccessorTx(tx, nil)
 	require.NoError(t, err)
 
 	require.NoError(t, config.SetParamGasPrice(cfgAccessor, &config.ParamGasPrice{
@@ -658,7 +658,7 @@ contracts:
 
 	params := NewBlockGeneratorParams(1, 2)
 
-	gen, err := NewBlockGenerator(ctx, params, database, nil, nil)
+	gen, err := NewBlockGenerator(ctx, params, database, nil)
 	require.NoError(b, err)
 	_, err = gen.GenerateZeroState(zeroState)
 	require.NoError(b, err)
@@ -686,7 +686,7 @@ contracts:
 		tx, _ := database.CreateRwTx(ctx)
 		proposal.PrevBlockHash, _ = db.ReadLastBlockHash(tx, 1)
 
-		gen, err = NewBlockGenerator(ctx, params, database, nil, nil)
+		gen, err = NewBlockGenerator(ctx, params, database, nil)
 		require.NoError(b, err)
 		_, err = gen.GenerateBlock(proposal, nil)
 		require.NoError(b, err)

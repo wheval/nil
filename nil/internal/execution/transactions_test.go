@@ -39,7 +39,6 @@ func (s *TransactionsSuite) TestValidateExternalTransaction() {
 	defer tx.Rollback()
 
 	es, err := NewExecutionState(tx, types.BaseShardId, StateParams{
-		GetBlockFromDb: true,
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	s.Require().NoError(err)
