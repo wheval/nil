@@ -17,7 +17,6 @@ import (
 	v1 "github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/encode/v1"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/rs/zerolog"
 )
@@ -28,6 +27,10 @@ type AggregatorMetrics interface {
 	RecordBlockBatchSize(ctx context.Context, batchSize int64)
 }
 
+type AggregatorTaskStorage interface {
+	AddTaskEntries(ctx context.Context, tasks ...*types.TaskEntry) error
+}
+
 type AggregatorBlockStorage interface {
 	TryGetLatestFetched(ctx context.Context) (*types.MainBlockRef, error)
 	SetBlockBatch(ctx context.Context, batch *types.BlockBatch) error
@@ -36,8 +39,8 @@ type AggregatorBlockStorage interface {
 type aggregator struct {
 	logger         zerolog.Logger
 	rpcClient      client.Client
-	blockStorage         AggregatorBlockStorage
-	taskStorage    storage.TaskStorage
+	blockStorage   AggregatorBlockStorage
+	taskStorage    AggregatorTaskStorage
 	batchCommitter batches.BatchCommitter
 	timer          common.Timer
 	metrics        AggregatorMetrics
@@ -47,16 +50,16 @@ type aggregator struct {
 func NewAggregator(
 	rpcClient client.Client,
 	blockStorage AggregatorBlockStorage,
-	taskStorage storage.TaskStorage,
+	taskStorage AggregatorTaskStorage,
 	timer common.Timer,
 	logger zerolog.Logger,
 	metrics AggregatorMetrics,
 	pollingDelay time.Duration,
 ) *aggregator {
 	agg := &aggregator{
-		rpcClient: rpcClient,
-		blockStorage:    blockStorage,
-		taskStorage:     taskStorage,
+		rpcClient:    rpcClient,
+		blockStorage: blockStorage,
+		taskStorage:  taskStorage,
 		batchCommitter: batches.NewBatchCommitter(
 			v1.NewEncoder(logger),
 			blob.NewBuilder(),

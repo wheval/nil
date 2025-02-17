@@ -27,7 +27,7 @@ type AggregatorTestSuite struct {
 
 	db           db.DB
 	blockStorage *storage.BlockStorage
-	taskStorage  storage.TaskStorage
+	taskStorage  *storage.TaskStorage
 
 	rpcClientMock *client.ClientMock
 	aggregator    *aggregator
@@ -50,7 +50,6 @@ func (s *AggregatorTestSuite) SetupSuite() {
 	timer := common.NewTimer()
 	s.blockStorage = storage.NewBlockStorage(s.db, timer, metricsHandler, logger)
 	s.taskStorage = storage.NewTaskStorage(s.db, timer, metricsHandler, logger)
-
 	s.rpcClientMock = &client.ClientMock{}
 
 	s.aggregator = NewAggregator(

@@ -18,32 +18,22 @@ const (
 	taskResultsTable db.TableName = "task_results"
 )
 
-// TaskResultStorage defines the interface for storing and managing task results.
-type TaskResultStorage interface {
-	// TryGetPending retrieves the first available TaskResult from storage or returns nil if none are available.
-	TryGetPending(ctx context.Context) (*types.TaskResult, error)
-
-	// Put stores the provided TaskResult into the storage.
-	Put(ctx context.Context, result *types.TaskResult) error
-
-	// Delete removes the task result with the specified TaskId from the storage.
-	Delete(ctx context.Context, taskId types.TaskId) error
-}
-
 func NewTaskResultStorage(
 	db db.DB,
 	logger zerolog.Logger,
-) TaskResultStorage {
-	return &taskResultStorage{
+) *TaskResultStorage {
+	return &TaskResultStorage{
 		commonStorage: makeCommonStorage(db, logger),
 	}
 }
 
-type taskResultStorage struct {
+// TaskResultStorage defines the type for storing and managing task results.
+type TaskResultStorage struct {
 	commonStorage
 }
 
-func (s *taskResultStorage) TryGetPending(ctx context.Context) (*types.TaskResult, error) {
+// TryGetPending retrieves the first available TaskResult from storage or returns nil if none are available.
+func (s *TaskResultStorage) TryGetPending(ctx context.Context) (*types.TaskResult, error) {
 	tx, err := s.database.CreateRoTx(ctx)
 	if err != nil {
 		return nil, err
@@ -67,7 +57,8 @@ func (s *taskResultStorage) TryGetPending(ctx context.Context) (*types.TaskResul
 	return unmarshallTaskResult(key, val)
 }
 
-func (s *taskResultStorage) Put(ctx context.Context, result *types.TaskResult) error {
+// Put stores the provided TaskResult into the storage.
+func (s *TaskResultStorage) Put(ctx context.Context, result *types.TaskResult) error {
 	if result == nil {
 		return errors.New("result cannot be nil")
 	}
@@ -77,7 +68,7 @@ func (s *taskResultStorage) Put(ctx context.Context, result *types.TaskResult) e
 	})
 }
 
-func (s *taskResultStorage) putImpl(ctx context.Context, result *types.TaskResult) error {
+func (s *TaskResultStorage) putImpl(ctx context.Context, result *types.TaskResult) error {
 	tx, err := s.database.CreateRwTx(ctx)
 	if err != nil {
 		return err
@@ -97,13 +88,14 @@ func (s *taskResultStorage) putImpl(ctx context.Context, result *types.TaskResul
 	return s.commit(tx)
 }
 
-func (s *taskResultStorage) Delete(ctx context.Context, taskId types.TaskId) error {
+// SetAsSubmitted removes the task result with the specified TaskId from the storage.
+func (s *TaskResultStorage) SetAsSubmitted(ctx context.Context, taskId types.TaskId) error {
 	return s.retryRunner.Do(ctx, func(ctx context.Context) error {
 		return s.deleteImpl(ctx, taskId)
 	})
 }
 
-func (s *taskResultStorage) deleteImpl(ctx context.Context, taskId types.TaskId) error {
+func (s *TaskResultStorage) deleteImpl(ctx context.Context, taskId types.TaskId) error {
 	tx, err := s.database.CreateRwTx(ctx)
 	if err != nil {
 		return err

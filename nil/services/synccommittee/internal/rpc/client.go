@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var retryConfig common.RetryConfig = common.RetryConfig{
+var retryConfig = common.RetryConfig{
 	ShouldRetry: common.LimitRetries(5),
 	NextDelay:   common.DelayExponential(100*time.Millisecond, time.Second),
 }

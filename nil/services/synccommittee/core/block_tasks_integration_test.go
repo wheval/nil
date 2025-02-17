@@ -25,7 +25,7 @@ type BlockTasksIntegrationTestSuite struct {
 	db    db.DB
 	timer common.Timer
 
-	taskStorage  storage.TaskStorage
+	taskStorage  *storage.TaskStorage
 	blockStorage *storage.BlockStorage
 
 	scheduler scheduler.TaskScheduler

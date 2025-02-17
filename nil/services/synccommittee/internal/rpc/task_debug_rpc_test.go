@@ -29,8 +29,8 @@ type TaskSchedulerDebugRpcTestSuite struct {
 	scheduler scheduler.TaskScheduler
 
 	database db.DB
+	storage  *storage.TaskStorage
 	timer    *common.TestTimerImpl
-	storage  storage.TaskStorage
 }
 
 func TestTaskSchedulerDebugRpcTestSuite(t *testing.T) {

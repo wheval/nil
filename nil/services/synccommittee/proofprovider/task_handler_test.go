@@ -21,7 +21,7 @@ type TaskHandlerTestSuite struct {
 	cancellation context.CancelFunc
 	database     db.DB
 	timer        common.Timer
-	taskStorage  storage.TaskStorage
+	taskStorage  *storage.TaskStorage
 	taskHandler  api.TaskHandler
 }
 

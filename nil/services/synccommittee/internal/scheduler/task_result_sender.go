@@ -8,7 +8,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/rs/zerolog"
 )
@@ -23,23 +22,29 @@ func MakeDefaultSenderConfig() ResultSenderConfig {
 	}
 }
 
+type TaskResultSource interface {
+	TryGetPending(ctx context.Context) (*types.TaskResult, error)
+
+	SetAsSubmitted(ctx context.Context, taskId types.TaskId) error
+}
+
 type TaskResultSender struct {
 	srv.WorkerLoop
 
 	requestHandler api.TaskRequestHandler
-	storage        storage.TaskResultStorage
+	resultSource   TaskResultSource
 	logger         zerolog.Logger
 	config         ResultSenderConfig
 }
 
 func NewTaskResultSender(
 	requestHandler api.TaskRequestHandler,
-	storage storage.TaskResultStorage,
+	resultSource TaskResultSource,
 	logger zerolog.Logger,
 ) *TaskResultSender {
 	sender := &TaskResultSender{
 		requestHandler: requestHandler,
-		storage:        storage,
+		resultSource:   resultSource,
 		config:         MakeDefaultSenderConfig(),
 	}
 
@@ -68,9 +73,9 @@ func (s *TaskResultSender) processPendingResult(ctx context.Context) error {
 }
 
 func (s *TaskResultSender) getPending(ctx context.Context) (*types.TaskResult, error) {
-	pendingResult, err := s.storage.TryGetPending(ctx)
+	pendingResult, err := s.resultSource.TryGetPending(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get next task result from the storage: %w", err)
+		return nil, fmt.Errorf("failed to get next task result: %w", err)
 	}
 	if pendingResult == nil {
 		s.logger.Debug().Msg("no task result available, waiting for new one")
@@ -85,12 +90,12 @@ func (s *TaskResultSender) sendPending(ctx context.Context, result *types.TaskRe
 		return fmt.Errorf("failed to send task result: %w", err)
 	}
 
-	log.NewTaskResultEvent(s.logger, zerolog.DebugLevel, result).Msg("task result successfully sent, deleting")
+	log.NewTaskResultEvent(s.logger, zerolog.DebugLevel, result).Msg("task result successfully sent")
 
-	if err := s.storage.Delete(ctx, result.TaskId); err != nil {
-		return fmt.Errorf("failed to delete task result from storage: %w", err)
+	if err := s.resultSource.SetAsSubmitted(ctx, result.TaskId); err != nil {
+		return fmt.Errorf("failed to set task result as submitted: %w", err)
 	}
 
-	log.NewTaskResultEvent(s.logger, zerolog.DebugLevel, result).Msg("task result deleted from storage")
+	log.NewTaskResultEvent(s.logger, zerolog.DebugLevel, result).Msg("task result is set as submitted")
 	return nil
 }
