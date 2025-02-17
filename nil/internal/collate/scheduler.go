@@ -84,9 +84,6 @@ func (s *Scheduler) Run(ctx context.Context, syncer *Syncer, consensus Consensus
 	s.consensus = consensus
 	s.syncer = syncer
 
-	// Enable handler for snapshot relaying
-	SetBootstrapHandler(ctx, s.networkManager, s.params.ShardId, s.txFabric)
-
 	// Enable handler for blocks relaying
 	SetRequestHandler(ctx, s.networkManager, s.params.ShardId, s.txFabric, s.logger)
 

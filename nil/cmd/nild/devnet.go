@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/NilFoundation/nil/nil/cmd/nild/nildconfig"
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -291,18 +292,18 @@ func (devnet *devnet) writeServerConfig(instanceId int, srv server, only string)
 	inst := srv.nodeSpec
 	cfg.MyShards = inst.Shards
 	cfg.SplitShards = inst.SplitShards
-	cfg.BootstrapPeers = devnet.getPeers(devnet.validators, inst.BootstrapPeersIdx)
+	cfg.BootstrapPeers = getPeers(devnet.validators, inst.BootstrapPeersIdx)
 	cfg.AdminSocketPath = srv.workDir + "/admin_socket"
 	cfg.LogClientRpcEvents = srv.logClientEvents
 	cfg.DB = db.NewDefaultBadgerDBOptions()
 	cfg.DB.Path = srv.workDir + "/database"
 	cfg.DB.AllowDrop = spec.NilWipeOnUpdate
 	cfg.Network.DHTEnabled = true
-	cfg.Network.DHTBootstrapPeers = devnet.getPeers(devnet.validators, inst.DHTBootstrapPeersIdx)
+	cfg.Network.DHTBootstrapPeers = getPeers(devnet.validators, inst.DHTBootstrapPeersIdx)
 
 	if len(inst.ArchiveNodeIndices) > 0 {
 		cfg.RpcNode = &nilservice.RpcNodeConfig{
-			ArchiveNodeList: devnet.getPeers(devnet.archivers, inst.ArchiveNodeIndices),
+			ArchiveNodeList: getPeers(devnet.archivers, inst.ArchiveNodeIndices),
 		}
 	}
 
@@ -330,12 +331,17 @@ func identityToAddress(port int, identity string) string {
 	return fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/%s", port, identity)
 }
 
-func (devnet *devnet) getPeers(servers []server, indices []int) network.AddrInfoSlice {
+func getPeer(srv server) network.AddrInfo {
+	var peer network.AddrInfo
+	address := identityToAddress(srv.port, srv.identity)
+	check.PanicIfErr(peer.Set(address))
+	return peer
+}
+
+func getPeers(servers []server, indices []int) network.AddrInfoSlice {
 	peers := make(network.AddrInfoSlice, len(indices))
 	for i, idx := range indices {
-		srv := servers[idx]
-		address := identityToAddress(srv.port, srv.identity)
-		peers[i].Set(address) //nolint:errcheck
+		peers[i] = getPeer(servers[idx])
 	}
 	return peers
 }

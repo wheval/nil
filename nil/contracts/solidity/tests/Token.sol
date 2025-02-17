@@ -13,7 +13,7 @@ contract Token is NilTokenBase {
 
     receive() external payable {}
 
-    function verifyExternal(uint256 hash, bytes calldata signature) external view returns (bool) {
+    function verifyExternal(uint256, bytes calldata) external pure returns (bool) {
         return true;
     }
 

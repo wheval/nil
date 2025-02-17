@@ -24,14 +24,14 @@ type SyncerConfig struct {
 	Name                 string
 	ShardId              types.ShardId
 	Timeout              time.Duration // pull blocks if no new blocks appear in the topic for this duration
-	BootstrapPeer        *network.AddrInfo
+	BootstrapPeers       []network.AddrInfo
 	BlockGeneratorParams execution.BlockGeneratorParams
 	ZeroState            string
 	ZeroStateConfig      *execution.ZeroStateConfig
 }
 
 type Syncer struct {
-	config SyncerConfig
+	config *SyncerConfig
 
 	topic string
 
@@ -48,7 +48,7 @@ type Syncer struct {
 	blockVerifier *signer.BlockVerifier
 }
 
-func NewSyncer(cfg SyncerConfig, db db.DB, networkManager *network.Manager) (*Syncer, error) {
+func NewSyncer(cfg *SyncerConfig, db db.DB, networkManager *network.Manager) (*Syncer, error) {
 	var waitForSync sync.WaitGroup
 	waitForSync.Add(1)
 
@@ -127,11 +127,22 @@ func (s *Syncer) FetchSnapshot(ctx context.Context) error {
 	if snapIsRequired, err := s.shardIsEmpty(ctx); err != nil {
 		return err
 	} else if snapIsRequired {
-		if err := fetchSnapshot(ctx, s.networkManager, s.config.BootstrapPeer, s.config.ShardId, s.db); err != nil {
+		var err error
+		for _, peer := range s.config.BootstrapPeers {
+			if err = fetchSnapshot(ctx, s.networkManager, &peer, s.db); err == nil {
+				return nil
+			}
+		}
+		if err != nil {
 			return fmt.Errorf("failed to fetch snapshot: %w", err)
 		}
 	}
 	return nil
+}
+
+func (s *Syncer) SetBootstrapHandler(ctx context.Context) {
+	// Enable handler for snapshot relaying
+	SetBootstrapHandler(ctx, s.networkManager, s.db)
 }
 
 func (s *Syncer) Run(ctx context.Context) error {
