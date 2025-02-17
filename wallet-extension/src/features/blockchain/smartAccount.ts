@@ -22,8 +22,15 @@ import { topUpSpecificCurrency } from "./faucet.ts";
 
 // Create Public Client
 export function createClient(rpcEndpoint: string, shardId: number): PublicClient {
+  const appVersion = import.meta.env.VITE_APP_VERSION || "1.0";
+
   return new PublicClient({
-    transport: new HttpTransport({ endpoint: rpcEndpoint }),
+    transport: new HttpTransport({
+      endpoint: rpcEndpoint,
+      headers: {
+        "Client-Type": `wallet v${appVersion}`,
+      },
+    }),
     shardId,
   });
 }
@@ -72,7 +79,7 @@ export async function initializeOrDeploySmartAccount(params: {
         smartAccount,
         faucetClient,
         Currency.NIL,
-        Number(convertEthToWei(0.1)),
+        Number(convertEthToWei(0.009)),
         false,
       );
     } catch (e) {

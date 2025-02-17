@@ -52,7 +52,7 @@ test("Top up NIL currency and verify exact balance change", async () => {
   const initialBalance = await fetchBalance(smartAccount);
 
   // 3. Top up NIL currency
-  const topUpAmountNIL = convertEthToWei(0.01);
+  const topUpAmountNIL = convertEthToWei(0.0001);
   await topUpSpecificCurrency(smartAccount, faucetClient, Currency.NIL, Number(topUpAmountNIL));
 
   // 4. Fetch updated NIL balance
