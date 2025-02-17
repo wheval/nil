@@ -26,11 +26,11 @@ type AggregatorTestSuite struct {
 	cancellation context.CancelFunc
 
 	db           db.DB
-	blockStorage storage.BlockStorage
+	blockStorage *storage.BlockStorage
 	taskStorage  storage.TaskStorage
 
 	rpcClientMock *client.ClientMock
-	aggregator    *Aggregator
+	aggregator    *aggregator
 }
 
 func TestAggregatorTestSuite(t *testing.T) {

@@ -22,10 +22,11 @@ type BlockTasksIntegrationTestSuite struct {
 	ctx          context.Context
 	cancellation context.CancelFunc
 
-	db           db.DB
-	timer        common.Timer
+	db    db.DB
+	timer common.Timer
+
 	taskStorage  storage.TaskStorage
-	blockStorage storage.BlockStorage
+	blockStorage *storage.BlockStorage
 
 	scheduler scheduler.TaskScheduler
 }

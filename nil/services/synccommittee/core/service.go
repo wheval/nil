@@ -40,7 +40,7 @@ func New(cfg *Config, database db.DB, ethClient rollupcontract.EthClient) (*Sync
 	blockStorage := storage.NewBlockStorage(database, timer, metricsHandler, logger)
 	taskStorage := storage.NewTaskStorage(database, timer, metricsHandler, logger)
 
-	aggregator := NewAggregator(
+	agg := NewAggregator(
 		client,
 		blockStorage,
 		taskStorage,
@@ -80,7 +80,7 @@ func New(cfg *Config, database db.DB, ethClient rollupcontract.EthClient) (*Sync
 	s := &SyncCommittee{
 		Service: srv.NewService(
 			logger,
-			proposer, aggregator, taskScheduler, taskListener,
+			proposer, agg, taskScheduler, taskListener,
 		),
 	}
 

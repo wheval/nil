@@ -23,7 +23,7 @@ type BlockStorageTestSuite struct {
 	db           db.DB
 	ctx          context.Context
 	cancellation context.CancelFunc
-	bs           BlockStorage
+	bs           *BlockStorage
 }
 
 func (s *BlockStorageTestSuite) SetupSuite() {

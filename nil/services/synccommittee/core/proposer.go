@@ -12,17 +12,31 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rollupcontract"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/rs/zerolog"
 )
 
-type Proposer struct {
-	blockStorage storage.BlockStorage
-	retryRunner  common.RetryRunner
-	ethClient    rollupcontract.EthClient
+type ProposerStorage interface {
+	TryGetProvedStateRoot(ctx context.Context) (*common.Hash, error)
+
+	SetProvedStateRoot(ctx context.Context, stateRoot common.Hash) error
+
+	TryGetNextProposalData(ctx context.Context) (*scTypes.ProposalData, error)
+
+	SetBlockAsProposed(ctx context.Context, id scTypes.BlockId) error
+}
+
+type ProposerMetrics interface {
+	metrics.BasicMetrics
+	RecordProposerTxSent(ctx context.Context, proposalData *scTypes.ProposalData)
+}
+
+type proposer struct {
+	storage     ProposerStorage
+	retryRunner common.RetryRunner
+	ethClient   rollupcontract.EthClient
 
 	rollupContractWrapper *rollupcontract.Wrapper
 	params                *ProposerParams
@@ -39,11 +53,6 @@ type ProposerParams struct {
 	EthClientTimeout  time.Duration
 }
 
-type ProposerMetrics interface {
-	metrics.BasicMetrics
-	RecordProposerTxSent(ctx context.Context, proposalData *scTypes.ProposalData)
-}
-
 func NewDefaultProposerParams() *ProposerParams {
 	return &ProposerParams{
 		Endpoint:          "http://rpc2.sepolia.org",
@@ -57,11 +66,11 @@ func NewDefaultProposerParams() *ProposerParams {
 func NewProposer(
 	ctx context.Context,
 	params *ProposerParams,
-	blockStorage storage.BlockStorage,
+	storage ProposerStorage,
 	ethClient rollupcontract.EthClient,
 	metrics ProposerMetrics,
 	logger zerolog.Logger,
-) (*Proposer, error) {
+) (*proposer, error) {
 	retryRunner := common.NewRetryRunner(
 		common.RetryConfig{
 			ShouldRetry: common.LimitRetries(5),
@@ -70,12 +79,12 @@ func NewProposer(
 		logger,
 	)
 
-	p := &Proposer{
-		blockStorage: blockStorage,
-		ethClient:    ethClient,
-		params:       params,
-		retryRunner:  retryRunner,
-		metrics:      metrics,
+	p := &proposer{
+		storage:     storage,
+		ethClient:   ethClient,
+		params:      params,
+		retryRunner: retryRunner,
+		metrics:     metrics,
 	}
 
 	p.logger = srv.WorkerLogger(logger, p)
@@ -88,11 +97,11 @@ func NewProposer(
 	return p, nil
 }
 
-func (*Proposer) Name() string {
+func (*proposer) Name() string {
 	return "proposer"
 }
 
-func (p *Proposer) Run(ctx context.Context, started chan<- struct{}) error {
+func (p *proposer) Run(ctx context.Context, started chan<- struct{}) error {
 	err := p.initializeProvedStateRoot(ctx)
 	if err != nil {
 		return err
@@ -113,7 +122,7 @@ func (p *Proposer) Run(ctx context.Context, started chan<- struct{}) error {
 	return nil
 }
 
-func (p *Proposer) tryGetRollupContractWrapper(ctx context.Context) error {
+func (p *proposer) tryGetRollupContractWrapper(ctx context.Context) error {
 	if p.rollupContractWrapper == nil {
 		var err error
 		p.rollupContractWrapper, err = rollupcontract.NewWrapper(ctx, p.params.ContractAddress, p.params.PrivateKey, p.ethClient, p.params.EthClientTimeout, p.logger)
@@ -124,8 +133,8 @@ func (p *Proposer) tryGetRollupContractWrapper(ctx context.Context) error {
 	return nil
 }
 
-func (p *Proposer) initializeProvedStateRoot(ctx context.Context) error {
-	storedStateRoot, err := p.blockStorage.TryGetProvedStateRoot(ctx)
+func (p *proposer) initializeProvedStateRoot(ctx context.Context) error {
+	storedStateRoot, err := p.storage.TryGetProvedStateRoot(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to check if proved state root is initialized: %w", err)
 	}
@@ -156,7 +165,7 @@ func (p *Proposer) initializeProvedStateRoot(ctx context.Context) error {
 	}
 
 	if storedStateRoot == nil || *storedStateRoot != latestStateRoot {
-		err = p.blockStorage.SetProvedStateRoot(ctx, latestStateRoot)
+		err = p.storage.SetProvedStateRoot(ctx, latestStateRoot)
 		if err != nil {
 			return fmt.Errorf("failed set proved state root: %w", err)
 		}
@@ -168,14 +177,14 @@ func (p *Proposer) initializeProvedStateRoot(ctx context.Context) error {
 	return nil
 }
 
-func (p *Proposer) proposeNextBlock(ctx context.Context) error {
+func (p *proposer) proposeNextBlock(ctx context.Context) error {
 	if p.rollupContractWrapper == nil {
 		err := p.initializeProvedStateRoot(ctx)
 		if err != nil {
 			return err
 		}
 	}
-	data, err := p.blockStorage.TryGetNextProposalData(ctx)
+	data, err := p.storage.TryGetNextProposalData(ctx)
 	if err != nil {
 		return fmt.Errorf("failed get next block to propose: %w", err)
 	}
@@ -190,14 +199,14 @@ func (p *Proposer) proposeNextBlock(ctx context.Context) error {
 	}
 
 	blockId := scTypes.NewBlockId(types.MainShardId, data.MainShardBlockHash)
-	err = p.blockStorage.SetBlockAsProposed(ctx, blockId)
+	err = p.storage.SetBlockAsProposed(ctx, blockId)
 	if err != nil {
 		return fmt.Errorf("failed set block with hash=%s as proposed: %w", data.MainShardBlockHash, err)
 	}
 	return nil
 }
 
-func (p *Proposer) getLatestProvedStateRoot(ctx context.Context) (common.Hash, error) {
+func (p *proposer) getLatestProvedStateRoot(ctx context.Context) (common.Hash, error) {
 	err := p.tryGetRollupContractWrapper(ctx)
 	if err != nil {
 		p.logger.Error().Msgf("rollup contract wrapper is not initialized: %s", err)
@@ -223,7 +232,7 @@ func (p *Proposer) getLatestProvedStateRoot(ctx context.Context) (common.Hash, e
 	return latestProvedState, err
 }
 
-func (p *Proposer) commitBatch(ctx context.Context, blobs []kzg4844.Blob, batchIndexInBlobStorage string) (*ethtypes.Transaction, bool, error) {
+func (p *proposer) commitBatch(ctx context.Context, blobs []kzg4844.Blob, batchIndexInBlobStorage string) (*ethtypes.Transaction, bool, error) {
 	var tx *ethtypes.Transaction
 	batchTxSkipped := false
 	err := p.retryRunner.Do(ctx, func(context.Context) error {
@@ -264,7 +273,7 @@ func (p *Proposer) commitBatch(ctx context.Context, blobs []kzg4844.Blob, batchI
 	return tx, batchTxSkipped, nil
 }
 
-func (p *Proposer) updateState(ctx context.Context, tx *ethtypes.Transaction, data *scTypes.ProposalData, batchIndexInBlobStorage string) error {
+func (p *proposer) updateState(ctx context.Context, tx *ethtypes.Transaction, data *scTypes.ProposalData, batchIndexInBlobStorage string) error {
 	blobTxSidecar := tx.BlobTxSidecar()
 	dataProofs, err := rollupcontract.ComputeDataProofs(blobTxSidecar)
 	if err != nil {
@@ -319,7 +328,7 @@ func (p *Proposer) updateState(ctx context.Context, tx *ethtypes.Transaction, da
 	return nil
 }
 
-func (p *Proposer) sendProof(ctx context.Context, data *scTypes.ProposalData) error {
+func (p *proposer) sendProof(ctx context.Context, data *scTypes.ProposalData) error {
 	// TODO: populate with actual data
 	blobs := []kzg4844.Blob{{0x01}, {0x02}, {0x03}}
 	batchIndexInBlobStorage := "0x0000000000000000000000000000000000000000000000000000000000000001"
