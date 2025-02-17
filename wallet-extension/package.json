@@ -16,7 +16,6 @@
     "@nilfoundation/niljs": "0.23.0",
     "@nilfoundation/ui-kit": "^2.5.28",
     "baseui": "^13.0.0",
-    "clean": "^4.0.2",
     "effector": "^22.8.6",
     "effector-react": "^22.5.3",
     "i18next": "^24.2.1",
