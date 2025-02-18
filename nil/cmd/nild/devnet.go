@@ -60,15 +60,16 @@ type devnetSpec struct {
 }
 
 type server struct {
-	service  string
-	name     string
-	identity string
-	port     int
-	rpcPort  int
-	credsDir string
-	workDir  string
-	nodeSpec nodeSpec
-	vkm      *keys.ValidatorKeysManager
+	service         string
+	name            string
+	identity        string
+	port            int
+	rpcPort         int
+	credsDir        string
+	workDir         string
+	nodeSpec        nodeSpec
+	logClientEvents bool
+	vkm             *keys.ValidatorKeysManager
 }
 
 type devnet struct {
@@ -155,7 +156,7 @@ func genDevnet(cmd *cobra.Command, args []string) error {
 	if spec.EnableRPCOnValidators {
 		validatorRPCBasePort = spec.NilRPCPort + len(spec.NilRPCConfig)
 	}
-	validators, err := spec.makeServers(spec.NilConfig, spec.NildP2PBaseTCPPort, validatorRPCBasePort, "nil", baseDir)
+	validators, err := spec.makeServers(spec.NilConfig, spec.NildP2PBaseTCPPort, validatorRPCBasePort, "nil", baseDir, false)
 	if err != nil {
 		return fmt.Errorf("failed to setup validator nodes: %w", err)
 	}
@@ -164,11 +165,11 @@ func genDevnet(cmd *cobra.Command, args []string) error {
 
 	archiveBaseP2P := spec.NildP2PBaseTCPPort + len(validators)
 
-	if devnet.archivers, err = spec.makeServers(spec.NilArchiveConfig, archiveBaseP2P, 0, "nil-archive", baseDir); err != nil {
+	if devnet.archivers, err = spec.makeServers(spec.NilArchiveConfig, archiveBaseP2P, 0, "nil-archive", baseDir, false); err != nil {
 		return fmt.Errorf("failed to setup archive nodes: %w", err)
 	}
 
-	if devnet.rpcNodes, err = spec.makeServers(spec.NilRPCConfig, 0, spec.NilRPCPort, "nil-rpc", baseDir); err != nil {
+	if devnet.rpcNodes, err = spec.makeServers(spec.NilRPCConfig, 0, spec.NilRPCPort, "nil-rpc", baseDir, true); err != nil {
 		return fmt.Errorf("failed to setup rpc nodes: %w", err)
 	}
 
@@ -211,12 +212,13 @@ func (devnet devnet) writeConfigs(servers []server, name string, only string) er
 	return nil
 }
 
-func (spec devnetSpec) makeServers(nodeSpecs []nodeSpec, basePort int, baseHTTPPort int, service string, baseDir string) ([]server, error) {
+func (spec devnetSpec) makeServers(nodeSpecs []nodeSpec, basePort int, baseHTTPPort int, service string, baseDir string, logClientEvents bool) ([]server, error) {
 	servers := make([]server, len(nodeSpecs))
 	for i, nodeSpec := range nodeSpecs {
 		servers[i].service = service
 		servers[i].name = fmt.Sprintf("%s-%d", service, i)
 		servers[i].nodeSpec = nodeSpec
+		servers[i].logClientEvents = logClientEvents
 		if basePort != 0 {
 			servers[i].port = basePort + i
 		}
@@ -291,6 +293,7 @@ func (devnet *devnet) writeServerConfig(instanceId int, srv server, only string)
 	cfg.SplitShards = inst.SplitShards
 	cfg.BootstrapPeers = devnet.getPeers(devnet.validators, inst.BootstrapPeersIdx)
 	cfg.AdminSocketPath = srv.workDir + "/admin_socket"
+	cfg.LogClientRpcEvents = srv.logClientEvents
 	cfg.DB = db.NewDefaultBadgerDBOptions()
 	cfg.DB.Path = srv.workDir + "/database"
 	cfg.DB.AllowDrop = spec.NilWipeOnUpdate
