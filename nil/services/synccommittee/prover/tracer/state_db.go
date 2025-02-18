@@ -75,7 +75,7 @@ func (mtc *transactionTraceContext) processOpcode(
 	// Finish in reverse order to keep rw_counter sequential.
 	// Each operation consists of read stack -> read data -> write data -> write stack (we
 	// ignore specific memory parts like returndata, etc for now). Intermediate stages could be omitted, but
-	// to keep RW ctr correct, stack tracer should be run the first on new opcode, and be finilized the last on previous opcode.
+	// to keep RW ctr correct, stack tracer should be run the first on new opcode, and be finalized the last on previous opcode.
 	// TODO: add check that only one of first 3 is run
 	mtc.memoryTracer.FinishPrevOpcodeTracing()
 	mtc.expTracer.FinishPrevOpcodeTracing()
@@ -208,7 +208,7 @@ func (tsdb *TracerStateDB) getOrNewAccount(addr types.Address) (*execution.Accou
 	return &createdAcc.AccountState, nil
 }
 
-// OutTransactions don't requre handling, they are just included into block
+// OutTransactions don't require handling, they are just included into block
 func (tsdb *TracerStateDB) HandleInTransaction(transaction *types.Transaction) (err error) {
 	tsdb.logger.Trace().
 		Int64("seqno", int64(transaction.Seqno)).
@@ -657,7 +657,7 @@ func (tsdb *TracerStateDB) RevertToSnapshot(int) {
 // Snapshot returns an identifier for the current revision of the state.
 func (tsdb *TracerStateDB) Snapshot() int {
 	// Snapshot is needed for rollback when an error was returned by the EVM.
-	// We could just ignore failing transactions in proof provider. In case revert occures, we fail in RevertToSnapshot(int)
+	// We could just ignore failing transactions in proof provider. In case revert occurs, we fail in RevertToSnapshot(int)
 	return 0
 }
 
