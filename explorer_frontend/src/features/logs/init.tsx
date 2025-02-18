@@ -3,9 +3,9 @@ import { MonoParagraphMedium } from "baseui/typography";
 import { nanoid } from "nanoid";
 import { compileCodeFx } from "../code/model";
 import {
-  assignSmartContractFx,
   callFx,
   deploySmartContractFx,
+  importSmartContractFx,
   registerContractInCometaFx,
   sendMethodFx,
 } from "../contracts/models/base";
@@ -40,7 +40,7 @@ $logs.on(deploySmartContractFx.doneData, (logs, { address, name, deployedFrom, t
   ];
 });
 
-$logs.on(assignSmartContractFx.doneData, (logs, { assignedSmartContractAddress }) => {
+$logs.on(importSmartContractFx.doneData, (logs, { importedSmartContractAddress }) => {
   return [
     ...logs,
     {
@@ -49,10 +49,10 @@ $logs.on(assignSmartContractFx.doneData, (logs, { assignedSmartContractAddress }
       type: LogType.Success,
       shortDescription: (
         <MonoParagraphMedium color={COLORS.green200}>
-          Contract assigned successfully
+          Contract imported successfully
         </MonoParagraphMedium>
       ),
-      payload: <ContractDeployedLog address={assignedSmartContractAddress} />,
+      payload: <ContractDeployedLog address={importedSmartContractAddress} />,
       timestamp: Date.now(),
     },
   ];
@@ -74,7 +74,7 @@ $logs.on(deploySmartContractFx.failData, (logs, error) => {
   ];
 });
 
-$logs.on(assignSmartContractFx.failData, (logs, error) => {
+$logs.on(importSmartContractFx.failData, (logs, error) => {
   return [
     ...logs,
     {
