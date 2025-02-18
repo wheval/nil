@@ -3,10 +3,13 @@ package jsonrpc
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
@@ -19,12 +22,31 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encoded hexutil.Byte
 
 	shardId := extTxn.To.ShardId()
 	reason, err := api.rawapi.SendTransaction(ctx, shardId, encoded)
+
+	headers, ok := ctx.Value(transport.HeadersContextKey).(http.Header)
+	if !ok {
+		headers = http.Header{}
+		headers.Add("Client-Type", "failed to extract headers from context")
+	}
+
+	log := api.clientEventsLog.Log().
+		Stringer(logging.FieldShardId, shardId).
+		Str(logging.FieldRpcMethod, "eth_sendRawTransaction").
+		Str(logging.FieldClientType, headers.Get("Client-Type")).
+		Str(logging.FieldClientVersion, headers.Get("Client-Version")).
+		Str(logging.FieldUid, headers.Get("X-UID")) //nolint:canonicalheader
+
 	if err != nil {
+		log.Msg("finished with err")
 		return common.EmptyHash, err
 	}
 
 	if reason != txnpool.NotSet {
+		log.Err(ErrTransactionDiscarded).Msgf("%s", reason)
 		return common.Hash{}, fmt.Errorf("%w: %s", ErrTransactionDiscarded, reason)
 	}
-	return extTxn.Hash(), nil
+
+	h := extTxn.Hash()
+	log.Stringer(logging.FieldTransactionHash, h).Msg("added to the pool")
+	return h, nil
 }

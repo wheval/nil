@@ -24,6 +24,10 @@ const (
 	defaultBatchConcurrency = 1 // trnasactions from batch maust be processed in order
 )
 
+type ContextKey string
+
+var HeadersContextKey ContextKey = "headers"
+
 // Server is an RPC server.
 type Server struct {
 	services serviceRegistry
@@ -31,18 +35,20 @@ type Server struct {
 	codecs   mapset.Set // mapset.Set[ServerCodec] requires go 1.20
 
 	batchConcurrency    uint
-	traceRequests       bool // Whether to print requests at INFO level
-	debugSingleRequest  bool // Whether to print requests at INFO level
-	batchLimit          int  // Maximum number of requests in a batch
+	traceRequests       bool     // Whether to print requests at INFO level
+	debugSingleRequest  bool     // Whether to print requests at INFO level
+	batchLimit          int      // Maximum number of requests in a batch
+	keepHeaders         []string // headers to pass to request handler
 	logger              zerolog.Logger
 	rpcSlowLogThreshold time.Duration
 }
 
 // NewServer creates a new server instance with no registered handlers.
-func NewServer(traceRequests, debugSingleRequest bool, logger zerolog.Logger, rpcSlowLogThreshold time.Duration) *Server {
+func NewServer(traceRequests, debugSingleRequest bool, logger zerolog.Logger, rpcSlowLogThreshold time.Duration, keepHeaders []string) *Server {
 	server := &Server{
 		services: serviceRegistry{logger: logger}, codecs: mapset.NewSet(), run: 1, batchConcurrency: defaultBatchConcurrency,
 		traceRequests: traceRequests, debugSingleRequest: debugSingleRequest, logger: logger, rpcSlowLogThreshold: rpcSlowLogThreshold,
+		keepHeaders: keepHeaders,
 	}
 
 	// Register the default service providing meta-information about the RPC service such
@@ -107,6 +113,12 @@ func (s *Server) ServeSingleRequest(ctx context.Context, r *http.Request, w http
 	if atomic.LoadInt32(&s.run) == 0 {
 		return
 	}
+
+	headers := http.Header{}
+	for _, h := range s.keepHeaders {
+		headers.Add(h, r.Header.Get(h))
+	}
+	ctx = context.WithValue(ctx, HeadersContextKey, headers)
 
 	h := newHandler(ctx, codec, &s.services, s.batchConcurrency, s.traceRequests, s.logger, s.rpcSlowLogThreshold)
 

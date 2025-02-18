@@ -51,4 +51,8 @@ const (
 	FieldHeight    = "height"
 	FieldRound     = "round"
 	FieldType      = "type"
+
+	FieldClientType    = "clientType"
+	FieldClientVersion = "clientVersion"
+	FieldUid           = "uid"
 )

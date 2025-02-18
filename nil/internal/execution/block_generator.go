@@ -129,7 +129,7 @@ func (g *BlockGenerator) collectGasPrices(prevBlockHash common.Hash, shards []co
 
 			block, err := db.ReadBlock(roTx, shardId, shardHash)
 			if err != nil {
-				logger.Err(err).
+				g.logger.Err(err).
 					Stringer(logging.FieldShardId, shardId).
 					Msg("Get gas price from shard: failed to read last block")
 				gasPrice.Shards[shardId] = *types.DefaultGasPrice.Uint256
@@ -174,21 +174,21 @@ func (g *BlockGenerator) GenerateZeroState(zeroStateYaml string, config *ZeroSta
 	return res.Block, nil
 }
 
-func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, logger zerolog.Logger) error {
+func (g *BlockGenerator) prepareExecutionState(proposal *Proposal) error {
 	if g.executionState.PrevBlock != proposal.PrevBlockHash {
 		esJson, err := g.executionState.MarshalJSON()
 		if err != nil {
-			logger.Err(err).Msg("Failed to marshal execution state")
+			g.logger.Err(err).Msg("Failed to marshal execution state")
 			esJson = nil
 		}
 		//nolint:musttag
 		proposalJson, err := json.Marshal(proposal)
 		if err != nil {
-			logger.Err(err).Msg("Failed to marshal block proposal")
+			g.logger.Err(err).Msg("Failed to marshal block proposal")
 			proposalJson = nil
 		}
 
-		logger.Debug().
+		g.logger.Debug().
 			Stringer("expected", g.executionState.PrevBlock).
 			Stringer("got", proposal.PrevBlockHash).
 			RawJSON("executionState", esJson).
@@ -269,18 +269,18 @@ func (g *BlockGenerator) handleTxn(txn *types.Transaction) error {
 	return nil
 }
 
-func (g *BlockGenerator) BuildBlock(proposal *Proposal, logger zerolog.Logger) (*BlockGenerationResult, error) {
-	if err := g.prepareExecutionState(proposal, logger); err != nil {
+func (g *BlockGenerator) BuildBlock(proposal *Proposal) (*BlockGenerationResult, error) {
+	if err := g.prepareExecutionState(proposal); err != nil {
 		return nil, err
 	}
 	return g.executionState.BuildBlock(proposal.PrevBlockId + 1)
 }
 
-func (g *BlockGenerator) GenerateBlock(proposal *Proposal, logger zerolog.Logger, sig *types.BlsAggregateSignature) (*BlockGenerationResult, error) {
+func (g *BlockGenerator) GenerateBlock(proposal *Proposal, sig *types.BlsAggregateSignature) (*BlockGenerationResult, error) {
 	g.mh.StartProcessingMeasurement(g.ctx, g.executionState.GasPrice, proposal.PrevBlockId+1)
 	defer func() { g.mh.EndProcessingMeasurement(g.ctx, g.counters) }()
 
-	if err := g.prepareExecutionState(proposal, logger); err != nil {
+	if err := g.prepareExecutionState(proposal); err != nil {
 		return nil, err
 	}
 

@@ -54,6 +54,7 @@ func startRpcServer(ctx context.Context, cfg *Config, rawApi rawapi.NodeApi, db 
 		TraceRequests:   true,
 		HTTPTimeouts:    httpcfg.DefaultHTTPTimeouts,
 		HttpCORSDomain:  []string{"*"},
+		KeepHeaders:     []string{"Client-Version", "Client-Type", "X-UID"},
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -61,11 +62,11 @@ func startRpcServer(ctx context.Context, cfg *Config, rawApi rawapi.NodeApi, db 
 
 	var ethApiService any
 	if cfg.RunMode == NormalRunMode || cfg.RunMode == RpcRunMode {
-		ethImpl := jsonrpc.NewEthAPI(ctx, rawApi, db, pollBlocksForLogs)
+		ethImpl := jsonrpc.NewEthAPI(ctx, rawApi, db, pollBlocksForLogs, cfg.LogClientRpcEvents)
 		defer ethImpl.Shutdown()
 		ethApiService = ethImpl
 	} else {
-		ethImpl := jsonrpc.NewEthAPIRo(ctx, rawApi, db, pollBlocksForLogs)
+		ethImpl := jsonrpc.NewEthAPIRo(ctx, rawApi, db, pollBlocksForLogs, cfg.LogClientRpcEvents)
 		defer ethImpl.Shutdown()
 		ethApiService = ethImpl
 	}

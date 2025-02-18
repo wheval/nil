@@ -46,4 +46,6 @@ type HttpCfg struct {
 	HTTPTimeouts       HTTPTimeouts
 
 	RPCSlowLogThreshold time.Duration
+
+	KeepHeaders []string // List of headers to pass to the request handler
 }

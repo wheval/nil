@@ -108,12 +108,12 @@ func (h *handler) shouldLogRequestParams(method string, lvl zerolog.Level) bool 
 	return true
 }
 
-func (h *handler) log(lvl zerolog.Level, txn *Message, logMsg string, duration time.Duration) {
+func (h *handler) log(lvl zerolog.Level, msg *Message, logMsg string, duration time.Duration) {
 	l := h.logger.WithLevel(lvl).
-		Stringer(logging.FieldReqId, idForLog(txn.ID)).
-		Str(logging.FieldRpcMethod, txn.Method)
+		Stringer(logging.FieldReqId, idForLog(msg.ID)).
+		Str(logging.FieldRpcMethod, msg.Method)
 
-	if h.shouldLogRequestParams(txn.Method, lvl) {
+	if h.shouldLogRequestParams(msg.Method, lvl) {
 		trim := func(s string) string {
 			const MaxMessageLength = 1000
 			if len(s) > MaxMessageLength && lvl != zerolog.TraceLevel {
@@ -123,8 +123,8 @@ func (h *handler) log(lvl zerolog.Level, txn *Message, logMsg string, duration t
 			return s
 		}
 
-		l = l.Str(logging.FieldRpcParams, trim(string(txn.Params))).
-			Str(logging.FieldRpcResult, trim(string(txn.Result)))
+		l = l.Str(logging.FieldRpcParams, trim(string(msg.Params))).
+			Str(logging.FieldRpcResult, trim(string(msg.Result)))
 	}
 
 	if duration > 0 {
@@ -150,22 +150,22 @@ func (h *handler) isRpcMethodNeedsCheck(method string) bool {
 }
 
 // handleBatch executes all messages in a batch and returns the responses.
-func (h *handler) handleBatch(txns []*Message) {
+func (h *handler) handleBatch(msgs []*Message) {
 	// Emit error response for empty batches:
-	if len(txns) == 0 {
+	if len(msgs) == 0 {
 		_ = h.conn.WriteJSON(h.rootCtx, errorMessage(&invalidRequestError{"empty batch"}))
 		return
 	}
 
 	// Process calls on a goroutine because they may block indefinitely:
 	// All goroutines will place results right to this array. Because requests order must match reply orders.
-	answers := make([]interface{}, len(txns))
+	answers := make([]interface{}, len(msgs))
 	// Bounded parallelism pattern explanation https://blog.golang.org/pipelines#TOC_9.
 	boundedConcurrency := make(chan struct{}, h.maxBatchConcurrency)
 	defer close(boundedConcurrency)
 	wg := sync.WaitGroup{}
-	wg.Add(len(txns))
-	for i := range txns {
+	wg.Add(len(msgs))
+	for i := range msgs {
 		boundedConcurrency <- struct{}{}
 		go func(i int) {
 			defer func() {
@@ -175,7 +175,7 @@ func (h *handler) handleBatch(txns []*Message) {
 
 			buf := bytes.NewBuffer(nil)
 			stream := jsoniter.NewStream(jsoniter.ConfigDefault, buf, 4096)
-			if res := h.handleCallMsg(h.rootCtx, txns[i], stream); res != nil {
+			if res := h.handleCallMsg(h.rootCtx, msgs[i], stream); res != nil {
 				answers[i] = res
 			}
 			_ = stream.Flush()
@@ -191,9 +191,9 @@ func (h *handler) handleBatch(txns []*Message) {
 }
 
 // handleMsg handles a single message.
-func (h *handler) handleMsg(txn *Message) {
+func (h *handler) handleMsg(msg *Message) {
 	stream := jsoniter.NewStream(jsoniter.ConfigDefault, nil, 4096)
-	answer := h.handleCallMsg(h.rootCtx, txn, stream)
+	answer := h.handleCallMsg(h.rootCtx, msg, stream)
 	if answer != nil {
 		buffer, _ := json.Marshal(answer) //nolint: errchkjson
 		_, _ = stream.Write(buffer)
@@ -202,82 +202,82 @@ func (h *handler) handleMsg(txn *Message) {
 }
 
 // handleCallMsg executes a call message and returns the answer.
-func (h *handler) handleCallMsg(ctx context.Context, txn *Message, stream *jsoniter.Stream) *Message {
+func (h *handler) handleCallMsg(ctx context.Context, msg *Message, stream *jsoniter.Stream) *Message {
 	start := time.Now()
 	switch {
-	case txn.isCall():
+	case msg.isCall():
 		var doSlowLog bool
 		if h.slowLogThreshold > 0 {
-			doSlowLog = h.isRpcMethodNeedsCheck(txn.Method)
+			doSlowLog = h.isRpcMethodNeedsCheck(msg.Method)
 			if doSlowLog {
 				slowTimer := time.AfterFunc(h.slowLogThreshold, func() {
-					h.log(zerolog.InfoLevel, txn, "Slow running request", time.Since(start))
+					h.log(zerolog.InfoLevel, msg, "Slow running request", time.Since(start))
 				})
 				defer slowTimer.Stop()
 			}
 		}
 
-		resp := h.handleCall(ctx, txn, stream)
+		resp := h.handleCall(ctx, msg, stream)
 		requestDuration := time.Since(start)
 
 		if doSlowLog {
 			if requestDuration > h.slowLogThreshold {
-				h.log(zerolog.InfoLevel, txn, "Slow request finished.", requestDuration)
+				h.log(zerolog.InfoLevel, msg, "Slow request finished.", requestDuration)
 			}
 		}
 
 		if resp != nil && resp.Error != nil {
-			h.log(zerolog.InfoLevel, txn, "Served with error: "+resp.Error.Message, requestDuration)
+			h.log(zerolog.InfoLevel, msg, "Served with error: "+resp.Error.Message, requestDuration)
 		}
 
 		if resp != nil && resp.Result != nil {
-			txn.Result = resp.Result
+			msg.Result = resp.Result
 		}
 
-		h.log(h.requestLoggingLevel(), txn, "Served.", requestDuration)
+		h.log(h.requestLoggingLevel(), msg, "Served.", requestDuration)
 
 		return resp
-	case txn.hasValidID():
-		return txn.errorResponse(&invalidRequestError{"invalid request"})
+	case msg.hasValidID():
+		return msg.errorResponse(&invalidRequestError{"invalid request"})
 	default:
 		return errorMessage(&invalidRequestError{"invalid request"})
 	}
 }
 
 // handleCall processes method calls.
-func (h *handler) handleCall(ctx context.Context, txn *Message, stream *jsoniter.Stream) *Message {
-	callb := h.reg.callback(txn.Method)
+func (h *handler) handleCall(ctx context.Context, msg *Message, stream *jsoniter.Stream) *Message {
+	callb := h.reg.callback(msg.Method)
 	if callb == nil {
-		return txn.errorResponse(&methodNotFoundError{method: txn.Method})
+		return msg.errorResponse(&methodNotFoundError{method: msg.Method})
 	}
-	args, err := parsePositionalArguments(txn.Params, callb.argTypes)
+	args, err := parsePositionalArguments(msg.Params, callb.argTypes)
 	if err != nil {
-		return txn.errorResponse(&InvalidParamsError{err.Error()})
+		return msg.errorResponse(&InvalidParamsError{err.Error()})
 	}
-	return h.runMethod(ctx, txn, callb, args, stream)
+	return h.runMethod(ctx, msg, callb, args, stream)
 }
 
 // runMethod runs the Go callback for an RPC method.
-func (h *handler) runMethod(ctx context.Context, txn *Message, callb *callback, args []reflect.Value, stream *jsoniter.Stream) *Message {
+func (h *handler) runMethod(ctx context.Context, msg *Message, callb *callback, args []reflect.Value, stream *jsoniter.Stream) *Message {
 	if !callb.streamable {
-		result, err := callb.call(ctx, txn.Method, args, stream)
+		result, err := callb.call(ctx, msg.Method, args, stream)
 		if err != nil {
-			return txn.errorResponse(err)
+			return msg.errorResponse(err)
 		}
-		return txn.response(result)
+		return msg.response(result)
 	}
 
 	stream.WriteObjectStart()
 	stream.WriteObjectField("jsonrpc")
 	stream.WriteString("2.0")
 	stream.WriteMore()
-	if txn.ID != nil {
+	if msg.ID != nil {
 		stream.WriteObjectField("id")
-		_, _ = stream.Write(txn.ID)
+		_, _ = stream.Write(msg.ID)
 		stream.WriteMore()
 	}
 	stream.WriteObjectField("result")
-	_, err := callb.call(ctx, txn.Method, args, stream)
+	_, err := callb.call(ctx, msg.Method, args, stream)
 	if err != nil {
 		writeNilIfNotPresent(stream)
 		stream.WriteMore()

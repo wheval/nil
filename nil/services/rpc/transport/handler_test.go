@@ -39,7 +39,7 @@ func TestHandlerDoesNotDoubleWriteNull(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			txn := Message{
+			msg := Message{
 				Version: "2.0",
 				ID:      []byte{49},
 				Method:  "test_test",
@@ -80,7 +80,7 @@ func TestHandlerDoesNotDoubleWriteNull(t *testing.T) {
 				streamable: true,
 			}
 
-			args, err := parsePositionalArguments((txn).Params, cb.argTypes)
+			args, err := parsePositionalArguments((msg).Params, cb.argTypes)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -89,7 +89,7 @@ func TestHandlerDoesNotDoubleWriteNull(t *testing.T) {
 			stream := jsoniter.NewStream(jsoniter.ConfigDefault, &buf, 4096)
 
 			h := handler{}
-			h.runMethod(t.Context(), &txn, cb, args, stream)
+			h.runMethod(t.Context(), &msg, cb, args, stream)
 
 			output := buf.String()
 			assert.Equal(t, testParams.expected, output, "expected output should match")
