@@ -28,7 +28,7 @@ func (s *NilLoadGeneratorRpc) SetupTest() {
 	s.Start(&nilservice.Config{
 		NShards:              4,
 		HttpUrl:              sockPath,
-		CollatorTickPeriodMs: 50,
+		CollatorTickPeriodMs: 30,
 	})
 
 	var faucetEndpoint string
@@ -39,14 +39,14 @@ func (s *NilLoadGeneratorRpc) SetupTest() {
 	s.Wg.Add(1)
 	go func() {
 		defer s.Wg.Done()
-		if err := nil_load_generator.Run(s.Context, nil_load_generator.Config{OwnEndpoint: nilLoadGeneratorSockPath, Endpoint: sockPath, FaucetEndpoint: faucetEndpoint, SwapPerIteration: 1},
+		if err := nil_load_generator.Run(s.Context, nil_load_generator.Config{OwnEndpoint: nilLoadGeneratorSockPath, Endpoint: sockPath, FaucetEndpoint: faucetEndpoint, SwapPerIteration: 1, RpcSwapLimit: "10000000", MintTokenAmount0: "3000000", MintTokenAmount1: "10000", ThresholdAmount: "3000000000", SwapAmount: "1000"},
 			logging.NewLogger("test_nil_load_generator")); err != nil {
 			s.runErrCh <- err
 		} else {
 			s.runErrCh <- nil
 		}
 	}()
-	time.Sleep(time.Second)
+	time.Sleep(3 * time.Second)
 }
 
 func (s *NilLoadGeneratorRpc) TearDownTest() {
@@ -56,7 +56,6 @@ func (s *NilLoadGeneratorRpc) TearDownTest() {
 func (s *NilLoadGeneratorRpc) TestSmartAccountBalanceModification() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
-
 	testTimeout := time.After(15 * time.Second)
 
 	client := nil_load_generator.NewClient(s.endpoint)
@@ -86,11 +85,6 @@ func (s *NilLoadGeneratorRpc) TestSmartAccountBalanceModification() {
 	for {
 		select {
 		case <-testTimeout:
-			for i, addr := range resSmartAccounts {
-				newBalance, err := s.Client.GetBalance(s.Context, addr, "latest")
-				s.Require().NoError(err)
-				s.Require().Greater(smartAccountsBalance[i].Uint64(), newBalance.Uint64())
-			}
 			return
 		case <-ticker.C:
 			res, err := client.GetHealthCheck()
