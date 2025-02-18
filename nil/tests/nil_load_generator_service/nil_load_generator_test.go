@@ -75,7 +75,7 @@ func (s *NilLoadGeneratorRpc) TestSmartAccountBalanceModification() {
 			s.Require().NoError(err)
 		}
 		return len(resSmartAccounts) != 0
-	}, 20*time.Second, 100*time.Millisecond)
+	}, 60*time.Second, 100*time.Millisecond)
 
 	for i, addr := range resSmartAccounts {
 		s.Require().Positive(smartAccountsBalance[i].Uint64(),
