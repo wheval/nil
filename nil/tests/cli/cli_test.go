@@ -355,20 +355,21 @@ faucet_endpoint = {{ .FaucetUrl }}
 		addr = s.RunCli("-c", cfgPath, "contract", "address", s.incBinPath, "123321", "--abi", s.incAbiPath, "-q")
 	})
 
-	res = s.RunCli("-c", cfgPath, "smart-account", "deploy", s.incBinPath, "123321", "--abi", s.incAbiPath)
+	res = s.RunCli("-c", cfgPath, "smart-account", "deploy", s.incBinPath, "123321", "--abi", s.incAbiPath, "-q")
+	parts := strings.Split(res, "\n")
+	s.Require().Len(parts, 2)
 	s.Run("Deploy contract", func() {
-		s.Contains(res, "Contract address")
-		s.Contains(res, addr)
+		s.Equal(addr, parts[1])
+		receipt := s.WaitIncludedInMain(common.HexToHash(parts[0]))
+		s.Require().True(receipt.AllSuccess())
 	})
 
 	s.Run("Check deploy transaction result and receipt", func() {
-		hash := strings.TrimPrefix(res, "Transaction hash: ")[:66]
-
-		res = s.RunCli("-c", cfgPath, "transaction", hash)
+		res = s.RunCli("-c", cfgPath, "transaction", parts[0])
 		s.Contains(res, "Transaction data:")
 		s.Contains(res, "\"success\": true")
 
-		res = s.RunCli("-c", cfgPath, "receipt", hash)
+		res = s.RunCli("-c", cfgPath, "receipt", parts[0])
 		s.Contains(res, "Receipt data:")
 		s.Contains(res, "\"success\": true")
 	})
@@ -418,8 +419,9 @@ faucet_endpoint = {{ .FaucetUrl }}
 	})
 
 	s.Run("Call 'increment' function of contract", func() {
-		res := s.RunCli("-c", cfgPath, "smart-account", "send-transaction", addr, "increment", "--abi", s.incAbiPath)
-		s.Contains(res, "Transaction hash")
+		res := s.RunCli("-c", cfgPath, "smart-account", "send-transaction", addr, "increment", "--abi", s.incAbiPath, "-q")
+		receipt := s.WaitIncludedInMain(common.HexToHash(res))
+		s.Require().True(receipt.AllSuccess())
 	})
 
 	s.Run("Call read-only 'get' function of contract once again", func() {
@@ -526,12 +528,13 @@ func (s *SuiteCliExec) TestCliCometa() {
 	var txnHash string
 
 	s.Run("Deploy counter", func() {
-		out := s.RunCliCfg("smart-account", "deploy", "--compile-input", "../contracts/counter-compile.json", "--shard-id", "1")
+		out := s.RunCliCfg("smart-account", "deploy", "--compile-input", "../contracts/counter-compile.json", "--shard-id", "1", "-q")
 		parts := strings.Split(out, "\n")
 		s.Require().Len(parts, 2)
-		parts = strings.Split(parts[1], ": ")
-		s.Require().Len(parts, 2)
 		address = types.HexToAddress(parts[1])
+		txHash := common.HexToHash(parts[0])
+		receipt := s.WaitIncludedInMain(txHash)
+		s.Require().True(receipt.AllSuccess())
 	})
 
 	s.Run("Get metadata", func() {
