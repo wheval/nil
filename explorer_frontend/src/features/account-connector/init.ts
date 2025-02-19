@@ -100,7 +100,7 @@ createSmartAccountFx.use(async ({ privateKey, endpoint }) => {
       {
         smartAccountAddress: smartAccount.address,
         faucetAddress: faucets.NIL,
-        amount: 1e18,
+        amount: BigInt(1e18),
       },
       client,
     );
