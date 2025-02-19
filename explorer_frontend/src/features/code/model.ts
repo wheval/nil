@@ -28,7 +28,13 @@ export const compileCodeFx = codeDomain.createEffect<
     code: string;
     version: string;
   },
-  App[]
+  {
+    apps: App[];
+    warnings: {
+      message: string;
+      line: number;
+    }[];
+  }
 >();
 
 export const $codeSnippetHash = codeDomain.createStore<string | null>(null);

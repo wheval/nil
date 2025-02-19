@@ -160,7 +160,7 @@ topUpSmartAccountBalanceFx.use(async (smartAccount) => {
 
   await faucetClient.topUpAndWaitUntilCompletion(
     {
-      smartAccount: smartAccount.address,
+      smartAccountAddress: smartAccount.address,
       faucetAddress: faucets.NIL,
       amount: convertEthToWei(0.1),
     },

@@ -54,7 +54,22 @@ compileCodeFx.use(async ({ version, code }) => {
     }
   }
 
-  return contracts;
+  const errors = res.errors || [];
+  const severeErrors = errors.filter((error) => error.severity === "error");
+
+  if (severeErrors.length > 0) {
+    throw new Error(severeErrors.map((error) => error.formattedMessage).join("\n"));
+  }
+
+  const warnings = errors.filter((error) => error.severity === "warning");
+  const refinedWarnings = warnings.map((warning) => {
+    return {
+      message: warning.formattedMessage,
+      line: warning.sourceLocation?.start || 0,
+    };
+  });
+
+  return { apps: contracts, warnings: refinedWarnings };
 });
 
 $solidityVersion.on(changeSolidityVersion, (_, version) => version);

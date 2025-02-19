@@ -90,7 +90,27 @@ $logs.on(importSmartContractFx.failData, (logs, error) => {
   ];
 });
 
-$logs.on(compileCodeFx.doneData, (logs) => {
+$logs.on(compileCodeFx.doneData, (logs, { warnings }) => {
+  if (warnings.length > 0) {
+    return [
+      ...logs,
+      {
+        id: nanoid(),
+        topic: LogTopic.Compilation,
+        type: LogType.Warn,
+        shortDescription: (
+          <MonoParagraphMedium color={COLORS.yellow200}>Compiled with warnings</MonoParagraphMedium>
+        ),
+        payload: (
+          <MonoParagraphMedium color={COLORS.gray50}>
+            {warnings.map((warning) => formatSolidityError(warning.message)).join("\n")}
+          </MonoParagraphMedium>
+        ),
+        timestamp: Date.now(),
+      },
+    ];
+  }
+
   return [
     ...logs,
     {

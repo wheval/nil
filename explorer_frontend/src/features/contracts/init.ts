@@ -67,7 +67,7 @@ import { exportApp, exportAppFx } from "./models/exportApp";
 
 compileCodeFx.doneData.watch(console.log);
 
-$contracts.on(compileCodeFx.doneData, (_, apps) => apps);
+$contracts.on(compileCodeFx.doneData, (_, { apps }) => apps);
 $contracts.reset(compileCodeFx.fail);
 
 persist({
