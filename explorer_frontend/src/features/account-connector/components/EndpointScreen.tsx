@@ -11,6 +11,7 @@ import animationData from "../assets/wallet-creation.json";
 import {
   $balance,
   $balanceToken,
+  $endpoint,
   $initializingSmartAccountError,
   $initializingSmartAccountState,
   $smartAccount,
@@ -23,7 +24,6 @@ import { type ValidationResult, validateRpcEndpoint } from "../validation";
 
 const EndpointScreen = () => {
   const [css] = useStyletron();
-  const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
   const [isDisabled, setIsDisabled] = useState(false);
   const { RPC_TELEGRAM_BOT } = getRuntimeConfigOrThrow();
@@ -36,6 +36,7 @@ const EndpointScreen = () => {
     initializingSmartAccountState,
     initializingSmartAccountError,
     isPendingSmartAccountCreation,
+    endpoint,
   ] = useUnit([
     $smartAccount,
     $balance,
@@ -43,8 +44,9 @@ const EndpointScreen = () => {
     $initializingSmartAccountState,
     $initializingSmartAccountError,
     createSmartAccountFx.pending,
+    $endpoint,
   ]);
-
+  const [inputValue, setInputValue] = useState(endpoint);
   const animationContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Initialize Lottie animation on mount
