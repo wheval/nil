@@ -55,9 +55,11 @@ import {
   setImportedSmartContractAddressError,
   setImportedSmartContractAddressIsValid,
   setParams,
+  setRandomShardId,
   setShardId,
   setValueInput,
   toggleActiveKey,
+  triggerShardIdValidation,
   unlinkApp,
   validateSmartContractAddressFx,
 } from "./models/base";
@@ -503,7 +505,6 @@ $callParams.on(setParams, (state, { functionName, paramName, value }) => {
   };
 });
 
-$shardId.reset($activeAppWithState);
 $shardIdIsValid.reset($activeAppWithState);
 $shardId.on(setShardId, (_, shardId) => shardId);
 
@@ -607,7 +608,7 @@ sample({
     shardId: $shardId,
     shardsAmount: $shardsAmount,
   }),
-  clock: merge([incrementShardId, decrementShardId, setShardId]),
+  clock: merge([incrementShardId, decrementShardId, setShardId, triggerShardIdValidation]),
   target: $shardIdIsValid,
   fn: ({ shardId, shardsAmount }) => {
     if (shardId === null) {
@@ -615,4 +616,30 @@ sample({
     }
     return shardId <= shardsAmount && shardId >= 1;
   },
+});
+
+sample({
+  clock: setRandomShardId,
+  source: $shardsAmount,
+  filter: combine($shardsAmount, $shardId, (shardsAmount, shardId) => {
+    return shardId === null && shardsAmount !== -1;
+  }),
+  target: setShardId,
+  fn: (shardsAmount) => {
+    const randomShardId = Math.floor(Math.random() * shardsAmount) + 1;
+
+    return randomShardId;
+  },
+});
+
+sample({
+  source: $activeAppWithState,
+  filter: $activeAppWithState.map((app) => !!app && !app.address),
+  target: setRandomShardId,
+});
+
+sample({
+  source: $activeAppWithState,
+  filter: $activeAppWithState.map((app) => !!app && !app.address),
+  target: triggerShardIdValidation,
 });

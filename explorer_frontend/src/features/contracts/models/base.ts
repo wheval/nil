@@ -79,11 +79,13 @@ export const setDeploymentArg = createEvent<{
 export const $importedAddress = createStore<string>("");
 export const setAssignAddress = createEvent<string>();
 
-export const $shardId = createStore<number | null>(1);
+export const $shardId = createStore<number | null>(null);
 
 export const setShardId = createEvent<number | null>();
+export const setRandomShardId = createEvent();
 export const incrementShardId = createEvent("increment");
 export const decrementShardId = createEvent("decrement");
+export const triggerShardIdValidation = createEvent();
 
 export const deploySmartContract = createEvent();
 export const deploySmartContractFx = createEffect<
