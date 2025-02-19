@@ -1,6 +1,7 @@
 import "@nomicfoundation/hardhat-toolbox";
 import * as dotenv from "dotenv";
 import type { HardhatUserConfig } from "hardhat/config";
+import "./tasks/deploy-incrementer";
 
 dotenv.config();
 

@@ -1,0 +1,78 @@
+# Hardhat: getting started
+
+=nil; is compatible with Hardhat. 
+
+[**`create-nil-hardhat-project`**](https://github.com/NilFoundation/nil/tree/main/create-nil-hardhat-project) is a preconfigured Hardhat project that allows for deploying and calling contracts on =nil; using standard Hardhat tasks. It is recommended to use this project for developing on =nil; using Hardhat. 
+
+## Installation
+
+To access the project:
+
+```bash
+git clone https://github.com/NilFoundation/nil.git
+cd ./nil/create-nil-hardhat-project
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+## Initial setup
+
+Open the `.env` file and input the following information while replacing placeholders with actual values:
+
+```
+NIL_RPC_ENDPOINT: RPC_ENDPOINT
+PRIVATE_KEY: PRIVATE_KEY
+FAUCET_ENDPOINT: FAUCET_ENDPOINT
+WALLET_ADDR: WALLET_ADDR
+```
+
+## Usage
+
+This example deploys the `Incrementer.sol` contract that comes with `create-nil-hardhat-project`.
+
+### Create a new task
+
+Create a new task in `./tasks/deploy-incrementer.ts`:
+
+```typescript showLineNumbers
+task("deploy-incrementer").setAction(async (taskArgs, _) => {
+  const smartAccount = await createSmartAccount();
+
+  const IncrementerJson = require("../../artifacts/contracts/Incrementer.sol/Incrementer.json");
+
+  const { contract, address } = await deployNilContract(
+    smartAccount,
+    IncrementerJson.abi as Abi,
+    IncrementerJson.bytecode,
+    [],
+    smartAccount.shardId,
+    [],
+  );
+
+  console.log("Incrementer contract deployed at address: " + address);
+
+  await contract.write.increment([]);
+
+  const value = await contract.read.getValue([]);
+
+  console.log("Incrementer contract value: " + value);
+});
+```
+
+Import the task inside `hardhat.config.ts`:
+
+```typescript showLineNumbers
+import "./tasks/deploy-incrementer";
+```
+
+### Interact with the contract
+
+Deploy and call the contract:
+
+```bash
+npx hardhat deploy-incrementer
+```

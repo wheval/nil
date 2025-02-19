@@ -51,6 +51,49 @@ npm install
 
 ## 🎯 Usage
 
+To compile all smart contracts:
+
+```bash
+npx run compile
+```
+
+Create a task for deploying the `Incrementer.sol` contract in `./tasks/deploy-incrementer.ts`:
+
+```ts
+import type { Abi } from "abitype";
+import { task } from "hardhat/config";
+import { createSmartAccount } from "../src/smart-account";
+import { deployNilContract } from "../src/deploy";
+
+task("deploy-incrementer").setAction(async (taskArgs, _) => {
+  const smartAccount = await createSmartAccount();
+
+  const IncrementerJson = require("../artifacts/contracts/Incrementer.sol/Incrementer.json");
+
+  const { contract, address } = await deployNilContract(
+    smartAccount,
+    IncrementerJson.abi as Abi,
+    IncrementerJson.bytecode,
+    [],
+    smartAccount.shardId,
+    [],
+  );
+  console.log("Incrementer factory contract deployed at address: " + address);
+});
+```
+
+Import the task inside `hardhat.config.ts`:
+
+```ts
+import "./tasks/deploy-incrementer";
+```
+
+To deploy the contract:
+
+```bash
+npx hardhat deploy-incrementer
+```
+
 To run all tests:
 
 ```bash
