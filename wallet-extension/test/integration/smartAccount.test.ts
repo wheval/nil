@@ -1,4 +1,3 @@
-import { convertEthToWei } from "@nilfoundation/niljs";
 import {
   fetchBalance,
   fetchSmartAccountCurrencies,
@@ -6,8 +5,7 @@ import {
   sendCurrency,
   topUpAllCurrencies,
 } from "../../src/features/blockchain";
-import { Currency } from "../../src/features/components/currency";
-import { getTokenAddressBySymbol } from "../../src/features/utils";
+import { btcAddress } from "../../src/features/utils/currency.ts";
 import { setup } from "./helper.ts";
 
 test("Initialize and deploy smart account, fetch balance and tokens", async () => {
@@ -85,12 +83,11 @@ test("Send NIL currency and token between accounts and validate balances", async
   const recipientInitialBalance = await fetchBalance(recipient);
 
   // 5. Send NIL currency from sender to recipient
-  const sendAmountNIL = convertEthToWei(0.000001);
   await sendCurrency({
     smartAccount: sender,
     to: recipient.address,
     value: 0.00001,
-    tokenSymbol: Currency.NIL,
+    tokenAddress: "",
   });
 
   // 6. Fetch updated balances after NIL transfer
@@ -103,13 +100,12 @@ test("Send NIL currency and token between accounts and validate balances", async
 
   // 7. Send BTC token from sender to recipient
   const sendAmountBTC = 5n;
-  const btcTokenAddress = getTokenAddressBySymbol(Currency.BTC);
 
   await sendCurrency({
     smartAccount: sender,
     to: recipient.address,
     value: Number(sendAmountBTC),
-    tokenSymbol: Currency.BTC,
+    tokenAddress: btcAddress,
   });
 
   // 8. Fetch updated token balances
@@ -117,8 +113,6 @@ test("Send NIL currency and token between accounts and validate balances", async
   const recipientTokensAfterBTC = await fetchSmartAccountCurrencies(recipient);
 
   // Check exact token balances after transaction
-  expect(senderTokensAfterBTC[btcTokenAddress]).toBe(
-    senderInitialTokens[btcTokenAddress] - sendAmountBTC,
-  );
-  expect(recipientTokensAfterBTC[btcTokenAddress]).toBe(sendAmountBTC);
+  expect(senderTokensAfterBTC[btcAddress]).toBe(senderInitialTokens[btcAddress] - sendAmountBTC);
+  expect(recipientTokensAfterBTC[btcAddress]).toBe(sendAmountBTC);
 });

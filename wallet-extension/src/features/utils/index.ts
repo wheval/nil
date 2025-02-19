@@ -4,11 +4,7 @@ export { validateRpcEndpoint, ValidationResult } from "./inputValidation.ts";
 export {
   convertWeiToEth,
   getCurrencyIcon,
-  getCurrencySymbolByAddress,
-  getTokenAddressBySymbol,
-  getTokenAddress,
   getCurrencies,
-  getBalanceForCurrency,
 } from "./currency.ts";
 
 export {

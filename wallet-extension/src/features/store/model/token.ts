@@ -1,15 +1,72 @@
 import type { SmartAccountV1 } from "@nilfoundation/niljs";
 import { createEffect, createEvent, createStore, sample } from "effector";
+import { persist } from "effector-storage/local";
 import { fetchBalance, fetchSmartAccountCurrencies } from "../../blockchain";
+import { btcAddress, ethAddress, usdtAddress } from "../../utils/currency.ts";
 import { setGlobalError } from "./error.ts";
 import { $smartAccount } from "./smartAccount.ts";
+
+//Init
+const initialTokens: { name: string; address: string; show: boolean; topupable: boolean }[] = [
+  {
+    address: "",
+    name: "Nil",
+    show: true,
+    topupable: true,
+  },
+  {
+    address: ethAddress,
+    name: "ETH",
+    show: true,
+    topupable: true,
+  },
+  {
+    address: usdtAddress,
+    name: "USDT",
+    show: true,
+    topupable: true,
+  },
+  {
+    address: btcAddress,
+    name: "BTC",
+    show: true,
+    topupable: true,
+  },
+];
 
 // Stores
 export const $balance = createStore<bigint | null>(null);
 export const $balanceCurrency = createStore<Record<string, bigint> | null>(null);
+export const $tokens =
+  createStore<{ name: string; address: string; show: boolean; topupable: boolean }[]>(
+    initialTokens,
+  );
+persist({
+  store: $tokens,
+  key: "nil_wallet_tokens",
+});
 
 // Events
 export const refetchBalancesEvent = createEvent();
+export const hideToken = createEvent<string>();
+export const showToken = createEvent<string>();
+export const addToken = createEvent<{ name: string; address: string }>();
+
+// Utils
+export const getCurrencySymbolByAddress = (address: string): string => {
+  return $tokens.getState().filter((token) => token.address === address)[0].name ?? "";
+};
+
+export const getBalanceForCurrency = (
+  address: string,
+  nilBalance: bigint,
+  balanceCurrencies: Record<string, bigint>,
+) => {
+  if (address === "") {
+    return nilBalance;
+  }
+  return balanceCurrencies[address] ?? 0n;
+};
 
 // Effects
 export const fetchBalanceFx = createEffect<SmartAccountV1, bigint, Error>(async (smartAccount) => {
@@ -40,6 +97,17 @@ export const fetchBalanceCurrenciesFx = createEffect<SmartAccountV1, Record<stri
 // Store updates
 $balance.on(fetchBalanceFx.doneData, (_, balance) => balance);
 $balanceCurrency.on(fetchBalanceCurrenciesFx.doneData, (_, currencies) => ({ ...currencies }));
+
+$tokens.on(addToken, (state, { name, address }) => [
+  ...state,
+  { name, address, show: true, topupable: false },
+]);
+$tokens.on(hideToken, (state, address) =>
+  state.map((token) => (token.address === address ? { ...token, show: false } : token)),
+);
+$tokens.on(showToken, (state, address) =>
+  state.map((token) => (token.address === address ? { ...token, show: true } : token)),
+);
 
 // Automatically fetch balances when `refetchBalancesEvent` is triggered
 sample({

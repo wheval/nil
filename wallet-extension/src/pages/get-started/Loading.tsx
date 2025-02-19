@@ -6,8 +6,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import animationData from "../../../public/animation/wallet-creation.json";
 import { Box, Logo } from "../../features/components/shared";
-import { $balanceCurrency, fetchBalanceCurrenciesFx } from "../../features/store/model/balance.ts";
 import { $globalError } from "../../features/store/model/error.ts";
+import { $balanceCurrency, fetchBalanceCurrenciesFx } from "../../features/store/model/token.ts";
 import { WalletRoutes } from "../../router";
 
 export const Loading = () => {
