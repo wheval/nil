@@ -1,6 +1,9 @@
-import Database from "better-sqlite3";
-const db = new Database("./database.db");
 import { createHash } from "node:crypto";
+import BetterSqlite3 from "better-sqlite3";
+
+const db: BetterSqlite3.Database = new BetterSqlite3("./database.db");
+
+export { db };
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS code (
