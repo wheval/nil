@@ -22,7 +22,7 @@ func (l CHLogger) Disable() CHLogger {
 }
 
 func (l CHLogger) Log() *zerolog.Event {
-	// cheap trick to ensure these logs are always written
+	// cheap trick to ensure these logs are written ± always
 	// despite of zerolog global log level
-	return l.l.WithLevel(zerolog.PanicLevel) //nolint:zerologlint
+	return l.l.WithLevel(zerolog.WarnLevel) //nolint:zerologlint
 }
