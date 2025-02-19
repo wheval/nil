@@ -104,22 +104,26 @@ func Compile(input *CompilerTask) (*ContractData, error) {
 	cmd := exec.Command(solc, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Printf("Compilation failed:\n%s\n", output)
+		logger.Error().Msgf("Compilation failed:\n%s\n", output)
 		return nil, err
 	}
 
 	var outputJson CompilerJsonOutput
 	if err := json.Unmarshal(output, &outputJson); err != nil {
-		fmt.Printf("Failed to unmarshal json: %s\n", err.Error())
+		logger.Error().Err(err).Msg("Failed to unmarshal json")
 		return nil, err
 	}
 	if len(outputJson.Errors) != 0 {
-		errMsg, err := json.Marshal(outputJson.Errors)
-		if err != nil {
-			errMsg = []byte("failed to marshal errors: " + err.Error())
+		for _, e := range outputJson.Errors {
+			if e.Type == "Error" {
+				errMsg, err := json.MarshalIndent(outputJson.Errors, "", "  ")
+				if err != nil {
+					errMsg = []byte("failed to marshal errors: " + err.Error())
+				}
+				logger.Error().Msgf("Compilation failed:\n%s\n", errMsg)
+				return nil, fmt.Errorf("compilation failed: %s", errMsg)
+			}
 		}
-		fmt.Printf("Compilation failed:\n%s\n", errMsg)
-		return nil, fmt.Errorf("compilation failed: %s", outputJson.Errors[0].FormattedMessage)
 	}
 
 	contractData, err := CreateContractData(compilerInput, &outputJson)
