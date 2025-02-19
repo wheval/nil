@@ -21,15 +21,15 @@ import { nilAddress } from "../tokens";
 import { $faucets } from "../tokens/model";
 import { ActiveComponent } from "./ActiveComponent.ts";
 import {
-  $accountConnectorWithEndpoint,
+  $accountConnectorWithRpcUrl,
   $activeComponent,
   $balance,
   $balanceToken,
-  $endpoint,
   $initializingSmartAccountError,
   $initializingSmartAccountState,
   $latestActivity,
   $privateKey,
+  $rpcUrl,
   $smartAccount,
   $topUpError,
   $topupInput,
@@ -44,9 +44,9 @@ import {
   regenrateAccountEvent,
   resetTopUpError,
   setActiveComponent,
-  setEndpoint,
   setInitializingSmartAccountState,
   setPrivateKey,
+  setRpcUrl,
   setTopupInput,
   topUpEvent,
   topUpSmartAccountBalanceFx,
@@ -55,8 +55,8 @@ import {
 } from "./model";
 
 persistLocalStorage({
-  store: $endpoint,
-  key: "endpoint",
+  store: $rpcUrl,
+  key: "rpcUrl",
 });
 
 persistLocalStorage({
@@ -65,16 +65,16 @@ persistLocalStorage({
 });
 
 $privateKey.on(setPrivateKey, (_, privateKey) => privateKey);
-$endpoint.on(setEndpoint, (_, endpoint) => endpoint);
+$rpcUrl.on(setRpcUrl, (_, rpcUrl) => rpcUrl);
 
-createSmartAccountFx.use(async ({ privateKey, endpoint }) => {
-  if (endpoint === "") return;
+createSmartAccountFx.use(async ({ privateKey, rpcUrl }) => {
+  if (rpcUrl === "") return;
   const signer = new LocalECDSAKeySigner({ privateKey });
   const client = new PublicClient({
-    transport: new HttpTransport({ endpoint }),
+    transport: new HttpTransport({ endpoint: rpcUrl }),
   });
   const faucetClient = new FaucetClient({
-    transport: new HttpTransport({ endpoint }),
+    transport: new HttpTransport({ endpoint: rpcUrl }),
   });
   const faucets = await faucetClient.getAllFaucets();
 
@@ -185,9 +185,9 @@ $smartAccount.reset($privateKey);
 $smartAccount.on(createSmartAccountFx.doneData, (_, smartAccount) => smartAccount);
 
 sample({
-  source: combine($privateKey, $endpoint, $faucets, (privateKey, endpoint, faucets) => ({
+  source: combine($privateKey, $rpcUrl, $faucets, (privateKey, rpcUrl, faucets) => ({
     privateKey,
-    endpoint,
+    rpcUrl,
     faucets,
   })),
   clock: initilizeSmartAccount,
@@ -253,15 +253,15 @@ persistSessionStorage({
 
 $topupInput.on(setTopupInput, (_, payload) => payload);
 
-topupSmartAccountTokenFx.use(async ({ smartAccount, topupInput, faucets, endpoint }) => {
+topupSmartAccountTokenFx.use(async ({ smartAccount, topupInput, faucets, rpcUrl }) => {
   const { token, amount } = topupInput;
   const faucetClient = new FaucetClient({
-    transport: new HttpTransport({ endpoint }),
+    transport: new HttpTransport({ endpoint: rpcUrl }),
   });
 
   const publicClient = new PublicClient({
     transport: new HttpTransport({
-      endpoint,
+      endpoint: rpcUrl,
     }),
   });
 
@@ -291,18 +291,18 @@ sample({
     $smartAccount,
     $topupInput,
     $faucets,
-    $endpoint,
-    (smartAccount, topupInput, faucets, endpoint) =>
+    $rpcUrl,
+    (smartAccount, topupInput, faucets, rpcUrl) =>
       ({
         smartAccount,
         topupInput,
         faucets,
-        endpoint,
+        rpcUrl,
       }) as {
         smartAccount: SmartAccountV1;
         topupInput: { token: string; amount: string };
         faucets: Record<string, Hex>;
-        endpoint: string;
+        rpcUrl: string;
       },
   ),
   target: topupSmartAccountTokenFx,
@@ -337,7 +337,7 @@ sample({
     return `${getRuntimeConfigOrThrow().RPC_API_URL}/${user}/${token}`;
   },
   filter: (q) => !!q.user && !!q.token,
-  target: setEndpoint,
+  target: setRpcUrl,
 });
 
 sample({
@@ -352,7 +352,7 @@ $initializingSmartAccountState.on(setInitializingSmartAccountState, (_, payload)
 $initializingSmartAccountState.reset(createSmartAccountFx.done);
 
 $initializingSmartAccountError.reset(createSmartAccountFx.done);
-$initializingSmartAccountError.reset($accountConnectorWithEndpoint);
+$initializingSmartAccountError.reset($accountConnectorWithRpcUrl);
 
 $activeComponent.on(topupSmartAccountTokenFx.done, () => ActiveComponent.Main);
 

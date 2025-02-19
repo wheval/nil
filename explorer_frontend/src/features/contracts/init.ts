@@ -4,7 +4,7 @@ import { combine, merge, sample } from "effector";
 import { persist } from "effector-storage/local";
 import { debug } from "patronum";
 import type { App } from "../../types";
-import { $endpoint, $smartAccount } from "../account-connector/model";
+import { $rpcUrl, $smartAccount } from "../account-connector/model";
 import { $solidityVersion, compileCodeFx } from "../code/model";
 import { $cometaService } from "../cometa/model";
 import { $shardsAmount } from "../shards/models/model";
@@ -261,11 +261,11 @@ sample({
 sample({
   source: combine({
     app: $activeApp,
-    endpoint: $endpoint,
+    rpcUrl: $rpcUrl,
   }),
   filter: $activeAppWithState.map((app) => !!app?.address),
   clock: choseApp,
-  fn: ({ endpoint, app }) => ({ address: app?.address!, endpoint }),
+  fn: ({ rpcUrl, app }) => ({ address: app?.address!, rpcUrl }),
   target: fetchBalanceFx,
 });
 
@@ -353,7 +353,7 @@ sample({
       functionName,
       args,
       abi: activeApp?.abi!,
-      endpoint: $endpoint.getState(),
+      rpcUrl: $rpcUrl.getState(),
       address: activeApp?.address!,
       appName: activeApp?.name,
     };
@@ -424,7 +424,7 @@ sample({
       functionName,
       args,
       abi: activeApp?.abi!,
-      endpoint: $endpoint.getState(),
+      rpcUrl: $rpcUrl.getState(),
       address: activeApp?.address!,
       smartAccount: smartAccount!,
       ...(value ? { value } : {}),

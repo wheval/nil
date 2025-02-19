@@ -1,11 +1,11 @@
 import { FaucetClient, HttpTransport } from "@nilfoundation/niljs";
 import { sample } from "effector";
-import { $endpoint } from "../account-connector/model";
+import { $rpcUrl } from "../account-connector/model";
 import { $faucets, fetchFaucetsEvent, fetchFaucetsFx } from "./model";
 
-fetchFaucetsFx.use(async (endpoint) => {
+fetchFaucetsFx.use(async (rpcUrl) => {
   const faucetClient = new FaucetClient({
-    transport: new HttpTransport({ endpoint }),
+    transport: new HttpTransport({ endpoint: rpcUrl }),
   });
 
   return await faucetClient.getAllFaucets();
@@ -13,12 +13,12 @@ fetchFaucetsFx.use(async (endpoint) => {
 
 sample({
   clock: fetchFaucetsEvent,
-  source: $endpoint,
+  source: $rpcUrl,
   target: fetchFaucetsFx,
 });
 
-$endpoint.watch((endpoint) => {
-  if (endpoint) {
+$rpcUrl.watch((rpcUrl) => {
+  if (rpcUrl) {
     fetchFaucetsEvent();
   }
 });
