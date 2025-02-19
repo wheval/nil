@@ -1,5 +1,5 @@
 export enum ActiveComponent {
-  Endpoint = "Endpoint",
+  RpcUrl = "RpcUrl",
   Main = "Main",
   Topup = "Topup",
   SmartAccountSelector = "SmartAccountSelector",

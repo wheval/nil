@@ -5,12 +5,12 @@ import { useSwipeable } from "react-swipeable";
 import { useStyletron } from "styletron-react";
 import { ActiveComponent } from "../ActiveComponent";
 import { $activeComponent, setActiveComponent } from "../model";
-import EndpointScreen from "./EndpointScreen.tsx";
 import { MainScreen } from "./MainScreen";
+import { RpcUrlScreen } from "./RpcUrlScreen.tsx";
 import { TopUpPanel } from "./TopUpPanel";
 
 const featureMap = new Map();
-featureMap.set(ActiveComponent.Endpoint, EndpointScreen);
+featureMap.set(ActiveComponent.RpcUrl, RpcUrlScreen);
 featureMap.set(ActiveComponent.Main, MainScreen);
 featureMap.set(ActiveComponent.Topup, TopUpPanel);
 
@@ -19,8 +19,8 @@ const AccountContainer = () => {
   const Component = activeComponent ? featureMap.get(activeComponent) : null;
   const [css] = useStyletron();
   const handlers = useSwipeable({
-    onSwipedLeft: () => setActiveComponent(ActiveComponent.Endpoint),
-    onSwipedRight: () => setActiveComponent(ActiveComponent.Endpoint),
+    onSwipedLeft: () => setActiveComponent(ActiveComponent.RpcUrl),
+    onSwipedRight: () => setActiveComponent(ActiveComponent.RpcUrl),
   });
 
   return (

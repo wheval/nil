@@ -1,6 +1,6 @@
 import { combine, sample } from "effector";
 import { interval } from "patronum";
-import { $endpoint } from "../account-connector/model";
+import { $rpcUrl } from "../account-connector/model";
 import { loadedPlaygroundPage } from "../code/model";
 import { playgroundRoute, playgroundWithHashRoute } from "../routing/routes/playgroundRoute";
 import { $isPageVisible, $rpcIsHealthy, checkRpcHealthFx, pageVisibilityChanged } from "./model";
@@ -19,7 +19,7 @@ const { tick } = interval({
 sample({
   clock: tick,
   target: checkRpcHealthFx,
-  source: $endpoint,
+  source: $rpcUrl,
   filter: combine(
     $isPageVisible,
     playgroundRoute.$isOpened,
@@ -30,7 +30,7 @@ sample({
 });
 
 sample({
-  clock: $endpoint,
+  clock: $rpcUrl,
   target: checkRpcHealthFx,
 });
 

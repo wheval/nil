@@ -242,15 +242,15 @@ export const $tokens = createStore<Record<`0x${string}`, bigint>>({});
 export const fetchBalanceFx = createEffect<
   {
     address: `0x${string}`;
-    endpoint: string;
+    rpcUrl: string;
   },
   {
     tokens: Record<`0x${string}`, bigint>;
     balance: bigint;
   }
->(async ({ address, endpoint }) => {
+>(async ({ address, rpcUrl }) => {
   const client = new PublicClient({
-    transport: new HttpTransport({ endpoint }),
+    transport: new HttpTransport({ endpoint: rpcUrl }),
   });
   const [tokens, balance] = await Promise.all([
     client.getTokens(address, "latest"),
@@ -282,7 +282,7 @@ export const callFx = createEffect<
     functionName: string;
     abi: Abi;
     args: unknown[];
-    endpoint: string;
+    rpcUrl: string;
     address: `0x${string}`;
   },
   {
@@ -290,9 +290,9 @@ export const callFx = createEffect<
     result: unknown;
     appName?: string;
   }
->(async ({ functionName, args, endpoint, abi, address, appName }) => {
+>(async ({ functionName, args, rpcUrl, abi, address, appName }) => {
   const client = new PublicClient({
-    transport: new HttpTransport({ endpoint }),
+    transport: new HttpTransport({ endpoint: rpcUrl }),
   });
 
   const data = await client.call(

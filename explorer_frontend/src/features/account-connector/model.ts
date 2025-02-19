@@ -14,21 +14,20 @@ export const initializePrivateKey = createEvent();
 export const $smartAccount = createStore<SmartAccountV1 | null>(null);
 export const $balance = createStore<bigint | null>(null);
 export const $balanceToken = createStore<Record<string, bigint> | null>(null);
-export const $endpoint = createStore<string>("");
+export const $rpcUrl = createStore<string>("");
 export const $topUpError = createStore<string>("");
 
-export const $latestActivity = createStore<{ txHash: string; successful: boolean } | null>(null);
+export const $latestActivity = createStore<{
+  txHash: string;
+  successful: boolean;
+} | null>(null);
 
-export const $accountConnectorWithEndpoint = combine(
-  $privateKey,
-  $endpoint,
-  (privateKey, endpoint) => ({
-    privateKey,
-    endpoint,
-  }),
-);
+export const $accountConnectorWithRpcUrl = combine($privateKey, $rpcUrl, (privateKey, rpcUrl) => ({
+  privateKey,
+  rpcUrl,
+}));
 
-export const setEndpoint = createEvent<string>();
+export const setRpcUrl = createEvent<string>();
 
 export const fetchBalanceFx = accountConnectorDomain.createEffect<SmartAccountV1, bigint>();
 
@@ -40,7 +39,7 @@ export const fetchBalanceTokensFx = accountConnectorDomain.createEffect<
 export const createSmartAccountFx = accountConnectorDomain.createEffect<
   {
     privateKey: Hex;
-    endpoint: string;
+    rpcUrl: string;
   },
   SmartAccountV1
 >();
@@ -56,7 +55,7 @@ export const regenrateAccountEvent = createEvent();
 
 export const topUpEvent = createEvent();
 
-export const $activeComponent = createStore<ActiveComponent | null>(ActiveComponent.Endpoint);
+export const $activeComponent = createStore<ActiveComponent | null>(ActiveComponent.RpcUrl);
 
 export const setActiveComponent = createEvent<ActiveComponent>();
 
@@ -81,7 +80,7 @@ export const topupSmartAccountTokenFx = accountConnectorDomain.createEffect<
       amount: string;
     };
     faucets: Record<string, Hex>;
-    endpoint: string;
+    rpcUrl: string;
   },
   void
 >();
@@ -96,6 +95,9 @@ export const $initializingSmartAccountError = accountConnectorDomain.createStore
 
 export const resetTopUpError = createEvent();
 
-export const addActivity = createEvent<{ txHash: string; successful: boolean }>();
+export const addActivity = createEvent<{
+  txHash: string;
+  successful: boolean;
+}>();
 
 export const clearLatestActivity = createEvent();

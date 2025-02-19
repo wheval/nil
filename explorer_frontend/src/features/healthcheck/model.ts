@@ -9,12 +9,12 @@ export const checkRpcHealthFx = healthcheckDomain.createEffect<string, boolean>(
 export const pageVisibilityChanged = healthcheckDomain.createEvent<boolean>();
 export const $isPageVisible = healthcheckDomain.createStore(document.visibilityState === "visible");
 
-checkRpcHealthFx.use(async (endpoint: string) => {
-  if (!endpoint) return true;
+checkRpcHealthFx.use(async (rpcUrl: string) => {
+  if (!rpcUrl) return true;
 
   try {
     const client = new PublicClient({
-      transport: new HttpTransport({ endpoint }),
+      transport: new HttpTransport({ endpoint: rpcUrl }),
     });
 
     const response = await client.chainId();

@@ -11,18 +11,18 @@ import animationData from "../assets/wallet-creation.json";
 import {
   $balance,
   $balanceToken,
-  $endpoint,
   $initializingSmartAccountError,
   $initializingSmartAccountState,
+  $rpcUrl,
   $smartAccount,
   createSmartAccountFx,
   initilizeSmartAccount,
   setActiveComponent,
-  setEndpoint,
+  setRpcUrl,
 } from "../model";
-import { type ValidationResult, validateRpcEndpoint } from "../validation";
+import { type ValidationResult, validateRpcUrl } from "../validation";
 
-const EndpointScreen = () => {
+export const RpcUrlScreen = () => {
   const [css] = useStyletron();
   const [error, setError] = useState("");
   const [isDisabled, setIsDisabled] = useState(false);
@@ -36,7 +36,7 @@ const EndpointScreen = () => {
     initializingSmartAccountState,
     initializingSmartAccountError,
     isPendingSmartAccountCreation,
-    endpoint,
+    rpcUrl,
   ] = useUnit([
     $smartAccount,
     $balance,
@@ -44,9 +44,9 @@ const EndpointScreen = () => {
     $initializingSmartAccountState,
     $initializingSmartAccountError,
     createSmartAccountFx.pending,
-    $endpoint,
+    $rpcUrl,
   ]);
-  const [inputValue, setInputValue] = useState(endpoint);
+  const [inputValue, setInputValue] = useState(rpcUrl);
   const animationContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Initialize Lottie animation on mount
@@ -66,7 +66,7 @@ const EndpointScreen = () => {
 
   // Handles connect button press
   const handleConnect = () => {
-    const validation: ValidationResult = validateRpcEndpoint(inputValue);
+    const validation: ValidationResult = validateRpcUrl(inputValue);
     if (!validation.isValid) {
       setError(validation.error);
       return;
@@ -75,16 +75,16 @@ const EndpointScreen = () => {
     setError("");
     setIsDisabled(true);
 
-    setEndpoint(inputValue);
+    setRpcUrl(inputValue);
     initilizeSmartAccount();
   };
 
-  // Opens a new browser tab to fetch the endpoint URL
-  const handleGetEndpoint = () => {
+  // Opens a new browser tab to fetch the rpcUrl URL
+  const handleGetRpcUrl = () => {
     if (RPC_TELEGRAM_BOT) {
       window.open(RPC_TELEGRAM_BOT, "_blank");
     } else {
-      console.error("VITE_GET_ENDPOINT_URL is not set.");
+      console.error("RPC_TELEGRAM_BOT runtime variable is not set.");
     }
   };
 
@@ -195,10 +195,8 @@ const EndpointScreen = () => {
         >
           Connect
         </Button>
-
-        {/* Get Endpoint Button */}
         <Button
-          onClick={handleGetEndpoint}
+          onClick={handleGetRpcUrl}
           kind={BUTTON_KIND.secondary}
           disabled={isDisabled}
           style={{
@@ -214,5 +212,3 @@ const EndpointScreen = () => {
     </div>
   );
 };
-
-export default EndpointScreen;

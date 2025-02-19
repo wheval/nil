@@ -25,8 +25,8 @@ import Linkicon from "../assets/link.svg";
 import {
   $balance,
   $balanceToken,
-  $endpoint,
   $latestActivity,
+  $rpcUrl,
   $smartAccount,
   clearLatestActivity,
   createSmartAccountFx,
@@ -48,7 +48,7 @@ const btnOverrides: ButtonOverrides = {
 const MainScreen = () => {
   const [css] = useStyletron();
   const [copied, setCopied] = useState(false);
-  const endpoint = useUnit($endpoint);
+  const rpcUrl = useUnit($rpcUrl);
   const latestActivity = useUnit($latestActivity);
   const [smartAccount, balance, balanceToken, isPendingSmartAccountCreation, rpcIsHealthy] =
     useUnit([$smartAccount, $balance, $balanceToken, createSmartAccountFx.pending, $rpcIsHealthy]);
@@ -83,8 +83,8 @@ const MainScreen = () => {
 
   // Handle copy functionality
   const handleCopy = async () => {
-    if (endpoint && typeof endpoint === "string") {
-      await navigator.clipboard.writeText(endpoint);
+    if (rpcUrl && typeof rpcUrl === "string") {
+      await navigator.clipboard.writeText(rpcUrl);
 
       setCopied(true);
 
@@ -136,7 +136,7 @@ const MainScreen = () => {
             <CopyButton textToCopy={address} disabled={address === null} color={COLORS.gray200} />
           </div>
         )}
-        {endpoint !== null && (
+        {rpcUrl !== null && (
           <div
             className={css({
               display: "flex",
@@ -148,7 +148,7 @@ const MainScreen = () => {
             {/* Read-Only Input */}
             <Input
               placeholder="Enter your RPC URL"
-              value={endpoint}
+              value={rpcUrl}
               readOnly
               overrides={{
                 Root: {
