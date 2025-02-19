@@ -1,7 +1,6 @@
 package db
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/NilFoundation/nil/nil/common"
@@ -42,61 +41,6 @@ func ShardTableName(tableName ShardedTableName, shardId types.ShardId) TableName
 
 func ShardBlocksTrieTableName(blockId types.BlockNumber) ShardedTableName {
 	return ShardedTableName(fmt.Sprintf("%s%d", shardBlocksTrieTable, blockId))
-}
-
-func IsKeyFromShardBlocksTrieTable(key []byte, shardId types.ShardId) bool {
-	return shardId.IsMainShard() && bytes.HasPrefix(key, []byte(shardBlocksTrieTable))
-}
-
-func CreateKeyFromShardTableChecker(shardId types.ShardId) func([]byte) bool {
-	shardTableNames := []ShardedTableName{
-		blockTable,
-		blockTimestampTable,
-		codeTable,
-
-		ContractTrieTable,
-		StorageTrieTable,
-		TransactionTrieTable,
-		ReceiptTrieTable,
-		TokenTrieTable,
-		ConfigTrieTable,
-		ContractTable,
-		BlockHashByNumberIndex,
-		BlockHashAndInTransactionIndexByTransactionHash,
-		BlockHashAndOutTransactionIndexByTransactionHash,
-		AsyncCallContextTable,
-	}
-
-	shardTables := make([]TableName, len(shardTableNames))
-	for i, t := range shardTableNames {
-		shardTables[i] = ShardTableName(t, shardId)
-	}
-
-	systemTables := []TableName{
-		LastBlockTable,
-		collatorStateTable,
-	}
-
-	systemKeys := make(map[string]struct{})
-	for _, t := range systemTables {
-		k := MakeKey(t, shardId.Bytes())
-		systemKeys[string(k)] = struct{}{}
-	}
-
-	return func(key []byte) bool {
-		if _, exists := systemKeys[string(key)]; exists {
-			return true
-		}
-		if IsKeyFromShardBlocksTrieTable(key, shardId) {
-			return true
-		}
-		for _, shardedTable := range shardTables {
-			if IsKeyFromTable(shardedTable, key) {
-				return true
-			}
-		}
-		return false
-	}
 }
 
 type BlockHashAndTransactionIndex struct {

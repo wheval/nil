@@ -34,7 +34,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/rs/zerolog"
-	"golang.org/x/sync/errgroup"
 )
 
 // syncer will pull blocks actively if no blocks appear for 5 rounds
@@ -185,9 +184,6 @@ func validateArchiveNodeConfig(cfg *Config, nm *network.Manager) error {
 	if nm == nil {
 		return errors.New("Failed to start archive node without network configuration")
 	}
-	if len(cfg.BootstrapPeers) > 0 && len(cfg.BootstrapPeers) != int(cfg.NShards) {
-		return errors.New("On archive node, number of bootstrap peers must be equal to the number of shards")
-	}
 	if !slices.Contains(cfg.MyShards, uint(types.MainShardId)) {
 		return errors.New("On archive node, main shard must be included in MyShards")
 	}
@@ -195,13 +191,7 @@ func validateArchiveNodeConfig(cfg *Config, nm *network.Manager) error {
 }
 
 func initSyncers(ctx context.Context, syncers []*collate.Syncer) error {
-	var g errgroup.Group
-	for _, syncer := range syncers {
-		g.Go(func() error {
-			return syncer.FetchSnapshot(ctx)
-		})
-	}
-	if err := g.Wait(); err != nil { // Wait for snapshots to avoid data races in DB
+	if err := syncers[0].FetchSnapshot(ctx); err != nil {
 		return err
 	}
 	for _, syncer := range syncers {
@@ -212,14 +202,9 @@ func initSyncers(ctx context.Context, syncers []*collate.Syncer) error {
 	return nil
 }
 
-func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) (collate.SyncerConfig, error) {
+func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) (*collate.SyncerConfig, error) {
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
 	syncerTimeout := syncTimeoutFactor * collatorTickPeriod
-
-	var bootstrapPeer *network.AddrInfo
-	if len(cfg.BootstrapPeers) > 0 {
-		bootstrapPeer = &cfg.BootstrapPeers[shardId]
-	}
 
 	var zeroState string
 	if len(cfg.ZeroStateYaml) != 0 {
@@ -228,16 +213,16 @@ func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) (collate.S
 		var err error
 		zeroState, err = execution.CreateZeroStateConfigWithMainPublicKey(cfg.MainKeysPath)
 		if err != nil {
-			return collate.SyncerConfig{}, err
+			return nil, err
 		}
 	}
 	zeroStateConfig := cfg.ZeroState
 
-	return collate.SyncerConfig{
+	return &collate.SyncerConfig{
 		Name:                 name,
 		ShardId:              shardId,
 		Timeout:              syncerTimeout,
-		BootstrapPeer:        bootstrapPeer,
+		BootstrapPeers:       cfg.BootstrapPeers,
 		BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
 		ZeroState:            zeroState,
 		ZeroStateConfig:      zeroStateConfig,
@@ -256,7 +241,7 @@ func (s *syncersResult) Wait() {
 
 func createSyncers(name string, cfg *Config, nm *network.Manager, database db.DB, logger zerolog.Logger) (*syncersResult, error) {
 	res := &syncersResult{
-		funcs:   make([]concurrent.Func, 0, cfg.NShards+1),
+		funcs:   make([]concurrent.Func, 0, cfg.NShards+2),
 		syncers: make([]*collate.Syncer, 0, cfg.NShards),
 	}
 	res.wgInit.Add(1)
@@ -293,6 +278,14 @@ func createSyncers(name string, cfg *Config, nm *network.Manager, database db.DB
 		}
 		return nil
 	})
+	res.funcs = append(res.funcs, func(ctx context.Context) error {
+		for _, syncer := range res.syncers {
+			syncer.WaitComplete()
+		}
+		res.syncers[0].SetBootstrapHandler(ctx)
+		return nil
+	})
+
 	return res, nil
 }
 

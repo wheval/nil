@@ -16,8 +16,8 @@ func (a *AddrInfo) Set(value string) error {
 	return nil
 }
 
-func (a *AddrInfo) String() string {
-	mu, err := peer.AddrInfoToP2pAddrs((*peer.AddrInfo)(a))
+func (a AddrInfo) String() string {
+	mu, err := peer.AddrInfoToP2pAddrs((*peer.AddrInfo)(&a))
 	if err != nil {
 		return err.Error()
 	}

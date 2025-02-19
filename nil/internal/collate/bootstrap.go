@@ -2,22 +2,19 @@ package collate
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/network"
-	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/rs/zerolog"
 )
 
-func topicBootstrapShard(shardId types.ShardId) network.ProtocolID {
-	return network.ProtocolID(fmt.Sprintf("nil/shard/%s/snap", shardId))
+func topicBootstrapShard() network.ProtocolID {
+	return network.ProtocolID("nil/snap")
 }
 
-func createShardBootstrapHandler(ctx context.Context, shardId types.ShardId, database db.DB, logger zerolog.Logger) func(s network.Stream) {
-	filter := db.CreateKeyFromShardTableChecker(shardId)
-
+func createShardBootstrapHandler(ctx context.Context, database db.DB, logger zerolog.Logger) func(s network.Stream) {
+	dummyFilter := func([]byte) bool { return true }
 	return func(s network.Stream) {
 		defer s.Close()
 
@@ -29,7 +26,7 @@ func createShardBootstrapHandler(ctx context.Context, shardId types.ShardId, dat
 			return
 		}
 
-		if err := database.Stream(ctx, filter, s); err != nil {
+		if err := database.Stream(ctx, dummyFilter, s); err != nil {
 			logger.Error().Err(err).Msg("Stream error")
 		}
 
@@ -38,24 +35,24 @@ func createShardBootstrapHandler(ctx context.Context, shardId types.ShardId, dat
 }
 
 // Set handler that streams DB data via libp2p.
-func SetBootstrapHandler(ctx context.Context, nm *network.Manager, shardId types.ShardId, db db.DB) {
+func SetBootstrapHandler(ctx context.Context, nm *network.Manager, db db.DB) {
 	if nm == nil {
 		return
 	}
 
-	logger := logging.NewLogger("bootstrap").With().Stringer(logging.FieldShardId, shardId).Logger()
+	logger := logging.NewLogger("bootstrap").With().Logger()
 
 	nm.SetStreamHandler(
 		ctx,
-		topicBootstrapShard(shardId),
-		createShardBootstrapHandler(ctx, shardId, db, logger),
+		topicBootstrapShard(),
+		createShardBootstrapHandler(ctx, db, logger),
 	)
 
 	logger.Info().Msg("Enable bootstrap endpoint")
 }
 
-func fetchShardSnap(ctx context.Context, nm *network.Manager, peerId network.PeerID, shardId types.ShardId, db db.DB, logger zerolog.Logger) error {
-	stream, err := nm.NewStream(ctx, peerId, topicBootstrapShard(shardId))
+func fetchShardSnap(ctx context.Context, nm *network.Manager, peerId network.PeerID, db db.DB, logger zerolog.Logger) error {
+	stream, err := nm.NewStream(ctx, peerId, topicBootstrapShard())
 	if err != nil {
 		logger.Error().Err(err).Msgf("Failed to open stream to %s", peerId)
 		return err
@@ -67,17 +64,17 @@ func fetchShardSnap(ctx context.Context, nm *network.Manager, peerId network.Pee
 		logger.Error().Err(err).Msgf("Failed to fetch snapshot from %s", peerId)
 		return err
 	}
-	logger.Info().Msgf("Fetching snapshot for shard %s is completed", shardId)
+	logger.Info().Msg("Fetching snapshot completed")
 	return nil
 }
 
 // Fetch DB snapshot via libp2p.
-func fetchSnapshot(ctx context.Context, nm *network.Manager, peerAddr *network.AddrInfo, shardId types.ShardId, db db.DB) error {
+func fetchSnapshot(ctx context.Context, nm *network.Manager, peerAddr *network.AddrInfo, db db.DB) error {
 	if nm == nil {
 		return nil
 	}
 
-	logger := logging.NewLogger("bootstrap").With().Stringer(logging.FieldShardId, shardId).Logger()
+	logger := logging.NewLogger("bootstrap").With().Logger()
 	if peerAddr == nil {
 		logger.Info().Msg("Peer address is empty. Snapshot won't be fetched")
 		return nil
@@ -89,5 +86,5 @@ func fetchSnapshot(ctx context.Context, nm *network.Manager, peerAddr *network.A
 		logger.Error().Err(err).Msgf("Failed to connect to %s", peerAddr)
 		return err
 	}
-	return fetchShardSnap(ctx, nm, peerId, shardId, db, logger)
+	return fetchShardSnap(ctx, nm, peerId, db, logger)
 }
