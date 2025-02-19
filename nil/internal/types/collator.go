@@ -5,8 +5,8 @@ type Neighbor struct {
 	ShardId ShardId `json:"shardId"`
 
 	// next block and transaction to read
-	BlockNumber      BlockNumber
-	TransactionIndex TransactionIndex
+	BlockNumber      BlockNumber      `json:"blockNumber"`
+	TransactionIndex TransactionIndex `json:"transactionIndex"`
 }
 
 type CollatorState struct {

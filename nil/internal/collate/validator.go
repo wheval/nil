@@ -38,7 +38,8 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 	}
 	defer gen.Rollback()
 
-	res, err := gen.BuildBlock(proposal)
+	gasPrices := gen.CollectGasPrices(proposal.PrevBlockHash, proposal.ShardHashes)
+	res, err := gen.BuildBlock(proposal, gasPrices)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate block: %w", err)
 	}
@@ -68,5 +69,6 @@ func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Prop
 		InTransactions:  res.InTxns,
 		OutTransactions: res.OutTxns,
 		ChildBlocks:     proposal.ShardHashes,
+		Config:          res.ConfigParams,
 	})
 }

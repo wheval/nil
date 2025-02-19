@@ -1366,6 +1366,7 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 	}
 
 	configRoot := common.EmptyHash
+	var configParams map[string][]byte
 	if es.ShardId.IsMainShard() {
 		var err error
 		prevBlock, err := db.ReadBlock(es.tx, es.ShardId, es.PrevBlock)
@@ -1377,6 +1378,9 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 		}
 		if configRoot, err = es.GetConfigAccessor().Commit(es.tx, configRoot); err != nil {
 			return nil, fmt.Errorf("failed to update config trie: %w", err)
+		}
+		if configParams, err = es.GetConfigAccessor().GetParams(); err != nil {
+			return nil, fmt.Errorf("failed to read config params: %w", err)
 		}
 	}
 
@@ -1402,10 +1406,11 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 	}
 
 	return &BlockGenerationResult{
-		Block:     block,
-		BlockHash: block.Hash(es.ShardId),
-		InTxns:    es.InTransactions,
-		OutTxns:   outTxnValues,
+		Block:        block,
+		BlockHash:    block.Hash(es.ShardId),
+		InTxns:       es.InTransactions,
+		OutTxns:      outTxnValues,
+		ConfigParams: configParams,
 	}, nil
 }
 

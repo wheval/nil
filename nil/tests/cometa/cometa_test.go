@@ -125,6 +125,8 @@ func (s *SuiteCometa) SetupTest() {
 		ZeroStateYaml:        s.zerostateCfg,
 	})
 	s.cometaClient = *cometa.NewClient(s.Endpoint)
+	tests.WaitShardTick(s.T(), s.Context, s.Client, types.MainShardId)
+	tests.WaitShardTick(s.T(), s.Context, s.Client, types.BaseShardId)
 }
 
 func (s *SuiteCometa) TestTwinContracts() {
