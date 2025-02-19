@@ -181,7 +181,7 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal) error {
 			g.logger.Err(err).Msg("Failed to marshal execution state")
 			esJson = nil
 		}
-		//nolint:musttag
+
 		proposalJson, err := json.Marshal(proposal)
 		if err != nil {
 			g.logger.Err(err).Msg("Failed to marshal block proposal")
