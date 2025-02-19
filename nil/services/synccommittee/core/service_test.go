@@ -92,7 +92,7 @@ func (s *SyncCommitteeTestSuite) TestProcessingLoop() {
 
 	s.waitMainShardToProcess()
 
-	cancel() // to avoid waiting without reason
+	cancel()
 	s.Require().ErrorIs(<-errCh, context.Canceled)
 }
 
