@@ -115,13 +115,13 @@ func Compile(input *CompilerTask) (*ContractData, error) {
 	}
 	if len(outputJson.Errors) != 0 {
 		for _, e := range outputJson.Errors {
-			if e.Type == "Error" {
+			if e.Severity == "error" {
 				errMsg, err := json.MarshalIndent(outputJson.Errors, "", "  ")
 				if err != nil {
 					errMsg = []byte("failed to marshal errors: " + err.Error())
 				}
 				logger.Error().Msgf("Compilation failed:\n%s\n", errMsg)
-				return nil, fmt.Errorf("compilation failed: %s", errMsg)
+				return nil, errors.New(string(errMsg))
 			}
 		}
 	}

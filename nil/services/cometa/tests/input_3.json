@@ -1,0 +1,12 @@
+{
+  "contractName": "TestWithError.sol:Foo",
+  "compilerVersion": "0.8.28",
+  "settings": {
+    "evmVersion": "london"
+  },
+  "sources": {
+    "Test.sol": {
+      "urls": ["TestWithError.sol"]
+    }
+  }
+}
