@@ -22,9 +22,10 @@ import (
 type Proposer struct {
 	blockStorage storage.BlockStorage
 	retryRunner  common.RetryRunner
+	ethClient    rollupcontract.EthClient
 
-	rollupContract *rollupcontract.Wrapper
-	params         *ProposerParams
+	rollupContractWrapper *rollupcontract.Wrapper
+	params                *ProposerParams
 
 	metrics ProposerMetrics
 	logger  zerolog.Logger
@@ -69,20 +70,21 @@ func NewProposer(
 		logger,
 	)
 
-	rollupContract, err := rollupcontract.NewWrapper(ctx, params.ContractAddress, params.PrivateKey, ethClient, params.EthClientTimeout, logger)
-	if err != nil {
-		return nil, err
-	}
-
 	p := &Proposer{
-		blockStorage:   blockStorage,
-		rollupContract: rollupContract,
-		params:         params,
-		retryRunner:    retryRunner,
-		metrics:        metrics,
+		blockStorage: blockStorage,
+		ethClient:    ethClient,
+		params:       params,
+		retryRunner:  retryRunner,
+		metrics:      metrics,
 	}
 
 	p.logger = srv.WorkerLogger(logger, p)
+
+	err := p.tryGetRollupContractWrapper(ctx)
+	if err != nil {
+		logger.Error().Msgf("rollup contract wrapper is not initialized: %s", err)
+	}
+
 	return p, nil
 }
 
@@ -91,14 +93,9 @@ func (*Proposer) Name() string {
 }
 
 func (p *Proposer) Run(ctx context.Context, started chan<- struct{}) error {
-	shouldResetStorage, err := p.initializeProvedStateRoot(ctx)
+	err := p.initializeProvedStateRoot(ctx)
 	if err != nil {
 		return err
-	}
-
-	if shouldResetStorage {
-		p.logger.Warn().Msg("resetting TaskStorage and BlockStorage")
-		// todo: reset TaskStorage and BlockStorage before starting Aggregator, TaskScheduler and TaskListener
 	}
 
 	close(started)
@@ -116,19 +113,32 @@ func (p *Proposer) Run(ctx context.Context, started chan<- struct{}) error {
 	return nil
 }
 
-func (p *Proposer) initializeProvedStateRoot(ctx context.Context) (shouldResetStorage bool, err error) {
+func (p *Proposer) tryGetRollupContractWrapper(ctx context.Context) error {
+	if p.rollupContractWrapper == nil {
+		var err error
+		p.rollupContractWrapper, err = rollupcontract.NewWrapper(ctx, p.params.ContractAddress, p.params.PrivateKey, p.ethClient, p.params.EthClientTimeout, p.logger)
+		if err != nil {
+			return fmt.Errorf("failed create rollup contract wrapper: %w", err)
+		}
+	}
+	return nil
+}
+
+func (p *Proposer) initializeProvedStateRoot(ctx context.Context) error {
 	storedStateRoot, err := p.blockStorage.TryGetProvedStateRoot(ctx)
 	if err != nil {
-		return false, fmt.Errorf("failed to check if proved state root is initialized: %w", err)
+		return fmt.Errorf("failed to check if proved state root is initialized: %w", err)
 	}
 
 	latestStateRoot, err := p.getLatestProvedStateRoot(ctx)
 	if err != nil {
-		// TODO return error after enable local L1 endpoint
-		p.logger.Error().Err(err).Msg("failed get current contract state root, set 0")
+		return fmt.Errorf("failed get current contract state root: %w", err)
 	}
 
 	switch {
+	case latestStateRoot == common.EmptyHash:
+		p.logger.Info().
+			Msg("L1 not available, will be used stored proved state root")
 	case storedStateRoot == nil:
 		p.logger.Info().
 			Stringer("latestStateRoot", latestStateRoot).
@@ -138,7 +148,9 @@ func (p *Proposer) initializeProvedStateRoot(ctx context.Context) (shouldResetSt
 			Stringer("storedStateRoot", storedStateRoot).
 			Stringer("latestStateRoot", latestStateRoot).
 			Msg("proved state root value is invalid, local storage will be reset")
-		shouldResetStorage = true
+
+		p.logger.Warn().Msg("resetting TaskStorage and BlockStorage")
+		// todo: reset TaskStorage and BlockStorage before starting Aggregator, TaskScheduler and TaskListener
 	default:
 		p.logger.Info().Stringer("stateRoot", storedStateRoot).Msg("proved state root value is valid")
 	}
@@ -146,17 +158,23 @@ func (p *Proposer) initializeProvedStateRoot(ctx context.Context) (shouldResetSt
 	if storedStateRoot == nil || *storedStateRoot != latestStateRoot {
 		err = p.blockStorage.SetProvedStateRoot(ctx, latestStateRoot)
 		if err != nil {
-			return false, fmt.Errorf("failed set proved state root: %w", err)
+			return fmt.Errorf("failed set proved state root: %w", err)
 		}
 	}
 
 	p.logger.Info().
 		Stringer("stateRoot", latestStateRoot).
 		Msg("proposer is initialized")
-	return shouldResetStorage, nil
+	return nil
 }
 
 func (p *Proposer) proposeNextBlock(ctx context.Context) error {
+	if p.rollupContractWrapper == nil {
+		err := p.initializeProvedStateRoot(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	data, err := p.blockStorage.TryGetNextProposalData(ctx)
 	if err != nil {
 		return fmt.Errorf("failed get next block to propose: %w", err)
@@ -180,10 +198,15 @@ func (p *Proposer) proposeNextBlock(ctx context.Context) error {
 }
 
 func (p *Proposer) getLatestProvedStateRoot(ctx context.Context) (common.Hash, error) {
+	err := p.tryGetRollupContractWrapper(ctx)
+	if err != nil {
+		p.logger.Error().Msgf("rollup contract wrapper is not initialized: %s", err)
+		return common.EmptyHash, nil
+	}
 	var finalizedBatchIndex string
-	err := p.retryRunner.Do(ctx, func(context.Context) error {
+	err = p.retryRunner.Do(ctx, func(context.Context) error {
 		var err error
-		finalizedBatchIndex, err = p.rollupContract.FinalizedBatchIndex(ctx)
+		finalizedBatchIndex, err = p.rollupContractWrapper.FinalizedBatchIndex(ctx)
 		return err
 	})
 	if err != nil {
@@ -193,7 +216,7 @@ func (p *Proposer) getLatestProvedStateRoot(ctx context.Context) (common.Hash, e
 	var latestProvedState [32]byte
 	err = p.retryRunner.Do(ctx, func(context.Context) error {
 		var err error
-		latestProvedState, err = p.rollupContract.StateRoots(ctx, finalizedBatchIndex)
+		latestProvedState, err = p.rollupContractWrapper.StateRoots(ctx, finalizedBatchIndex)
 		return err
 	})
 
@@ -205,7 +228,7 @@ func (p *Proposer) commitBatch(ctx context.Context, blobs []kzg4844.Blob, batchI
 	batchTxSkipped := false
 	err := p.retryRunner.Do(ctx, func(context.Context) error {
 		var err error
-		tx, err = p.rollupContract.CommitBatch(ctx, blobs, batchIndexInBlobStorage)
+		tx, err = p.rollupContractWrapper.CommitBatch(ctx, blobs, batchIndexInBlobStorage)
 		if errors.Is(err, rollupcontract.ErrBatchAlreadyCommitted) {
 			p.logger.Warn().Msg("batch is already committed, skipping blob tx")
 			batchTxSkipped = true
@@ -226,7 +249,7 @@ func (p *Proposer) commitBatch(ctx context.Context, blobs []kzg4844.Blob, batchI
 			Any("blobHases", tx.BlobHashes()).
 			Msg("blob transaction sent")
 
-		receipt, err := p.rollupContract.WaitForReceipt(ctx, tx.Hash())
+		receipt, err := p.rollupContractWrapper.WaitForReceipt(ctx, tx.Hash())
 		if err != nil {
 			return nil, false, err
 		}
@@ -259,7 +282,7 @@ func (p *Proposer) updateState(ctx context.Context, tx *ethtypes.Transaction, da
 	updateTxSkipped := false
 	err = p.retryRunner.Do(ctx, func(context.Context) error {
 		var err error
-		tx, err = p.rollupContract.UpdateState(
+		tx, err = p.rollupContractWrapper.UpdateState(
 			ctx,
 			batchIndexInBlobStorage,
 			data.OldProvedStateRoot,

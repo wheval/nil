@@ -38,8 +38,9 @@ func (s *TaskHandlerTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	s.taskStorage = storage.NewTaskStorage(s.database, common.NewTimer(), metricsHandler, logger)
+	taskResultStorage := storage.NewTaskResultStorage(s.database, logger)
 	s.timer = testaide.NewTestTimer()
-	s.taskHandler = newTaskHandler(s.taskStorage, s.timer, logger)
+	s.taskHandler = newTaskHandler(s.taskStorage, taskResultStorage, 0, s.timer, logger)
 }
 
 func TestTaskHandlerSuite(t *testing.T) {

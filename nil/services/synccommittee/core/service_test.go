@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"testing"
 	"time"
@@ -48,7 +49,7 @@ func (s *SyncCommitteeTestSuite) SetupSuite() {
 	var err error
 	s.scDb, err = db.NewBadgerDbInMemory()
 	s.Require().NoError(err)
-	ethClientMock := &rollupcontract.EthClientMock{ChainIDFunc: func(ctx context.Context) (*big.Int, error) { return big.NewInt(0), nil }}
+	ethClientMock := &rollupcontract.EthClientMock{ChainIDFunc: func(ctx context.Context) (*big.Int, error) { return big.NewInt(0), errors.New("Empty mocked call") }}
 	s.syncCommittee, err = New(cfg, s.scDb, ethClientMock)
 	s.Require().NoError(err)
 	syncCommitteeMetrics, err := metrics.NewSyncCommitteeMetrics()
