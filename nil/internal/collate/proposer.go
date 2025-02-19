@@ -78,6 +78,11 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 	}
 	defer tx.Rollback()
 
+	block, err := p.fetchPrevBlock(tx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch previous block: %w", err)
+	}
+
 	configAccessor, err := config.NewConfigAccessorTx(tx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config accessor: %w", err)
@@ -91,15 +96,11 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 		return nil, err
 	}
 
-	if err = p.executionState.UpdateBaseFee(); err != nil {
+	if err = p.executionState.UpdateBaseFee(block); err != nil {
 		return nil, fmt.Errorf("failed to update gas price: %w", err)
 	}
 
 	p.logger.Trace().Msg("Collating...")
-
-	if err := p.fetchPrevBlock(tx); err != nil {
-		return nil, fmt.Errorf("failed to fetch previous block: %w", err)
-	}
 
 	if err := p.fetchLastBlockHashes(tx); err != nil {
 		return nil, fmt.Errorf("failed to fetch last block hashes: %w", err)
@@ -124,18 +125,18 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 	return p.proposal, nil
 }
 
-func (p *proposer) fetchPrevBlock(tx db.RoTx) error {
+func (p *proposer) fetchPrevBlock(tx db.RoTx) (*types.Block, error) {
 	b, hash, err := db.ReadLastBlock(tx, p.params.ShardId)
 	if err != nil {
 		if errors.Is(err, db.ErrKeyNotFound) {
-			return nil
+			return nil, nil
 		}
-		return err
+		return nil, err
 	}
 
 	p.proposal.PrevBlockId = b.Id
 	p.proposal.PrevBlockHash = hash
-	return nil
+	return b, nil
 }
 
 func (p *proposer) fetchLastBlockHashes(tx db.RoTx) error {

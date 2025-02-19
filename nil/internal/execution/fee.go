@@ -1,7 +1,7 @@
 package execution
 
 import (
-	"fmt"
+	"errors"
 	"sync"
 
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -10,18 +10,16 @@ import (
 
 var lock sync.Mutex
 
-func (es *ExecutionState) UpdateBaseFee() error {
-	acc, err := es.shardAccessor.GetBlock().ByHash(es.PrevBlock)
-	if err != nil {
+func (es *ExecutionState) UpdateBaseFee(prevBlock *types.Block) error {
+	if prevBlock == nil {
 		// If we can't read the previous block, we don't change the gas price
 		es.GasPrice = types.DefaultGasPrice
-		logger.Error().Err(err).Msg("failed to read previous block, gas price won't be changed")
-		return fmt.Errorf("failed to read previous block: %w", err)
+		err := errors.New("previous block not found")
+		logger.Error().Err(err).Msg("Gas price won't be changed")
+		return err
 	}
-	prevBlock := acc.Block()
 
 	es.BaseFee = calculateBaseFee(prevBlock.BaseFee, prevBlock.GasUsed)
-
 	if es.BaseFee.Cmp(prevBlock.BaseFee) != 0 {
 		logger.Debug().
 			Stringer("Old", prevBlock.BaseFee).
