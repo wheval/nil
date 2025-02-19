@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"slices"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -18,14 +19,19 @@ const (
 )
 
 type Service struct {
-	workers []Worker
-	logger  zerolog.Logger
+	workers      []Worker
+	started      atomic.Bool
+	cancellation chan context.CancelFunc
+	stopped      chan struct{}
+	logger       zerolog.Logger
 }
 
 func NewService(logger zerolog.Logger, workers ...Worker) Service {
 	return Service{
-		workers: workers,
-		logger:  logger,
+		workers:      workers,
+		cancellation: make(chan context.CancelFunc, 1),
+		stopped:      make(chan struct{}),
+		logger:       logger,
 	}
 }
 
@@ -47,10 +53,20 @@ type workerControl struct {
 // On receiving a termination signal (e.g., SIGINT or SIGTERM), the shutdown process begins.
 // During shutdown, workers are stopped in the reverse order: D -> C -> B -> A.
 func (s *Service) Run(ctx context.Context) error {
+	if !s.started.CompareAndSwap(false, true) {
+		return errors.New("service already started")
+	}
+
 	s.logger.Info().Msg("starting service")
 
-	signalCtx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
+	signalCtx, cancellation := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	s.cancellation <- cancellation
+	close(s.cancellation)
+
+	defer func() {
+		s.tryCancel()
+		close(s.stopped)
+	}()
 
 	controls := make([]*workerControl, len(s.workers))
 	defer s.cancelWorkers(controls)
@@ -72,6 +88,19 @@ func (s *Service) Run(ctx context.Context) error {
 	case <-signalCtx.Done():
 		s.logger.Info().Msg("stopping service due to a cancellation request")
 		return signalCtx.Err()
+	}
+}
+
+func (s *Service) Stop() (stopped <-chan struct{}) {
+	s.tryCancel()
+	return s.stopped
+}
+
+func (s *Service) tryCancel() {
+	if cancel, ok := <-s.cancellation; ok {
+		cancel()
+	} else {
+		s.logger.Debug().Msg("service execution already cancelled, ignoring cancellation request")
 	}
 }
 
