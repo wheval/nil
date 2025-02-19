@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"runtime"
 	"runtime/debug"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -33,22 +32,6 @@ const (
 	unknownVersion  string = "<unknown>"
 )
 
-const BaseRevision = 5000
-
-// This revision increase is needed due to the move to the new repository.
-// TODO(@isergeyam): This is actually a dirty hack; we need to resolve the versioning gracefully.
-// See https://github.com/NilFoundation/nil/issues/39
-func updateGitRevision(revision string) string {
-	if revision == "0" || revision == "1" || revision == "" {
-		return revision
-	}
-	rev, err := strconv.Atoi(revision)
-	if err == nil {
-		return strconv.Itoa(rev + BaseRevision)
-	}
-	return revision
-}
-
 func GetVersionInfo() versionInfo {
 	versionInfoCacheMutex.Lock()
 	defer versionInfoCacheMutex.Unlock()
@@ -68,7 +51,6 @@ func GetVersionInfo() versionInfo {
 			versionInfoCache = versionInfo{GitTag: matches[1], GitRevision: matches[2], GitCommit: matches[3]}
 		}
 	}
-	versionInfoCache.GitRevision = updateGitRevision(versionInfoCache.GitRevision)
 	return versionInfoCache
 }
 
