@@ -64,6 +64,7 @@ type RawBlockWithExtractedData struct {
 	Errors          map[common.Hash]string
 	ChildBlocks     []common.Hash
 	DbTimestamp     uint64
+	Config          map[string][]byte
 }
 
 type BlockWithExtractedData struct {
@@ -74,6 +75,7 @@ type BlockWithExtractedData struct {
 	Errors          map[common.Hash]string `json:"errors,omitempty"`
 	ChildBlocks     []common.Hash          `json:"childBlocks"`
 	DbTimestamp     uint64                 `json:"dbTimestamp"`
+	Config          map[string][]byte      `json:"config"`
 }
 
 // interfaces
@@ -111,6 +113,7 @@ func (b *RawBlockWithExtractedData) DecodeSSZ() (*BlockWithExtractedData, error)
 		Errors:          b.Errors,
 		ChildBlocks:     b.ChildBlocks,
 		DbTimestamp:     b.DbTimestamp,
+		Config:          b.Config,
 	}, nil
 }
 
@@ -139,6 +142,7 @@ func (b *BlockWithExtractedData) EncodeSSZ() (*RawBlockWithExtractedData, error)
 		Errors:          b.Errors,
 		ChildBlocks:     b.ChildBlocks,
 		DbTimestamp:     b.DbTimestamp,
+		Config:          b.Config,
 	}, nil
 }
 

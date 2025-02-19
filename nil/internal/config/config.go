@@ -70,7 +70,7 @@ type ParamAccessor struct {
 }
 
 func NewConfigReader(tx db.RoTx, mainShardHash *common.Hash) (ConfigAccessor, error) {
-	trie, err := getConfigTrie(tx, mainShardHash)
+	trie, err := GetConfigTrie(tx, mainShardHash)
 	if err != nil {
 		return nil, err
 	}
@@ -110,11 +110,11 @@ func NewConfigAccessorByNumberTx(ctx context.Context, tx db.RoTx, mainShardBlock
 	if err != nil {
 		return nil, err
 	}
-	return NewConfigAccessorTx(ctx, tx, &mainShardHash)
+	return NewConfigAccessorTx(tx, &mainShardHash)
 }
 
-func NewConfigAccessorTx(ctx context.Context, tx db.RoTx, mainShardHash *common.Hash) (ConfigAccessor, error) {
-	trie, err := getConfigTrie(tx, mainShardHash)
+func NewConfigAccessorTx(tx db.RoTx, mainShardHash *common.Hash) (ConfigAccessor, error) {
+	trie, err := GetConfigTrie(tx, mainShardHash)
 	if err != nil {
 		return nil, err
 	}
@@ -122,10 +122,14 @@ func NewConfigAccessorTx(ctx context.Context, tx db.RoTx, mainShardHash *common.
 	for k, v := range trie.Iterate() {
 		data[string(k)] = v
 	}
+	return NewConfigAccessorFromMap(data), nil
+}
+
+func NewConfigAccessorFromMap(data map[string][]byte) ConfigAccessor {
 	return &configAccessorImpl{
 		data,
 		make(map[string][]byte),
-	}, nil
+	}
 }
 
 // NewConfigAccessor creates a new configAccessorImpl reading the whole trie from the MPT.
@@ -135,7 +139,7 @@ func NewConfigAccessor(ctx context.Context, db db.DB, mainShardHash *common.Hash
 		return nil, fmt.Errorf("failed to create read-only transaction: %w", err)
 	}
 	defer tx.Rollback()
-	return NewConfigAccessorTx(ctx, tx, mainShardHash)
+	return NewConfigAccessorTx(tx, mainShardHash)
 }
 
 // Commit updates the config trie with the current state of the configAccessorImpl.
@@ -246,7 +250,7 @@ func setParamImpl[T any](c ConfigAccessor, obj *T) error {
 	return errors.New("type does not implement types.IConfigParam")
 }
 
-func getConfigTrie(tx db.RoTx, mainShardHash *common.Hash) (*mpt.Reader, error) {
+func GetConfigTrie(tx db.RoTx, mainShardHash *common.Hash) (*mpt.Reader, error) {
 	configTree := mpt.NewDbReader(tx, types.MainShardId, db.ConfigTrieTable)
 	lastBlock := mainShardHash == nil
 

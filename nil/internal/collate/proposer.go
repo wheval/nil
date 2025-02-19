@@ -78,7 +78,7 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 	}
 	defer tx.Rollback()
 
-	configAccessor, err := config.NewConfigAccessorTx(ctx, tx, nil)
+	configAccessor, err := config.NewConfigAccessorTx(tx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config accessor: %w", err)
 	}

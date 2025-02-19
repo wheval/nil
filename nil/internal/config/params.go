@@ -174,7 +174,7 @@ func GetValidatorListForShard(
 		}
 	}
 
-	c, err := NewConfigAccessorTx(ctx, tx, &mainShardHash)
+	c, err := NewConfigAccessorTx(tx, &mainShardHash)
 	if errors.Is(err, db.ErrKeyNotFound) {
 		// It is possible that the needed main chain block has not arrived yet, or that this one is some byzantine block.
 		// Because right now the config is actually constant, we can use whatever version we like in this case,
@@ -184,7 +184,7 @@ func GetValidatorListForShard(
 			Stringer(logging.FieldBlockNumber, block.Id).
 			Stringer(logging.FieldBlockMainChainHash, mainShardHash).
 			Msg("Main chain block not found, using the latest accessible config")
-		c, err = NewConfigAccessorTx(ctx, tx, nil)
+		c, err = NewConfigAccessorTx(tx, nil)
 	}
 	if err != nil {
 		return nil, err

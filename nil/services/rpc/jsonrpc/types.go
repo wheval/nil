@@ -6,6 +6,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
+	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
 	rpctypes "github.com/NilFoundation/nil/nil/services/rpc/types"
@@ -93,6 +94,63 @@ type DebugRPCBlock struct {
 	OutTransactions []hexutil.Bytes        `json:"outTransactions"`
 	Receipts        []hexutil.Bytes        `json:"receipts"`
 	Errors          map[common.Hash]string `json:"errors"`
+	Config          *ChainConfig           `json:"config"`
+}
+
+type ChainConfig struct {
+	Validators  *config.ParamValidators  `json:"validators"`
+	GasPrices   *config.ParamGasPrice    `json:"gasPrices"`
+	L1BlockInfo *config.ParamL1BlockInfo `json:"l1BlockInfo"`
+}
+
+func NewChainConfigFromMap(data map[string][]byte) (*ChainConfig, error) {
+	if data == nil {
+		return nil, nil
+	}
+	configAccessor := config.NewConfigAccessorFromMap(data)
+	validators, err := config.GetParamValidators(configAccessor)
+	if err != nil && !errors.Is(err, config.ErrParamNotFound) {
+		return nil, err
+	}
+	gasPrices, err := config.GetParamGasPrice(configAccessor)
+	if err != nil && !errors.Is(err, config.ErrParamNotFound) {
+		return nil, err
+	}
+	l1BlockInfo, err := config.GetParamL1Block(configAccessor)
+	if err != nil && !errors.Is(err, config.ErrParamNotFound) {
+		return nil, err
+	}
+	return &ChainConfig{
+		Validators:  validators,
+		GasPrices:   gasPrices,
+		L1BlockInfo: l1BlockInfo,
+	}, nil
+}
+
+func (c *ChainConfig) ToMap() (map[string][]byte, error) {
+	result := make(map[string][]byte)
+	if c.Validators != nil {
+		validators, err := c.Validators.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		result[config.NameValidators] = validators
+	}
+	if c.GasPrices != nil {
+		gasPrices, err := c.GasPrices.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		result[config.NameGasPrice] = gasPrices
+	}
+	if c.L1BlockInfo != nil {
+		l1BlockInfo, err := c.L1BlockInfo.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		result[config.NameL1Block] = l1BlockInfo
+	}
+	return result, nil
 }
 
 func (b *DebugRPCBlock) Encode(block *types.RawBlockWithExtractedData) error {
@@ -102,18 +160,37 @@ func (b *DebugRPCBlock) Encode(block *types.RawBlockWithExtractedData) error {
 	b.OutTransactions = hexutil.FromBytesSlice(block.OutTransactions)
 	b.Receipts = hexutil.FromBytesSlice(block.Receipts)
 	b.Errors = block.Errors
+
+	if block.Config != nil {
+		config, err := NewChainConfigFromMap(block.Config)
+		if err != nil {
+			return err
+		}
+		b.Config = config
+		fmt.Printf("config was set to %+v\n", config)
+	}
+
 	return nil
 }
 
 func (b *DebugRPCBlock) Decode() (*types.RawBlockWithExtractedData, error) {
-	return &types.RawBlockWithExtractedData{
+	decodedBlock := types.RawBlockWithExtractedData{
 		Block:           b.Content,
 		ChildBlocks:     b.ChildBlocks,
 		InTransactions:  hexutil.ToBytesSlice(b.InTransactions),
 		OutTransactions: hexutil.ToBytesSlice(b.OutTransactions),
 		Receipts:        hexutil.ToBytesSlice(b.Receipts),
 		Errors:          b.Errors,
-	}, nil
+	}
+	if b.Config != nil {
+		configMap, err := b.Config.ToMap()
+		if err != nil {
+			return nil, err
+		}
+		decodedBlock.Config = configMap
+	}
+
+	return &decodedBlock, nil
 }
 
 func (b *DebugRPCBlock) DecodeSSZ() (*types.BlockWithExtractedData, error) {

@@ -218,6 +218,7 @@ type rawBlockAccessorResult struct {
 	receipts        fieldAccessor[[][]byte]
 	childBlocks     fieldAccessor[[]common.Hash]
 	dbTimestamp     fieldAccessor[uint64]
+	config          fieldAccessor[map[string][]byte]
 }
 
 func (r rawBlockAccessorResult) Block() []byte {
@@ -244,6 +245,10 @@ func (r rawBlockAccessorResult) DbTimestamp() uint64 {
 	return r.dbTimestamp()
 }
 
+func (r rawBlockAccessorResult) Config() map[string][]byte {
+	return r.config()
+}
+
 type rawBlockAccessor struct {
 	rawShardAccessor    *rawShardAccessor
 	withInTransactions  bool
@@ -251,6 +256,7 @@ type rawBlockAccessor struct {
 	withReceipts        bool
 	withChildBlocks     bool
 	withDbTimestamp     bool
+	withConfig          bool
 }
 
 func (b rawBlockAccessor) WithChildBlocks() rawBlockAccessor {
@@ -275,6 +281,11 @@ func (b rawBlockAccessor) WithReceipts() rawBlockAccessor {
 
 func (b rawBlockAccessor) WithDbTimestamp() rawBlockAccessor {
 	b.withDbTimestamp = true
+	return b
+}
+
+func (b rawBlockAccessor) WithConfig() rawBlockAccessor {
+	b.withConfig = true
 	return b
 }
 
@@ -318,6 +329,7 @@ func (b rawBlockAccessor) ByHash(hash common.Hash) (rawBlockAccessorResult, erro
 		receipts:        notInitialized[[][]byte]("Receipts"),
 		childBlocks:     notInitialized[[]common.Hash]("ChildBlocks"),
 		dbTimestamp:     notInitialized[uint64]("DbTimestamp"),
+		config:          notInitialized[map[string][]byte]("Config"),
 	}
 
 	if b.withInTransactions {
@@ -370,6 +382,17 @@ func (b rawBlockAccessor) ByHash(hash common.Hash) (rawBlockAccessorResult, erro
 		res.dbTimestamp = initWith(ts)
 	}
 
+	// config is included only for main shard, empty for others
+	if b.withConfig {
+		root := mpt.NewDbReader(sa.tx, sa.shardId, db.ConfigTrieTable)
+		root.SetRootHash(block.ConfigRoot)
+		configMap := make(map[string][]byte)
+		for key, value := range root.Iterate() {
+			configMap[string(key)] = value
+		}
+		res.config = initWith(configMap)
+	}
+
 	return res, nil
 }
 
@@ -391,6 +414,7 @@ type blockAccessorResult struct {
 	receipts        fieldAccessor[[]*types.Receipt]
 	childBlocks     fieldAccessor[[]common.Hash]
 	dbTimestamp     fieldAccessor[uint64]
+	config          fieldAccessor[map[string][]byte]
 }
 
 func (r blockAccessorResult) Block() *types.Block {
@@ -417,6 +441,10 @@ func (r blockAccessorResult) DbTimestamp() uint64 {
 	return r.dbTimestamp()
 }
 
+func (r blockAccessorResult) Config() map[string][]byte {
+	return r.config()
+}
+
 type blockAccessor struct {
 	rawBlockAccessor
 }
@@ -441,6 +469,10 @@ func (b blockAccessor) WithDbTimestamp() blockAccessor {
 	return blockAccessor{b.rawBlockAccessor.WithDbTimestamp()}
 }
 
+func (b blockAccessor) WithConfig() blockAccessor {
+	return blockAccessor{b.rawBlockAccessor.WithConfig()}
+}
+
 func (b blockAccessor) ByHash(hash common.Hash) (blockAccessorResult, error) {
 	sa := b.rawBlockAccessor.rawShardAccessor
 
@@ -461,6 +493,7 @@ func (b blockAccessor) ByHash(hash common.Hash) (blockAccessorResult, error) {
 		receipts:        notInitialized[[]*types.Receipt]("Receipts"),
 		childBlocks:     notInitialized[[]common.Hash]("ChildBlocks"),
 		dbTimestamp:     notInitialized[uint64]("DbTimestamp"),
+		config:          notInitialized[map[string][]byte]("Config"),
 	}
 
 	if b.withInTransactions {
@@ -487,6 +520,10 @@ func (b blockAccessor) ByHash(hash common.Hash) (blockAccessorResult, error) {
 
 	if b.withDbTimestamp {
 		res.dbTimestamp = initWith(raw.DbTimestamp())
+	}
+
+	if b.withConfig {
+		res.config = initWith(raw.Config())
 	}
 
 	return res, nil
