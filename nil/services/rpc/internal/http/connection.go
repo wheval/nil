@@ -10,9 +10,9 @@ import (
 
 const (
 	MaxRequestContentLength  = 1024 * 1024 * 32 // 32MB
-	currentHeight            = 39
+	currentHeight            = 356
 	minSupportedRevision     = version.BaseRevision + currentHeight
-	minSupportedNiljsVersion = "0.23.0"
+	minSupportedNiljsVersion = "0.24.0"
 )
 
 type (

@@ -72,6 +72,10 @@ stdenv.mkDerivation rec {
     export NODE_JS=${nodejs}/bin/node
     export NIL=${nil}
     cd docs
+
+    # needed to work-around the openssl incompatibility
+    # not sure why it happens, but it does the job
+    export NODE_OPTIONS=--openssl-legacy-provider
     npm run build
   '';
 
@@ -97,6 +101,7 @@ stdenv.mkDerivation rec {
     export NODE_JS=${nodejs}/bin/node
     mkdir -p ~/.solc-select/artifacts/solc-0.8.28
     ln -f -s ${solc}/bin/solc ~/.solc-select/artifacts/solc-0.8.28/solc-0.8.28
+    export NODE_OPTIONS=--openssl-legacy-provider
   '';
 
   installPhase = ''
