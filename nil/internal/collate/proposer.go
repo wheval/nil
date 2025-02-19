@@ -128,9 +128,6 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 func (p *proposer) fetchPrevBlock(tx db.RoTx) (*types.Block, error) {
 	b, hash, err := db.ReadLastBlock(tx, p.params.ShardId)
 	if err != nil {
-		if errors.Is(err, db.ErrKeyNotFound) {
-			return nil, nil
-		}
 		return nil, err
 	}
 

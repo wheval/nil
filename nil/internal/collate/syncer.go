@@ -8,7 +8,10 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/assert"
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
+	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
@@ -366,20 +369,31 @@ func (s *Syncer) GenerateZerostate(ctx context.Context) error {
 	return nil
 }
 
+func returnErrorOrPanic(err error) error {
+	if assert.Enable {
+		check.PanicIfErr(err)
+	}
+	return err
+}
+
 func validateRepliedBlock(
 	in *types.Block, replied *execution.BlockGenerationResult, inHash common.Hash, inTxns []*types.Transaction,
 ) error {
 	if replied.Block.OutTransactionsRoot != in.OutTransactionsRoot {
-		return fmt.Errorf("out transactions root mismatch. Expected %x, got %x",
-			in.OutTransactionsRoot, replied.Block.OutTransactionsRoot)
+		return returnErrorOrPanic(fmt.Errorf("out transactions root mismatch. Expected %x, got %x",
+			in.OutTransactionsRoot, replied.Block.OutTransactionsRoot))
 	}
 	if len(replied.OutTxns) != len(inTxns) {
-		return fmt.Errorf("out transactions count mismatch. Expected %d, got %d",
-			len(inTxns), len(replied.InTxns))
+		return returnErrorOrPanic(fmt.Errorf("out transactions count mismatch. Expected %d, got %d",
+			len(inTxns), len(replied.InTxns)))
+	}
+	if replied.Block.ConfigRoot != in.ConfigRoot {
+		return returnErrorOrPanic(fmt.Errorf("config root mismatch. Expected %x, got %x",
+			in.ConfigRoot, replied.Block.ConfigRoot))
 	}
 	if replied.BlockHash != inHash {
-		return fmt.Errorf("block hash mismatch. Expected %x, got %x",
-			inHash, replied.BlockHash)
+		return returnErrorOrPanic(fmt.Errorf("block hash mismatch. Expected %x, got %x",
+			inHash, replied.BlockHash))
 	}
 	return nil
 }
@@ -421,9 +435,20 @@ func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtracte
 	proposal.InternalTxns, proposal.ExternalTxns = execution.SplitInTransactions(block.InTransactions)
 	proposal.ForwardTxns, _ = execution.SplitOutTransactions(block.OutTransactions, s.config.ShardId)
 
+	var gasPrices []types.Uint256
+	if s.config.ShardId.IsMainShard() {
+		if gasPricesBytes, ok := block.Config[config.NameGasPrice]; ok {
+			param := &config.ParamGasPrice{}
+			if err := param.UnmarshalSSZ(gasPricesBytes); err != nil {
+				return fmt.Errorf("failed to unmarshal gas prices: %w", err)
+			}
+			gasPrices = param.Shards
+		}
+	}
+
 	// First we build block without writing it into the database, because we need to check that the resulted block is
 	// the same as the proposed one.
-	resBlock, err := gen.BuildBlock(proposal)
+	resBlock, err := gen.BuildBlock(proposal, gasPrices)
 	if err != nil {
 		return fmt.Errorf("failed to build block: %w", err)
 	}

@@ -27,6 +27,7 @@ func init() {
 
 type ConfigAccessor interface {
 	GetParamData(name string) ([]byte, error)
+	GetParams() (map[string][]byte, error)
 	SetParamData(name string, data []byte) error
 	Commit(tx db.RwTx, root common.Hash) (common.Hash, error)
 }
@@ -83,6 +84,10 @@ var _ ConfigAccessor = (*ConfigAccessorStub)(nil)
 
 func (c *ConfigAccessorStub) GetParamData(name string) ([]byte, error) {
 	return nil, errors.New("stub config accessor should not be called")
+}
+
+func (c *ConfigAccessorStub) GetParams() (map[string][]byte, error) {
+	return nil, nil // don't return error for the same reason as for Commit.
 }
 
 func (c *ConfigAccessorStub) SetParamData(name string, data []byte) error {
@@ -161,6 +166,14 @@ func (c *configReader) GetParamData(name string) ([]byte, error) {
 	return c.trie.Get([]byte(name))
 }
 
+func (c *configReader) GetParams() (map[string][]byte, error) {
+	result := make(map[string][]byte)
+	for k, v := range c.trie.Iterate() {
+		result[string(k)] = v
+	}
+	return result, nil
+}
+
 func (c *configReader) SetParamData(name string, data []byte) error {
 	return errors.New("call `SetParamData` for read-only config accessor")
 }
@@ -178,6 +191,17 @@ func (c *configAccessorImpl) GetParamData(name string) ([]byte, error) {
 		}
 	}
 	return data, nil
+}
+
+func (c *configAccessorImpl) GetParams() (map[string][]byte, error) {
+	result := make(map[string][]byte)
+	for k, v := range c.readData {
+		result[k] = v
+	}
+	for k, v := range c.writeData {
+		result[k] = v
+	}
+	return result, nil
 }
 
 func (c *configAccessorImpl) SetParamData(name string, data []byte) error {

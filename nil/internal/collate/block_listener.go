@@ -212,13 +212,15 @@ func SetRequestHandler(
 		}
 		defer tx.Rollback()
 
+		acc := accessor.RawAccess(tx, shardId).
+			GetBlock().
+			WithOutTransactions().
+			WithInTransactions().
+			WithChildBlocks().
+			WithConfig()
+
 		for id := blockReq.Id; ; id++ {
-			resp, err := accessor.RawAccess(tx, shardId).
-				GetBlock().
-				WithOutTransactions().
-				WithInTransactions().
-				WithChildBlocks().
-				ByNumber(types.BlockNumber(id))
+			resp, err := acc.ByNumber(types.BlockNumber(id))
 			if err != nil {
 				if !errors.Is(err, db.ErrKeyNotFound) {
 					logError(logger, err, "DB error")
@@ -231,6 +233,7 @@ func SetRequestHandler(
 				OutTransactionsSSZ: resp.OutTransactions(),
 				InTransactionsSSZ:  resp.InTransactions(),
 				ChildBlocks:        pb.PackHashes(resp.ChildBlocks()),
+				Config:             resp.Config(),
 			}
 
 			if err := writeBlockToStream(s, b); err != nil {

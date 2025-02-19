@@ -1,7 +1,6 @@
 package execution
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -11,14 +10,6 @@ import (
 var lock sync.Mutex
 
 func (es *ExecutionState) UpdateBaseFee(prevBlock *types.Block) error {
-	if prevBlock == nil {
-		// If we can't read the previous block, we don't change the gas price
-		es.GasPrice = types.DefaultGasPrice
-		err := errors.New("previous block not found")
-		logger.Error().Err(err).Msg("Gas price won't be changed")
-		return err
-	}
-
 	es.BaseFee = calculateBaseFee(prevBlock.BaseFee, prevBlock.GasUsed)
 	if es.BaseFee.Cmp(prevBlock.BaseFee) != 0 {
 		logger.Debug().
