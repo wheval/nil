@@ -198,6 +198,19 @@ export default {
     },
     {
       type: "category",
+      label: "Hardhat",
+      collapsed: true,
+      collapsible: true,
+      items: [
+        {
+          type: "doc",
+          label: "Getting started",
+          id: "hardhat/getting-started",
+        }
+      ]
+    },
+    {
+      type: "category",
       label: "Guides",
       collapsed: true,
       collapsible: true,
