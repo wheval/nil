@@ -38,29 +38,11 @@ type blockEntry struct {
 	FetchedAt time.Time        `json:"fetchedAt"`
 }
 
-type BlockStorage interface {
-	TryGetProvedStateRoot(ctx context.Context) (*common.Hash, error)
-
-	SetProvedStateRoot(ctx context.Context, stateRoot common.Hash) error
-
-	TryGetLatestFetched(ctx context.Context) (*scTypes.MainBlockRef, error)
-
-	TryGetBlock(ctx context.Context, id scTypes.BlockId) (*jsonrpc.RPCBlock, error)
-
-	SetBlockBatch(ctx context.Context, batch *scTypes.BlockBatch) error
-
-	SetBlockAsProved(ctx context.Context, id scTypes.BlockId) error
-
-	SetBlockAsProposed(ctx context.Context, id scTypes.BlockId) error
-
-	TryGetNextProposalData(ctx context.Context) (*scTypes.ProposalData, error)
-}
-
 type BlockStorageMetrics interface {
 	RecordMainBlockProved(ctx context.Context)
 }
 
-type blockStorage struct {
+type BlockStorage struct {
 	commonStorage
 	timer   common.Timer
 	metrics BlockStorageMetrics
@@ -71,15 +53,15 @@ func NewBlockStorage(
 	timer common.Timer,
 	metrics BlockStorageMetrics,
 	logger zerolog.Logger,
-) BlockStorage {
-	return &blockStorage{
+) *BlockStorage {
+	return &BlockStorage{
 		commonStorage: makeCommonStorage(database, logger, common.DoNotRetryIf(scTypes.ErrBlockMismatch)),
 		timer:         timer,
 		metrics:       metrics,
 	}
 }
 
-func (bs *blockStorage) TryGetProvedStateRoot(ctx context.Context) (*common.Hash, error) {
+func (bs *BlockStorage) TryGetProvedStateRoot(ctx context.Context) (*common.Hash, error) {
 	tx, err := bs.database.CreateRoTx(ctx)
 	if err != nil {
 		return nil, err
@@ -89,7 +71,7 @@ func (bs *blockStorage) TryGetProvedStateRoot(ctx context.Context) (*common.Hash
 	return bs.getProvedStateRoot(tx)
 }
 
-func (bs *blockStorage) getProvedStateRoot(tx db.RoTx) (*common.Hash, error) {
+func (bs *BlockStorage) getProvedStateRoot(tx db.RoTx) (*common.Hash, error) {
 	hashBytes, err := tx.Get(stateRootTable, mainShardKey)
 	if errors.Is(err, db.ErrKeyNotFound) {
 		return nil, nil
@@ -102,7 +84,7 @@ func (bs *blockStorage) getProvedStateRoot(tx db.RoTx) (*common.Hash, error) {
 	return &hash, nil
 }
 
-func (bs *blockStorage) SetProvedStateRoot(ctx context.Context, stateRoot common.Hash) error {
+func (bs *BlockStorage) SetProvedStateRoot(ctx context.Context, stateRoot common.Hash) error {
 	tx, err := bs.database.CreateRwTx(ctx)
 	if err != nil {
 		return err
@@ -117,7 +99,7 @@ func (bs *blockStorage) SetProvedStateRoot(ctx context.Context, stateRoot common
 	return bs.commit(tx)
 }
 
-func (bs *blockStorage) TryGetLatestFetched(ctx context.Context) (*scTypes.MainBlockRef, error) {
+func (bs *BlockStorage) TryGetLatestFetched(ctx context.Context) (*scTypes.MainBlockRef, error) {
 	tx, err := bs.database.CreateRoTx(ctx)
 	if err != nil {
 		return nil, err
@@ -132,7 +114,7 @@ func (bs *blockStorage) TryGetLatestFetched(ctx context.Context) (*scTypes.MainB
 	return lastFetched, nil
 }
 
-func (bs *blockStorage) TryGetBlock(ctx context.Context, id scTypes.BlockId) (*jsonrpc.RPCBlock, error) {
+func (bs *BlockStorage) TryGetBlock(ctx context.Context, id scTypes.BlockId) (*jsonrpc.RPCBlock, error) {
 	tx, err := bs.database.CreateRoTx(ctx)
 	if err != nil {
 		return nil, err
@@ -146,7 +128,7 @@ func (bs *blockStorage) TryGetBlock(ctx context.Context, id scTypes.BlockId) (*j
 	return &entry.Block, nil
 }
 
-func (bs *blockStorage) SetBlockBatch(ctx context.Context, batch *scTypes.BlockBatch) error {
+func (bs *BlockStorage) SetBlockBatch(ctx context.Context, batch *scTypes.BlockBatch) error {
 	if batch == nil {
 		return errors.New("batch cannot be nil")
 	}
@@ -156,7 +138,7 @@ func (bs *blockStorage) SetBlockBatch(ctx context.Context, batch *scTypes.BlockB
 	})
 }
 
-func (bs *blockStorage) setBlockBatchImpl(ctx context.Context, batch *scTypes.BlockBatch) error {
+func (bs *BlockStorage) setBlockBatchImpl(ctx context.Context, batch *scTypes.BlockBatch) error {
 	tx, err := bs.database.CreateRwTx(ctx)
 	if err != nil {
 		return err
@@ -184,7 +166,7 @@ func (bs *blockStorage) setBlockBatchImpl(ctx context.Context, batch *scTypes.Bl
 	return bs.commit(tx)
 }
 
-func (bs *blockStorage) putBlockTx(tx db.RwTx, batchId scTypes.BatchId, block *jsonrpc.RPCBlock) error {
+func (bs *BlockStorage) putBlockTx(tx db.RwTx, batchId scTypes.BatchId, block *jsonrpc.RPCBlock) error {
 	currentTime := bs.timer.NowTime()
 	entry := blockEntry{Block: *block, BatchId: batchId, FetchedAt: currentTime}
 	value, err := marshallEntry(&entry)
@@ -200,7 +182,7 @@ func (bs *blockStorage) putBlockTx(tx db.RwTx, batchId scTypes.BatchId, block *j
 	return nil
 }
 
-func (bs *blockStorage) updateLatestFetched(tx db.RwTx, block *jsonrpc.RPCBlock) error {
+func (bs *BlockStorage) updateLatestFetched(tx db.RwTx, block *jsonrpc.RPCBlock) error {
 	if block.ShardId != types.MainShardId {
 		return nil
 	}
@@ -226,7 +208,7 @@ func (bs *blockStorage) updateLatestFetched(tx db.RwTx, block *jsonrpc.RPCBlock)
 	return bs.putLatestFetchedBlockTx(tx, block.ShardId, *newLatestFetched)
 }
 
-func (bs *blockStorage) setProposeParentHash(tx db.RwTx, block *jsonrpc.RPCBlock) error {
+func (bs *BlockStorage) setProposeParentHash(tx db.RwTx, block *jsonrpc.RPCBlock) error {
 	if block.ShardId != types.MainShardId {
 		return nil
 	}
@@ -250,7 +232,7 @@ func (bs *blockStorage) setProposeParentHash(tx db.RwTx, block *jsonrpc.RPCBlock
 	return bs.setParentOfNextToPropose(tx, block.ParentHash)
 }
 
-func (bs *blockStorage) SetBlockAsProved(ctx context.Context, id scTypes.BlockId) error {
+func (bs *BlockStorage) SetBlockAsProved(ctx context.Context, id scTypes.BlockId) error {
 	wasSet, err := bs.setBlockAsProvedImpl(ctx, id)
 	if err != nil {
 		return err
@@ -261,7 +243,7 @@ func (bs *blockStorage) SetBlockAsProved(ctx context.Context, id scTypes.BlockId
 	return nil
 }
 
-func (bs *blockStorage) setBlockAsProvedImpl(ctx context.Context, id scTypes.BlockId) (wasSet bool, err error) {
+func (bs *BlockStorage) setBlockAsProvedImpl(ctx context.Context, id scTypes.BlockId) (wasSet bool, err error) {
 	tx, err := bs.database.CreateRwTx(ctx)
 	if err != nil {
 		return false, err
@@ -298,7 +280,7 @@ func (bs *blockStorage) setBlockAsProvedImpl(ctx context.Context, id scTypes.Blo
 	return true, nil
 }
 
-func (bs *blockStorage) TryGetNextProposalData(ctx context.Context) (*scTypes.ProposalData, error) {
+func (bs *BlockStorage) TryGetNextProposalData(ctx context.Context) (*scTypes.ProposalData, error) {
 	tx, err := bs.database.CreateRoTx(ctx)
 	if err != nil {
 		return nil, err
@@ -368,13 +350,13 @@ func (bs *blockStorage) TryGetNextProposalData(ctx context.Context) (*scTypes.Pr
 	}, nil
 }
 
-func (bs *blockStorage) SetBlockAsProposed(ctx context.Context, id scTypes.BlockId) error {
+func (bs *BlockStorage) SetBlockAsProposed(ctx context.Context, id scTypes.BlockId) error {
 	return bs.retryRunner.Do(ctx, func(ctx context.Context) error {
 		return bs.setBlockAsProposedImpl(ctx, id)
 	})
 }
 
-func (bs *blockStorage) setBlockAsProposedImpl(ctx context.Context, id scTypes.BlockId) error {
+func (bs *BlockStorage) setBlockAsProposedImpl(ctx context.Context, id scTypes.BlockId) error {
 	tx, err := bs.database.CreateRwTx(ctx)
 	if err != nil {
 		return err
@@ -424,7 +406,7 @@ func isValidProposalCandidate(entry *blockEntry, parentHash common.Hash) bool {
 }
 
 // getParentOfNextToPropose retrieves parent's hash of the next block to propose
-func (bs *blockStorage) getParentOfNextToPropose(tx db.RoTx) (*common.Hash, error) {
+func (bs *BlockStorage) getParentOfNextToPropose(tx db.RoTx) (*common.Hash, error) {
 	hashBytes, err := tx.Get(nextToProposeTable, mainShardKey)
 
 	if errors.Is(err, db.ErrKeyNotFound) {
@@ -440,7 +422,7 @@ func (bs *blockStorage) getParentOfNextToPropose(tx db.RoTx) (*common.Hash, erro
 }
 
 // setParentOfNextToPropose sets parent's hash of the next block to propose
-func (bs *blockStorage) setParentOfNextToPropose(tx db.RwTx, hash common.Hash) error {
+func (bs *BlockStorage) setParentOfNextToPropose(tx db.RwTx, hash common.Hash) error {
 	err := tx.Put(nextToProposeTable, mainShardKey, hash.Bytes())
 	if err != nil {
 		return fmt.Errorf("failed to put next to propose parent hash: %w", err)
@@ -448,7 +430,7 @@ func (bs *blockStorage) setParentOfNextToPropose(tx db.RwTx, hash common.Hash) e
 	return nil
 }
 
-func (bs *blockStorage) validateMainShardEntry(tx db.RoTx, id scTypes.BlockId, entry *blockEntry) error {
+func (bs *BlockStorage) validateMainShardEntry(tx db.RoTx, id scTypes.BlockId, entry *blockEntry) error {
 	if entry == nil {
 		return fmt.Errorf("block with id=%s is not found", id.String())
 	}
@@ -479,7 +461,7 @@ func (bs *blockStorage) validateMainShardEntry(tx db.RoTx, id scTypes.BlockId, e
 	return nil
 }
 
-func (bs *blockStorage) getLatestFetchedMainTx(tx db.RoTx) (*scTypes.MainBlockRef, error) {
+func (bs *BlockStorage) getLatestFetchedMainTx(tx db.RoTx) (*scTypes.MainBlockRef, error) {
 	value, err := tx.Get(latestFetchedTable, mainShardKey)
 	if errors.Is(err, db.ErrKeyNotFound) {
 		return nil, nil
@@ -496,7 +478,7 @@ func (bs *blockStorage) getLatestFetchedMainTx(tx db.RoTx) (*scTypes.MainBlockRe
 	return blockRef, nil
 }
 
-func (bs *blockStorage) putLatestFetchedBlockTx(tx db.RwTx, shardId types.ShardId, block scTypes.MainBlockRef) error {
+func (bs *BlockStorage) putLatestFetchedBlockTx(tx db.RwTx, shardId types.ShardId, block scTypes.MainBlockRef) error {
 	bytes, err := json.Marshal(block)
 	if err != nil {
 		return fmt.Errorf(
@@ -516,7 +498,7 @@ func makeShardKey(shardId types.ShardId) []byte {
 	return key
 }
 
-func (bs *blockStorage) getBlockEntry(tx db.RoTx, id scTypes.BlockId) (*blockEntry, error) {
+func (bs *BlockStorage) getBlockEntry(tx db.RoTx, id scTypes.BlockId) (*blockEntry, error) {
 	idBytes := id.Bytes()
 	value, err := tx.Get(blocksTable, idBytes)
 	if err != nil {

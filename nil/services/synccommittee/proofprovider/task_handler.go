@@ -6,30 +6,33 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/rs/zerolog"
 )
 
+type HandlerTaskStorage interface {
+	AddTaskEntries(ctx context.Context, tasks ...*types.TaskEntry) error
+}
+
 type taskHandler struct {
-	taskStorage   storage.TaskStorage
-	resultStorage storage.TaskResultStorage
-	skipRate      int
-	taskNum       int
-	timer         common.Timer
-	logger        zerolog.Logger
+	taskStorage HandlerTaskStorage
+	resultSaver TaskResultSaver
+	skipRate    int
+	taskNum     int
+	timer       common.Timer
+	logger      zerolog.Logger
 }
 
 func newTaskHandler(
-	taskStorage storage.TaskStorage, resultStorage storage.TaskResultStorage, skipRate int, timer common.Timer, logger zerolog.Logger,
+	taskStorage HandlerTaskStorage, resultSaver TaskResultSaver, skipRate int, timer common.Timer, logger zerolog.Logger,
 ) api.TaskHandler {
 	return &taskHandler{
-		taskStorage:   taskStorage,
-		resultStorage: resultStorage,
-		skipRate:      skipRate,
-		taskNum:       0,
-		timer:         timer,
-		logger:        logger,
+		taskStorage: taskStorage,
+		resultSaver: resultSaver,
+		skipRate:    skipRate,
+		taskNum:     0,
+		timer:       timer,
+		logger:      logger,
 	}
 }
 
@@ -48,7 +51,7 @@ func (h *taskHandler) Handle(ctx context.Context, executorId types.TaskExecutorI
 			types.TaskOutputArtifacts{},
 			task.BlockHash.Bytes(),
 		)
-		err := h.resultStorage.Put(ctx, skippedTaskResult)
+		err := h.resultSaver.Put(ctx, skippedTaskResult)
 		if err != nil {
 			log.NewTaskEvent(h.logger, zerolog.ErrorLevel, task).
 				Err(err).

@@ -12,7 +12,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/scheduler/heap"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/public"
 	"github.com/rs/zerolog"
@@ -38,18 +37,32 @@ type TaskScheduler interface {
 	public.TaskDebugApi
 }
 
-type TaskSchedulerMetrics interface {
+type Storage interface {
+	TryGetTaskEntry(ctx context.Context, id types.TaskId) (*types.TaskEntry, error)
+
+	GetTaskViews(ctx context.Context, destination interface{ Add(task *public.TaskView) }, predicate func(*public.TaskView) bool) error
+
+	GetTaskTreeView(ctx context.Context, taskId types.TaskId) (*public.TaskTreeView, error)
+
+	RequestTaskToExecute(ctx context.Context, executor types.TaskExecutorId) (*types.Task, error)
+
+	ProcessTaskResult(ctx context.Context, res *types.TaskResult) error
+
+	RescheduleHangingTasks(ctx context.Context, taskExecutionTimeout time.Duration) error
+}
+
+type Metrics interface {
 	metrics.BasicMetrics
 }
 
 func New(
-	taskStorage storage.TaskStorage,
+	storage Storage,
 	stateHandler api.TaskStateChangeHandler,
-	metrics TaskSchedulerMetrics,
+	metrics Metrics,
 	logger zerolog.Logger,
 ) TaskScheduler {
 	scheduler := &taskSchedulerImpl{
-		storage:      taskStorage,
+		storage:      storage,
 		stateHandler: stateHandler,
 		config:       DefaultConfig(),
 		metrics:      metrics,
@@ -63,10 +76,10 @@ func New(
 type taskSchedulerImpl struct {
 	srv.WorkerLoop
 
-	storage      storage.TaskStorage
+	storage      Storage
 	stateHandler api.TaskStateChangeHandler
 	config       Config
-	metrics      TaskSchedulerMetrics
+	metrics      Metrics
 	logger       zerolog.Logger
 }
 

@@ -30,9 +30,9 @@ type ProposerTestSuite struct {
 	params           *ProposerParams
 	db               db.DB
 	timer            common.Timer
-	storage          storage.BlockStorage
+	storage          *storage.BlockStorage
 	ethClient        *rollupcontract.EthClientMock
-	proposer         *Proposer
+	proposer         *proposer
 	testData         *types.ProposalData
 	callContractMock *callContractMock
 }

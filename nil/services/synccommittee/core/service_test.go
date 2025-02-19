@@ -25,7 +25,7 @@ type SyncCommitteeTestSuite struct {
 
 	url           string
 	nShards       uint32
-	blockStorage  storage.BlockStorage
+	blockStorage  *storage.BlockStorage
 	syncCommittee *SyncCommittee
 	scDb          db.DB
 }

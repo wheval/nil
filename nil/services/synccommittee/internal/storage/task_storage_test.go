@@ -24,7 +24,7 @@ type TaskStorageSuite struct {
 	suite.Suite
 	database db.DB
 	timer    common.Timer
-	ts       TaskStorage
+	ts       *TaskStorage
 	ctx      context.Context
 }
 

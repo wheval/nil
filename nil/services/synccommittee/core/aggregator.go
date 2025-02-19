@@ -17,7 +17,6 @@ import (
 	v1 "github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/encode/v1"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/rs/zerolog"
 )
@@ -28,11 +27,20 @@ type AggregatorMetrics interface {
 	RecordBlockBatchSize(ctx context.Context, batchSize int64)
 }
 
-type Aggregator struct {
+type AggregatorTaskStorage interface {
+	AddTaskEntries(ctx context.Context, tasks ...*types.TaskEntry) error
+}
+
+type AggregatorBlockStorage interface {
+	TryGetLatestFetched(ctx context.Context) (*types.MainBlockRef, error)
+	SetBlockBatch(ctx context.Context, batch *types.BlockBatch) error
+}
+
+type aggregator struct {
 	logger         zerolog.Logger
 	rpcClient      client.Client
-	blockStorage   storage.BlockStorage
-	taskStorage    storage.TaskStorage
+	blockStorage   AggregatorBlockStorage
+	taskStorage    AggregatorTaskStorage
 	batchCommitter batches.BatchCommitter
 	timer          common.Timer
 	metrics        AggregatorMetrics
@@ -41,14 +49,14 @@ type Aggregator struct {
 
 func NewAggregator(
 	rpcClient client.Client,
-	blockStorage storage.BlockStorage,
-	taskStorage storage.TaskStorage,
+	blockStorage AggregatorBlockStorage,
+	taskStorage AggregatorTaskStorage,
 	timer common.Timer,
 	logger zerolog.Logger,
 	metrics AggregatorMetrics,
 	pollingDelay time.Duration,
-) *Aggregator {
-	aggregator := &Aggregator{
+) *aggregator {
+	agg := &aggregator{
 		rpcClient:    rpcClient,
 		blockStorage: blockStorage,
 		taskStorage:  taskStorage,
@@ -63,16 +71,16 @@ func NewAggregator(
 		metrics: metrics,
 	}
 
-	aggregator.workerAction = concurrent.NewSuspendable(aggregator.runIteration, pollingDelay)
-	aggregator.logger = srv.WorkerLogger(logger, aggregator)
-	return aggregator
+	agg.workerAction = concurrent.NewSuspendable(agg.runIteration, pollingDelay)
+	agg.logger = srv.WorkerLogger(logger, agg)
+	return agg
 }
 
-func (agg *Aggregator) Name() string {
+func (agg *aggregator) Name() string {
 	return "aggregator"
 }
 
-func (agg *Aggregator) Run(ctx context.Context, started chan<- struct{}) error {
+func (agg *aggregator) Run(ctx context.Context, started chan<- struct{}) error {
 	agg.logger.Info().Msg("starting blocks fetching")
 
 	err := agg.workerAction.Run(ctx, started)
@@ -86,7 +94,7 @@ func (agg *Aggregator) Run(ctx context.Context, started chan<- struct{}) error {
 	return err
 }
 
-func (agg *Aggregator) Pause(ctx context.Context) error {
+func (agg *aggregator) Pause(ctx context.Context) error {
 	paused, err := agg.workerAction.Pause(ctx)
 	if err != nil {
 		return err
@@ -97,7 +105,7 @@ func (agg *Aggregator) Pause(ctx context.Context) error {
 	return nil
 }
 
-func (agg *Aggregator) Resume(ctx context.Context) error {
+func (agg *aggregator) Resume(ctx context.Context) error {
 	resumed, err := agg.workerAction.Resume(ctx)
 	if err != nil {
 		return err
@@ -108,7 +116,7 @@ func (agg *Aggregator) Resume(ctx context.Context) error {
 	return nil
 }
 
-func (agg *Aggregator) runIteration(ctx context.Context) {
+func (agg *aggregator) runIteration(ctx context.Context) {
 	err := agg.processNewBlocks(ctx)
 
 	if errors.Is(err, types.ErrBatchNotReady) {
@@ -124,7 +132,7 @@ func (agg *Aggregator) runIteration(ctx context.Context) {
 
 // processNewBlocks fetches and processes new blocks for all shards.
 // It handles the overall flow of block synchronization and proof creation.
-func (agg *Aggregator) processNewBlocks(ctx context.Context) error {
+func (agg *aggregator) processNewBlocks(ctx context.Context) error {
 	latestBlock, err := agg.fetchLatestBlockRef(ctx)
 	if err != nil {
 		return err
@@ -139,7 +147,7 @@ func (agg *Aggregator) processNewBlocks(ctx context.Context) error {
 }
 
 // fetchLatestBlocks retrieves the latest block for main shard
-func (agg *Aggregator) fetchLatestBlockRef(ctx context.Context) (*types.MainBlockRef, error) {
+func (agg *aggregator) fetchLatestBlockRef(ctx context.Context) (*types.MainBlockRef, error) {
 	block, err := agg.rpcClient.GetBlock(ctx, coreTypes.MainShardId, "latest", false)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching latest block from shard %d: %w", coreTypes.MainShardId, err)
@@ -149,7 +157,7 @@ func (agg *Aggregator) fetchLatestBlockRef(ctx context.Context) (*types.MainBloc
 
 // processShardBlocks handles the processing of new blocks for the main shard.
 // It fetches new blocks, updates the storage, and records relevant metrics.
-func (agg *Aggregator) processShardBlocks(ctx context.Context, actualLatest types.MainBlockRef) error {
+func (agg *aggregator) processShardBlocks(ctx context.Context, actualLatest types.MainBlockRef) error {
 	latestFetched, err := agg.blockStorage.TryGetLatestFetched(ctx)
 	if err != nil {
 		return fmt.Errorf("error reading latest fetched block for the main shard: %w", err)
@@ -175,7 +183,7 @@ func (agg *Aggregator) processShardBlocks(ctx context.Context, actualLatest type
 }
 
 // fetchAndProcessBlocks retrieves a range of blocks for a main shard, stores them, creates proof tasks
-func (agg *Aggregator) fetchAndProcessBlocks(ctx context.Context, blocksRange types.BlocksRange) error {
+func (agg *aggregator) fetchAndProcessBlocks(ctx context.Context, blocksRange types.BlocksRange) error {
 	shardId := coreTypes.MainShardId
 	const requestBatchSize = 20
 	results, err := agg.rpcClient.GetBlocksRange(ctx, shardId, blocksRange.Start, blocksRange.End+1, true, requestBatchSize)
@@ -200,7 +208,7 @@ func (agg *Aggregator) fetchAndProcessBlocks(ctx context.Context, blocksRange ty
 	return nil
 }
 
-func (agg *Aggregator) createBlockBatch(ctx context.Context, mainShardBlock *jsonrpc.RPCBlock) (*types.BlockBatch, error) {
+func (agg *aggregator) createBlockBatch(ctx context.Context, mainShardBlock *jsonrpc.RPCBlock) (*types.BlockBatch, error) {
 	childIds, err := types.ChildBlockIds(mainShardBlock)
 	if err != nil {
 		return nil, err
@@ -222,7 +230,7 @@ func (agg *Aggregator) createBlockBatch(ctx context.Context, mainShardBlock *jso
 }
 
 // handleBlockBatch checks the validity of a block and stores it if valid.
-func (agg *Aggregator) handleBlockBatch(ctx context.Context, batch *types.BlockBatch) error {
+func (agg *aggregator) handleBlockBatch(ctx context.Context, batch *types.BlockBatch) error {
 	latestFetched, err := agg.blockStorage.TryGetLatestFetched(ctx)
 	if err != nil {
 		return fmt.Errorf("error reading latest fetched block from storage: %w", err)
@@ -249,7 +257,7 @@ func (agg *Aggregator) handleBlockBatch(ctx context.Context, batch *types.BlockB
 }
 
 // createProofTask generates proof tasks for block batch
-func (agg *Aggregator) createProofTasks(ctx context.Context, batch *types.BlockBatch) error {
+func (agg *aggregator) createProofTasks(ctx context.Context, batch *types.BlockBatch) error {
 	currentTime := agg.timer.NowTime()
 	proofTasks, err := batch.CreateProofTasks(currentTime)
 	if err != nil {

@@ -18,7 +18,7 @@ type TaskResultStorageSuite struct {
 	cancel context.CancelFunc
 
 	database db.DB
-	storage  TaskResultStorage
+	storage  *TaskResultStorage
 }
 
 func TestTaskResultStorageSuite(t *testing.T) {
@@ -64,7 +64,7 @@ func (s *TaskResultStorageSuite) Test_Put_Same_Task_Result_N_Times() {
 	s.Require().Equal(result, resultFromStorage)
 }
 
-func (s *TaskResultStorageSuite) Test_Delete_Same_Task_Result_N_Times() {
+func (s *TaskResultStorageSuite) Test_SetAsSubmitted_Same_Task_Result_N_Times() {
 	result := types.NewFailureProviderTaskResult(
 		types.NewTaskId(),
 		testaide.RandomExecutorId(),
@@ -75,7 +75,7 @@ func (s *TaskResultStorageSuite) Test_Delete_Same_Task_Result_N_Times() {
 	s.Require().NoError(err)
 
 	for range 3 {
-		err := s.storage.Delete(s.ctx, result.TaskId)
+		err := s.storage.SetAsSubmitted(s.ctx, result.TaskId)
 		s.Require().NoError(err)
 
 		nextRes, err := s.storage.TryGetPending(s.ctx)
@@ -101,7 +101,7 @@ func (s *TaskResultStorageSuite) Test_Put_Get_Delete_Results() {
 
 		resultsFromStorage = append(resultsFromStorage, resultFromStorage)
 
-		err = s.storage.Delete(s.ctx, resultFromStorage.TaskId)
+		err = s.storage.SetAsSubmitted(s.ctx, resultFromStorage.TaskId)
 		s.Require().NoError(err)
 	}
 

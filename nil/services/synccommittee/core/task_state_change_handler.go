@@ -7,23 +7,26 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/rs/zerolog"
 )
 
+type ProvedBlockSetter interface {
+	SetBlockAsProved(ctx context.Context, blockId types.BlockId) error
+}
+
 type taskStateChangeHandler struct {
-	blockStorage storage.BlockStorage
-	logger       zerolog.Logger
+	blockSetter ProvedBlockSetter
+	logger      zerolog.Logger
 }
 
 func newTaskStateChangeHandler(
-	blockStorage storage.BlockStorage,
+	blockSetter ProvedBlockSetter,
 	logger zerolog.Logger,
 ) api.TaskStateChangeHandler {
 	return &taskStateChangeHandler{
-		blockStorage: blockStorage,
-		logger:       logger,
+		blockSetter: blockSetter,
+		logger:      logger,
 	}
 }
 
@@ -48,7 +51,7 @@ func (h taskStateChangeHandler) OnTaskTerminated(ctx context.Context, task *type
 
 	blockId := types.NewBlockId(task.ShardId, task.BlockHash)
 
-	if err := h.blockStorage.SetBlockAsProved(ctx, blockId); err != nil {
+	if err := h.blockSetter.SetBlockAsProved(ctx, blockId); err != nil {
 		return fmt.Errorf("failed to set block with id=%s as proved: %w", blockId, err)
 	}
 

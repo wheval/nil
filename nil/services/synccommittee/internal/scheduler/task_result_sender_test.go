@@ -24,8 +24,9 @@ type TaskResultSenderSuite struct {
 	cancel context.CancelFunc
 
 	database      db.DB
-	logger        zerolog.Logger
-	resultStorage storage.TaskResultStorage
+	resultStorage *storage.TaskResultStorage
+
+	logger zerolog.Logger
 }
 
 func TestTaskResultSenderSuite(t *testing.T) {

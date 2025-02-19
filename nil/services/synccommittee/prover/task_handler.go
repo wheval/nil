@@ -14,31 +14,34 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/prover/commands"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/prover/internal/constants"
 	"github.com/rs/zerolog"
 )
 
+type TaskResultSaver interface {
+	Put(ctx context.Context, result *types.TaskResult) error
+}
+
 type taskHandler struct {
-	resultStorage storage.TaskResultStorage
-	timer         common.Timer
-	logger        zerolog.Logger
-	config        taskHandlerConfig
+	resultSaver TaskResultSaver
+	timer       common.Timer
+	logger      zerolog.Logger
+	config      taskHandlerConfig
 }
 
 func newTaskHandler(
-	resultStorage storage.TaskResultStorage,
+	resultSaver TaskResultSaver,
 	timer common.Timer,
 	logger zerolog.Logger,
 	config taskHandlerConfig,
 ) api.TaskHandler {
 	return &taskHandler{
-		resultStorage: resultStorage,
-		timer:         timer,
-		logger:        logger,
-		config:        config,
+		resultSaver: resultSaver,
+		timer:       timer,
+		logger:      logger,
+		config:      config,
 	}
 }
 
@@ -69,7 +72,7 @@ func (h *taskHandler) Handle(ctx context.Context, executorId types.TaskExecutorI
 		taskResult = types.NewFailureProverTaskResult(task.Id, executorId, h.mapErrToTaskExec(err))
 	}
 
-	return h.resultStorage.Put(ctx, taskResult)
+	return h.resultSaver.Put(ctx, taskResult)
 }
 
 func (h *taskHandler) handleImpl(ctx context.Context, task *types.Task) (*executionResult, error) {

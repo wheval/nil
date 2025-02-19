@@ -26,37 +26,6 @@ const (
 	rescheduledTasksPerTxLimit = 100
 )
 
-// TaskViewContainer is an interface for storing task view
-type TaskViewContainer interface {
-	// Add inserts a new TaskView into the container
-	Add(task *public.TaskView)
-}
-
-// TaskStorage Interface for storing and accessing tasks from DB
-type TaskStorage interface {
-	// AddTaskEntries Store set of task entries as a single transaction.
-	// If at least one task with a given id already exists, method returns ErrTaskAlreadyExists.
-	AddTaskEntries(ctx context.Context, tasks ...*types.TaskEntry) error
-
-	// TryGetTaskEntry Retrieve a task entry by its id. In case if task does not exist, method returns nil
-	TryGetTaskEntry(ctx context.Context, id types.TaskId) (*types.TaskEntry, error)
-
-	// GetTaskViews Retrieve tasks that match the given predicate function and pushes them to the destination container.
-	GetTaskViews(ctx context.Context, destination TaskViewContainer, predicate func(*public.TaskView) bool) error
-
-	// GetTaskTreeView retrieves the full hierarchical structure of a task and its dependencies by the given task id.
-	GetTaskTreeView(ctx context.Context, taskId types.TaskId) (*public.TaskTreeView, error)
-
-	// RequestTaskToExecute Find task with no dependencies and higher priority and assign it to the executor
-	RequestTaskToExecute(ctx context.Context, executor types.TaskExecutorId) (*types.Task, error)
-
-	// ProcessTaskResult Check task result, update dependencies in case of success
-	ProcessTaskResult(ctx context.Context, res *types.TaskResult) error
-
-	// RescheduleHangingTasks Identify tasks that exceed execution timeout and reschedule them to be re-executed
-	RescheduleHangingTasks(ctx context.Context, taskExecutionTimeout time.Duration) error
-}
-
 type TaskStorageMetrics interface {
 	RecordTaskAdded(ctx context.Context, task *types.TaskEntry)
 	RecordTaskStarted(ctx context.Context, taskEntry *types.TaskEntry)
@@ -64,7 +33,8 @@ type TaskStorageMetrics interface {
 	RecordTaskRescheduled(ctx context.Context, taskType types.TaskType, previousExecutor types.TaskExecutorId)
 }
 
-type taskStorage struct {
+// TaskStorage defines a type for managing tasks and their lifecycle operations.
+type TaskStorage struct {
 	commonStorage
 	timer   common.Timer
 	metrics TaskStorageMetrics
@@ -75,8 +45,8 @@ func NewTaskStorage(
 	timer common.Timer,
 	metrics TaskStorageMetrics,
 	logger zerolog.Logger,
-) TaskStorage {
-	return &taskStorage{
+) *TaskStorage {
+	return &TaskStorage{
 		commonStorage: makeCommonStorage(
 			db,
 			logger,
@@ -88,7 +58,7 @@ func NewTaskStorage(
 }
 
 // Helper to get and decode task entry from DB
-func (*taskStorage) extractTaskEntry(tx db.RoTx, id types.TaskId) (*types.TaskEntry, error) {
+func (*TaskStorage) extractTaskEntry(tx db.RoTx, id types.TaskId) (*types.TaskEntry, error) {
 	encoded, err := tx.Get(taskEntriesTable, id.Bytes())
 	if err != nil {
 		return nil, err
@@ -102,7 +72,7 @@ func (*taskStorage) extractTaskEntry(tx db.RoTx, id types.TaskId) (*types.TaskEn
 }
 
 // Helper to encode and put task entry into DB
-func (st *taskStorage) putTaskEntry(tx db.RwTx, entry *types.TaskEntry) error {
+func (st *TaskStorage) putTaskEntry(tx db.RwTx, entry *types.TaskEntry) error {
 	var inputBuffer bytes.Buffer
 	err := gob.NewEncoder(&inputBuffer).Encode(entry)
 	if err != nil {
@@ -115,7 +85,9 @@ func (st *taskStorage) putTaskEntry(tx db.RwTx, entry *types.TaskEntry) error {
 	return nil
 }
 
-func (st *taskStorage) AddTaskEntries(ctx context.Context, tasks ...*types.TaskEntry) error {
+// AddTaskEntries saves set of task entries.
+// If at least one task with a given id already exists, method returns ErrTaskAlreadyExists.
+func (st *TaskStorage) AddTaskEntries(ctx context.Context, tasks ...*types.TaskEntry) error {
 	err := st.retryRunner.Do(ctx, func(ctx context.Context) error {
 		return st.addTaskEntriesImpl(ctx, tasks)
 	})
@@ -129,7 +101,7 @@ func (st *taskStorage) AddTaskEntries(ctx context.Context, tasks ...*types.TaskE
 	return nil
 }
 
-func (st *taskStorage) addTaskEntriesImpl(ctx context.Context, tasks []*types.TaskEntry) error {
+func (st *TaskStorage) addTaskEntriesImpl(ctx context.Context, tasks []*types.TaskEntry) error {
 	tx, err := st.database.CreateRwTx(ctx)
 	if err != nil {
 		return err
@@ -146,7 +118,7 @@ func (st *taskStorage) addTaskEntriesImpl(ctx context.Context, tasks []*types.Ta
 	return st.commit(tx)
 }
 
-func (st *taskStorage) addSingleTaskEntryTx(tx db.RwTx, entry *types.TaskEntry) error {
+func (st *TaskStorage) addSingleTaskEntryTx(tx db.RwTx, entry *types.TaskEntry) error {
 	key := st.makeTaskKey(entry)
 	exists, err := tx.Exists(taskEntriesTable, key)
 	if err != nil {
@@ -159,7 +131,8 @@ func (st *taskStorage) addSingleTaskEntryTx(tx db.RwTx, entry *types.TaskEntry) 
 	return st.putTaskEntry(tx, entry)
 }
 
-func (st *taskStorage) TryGetTaskEntry(ctx context.Context, id types.TaskId) (*types.TaskEntry, error) {
+// TryGetTaskEntry Retrieve a task entry by its id. In case if task does not exist, method returns nil
+func (st *TaskStorage) TryGetTaskEntry(ctx context.Context, id types.TaskId) (*types.TaskEntry, error) {
 	tx, err := st.database.CreateRoTx(ctx)
 	if err != nil {
 		return nil, err
@@ -174,7 +147,8 @@ func (st *taskStorage) TryGetTaskEntry(ctx context.Context, id types.TaskId) (*t
 	return entry, err
 }
 
-func (st *taskStorage) GetTaskViews(ctx context.Context, destination TaskViewContainer, predicate func(*public.TaskView) bool) error {
+// GetTaskViews Retrieve tasks that match the given predicate function and pushes them to the destination container.
+func (st *TaskStorage) GetTaskViews(ctx context.Context, destination interface{ Add(task *public.TaskView) }, predicate func(*public.TaskView) bool) error {
 	tx, err := st.database.CreateRoTx(ctx)
 	if err != nil {
 		return err
@@ -197,7 +171,8 @@ func (st *taskStorage) GetTaskViews(ctx context.Context, destination TaskViewCon
 	return nil
 }
 
-func (st *taskStorage) GetTaskTreeView(ctx context.Context, rootTaskId types.TaskId) (*public.TaskTreeView, error) {
+// GetTaskTreeView retrieves the full hierarchical structure of a task and its dependencies by the given task id.
+func (st *TaskStorage) GetTaskTreeView(ctx context.Context, rootTaskId types.TaskId) (*public.TaskTreeView, error) {
 	tx, err := st.database.CreateRoTx(ctx)
 	if err != nil {
 		return nil, err
@@ -252,7 +227,7 @@ func (st *taskStorage) GetTaskTreeView(ctx context.Context, rootTaskId types.Tas
 }
 
 // Helper to find available task with higher priority
-func (st *taskStorage) findTopPriorityTask(tx db.RoTx) (*types.TaskEntry, error) {
+func (st *TaskStorage) findTopPriorityTask(tx db.RoTx) (*types.TaskEntry, error) {
 	var topPriorityTask *types.TaskEntry = nil
 
 	err := st.iterateOverTaskEntries(tx, func(entry *types.TaskEntry) (bool, error) {
@@ -270,7 +245,8 @@ func (st *taskStorage) findTopPriorityTask(tx db.RoTx) (*types.TaskEntry, error)
 	return topPriorityTask, err
 }
 
-func (st *taskStorage) RequestTaskToExecute(ctx context.Context, executor types.TaskExecutorId) (*types.Task, error) {
+// RequestTaskToExecute Find task with no dependencies and higher priority and assign it to the executor
+func (st *TaskStorage) RequestTaskToExecute(ctx context.Context, executor types.TaskExecutorId) (*types.Task, error) {
 	var taskEntry *types.TaskEntry
 	err := st.retryRunner.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -289,7 +265,7 @@ func (st *taskStorage) RequestTaskToExecute(ctx context.Context, executor types.
 	return &taskEntry.Task, nil
 }
 
-func (st *taskStorage) requestTaskToExecuteImpl(ctx context.Context, executor types.TaskExecutorId) (*types.TaskEntry, error) {
+func (st *TaskStorage) requestTaskToExecuteImpl(ctx context.Context, executor types.TaskExecutorId) (*types.TaskEntry, error) {
 	tx, err := st.database.CreateRwTx(ctx)
 	if err != nil {
 		return nil, err
@@ -318,13 +294,14 @@ func (st *taskStorage) requestTaskToExecuteImpl(ctx context.Context, executor ty
 	return taskEntry, nil
 }
 
-func (st *taskStorage) ProcessTaskResult(ctx context.Context, res *types.TaskResult) error {
+// ProcessTaskResult checks task result and updates dependencies in case of success
+func (st *TaskStorage) ProcessTaskResult(ctx context.Context, res *types.TaskResult) error {
 	return st.retryRunner.Do(ctx, func(ctx context.Context) error {
 		return st.processTaskResultImpl(ctx, res)
 	})
 }
 
-func (st *taskStorage) processTaskResultImpl(ctx context.Context, res *types.TaskResult) error {
+func (st *TaskStorage) processTaskResultImpl(ctx context.Context, res *types.TaskResult) error {
 	tx, err := st.database.CreateRwTx(ctx)
 	if err != nil {
 		return err
@@ -372,7 +349,7 @@ func (st *taskStorage) processTaskResultImpl(ctx context.Context, res *types.Tas
 	return nil
 }
 
-func (st *taskStorage) terminateTaskTx(tx db.RwTx, entry *types.TaskEntry, res *types.TaskResult) error {
+func (st *TaskStorage) terminateTaskTx(tx db.RwTx, entry *types.TaskEntry, res *types.TaskResult) error {
 	currentTime := st.timer.NowTime()
 
 	if err := entry.Terminate(res, currentTime); err != nil {
@@ -398,7 +375,7 @@ func (st *taskStorage) terminateTaskTx(tx db.RwTx, entry *types.TaskEntry, res *
 	return nil
 }
 
-func (st *taskStorage) updateDependentsTx(
+func (st *TaskStorage) updateDependentsTx(
 	tx db.RwTx,
 	entry *types.TaskEntry,
 	res *types.TaskResult,
@@ -428,7 +405,8 @@ type rescheduledTask struct {
 	previousExecutor types.TaskExecutorId
 }
 
-func (st *taskStorage) RescheduleHangingTasks(ctx context.Context, taskExecutionTimeout time.Duration) error {
+// RescheduleHangingTasks finds tasks that exceed execution timeout and reschedules them to be re-executed later.
+func (st *TaskStorage) RescheduleHangingTasks(ctx context.Context, taskExecutionTimeout time.Duration) error {
 	var rescheduled []rescheduledTask
 	err := st.retryRunner.Do(ctx, func(ctx context.Context) error {
 		var err error
@@ -445,7 +423,7 @@ func (st *taskStorage) RescheduleHangingTasks(ctx context.Context, taskExecution
 	return nil
 }
 
-func (st *taskStorage) rescheduleHangingTasksImpl(
+func (st *TaskStorage) rescheduleHangingTasksImpl(
 	ctx context.Context,
 	taskExecutionTimeout time.Duration,
 ) (rescheduled []rescheduledTask, err error) {
@@ -488,7 +466,7 @@ func (st *taskStorage) rescheduleHangingTasksImpl(
 	return rescheduled, nil
 }
 
-func (st *taskStorage) rescheduleTaskTx(
+func (st *TaskStorage) rescheduleTaskTx(
 	tx db.RwTx,
 	entry *types.TaskEntry,
 	cause *types.TaskExecError,
@@ -510,7 +488,7 @@ func (st *taskStorage) rescheduleTaskTx(
 	return nil
 }
 
-func (*taskStorage) iterateOverTaskEntries(
+func (*TaskStorage) iterateOverTaskEntries(
 	tx db.RoTx,
 	action func(entry *types.TaskEntry) (shouldContinue bool, err error),
 ) error {
@@ -541,6 +519,6 @@ func (*taskStorage) iterateOverTaskEntries(
 	return nil
 }
 
-func (*taskStorage) makeTaskKey(entry *types.TaskEntry) []byte {
+func (*TaskStorage) makeTaskKey(entry *types.TaskEntry) []byte {
 	return entry.Task.Id.Bytes()
 }

@@ -26,11 +26,11 @@ type AggregatorTestSuite struct {
 	cancellation context.CancelFunc
 
 	db           db.DB
-	blockStorage storage.BlockStorage
-	taskStorage  storage.TaskStorage
+	blockStorage *storage.BlockStorage
+	taskStorage  *storage.TaskStorage
 
 	rpcClientMock *client.ClientMock
-	aggregator    *Aggregator
+	aggregator    *aggregator
 }
 
 func TestAggregatorTestSuite(t *testing.T) {
@@ -50,7 +50,6 @@ func (s *AggregatorTestSuite) SetupSuite() {
 	timer := common.NewTimer()
 	s.blockStorage = storage.NewBlockStorage(s.db, timer, metricsHandler, logger)
 	s.taskStorage = storage.NewTaskStorage(s.db, timer, metricsHandler, logger)
-
 	s.rpcClientMock = &client.ClientMock{}
 
 	s.aggregator = NewAggregator(

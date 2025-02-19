@@ -6,19 +6,22 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/rs/zerolog"
 )
 
+type TaskResultSaver interface {
+	Put(ctx context.Context, result *types.TaskResult) error
+}
+
 type taskStateChangeHandler struct {
-	resultStorage     storage.TaskResultStorage
+	resultStorage     TaskResultSaver
 	currentExecutorId types.TaskExecutorId
 	logger            zerolog.Logger
 }
 
 func newTaskStateChangeHandler(
-	resultStorage storage.TaskResultStorage,
+	resultStorage TaskResultSaver,
 	currentExecutorId types.TaskExecutorId,
 	logger zerolog.Logger,
 ) api.TaskStateChangeHandler {
