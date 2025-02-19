@@ -43,6 +43,9 @@ type Config struct {
 	RPCPort        int                   `yaml:"rpcPort,omitempty"`
 	BootstrapPeers network.AddrInfoSlice `yaml:"bootstrapPeers,omitempty"`
 
+	// Profiling
+	PprofPort int `yaml:"pprofPort,omitempty"`
+
 	// Admin
 	AdminSocketPath string `yaml:"adminSocket,omitempty"`
 
@@ -79,7 +82,10 @@ type Config struct {
 	L1Fetcher rollup.L1BlockFetcher `yaml:"-"`
 }
 
-const DefaultNShards types.ShardId = 5
+const (
+	DefaultNShards   types.ShardId = 5
+	DefaultPprofPort uint32        = 6060
+)
 
 func NewDefaultConfig() *Config {
 	return &Config{
@@ -99,6 +105,7 @@ func NewDefaultConfig() *Config {
 		Telemetry: telemetry.NewDefaultConfig(),
 		Replay:    NewDefaultReplayConfig(),
 		RpcNode:   NewDefaultRpcNodeConfig(),
+		PprofPort: int(DefaultPprofPort),
 	}
 }
 

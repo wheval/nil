@@ -36,7 +36,7 @@ func main() {
 
 	logging.ApplyComponentsFilter(logFilter)
 
-	profiling.Start(profiling.DefaultPort)
+	profiling.Start(cfg.PprofPort)
 
 	database, err := openDb(cfg.DB.Path, cfg.DB.AllowDrop, logger)
 	check.PanicIfErr(err)
@@ -148,6 +148,7 @@ func parseArgs() *nildconfig.Config {
 
 	// For backward compatibility
 	rootCmd.PersistentFlags().IntVar(&cfg.RPCPort, "port", cfg.RPCPort, "http port for rpc server")
+	rootCmd.PersistentFlags().IntVar(&cfg.PprofPort, "pprof-port", cfg.PprofPort, "port to serve pprof profiling information")
 	check.PanicIfErr(rootCmd.PersistentFlags().MarkHidden("port"))
 
 	runCmd := &cobra.Command{

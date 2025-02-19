@@ -33,6 +33,7 @@ type devnetSpec struct {
 	NildConfigDir          string   `yaml:"nild_config_dir"`
 	NildCredentialsDir     string   `yaml:"nild_credentials_dir"`
 	NildP2PBaseTCPPort     int      `yaml:"nild_p2p_base_tcp_port"`
+	PprofBaseTCPPort       int      `yaml:"pprof_base_tcp_port"`
 	NilWipeOnUpdate        bool     `yaml:"nil_wipe_on_update"`
 	NShards                uint32   `yaml:"nShards"`
 	NilRPCHost             string   `yaml:"nil_rpc_host"`
@@ -64,6 +65,7 @@ type server struct {
 	name            string
 	identity        string
 	port            int
+	pprofPort       int
 	rpcPort         int
 	credsDir        string
 	workDir         string
@@ -156,7 +158,7 @@ func genDevnet(cmd *cobra.Command, args []string) error {
 	if spec.EnableRPCOnValidators {
 		validatorRPCBasePort = spec.NilRPCPort + len(spec.NilRPCConfig)
 	}
-	validators, err := spec.makeServers(spec.NilConfig, spec.NildP2PBaseTCPPort, validatorRPCBasePort, "nil", baseDir, false)
+	validators, err := spec.makeServers(spec.NilConfig, spec.NildP2PBaseTCPPort, spec.PprofBaseTCPPort, validatorRPCBasePort, "nil", baseDir, false)
 	if err != nil {
 		return fmt.Errorf("failed to setup validator nodes: %w", err)
 	}
@@ -164,12 +166,15 @@ func genDevnet(cmd *cobra.Command, args []string) error {
 	devnet := devnet{spec: spec, baseDir: baseDir, validators: validators}
 
 	archiveBaseP2P := spec.NildP2PBaseTCPPort + len(validators)
+	archiveBasePprof := spec.PprofBaseTCPPort + len(validators)
 
-	if devnet.archivers, err = spec.makeServers(spec.NilArchiveConfig, archiveBaseP2P, 0, "nil-archive", baseDir, false); err != nil {
+	if devnet.archivers, err = spec.makeServers(spec.NilArchiveConfig, archiveBaseP2P, archiveBasePprof, 0, "nil-archive", baseDir, false); err != nil {
 		return fmt.Errorf("failed to setup archive nodes: %w", err)
 	}
 
-	if devnet.rpcNodes, err = spec.makeServers(spec.NilRPCConfig, 0, spec.NilRPCPort, "nil-rpc", baseDir, true); err != nil {
+	rpcBasePprof := spec.PprofBaseTCPPort + len(validators) + len(devnet.archivers)
+
+	if devnet.rpcNodes, err = spec.makeServers(spec.NilRPCConfig, 0, rpcBasePprof, spec.NilRPCPort, "nil-rpc", baseDir, true); err != nil {
 		return fmt.Errorf("failed to setup rpc nodes: %w", err)
 	}
 
@@ -212,7 +217,7 @@ func (devnet devnet) writeConfigs(servers []server, name string, only string) er
 	return nil
 }
 
-func (spec devnetSpec) makeServers(nodeSpecs []nodeSpec, basePort int, baseHTTPPort int, service string, baseDir string, logClientEvents bool) ([]server, error) {
+func (spec devnetSpec) makeServers(nodeSpecs []nodeSpec, basePort int, pprofBasePort int, baseHTTPPort int, service string, baseDir string, logClientEvents bool) ([]server, error) {
 	servers := make([]server, len(nodeSpecs))
 	for i, nodeSpec := range nodeSpecs {
 		servers[i].service = service
@@ -221,6 +226,9 @@ func (spec devnetSpec) makeServers(nodeSpecs []nodeSpec, basePort int, baseHTTPP
 		servers[i].logClientEvents = logClientEvents
 		if basePort != 0 {
 			servers[i].port = basePort + i
+		}
+		if pprofBasePort != 0 {
+			servers[i].pprofPort = pprofBasePort + i
 		}
 		if baseHTTPPort != 0 {
 			servers[i].rpcPort = baseHTTPPort + i
@@ -273,6 +281,7 @@ func (devnet *devnet) writeServerConfig(instanceId int, srv server, only string)
 	}
 	cfg.RPCPort = srv.rpcPort
 	cfg.Network.TcpPort = srv.port
+	cfg.PprofPort = srv.pprofPort
 	cfg.ZeroState = devnet.zeroState
 
 	var err error
