@@ -85,6 +85,10 @@ func (bs *BlockStorage) getProvedStateRoot(tx db.RoTx) (*common.Hash, error) {
 }
 
 func (bs *BlockStorage) SetProvedStateRoot(ctx context.Context, stateRoot common.Hash) error {
+	if stateRoot == common.EmptyHash {
+		return errors.New("state root cannot be empty")
+	}
+
 	tx, err := bs.database.CreateRwTx(ctx)
 	if err != nil {
 		return err

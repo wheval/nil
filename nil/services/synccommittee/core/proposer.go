@@ -89,9 +89,9 @@ func NewProposer(
 
 	p.logger = srv.WorkerLogger(logger, p)
 
-	err := p.tryGetRollupContractWrapper(ctx)
+	err := p.initRollupContractWrapper(ctx)
 	if err != nil {
-		logger.Error().Msgf("rollup contract wrapper is not initialized: %s", err)
+		logger.Error().Err(err).Msgf("rollup contract wrapper is not initialized")
 	}
 
 	return p, nil
@@ -102,8 +102,7 @@ func (*proposer) Name() string {
 }
 
 func (p *proposer) Run(ctx context.Context, started chan<- struct{}) error {
-	err := p.initializeProvedStateRoot(ctx)
-	if err != nil {
+	if err := p.initializeProvedStateRoot(ctx); err != nil {
 		return err
 	}
 
@@ -122,13 +121,15 @@ func (p *proposer) Run(ctx context.Context, started chan<- struct{}) error {
 	return nil
 }
 
-func (p *proposer) tryGetRollupContractWrapper(ctx context.Context) error {
-	if p.rollupContractWrapper == nil {
-		var err error
-		p.rollupContractWrapper, err = rollupcontract.NewWrapper(ctx, p.params.ContractAddress, p.params.PrivateKey, p.ethClient, p.params.EthClientTimeout, p.logger)
-		if err != nil {
-			return fmt.Errorf("failed create rollup contract wrapper: %w", err)
-		}
+func (p *proposer) initRollupContractWrapper(ctx context.Context) error {
+	if p.rollupContractWrapper != nil {
+		return nil
+	}
+
+	var err error
+	p.rollupContractWrapper, err = rollupcontract.NewWrapper(ctx, p.params.ContractAddress, p.params.PrivateKey, p.ethClient, p.params.EthClientTimeout, p.logger)
+	if err != nil {
+		return fmt.Errorf("failed create rollup contract wrapper: %w", err)
 	}
 	return nil
 }
@@ -136,44 +137,60 @@ func (p *proposer) tryGetRollupContractWrapper(ctx context.Context) error {
 func (p *proposer) initializeProvedStateRoot(ctx context.Context) error {
 	storedStateRoot, err := p.storage.TryGetProvedStateRoot(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to check if proved state root is initialized: %w", err)
+		return fmt.Errorf("failed to get proved state root from the storage: %w", err)
+	}
+	var storedRootStr string
+	if storedStateRoot != nil {
+		storedRootStr = storedStateRoot.String()
+	} else {
+		storedRootStr = "nil"
 	}
 
 	latestStateRoot, err := p.getLatestProvedStateRoot(ctx)
-	if err != nil {
-		return fmt.Errorf("failed get current contract state root: %w", err)
-	}
 
 	switch {
-	case latestStateRoot == common.EmptyHash:
-		p.logger.Info().
-			Msg("L1 not available, will be used stored proved state root")
+	case err != nil:
+		p.logger.Warn().
+			Err(err).
+			Str("storedStateRoot", storedRootStr).
+			Msg("failed to get state root from L1, stored proved state root will be used")
+
 	case storedStateRoot == nil:
 		p.logger.Info().
 			Stringer("latestStateRoot", latestStateRoot).
 			Msg("proved state root is not initialized, value from L1 will be used")
+		if err := p.updateStoredStateRoot(ctx, latestStateRoot); err != nil {
+			return err
+		}
+
 	case *storedStateRoot != latestStateRoot:
 		p.logger.Warn().
-			Stringer("storedStateRoot", storedStateRoot).
+			Str("storedStateRoot", storedRootStr).
 			Stringer("latestStateRoot", latestStateRoot).
-			Msg("proved state root value is invalid, local storage will be reset")
+			Msg("stored proved state root value is invalid, local storage will be reset")
 
 		p.logger.Warn().Msg("resetting TaskStorage and BlockStorage")
 		// todo: reset TaskStorage and BlockStorage before starting Aggregator, TaskScheduler and TaskListener
+
+		if err := p.updateStoredStateRoot(ctx, latestStateRoot); err != nil {
+			return err
+		}
+
 	default:
 		p.logger.Info().Stringer("stateRoot", storedStateRoot).Msg("proved state root value is valid")
-	}
-
-	if storedStateRoot == nil || *storedStateRoot != latestStateRoot {
-		err = p.storage.SetProvedStateRoot(ctx, latestStateRoot)
-		if err != nil {
-			return fmt.Errorf("failed set proved state root: %w", err)
-		}
 	}
 
 	p.logger.Info().
 		Stringer("stateRoot", latestStateRoot).
 		Msg("proposer is initialized")
+	return nil
+}
+
+func (p *proposer) updateStoredStateRoot(ctx context.Context, stateRoot common.Hash) error {
+	err := p.storage.SetProvedStateRoot(ctx, stateRoot)
+	if err != nil {
+		return fmt.Errorf("failed set proved state root: %w", err)
+	}
 	return nil
 }
 
@@ -207,13 +224,11 @@ func (p *proposer) proposeNextBlock(ctx context.Context) error {
 }
 
 func (p *proposer) getLatestProvedStateRoot(ctx context.Context) (common.Hash, error) {
-	err := p.tryGetRollupContractWrapper(ctx)
-	if err != nil {
-		p.logger.Error().Msgf("rollup contract wrapper is not initialized: %s", err)
-		return common.EmptyHash, nil
+	if err := p.initRollupContractWrapper(ctx); err != nil {
+		return common.EmptyHash, err
 	}
 	var finalizedBatchIndex string
-	err = p.retryRunner.Do(ctx, func(context.Context) error {
+	err := p.retryRunner.Do(ctx, func(context.Context) error {
 		var err error
 		finalizedBatchIndex, err = p.rollupContractWrapper.FinalizedBatchIndex(ctx)
 		return err
@@ -255,7 +270,7 @@ func (p *proposer) commitBatch(ctx context.Context, blobs []kzg4844.Blob, batchI
 			Int("gasLimit", int(tx.Gas())).
 			Int("blobGasLimit", int(tx.BlobGas())).
 			Int("cost", int(tx.Cost().Uint64())).
-			Any("blobHases", tx.BlobHashes()).
+			Any("blobHashes", tx.BlobHashes()).
 			Msg("blob transaction sent")
 
 		receipt, err := p.rollupContractWrapper.WaitForReceipt(ctx, tx.Hash())
