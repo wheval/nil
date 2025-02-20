@@ -2,6 +2,7 @@ package cometa
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
@@ -126,6 +127,19 @@ func (s *SuiteServiceTest) TestTwinContracts() {
 	s.Require().NoError(err)
 
 	s.Require().Equal(contract, contract2)
+}
+
+func (s *SuiteServiceTest) TestErrorContract() {
+	task := s.getCompilerTask("input_3")
+
+	_, err := Compile(task)
+	s.Require().Error(err)
+	var compileErrors []CompilerOutputError
+	err = json.Unmarshal([]byte(err.Error()), &compileErrors)
+	s.Require().NoError(err)
+	s.Require().Len(compileErrors, 1)
+	s.Require().Equal("error", compileErrors[0].Severity)
+	s.Require().Contains(compileErrors[0].Message, "Expected identifier but got '}'")
 }
 
 func (s *SuiteServiceTest) getCompilerTask(name string) *CompilerTask {
