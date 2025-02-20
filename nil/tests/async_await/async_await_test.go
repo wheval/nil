@@ -12,6 +12,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
+	"github.com/NilFoundation/nil/nil/services/rpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/tests"
 	"github.com/stretchr/testify/suite"
@@ -92,6 +93,8 @@ contracts:
 
 	const disableConsensus = true
 	s.Start(&nilservice.Config{
+		SplitShards:      false,
+		HttpUrl:          rpc.GetSockPath(s.T()),
 		NShards:          nShards,
 		ZeroStateYaml:    s.zerostateCfg,
 		DisableConsensus: disableConsensus,
@@ -168,6 +171,66 @@ func (s *SuiteAsyncAwait) TestSumCounters() {
 	value, ok := nameRes[0].(int32)
 	s.Require().True(ok)
 	s.Require().Equal(int32(467*2), value)
+}
+
+func (s *SuiteAsyncAwait) TestNestedRequest() {
+	var (
+		data    []byte
+		receipt *jsonrpc.RPCReceipt
+	)
+
+	data = s.AbiPack(s.abiTest, "nestedRequest", s.testAddress1, s.counterAddress0)
+	receipt = s.SendExternalTransactionNoCheck(data, s.testAddress0)
+	s.Require().True(receipt.AllSuccess())
+}
+
+func (s *SuiteAsyncAwait) TestNestedAwaitCall() {
+	var (
+		data    []byte
+		receipt *jsonrpc.RPCReceipt
+	)
+
+	data = s.AbiPack(s.abiTest, "sendRequestWithNestedAwaitCall", s.testAddress1)
+	receipt = s.SendExternalTransactionNoCheck(data, s.testAddress0)
+	s.Require().True(receipt.AllSuccess())
+}
+
+func (s *SuiteAsyncAwait) TestSendRequestFromCallback() {
+	var (
+		data    []byte
+		receipt *jsonrpc.RPCReceipt
+	)
+
+	counterValue := tests.CallGetterT[int32](s.T(), s.Context, s.DefaultClient, s.abiCounter, s.counterAddress0, "get")
+
+	data = s.AbiPack(s.abiTest, "sendRequestFromCallback", s.counterAddress0)
+	receipt = s.SendExternalTransactionNoCheck(data, s.testAddress0)
+	s.Require().True(receipt.AllSuccess())
+
+	tests.CheckContractValueEqual(s.T(), s.Context, s.DefaultClient, s.abiCounter, s.counterAddress0, "get",
+		counterValue+1+2+3+4+5)
+
+	s.Require().False(receipt.OutReceipts[0].Flags.IsResponse())
+
+	response := receipt.OutReceipts[0].OutReceipts[0]
+	s.Require().True(response.Flags.IsResponse())
+	s.Require().False(response.OutReceipts[0].Flags.IsResponse())
+
+	response = response.OutReceipts[0].OutReceipts[0]
+	s.Require().True(response.Flags.IsResponse())
+	s.Require().False(response.OutReceipts[0].Flags.IsResponse())
+
+	response = response.OutReceipts[0].OutReceipts[0]
+	s.Require().True(response.Flags.IsResponse())
+	s.Require().False(response.OutReceipts[0].Flags.IsResponse())
+
+	response = response.OutReceipts[0].OutReceipts[0]
+	s.Require().True(response.Flags.IsResponse())
+	s.Require().False(response.OutReceipts[0].Flags.IsResponse())
+
+	response = response.OutReceipts[0].OutReceipts[0]
+	s.Require().True(response.Flags.IsResponse())
+	s.Require().False(response.OutReceipts[0].Flags.IsResponse())
 }
 
 func (s *SuiteAsyncAwait) TestFailed() {

@@ -351,3 +351,8 @@ func getContractInfo(addr types.Address, valuesMap ReceiptInfo) *ContractInfo {
 	}
 	return value
 }
+
+func (s *RpcSuite) CheckBalance(infoMap ReceiptInfo, balance types.Value, accounts []types.Address) types.Value {
+	s.T().Helper()
+	return CheckBalance(s.T(), s.Context, s.Client, infoMap, balance, accounts)
+}

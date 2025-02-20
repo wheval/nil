@@ -97,8 +97,8 @@ type ExecutionState struct {
 	// Pointer to currently executed VM
 	evm *vm.EVM
 
-	// wasSentRequest is true if the VM execution ended with sending a request transaction
-	wasSentRequest bool
+	// wasAwaitCall is true if the VM execution ended with sending a awaitCall transaction
+	wasAwaitCall bool
 
 	configAccessor config.ConfigAccessor
 
@@ -797,23 +797,24 @@ func (es *ExecutionState) AddOutRequestTransaction(
 
 	txn.RequestId = acc.FetchRequestId()
 
-	// If inbound transaction is also a request, we need to add a new record to the request chain.
-	inTxn := es.GetInTransaction()
-	if inTxn.IsRequest() {
-		txn.RequestChain = make([]*types.AsyncRequestInfo, len(es.GetInTransaction().RequestChain)+1)
-		copy(txn.RequestChain, inTxn.RequestChain)
-		txn.RequestChain[len(inTxn.RequestChain)] = &types.AsyncRequestInfo{
-			Id:     inTxn.RequestId,
-			Caller: inTxn.From,
-		}
-	} else if len(inTxn.RequestChain) != 0 {
-		// If inbound transaction is a response, we need to copy the request chain from it.
-		check.PanicIfNot(inTxn.IsResponse())
-		txn.RequestChain = inTxn.RequestChain
-	}
-
+	// Only await calls should inherit the request chain from the inbound transaction.
 	if isAwait {
-		es.wasSentRequest = true
+		// If an inbound transaction is also a request, we need to add a new record to the request chain.
+		inTxn := es.GetInTransaction()
+		if inTxn.IsRequest() {
+			txn.RequestChain = make([]*types.AsyncRequestInfo, len(es.GetInTransaction().RequestChain)+1)
+			copy(txn.RequestChain, inTxn.RequestChain)
+			txn.RequestChain[len(inTxn.RequestChain)] = &types.AsyncRequestInfo{
+				Id:     inTxn.RequestId,
+				Caller: inTxn.From,
+			}
+		} else if len(inTxn.RequestChain) != 0 {
+			// If inbound transaction is a response, we need to copy the request chain from it.
+			check.PanicIfNot(inTxn.IsResponse())
+			txn.RequestChain = inTxn.RequestChain
+		}
+
+		es.wasAwaitCall = true
 		// Stop vm execution and save its state after the current instruction (call of precompile) is finished.
 		es.evm.StopAndDumpState(responseProcessingGas)
 	} else {
@@ -1007,14 +1008,14 @@ func (es *ExecutionState) HandleTransaction(ctx context.Context, txn *types.Tran
 	responseWasSent := false
 	bounced := false
 	if txn.IsRequest() {
-		if !es.wasSentRequest {
+		if !es.wasAwaitCall {
 			if err := es.SendResponseTransaction(txn, res); err != nil {
 				return NewExecutionResult().SetFatal(fmt.Errorf("SendResponseTransaction failed: %w\n", err))
 			}
 			bounced = true
 			responseWasSent = true
 		}
-	} else if txn.IsResponse() && !es.wasSentRequest && len(txn.RequestChain) > 0 {
+	} else if txn.IsResponse() && !es.wasAwaitCall && len(txn.RequestChain) > 0 {
 		// There is pending requests in the chain, so we need to send response to them.
 		// But we don't send response if a new request was sent during the execution.
 		if err := es.SendResponseTransaction(txn, res); err != nil {
