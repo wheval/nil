@@ -167,7 +167,6 @@ func (b *DebugRPCBlock) Encode(block *types.RawBlockWithExtractedData) error {
 			return err
 		}
 		b.Config = config
-		fmt.Printf("config was set to %+v\n", config)
 	}
 
 	return nil
