@@ -1,6 +1,14 @@
 import { BUTTON_KIND, BUTTON_SIZE, Button, COLORS, Card, Spinner } from "@nilfoundation/ui-kit";
 import { useUnit } from "effector-react";
-import { $code, $error, changeCode, compile, compileCodeFx, fetchCodeSnippetFx } from "./model";
+import {
+  $code,
+  $error,
+  $warnings,
+  changeCode,
+  compile,
+  compileCodeFx,
+  fetchCodeSnippetFx,
+} from "./model";
 import "./init";
 import { type Diagnostic, linter } from "@codemirror/lint";
 import type { EditorView } from "@codemirror/view";
@@ -19,18 +27,19 @@ const MemoizedCodeToolbar = memo(CodeToolbar);
 
 export const Code = () => {
   const [isMobile] = useMobile();
-  const [code, isDownloading, errors, fetchingCodeSnippet, compiling] = useUnit([
+  const [code, isDownloading, errors, fetchingCodeSnippet, compiling, warnings] = useUnit([
     $code,
     fetchSolidityCompiler.pending,
     $error,
     fetchCodeSnippetFx.pending,
     compileCodeFx.pending,
+    $warnings,
   ]);
   const [css] = useStyletron();
 
   const codemirrorExtensions = useMemo(() => {
     const solidityLinter = (view: EditorView) => {
-      const diagnostics: Diagnostic[] = errors.map((error) => {
+      const displayErrors: Diagnostic[] = errors.map((error) => {
         return {
           from: view.state.doc.line(error.line).from,
           to: view.state.doc.line(error.line).to,
@@ -38,11 +47,21 @@ export const Code = () => {
           severity: "error",
         };
       });
-      return diagnostics;
+
+      const displayWarnings: Diagnostic[] = warnings.map((warning) => {
+        return {
+          from: view.state.doc.line(warning.line).from,
+          to: view.state.doc.line(warning.line).to,
+          message: warning.message,
+          severity: "warning",
+        };
+      });
+
+      return [...displayErrors, ...displayWarnings];
     };
 
     return [linter(solidityLinter)];
-  }, [errors]);
+  }, [errors, warnings]);
 
   const noCode = code.trim().length === 0;
   const btnContent = useCompileButton();

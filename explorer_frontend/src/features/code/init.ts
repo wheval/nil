@@ -13,6 +13,7 @@ import {
   $recentProjects,
   $shareCodeSnippetError,
   $solidityVersion,
+  $warnings,
   changeCode,
   changeSolidityVersion,
   compile,
@@ -63,9 +64,13 @@ compileCodeFx.use(async ({ version, code }) => {
 
   const warnings = errors.filter((error) => error.severity === "warning");
   const refinedWarnings = warnings.map((warning) => {
+    const warningLines = warning.formattedMessage.split("\n");
+    const locationLine = warningLines.find((line) => line.includes("-->"))?.trim();
+    const [_, lineNumber] = locationLine ? locationLine.split(":") : [0, 0];
+
     return {
       message: warning.formattedMessage,
-      line: warning.sourceLocation?.start || 0,
+      line: Number(lineNumber),
     };
   });
 
@@ -87,12 +92,16 @@ sample({
   clock: compile,
   target: compileCodeFx,
 });
+
 $error.reset(changeCode);
+$warnings.reset(changeCode);
+
 interface SolidityError {
   type: string; // 'error' or 'warning'
   line: number; // line number where the error occurred
   message: string; // error message
 }
+
 $error.on(compileCodeFx.failData, (_, error) => {
   function parseSolidityError(errorString: string): SolidityError[] {
     const errors: SolidityError[] = [];
@@ -134,6 +143,8 @@ $error.on(compileCodeFx.failData, (_, error) => {
     };
   });
 });
+
+$warnings.on(compileCodeFx.doneData, (_, { warnings }) => warnings);
 
 sample({
   clock: setCodeSnippetEvent,

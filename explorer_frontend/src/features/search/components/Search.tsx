@@ -12,7 +12,6 @@ import {
 } from "../models/model";
 import { SearchResult } from "./SearchResult";
 
-// implement search login here if needed
 const Search = () => {
   const [query, focused, results] = useUnit([$query, $focused, $results]);
   const [css] = useStyletron();
@@ -25,6 +24,7 @@ const Search = () => {
         marginLeft: "32px",
         width: "100%",
         position: "relative",
+        zIndex: 2,
       })}
     >
       <Input
