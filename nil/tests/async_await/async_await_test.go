@@ -90,12 +90,18 @@ contracts:
 	nShards := uint32(3)
 	port := 10425
 
+	const disableConsensus = true
 	s.Start(&nilservice.Config{
-		NShards:       nShards,
-		ZeroStateYaml: s.zerostateCfg,
+		NShards:          nShards,
+		ZeroStateYaml:    s.zerostateCfg,
+		DisableConsensus: disableConsensus,
 	}, port)
 
-	_, archiveNodeAddr := s.StartArchiveNode(port+int(nShards), true)
+	_, archiveNodeAddr := s.StartArchiveNode(&tests.ArchiveNodeConfig{
+		Port:               port + int(nShards),
+		WithBootstrapPeers: true,
+		DisableConsensus:   disableConsensus,
+	})
 	s.DefaultClient, _ = s.StartRPCNode(tests.WithDhtBootstrapByValidators, network.AddrInfoSlice{archiveNodeAddr})
 }
 

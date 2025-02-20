@@ -24,13 +24,14 @@ import (
 )
 
 type SyncerConfig struct {
-	Name                 string
-	ShardId              types.ShardId
-	Timeout              time.Duration // pull blocks if no new blocks appear in the topic for this duration
-	BootstrapPeers       []network.AddrInfo
-	BlockGeneratorParams execution.BlockGeneratorParams
-	ZeroState            string
-	ZeroStateConfig      *execution.ZeroStateConfig
+	execution.BlockGeneratorParams
+
+	Name            string
+	ShardId         types.ShardId
+	Timeout         time.Duration // pull blocks if no new blocks appear in the topic for this duration
+	BootstrapPeers  []network.AddrInfo
+	ZeroState       string
+	ZeroStateConfig *execution.ZeroStateConfig
 }
 
 type Syncer struct {
@@ -325,15 +326,17 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 		return nil
 	}
 
-	if err := s.blockVerifier.VerifyBlock(ctx, block.Block, s.logger); err != nil {
-		s.logger.Error().
-			Uint64(logging.FieldBlockNumber, uint64(block.Id)).
-			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
-			Stringer(logging.FieldShardId, s.config.ShardId).
-			Stringer(logging.FieldSignature, block.Signature).
-			Err(err).
-			Msg("Failed to verify block signature")
-		return err
+	if !s.config.DisableConsensus {
+		if err := s.blockVerifier.VerifyBlock(ctx, block.Block, s.logger); err != nil {
+			s.logger.Error().
+				Uint64(logging.FieldBlockNumber, uint64(block.Id)).
+				Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
+				Stringer(logging.FieldShardId, s.config.ShardId).
+				Stringer(logging.FieldSignature, block.Signature).
+				Err(err).
+				Msg("Failed to verify block signature")
+			return err
+		}
 	}
 
 	if err := s.replayBlock(ctx, block); err != nil {

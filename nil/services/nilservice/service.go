@@ -603,15 +603,11 @@ func createShards(
 
 func createActiveCollator(shard types.ShardId, cfg *Config, collatorTickPeriod time.Duration, database db.DB, networkManager *network.Manager, txnPool txnpool.Pool) *collate.Scheduler {
 	collatorCfg := collate.Params{
-		BlockGeneratorParams: execution.BlockGeneratorParams{
-			ShardId:  shard,
-			NShards:  cfg.NShards,
-			TraceEVM: cfg.TraceEVM,
-		},
-		CollatorTickPeriod: collatorTickPeriod,
-		Timeout:            collatorTickPeriod,
-		Topology:           collate.GetShardTopologyById(cfg.Topology),
-		L1Fetcher:          cfg.L1Fetcher,
+		BlockGeneratorParams: cfg.BlockGeneratorParams(shard),
+		CollatorTickPeriod:   collatorTickPeriod,
+		Timeout:              collatorTickPeriod,
+		Topology:             collate.GetShardTopologyById(cfg.Topology),
+		L1Fetcher:            cfg.L1Fetcher,
 	}
 	return collate.NewScheduler(database, txnPool, collatorCfg, networkManager)
 }

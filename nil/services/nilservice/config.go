@@ -69,7 +69,8 @@ type Config struct {
 	ZeroStateYaml        string `yaml:"-"`
 
 	// Consensus
-	Validators map[types.ShardId][]config.ValidatorInfo `yaml:"validators,omitempty"`
+	Validators       map[types.ShardId][]config.ValidatorInfo `yaml:"validators,omitempty"`
+	DisableConsensus bool                                     `yaml:"-"`
 
 	// Sub-configs
 	Network   *network.Config            `yaml:"network,omitempty"`
@@ -199,9 +200,10 @@ func (c *Config) LoadValidatorPrivateKey() (bls.PrivateKey, error) {
 
 func (c *Config) BlockGeneratorParams(shardId types.ShardId) execution.BlockGeneratorParams {
 	return execution.BlockGeneratorParams{
-		ShardId:      shardId,
-		NShards:      c.NShards,
-		TraceEVM:     c.TraceEVM,
-		MainKeysPath: c.MainKeysPath,
+		ShardId:          shardId,
+		NShards:          c.NShards,
+		TraceEVM:         c.TraceEVM,
+		MainKeysPath:     c.MainKeysPath,
+		DisableConsensus: c.DisableConsensus,
 	}
 }

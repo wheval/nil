@@ -123,6 +123,7 @@ func (s *SuiteCometa) SetupTest() {
 		HttpUrl:              rpc.GetSockPath(s.T()),
 		Cometa:               &s.cometaCfg,
 		ZeroStateYaml:        s.zerostateCfg,
+		DisableConsensus:     true,
 	})
 	s.cometaClient = *cometa.NewClient(s.Endpoint)
 	tests.WaitShardTick(s.T(), s.Context, s.Client, types.MainShardId)

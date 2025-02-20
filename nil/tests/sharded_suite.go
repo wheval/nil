@@ -99,9 +99,16 @@ func createOneShardOneValidatorCfg(
 	s.Require().NotEmpty(validatorKeysPath)
 
 	shardId := uint(index + 1)
+	myShards := []uint{uint(types.MainShardId), shardId}
+	if cfg.DisableConsensus {
+		if index != 0 {
+			myShards = []uint{shardId}
+		}
+	}
+
 	return &nilservice.Config{
 		NShards:              cfg.NShards,
-		MyShards:             []uint{uint(types.MainShardId), shardId},
+		MyShards:             myShards,
 		SplitShards:          true,
 		HttpUrl:              s.Instances[index].RpcUrl,
 		Topology:             cfg.Topology,
@@ -110,12 +117,17 @@ func createOneShardOneValidatorCfg(
 		ZeroStateYaml:        cfg.ZeroStateYaml,
 		ValidatorKeysPath:    validatorKeysPath,
 		ZeroState:            newZeroState(validators),
+		DisableConsensus:     cfg.DisableConsensus,
 	}
 }
 
-func createShardAllValidatorsCfg(
+func createAllShardsAllValidatorsCfg(
 	s *ShardedSuite, index InstanceId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[InstanceId]*keys.ValidatorKeysManager,
 ) *nilservice.Config {
+	if cfg.DisableConsensus {
+		s.Require().Fail("Consensus is disabled")
+	}
+
 	myShards := slices.Collect(common.Range(0, uint(cfg.NShards)))
 
 	validatorKeysPath := keyManagers[index].GetKeysPath()
@@ -223,7 +235,7 @@ func (s *ShardedSuite) Start(cfg *nilservice.Config, port int) {
 func (s *ShardedSuite) StartShardAllValidators(cfg *nilservice.Config, port int) {
 	s.T().Helper()
 
-	s.start(cfg, port, createShardAllValidatorsCfg)
+	s.start(cfg, port, createAllShardsAllValidatorsCfg)
 }
 
 func (s *ShardedSuite) connectToInstances(nm *network.Manager) {
@@ -246,24 +258,31 @@ func (s *ShardedSuite) GetNShards() uint32 {
 	return s.Instances[0].Config.NShards
 }
 
-func (s *ShardedSuite) StartArchiveNode(port int, withBootstrapPeers bool) (client.Client, network.AddrInfo) {
+type ArchiveNodeConfig struct {
+	Port               int
+	WithBootstrapPeers bool
+	DisableConsensus   bool
+}
+
+func (s *ShardedSuite) StartArchiveNode(params *ArchiveNodeConfig) (client.Client, network.AddrInfo) {
 	s.T().Helper()
 
 	s.Require().NotEmpty(s.Instances)
-	netCfg, addr := network.GenerateConfig(s.T(), port)
-	serviceName := fmt.Sprintf("archive-%d", port)
+	netCfg, addr := network.GenerateConfig(s.T(), params.Port)
+	serviceName := fmt.Sprintf("archive-%d", params.Port)
 
 	cfg := &nilservice.Config{
-		NShards:   s.GetNShards(),
-		Network:   netCfg,
-		HttpUrl:   rpc.GetSockPathService(s.T(), serviceName),
-		RunMode:   nilservice.ArchiveRunMode,
-		ZeroState: s.Instances[0].Config.ZeroState,
+		NShards:          s.GetNShards(),
+		Network:          netCfg,
+		HttpUrl:          rpc.GetSockPathService(s.T(), serviceName),
+		RunMode:          nilservice.ArchiveRunMode,
+		ZeroState:        s.Instances[0].Config.ZeroState,
+		DisableConsensus: params.DisableConsensus,
 	}
 
 	cfg.MyShards = slices.Collect(common.Range(0, uint(cfg.NShards)))
 	netCfg.DHTBootstrapPeers = slices.Collect(common.Transform(slices.Values(s.Instances), getShardAddress))
-	if withBootstrapPeers {
+	if params.WithBootstrapPeers {
 		bootstrapPeers := slices.Clone(netCfg.DHTBootstrapPeers)
 		bootstrapPeers = append(bootstrapPeers[0:1], bootstrapPeers...)
 		cfg.BootstrapPeers = bootstrapPeers
