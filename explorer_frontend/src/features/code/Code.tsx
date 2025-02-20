@@ -148,8 +148,6 @@ export const Code = () => {
             className={css({
               width: "100%",
               height: `calc(100% - ${isMobile ? "32px - 8px - 8px - 48px - 8px - 48px - 8px" : "48px - 8px"})`,
-              overflow: "auto",
-              overscrollBehavior: "contain",
               backgroundColor: COLORS.gray900,
               borderTopLeftRadius: "12px",
               borderTopRightRadius: "12px",
@@ -167,6 +165,9 @@ export const Code = () => {
               }}
               className={css({
                 paddingBottom: "0!important",
+                height: "100%",
+                overflow: "auto",
+                overscrollBehavior: "contain",
               })}
               data-testid="code-field"
             />
