@@ -107,30 +107,40 @@ func (s *Scheduler) Run(ctx context.Context, syncer *Syncer, consensus Consensus
 }
 
 func (s *Scheduler) doCollate(ctx context.Context) error {
-	id, err := s.readLastBlockId(ctx)
-	if err != nil {
-		return err
-	}
+	if s.params.DisableConsensus {
+		v := s.Validator()
+		proposal, err := v.BuildProposal(ctx)
+		if err != nil {
+			return err
+		}
 
-	subId, syncCh := s.syncer.Subscribe()
-	defer s.syncer.Unsubscribe(subId)
+		return v.InsertProposal(ctx, proposal, nil)
+	} else {
+		id, err := s.readLastBlockId(ctx)
+		if err != nil {
+			return err
+		}
 
-	ctx, cancelFn := context.WithCancel(ctx)
-	defer cancelFn()
+		subId, syncCh := s.syncer.Subscribe()
+		defer s.syncer.Unsubscribe(subId)
 
-	consCh := make(chan error, 1)
-	go func() {
-		consCh <- s.consensus.RunSequence(ctx, id.Uint64()+1)
-	}()
+		ctx, cancelFn := context.WithCancel(ctx)
+		defer cancelFn()
 
-	select {
-	case <-syncCh:
-		cancelFn()
-		err := <-consCh
-		s.logger.Debug().Err(err).Msg("Consensus interrupted by syncer")
-		return nil
-	case err := <-consCh:
-		return err
+		consCh := make(chan error, 1)
+		go func() {
+			consCh <- s.consensus.RunSequence(ctx, id.Uint64()+1)
+		}()
+
+		select {
+		case <-syncCh:
+			cancelFn()
+			err := <-consCh
+			s.logger.Debug().Err(err).Msg("Consensus interrupted by syncer")
+			return nil
+		case err := <-consCh:
+			return err
+		}
 	}
 }
 

@@ -24,7 +24,10 @@ func (s *SuiteRpcNode) SetupTest() {
 		RunMode: nilservice.NormalRunMode,
 	}, port)
 
-	_, archiveNodeAddr := s.StartArchiveNode(port+int(nShards), true)
+	_, archiveNodeAddr := s.StartArchiveNode(&tests.ArchiveNodeConfig{
+		Port:               port + int(nShards),
+		WithBootstrapPeers: true,
+	})
 	s.DefaultClient, _ = s.StartRPCNode(tests.WithoutDhtBootstrapByValidators, network.AddrInfoSlice{archiveNodeAddr})
 }
 

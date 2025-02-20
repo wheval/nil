@@ -25,7 +25,10 @@ func (s *SuiteArchiveNode) SetupTest() {
 		CollatorTickPeriodMs: 200,
 	}, s.port)
 
-	s.DefaultClient, _ = s.StartArchiveNode(s.port+int(nshards), s.withBootstrapPeers)
+	s.DefaultClient, _ = s.StartArchiveNode(&tests.ArchiveNodeConfig{
+		Port:               s.port + int(nshards),
+		WithBootstrapPeers: s.withBootstrapPeers,
+	})
 }
 
 func (s *SuiteArchiveNode) TearDownTest() {
