@@ -97,10 +97,18 @@ func (s *Server) validateRequest(r *http.Request) (int, error) {
 	}
 
 	// Niljs is supported by server
-	header := r.Header.Get(nilJsVersionHeader)
-	if header != "" {
-		version, err := semver.NewVersion(header)
-		if err == nil {
+	if header := r.Header.Get(nilJsVersionHeader); header != "" {
+		if !strings.HasPrefix(header, niljsClientVersionPrefix) || len(header) <= len(niljsClientVersionPrefix) {
+			return http.StatusBadRequest, fmt.Errorf("invalid Client-Version header: %q. Expected format is niljs/<version>", header)
+		}
+
+		parsedHeader := header[len(niljsClientVersionPrefix):]
+		if parsedHeader != "" {
+			version, err := semver.NewVersion(parsedHeader)
+			if err != nil {
+				return http.StatusBadRequest, fmt.Errorf("invalid Client-Version header: %s. Expected format is niljs/<version>", header)
+			}
+
 			if version.LessThan(parsedMinSupportedNiljsVersion) {
 				err := fmt.Errorf("specified niljs version %s, minimum supported is %s", version, minSupportedNiljsVersion)
 				return http.StatusUpgradeRequired, err
