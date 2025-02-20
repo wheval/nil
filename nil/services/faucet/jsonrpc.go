@@ -44,11 +44,10 @@ func (c *APIImpl) fetchSeqno(ctx context.Context, addr types.Address) (types.Seq
 }
 
 func (c *APIImpl) getOrFetchSeqno(ctx context.Context, faucetAddress types.Address) (types.Seqno, error) {
-	// todo: uncomment after switching all users (e.g. docs and tests) to the faucet service
-	// seqno, ok := c.seqnos[faucetAddress]
-	// if ok {
-	//	return seqno, nil
-	// }
+	seqno, ok := c.seqnos[faucetAddress]
+	if ok {
+		return seqno, nil
+	}
 
 	seqno, err := c.fetchSeqno(ctx, faucetAddress)
 	if err != nil {
