@@ -17,12 +17,20 @@ export const $availableSolidityVersions = codeDomain.createStore([
 ]);
 
 export const changeSolidityVersion = codeDomain.createEvent<string>();
+
 export const $error = codeDomain.createStore<
   {
     message: string;
     line: number;
   }[]
 >([]);
+export const $warnings = codeDomain.createStore<
+  {
+    message: string;
+    line: number;
+  }[]
+>([]);
+
 export const compileCodeFx = codeDomain.createEffect<
   {
     code: string;
