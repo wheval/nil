@@ -32,11 +32,13 @@ type SuiteZeroState struct {
 }
 
 func (suite *SuiteZeroState) SetupSuite() {
+	var err error
 	suite.ctx = context.Background()
 
-	zeroStateConfig, err := ParseZeroStateConfig(DefaultZeroStateConfig)
+	defaultZeroStateConfig, err := CreateDefaultZeroStateConfig(MainPublicKey)
 	suite.Require().NoError(err)
-	faucetAddress := zeroStateConfig.GetContractAddress("Faucet")
+
+	faucetAddress := defaultZeroStateConfig.GetContractAddress("Faucet")
 	suite.Require().NotNil(faucetAddress)
 	suite.faucetAddr = *faucetAddress
 
@@ -121,7 +123,12 @@ config:
 	require.NoError(t, err)
 	state, err = NewExecutionState(tx, 0, StateParams{ConfigAccessor: configAccessor})
 	require.NoError(t, err)
-	err = state.GenerateZeroStateYaml(configYaml)
+
+	zeroState, err := ParseZeroStateConfig(configYaml)
+	require.NoError(t, err)
+	zeroState.MainPublicKey = MainPublicKey
+
+	err = state.GenerateZeroState(zeroState)
 	require.NoError(t, err)
 	require.Equal(t, 0, state.GasPrice.Cmp(types.NewValueFromUint64(1)))
 
@@ -129,7 +136,11 @@ config:
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)
-	err = state.GenerateZeroStateYaml(configYaml)
+	zeroState, err = ParseZeroStateConfig(configYaml)
+	require.NoError(t, err)
+	zeroState.MainPublicKey = MainPublicKey
+
+	err = state.GenerateZeroState(zeroState)
 	require.NoError(t, err)
 	require.Equal(t, 0, state.GasPrice.Cmp(types.NewValueFromUint64(2)))
 
@@ -137,7 +148,11 @@ config:
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)
-	err = state.GenerateZeroStateYaml(configYaml)
+	zeroState, err = ParseZeroStateConfig(configYaml)
+	require.NoError(t, err)
+	zeroState.MainPublicKey = MainPublicKey
+
+	err = state.GenerateZeroState(zeroState)
 	require.NoError(t, err)
 	require.Equal(t, 0, state.GasPrice.Cmp(types.NewValueFromUint64(3)))
 
@@ -154,9 +169,14 @@ contracts:
   contract: SmartAccount
   ctorArgs: [MainPublicKey]
 `, smartAccountAddr.Hex())
+
 	state, err = NewExecutionState(tx, types.MainShardId, StateParams{ConfigAccessor: configAccessor})
 	require.NoError(t, err)
-	err = state.GenerateZeroStateYaml(configYaml)
+	zeroState, err = ParseZeroStateConfig(configYaml)
+	require.NoError(t, err)
+	zeroState.MainPublicKey = MainPublicKey
+
+	err = state.GenerateZeroState(zeroState)
 	require.NoError(t, err)
 	require.Equal(t, types.DefaultGasPrice, state.GasPrice)
 
@@ -183,7 +203,11 @@ contracts:
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)
-	err = state.GenerateZeroStateYaml(configYaml2)
+	zeroState, err = ParseZeroStateConfig(configYaml2)
+	require.NoError(t, err)
+	zeroState.MainPublicKey = MainPublicKey
+
+	err = state.GenerateZeroState(zeroState)
 	require.Error(t, err)
 
 	// Test only one contract should deployed in specific shard
@@ -203,7 +227,11 @@ contracts:
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)
-	err = state.GenerateZeroStateYaml(configYaml3)
+	zeroState, err = ParseZeroStateConfig(configYaml3)
+	require.NoError(t, err)
+	zeroState.MainPublicKey = MainPublicKey
+
+	err = state.GenerateZeroState(zeroState)
 	require.NoError(t, err)
 
 	faucetAddr = types.CreateAddress(types.BaseShardId, types.BuildDeployPayload(faucetCode, common.EmptyHash))

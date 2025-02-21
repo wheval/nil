@@ -45,10 +45,15 @@ contracts:
 }
 
 func (s *SuiteCliTestCall) SetupTest() {
+	var err error
+	zeroState, err := execution.ParseZeroStateConfig(s.zerostateCfg)
+	s.Require().NoError(err)
+	zeroState.MainPublicKey = execution.MainPublicKey
+
 	s.Start(&nilservice.Config{
 		NShards:              2,
 		CollatorTickPeriodMs: 200,
-		ZeroStateYaml:        s.zerostateCfg,
+		ZeroState:            zeroState,
 	}, 10525)
 
 	s.client, s.endpoint = s.StartRPCNode(tests.WithDhtBootstrapByValidators, nil)

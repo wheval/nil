@@ -49,11 +49,15 @@ contracts:
 }
 
 func (s *SuiteRegression) SetupTest() {
+	zeroStateConfig, err := execution.ParseZeroStateConfig(s.zerostateCfg)
+	s.Require().NoError(err)
+	zeroStateConfig.MainPublicKey = execution.MainPublicKey
+
 	s.Start(&nilservice.Config{
-		NShards:       s.ShardsNum,
-		HttpUrl:       rpc.GetSockPath(s.T()),
-		RunMode:       nilservice.CollatorsOnlyRunMode,
-		ZeroStateYaml: s.zerostateCfg,
+		NShards:   s.ShardsNum,
+		HttpUrl:   rpc.GetSockPath(s.T()),
+		RunMode:   nilservice.CollatorsOnlyRunMode,
+		ZeroState: zeroStateConfig,
 	})
 }
 

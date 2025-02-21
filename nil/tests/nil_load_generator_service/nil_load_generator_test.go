@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common/logging"
+	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/faucet"
 	"github.com/NilFoundation/nil/nil/services/nil_load_generator"
@@ -35,11 +36,14 @@ func (s *NilLoadGeneratorRpc) SetupTest() {
 	s.faucetClient, faucetEndpoint = tests.StartFaucetService(s.T(), s.Context, &s.Wg, s.Client)
 	time.Sleep(time.Second)
 
+	keyFile := s.T().TempDir() + "/key.yaml"
+	s.Require().NoError(execution.DumpMainKeys(keyFile, execution.MainPrivateKey, execution.MainPublicKey))
+
 	s.runErrCh = make(chan error, 1)
 	s.Wg.Add(1)
 	go func() {
 		defer s.Wg.Done()
-		if err := nil_load_generator.Run(s.Context, nil_load_generator.Config{OwnEndpoint: nilLoadGeneratorSockPath, Endpoint: sockPath, FaucetEndpoint: faucetEndpoint, SwapPerIteration: 1, RpcSwapLimit: "10000000", MintTokenAmount0: "3000000", MintTokenAmount1: "10000", ThresholdAmount: "3000000000", SwapAmount: "1000"},
+		if err := nil_load_generator.Run(s.Context, nil_load_generator.Config{OwnEndpoint: nilLoadGeneratorSockPath, Endpoint: sockPath, FaucetEndpoint: faucetEndpoint, SwapPerIteration: 1, RpcSwapLimit: "10000000", MintTokenAmount0: "3000000", MintTokenAmount1: "10000", ThresholdAmount: "3000000000", SwapAmount: "1000", MainKeysPath: keyFile},
 			logging.NewLogger("test_nil_load_generator")); err != nil {
 			s.runErrCh <- err
 		} else {

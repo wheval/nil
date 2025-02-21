@@ -2,6 +2,8 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +11,7 @@ import (
 	"github.com/NilFoundation/nil/nil/cmd/nild/nildconfig"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/internal/config"
+	nilcrypto "github.com/NilFoundation/nil/nil/internal/crypto"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/keys"
@@ -127,11 +130,28 @@ func (devnet devnet) generateZeroState(nShards uint32, servers []server) (*execu
 			})
 		}
 	}
-	return &execution.ZeroStateConfig{
-		ConfigParams: execution.ConfigParams{
-			Validators: config.ParamValidators{Validators: validators},
-		},
-	}, nil
+	mainKeyPath := devnet.spec.NildCredentialsDir + "/keys.yaml"
+	_, mainPublicKey, err := execution.LoadMainKeys(mainKeyPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	if err != nil {
+		var mainPrivateKey *ecdsa.PrivateKey
+		mainPrivateKey, mainPublicKey, err = nilcrypto.GenerateKeyPair()
+		if err != nil {
+			return nil, err
+		}
+		if err := execution.DumpMainKeys(mainKeyPath, mainPrivateKey, mainPublicKey); err != nil {
+			return nil, err
+		}
+	}
+	zeroState, err := execution.CreateDefaultZeroStateConfig(mainPublicKey)
+	if err != nil {
+		return nil, err
+	}
+	zeroState.ConfigParams.Validators = config.ParamValidators{Validators: validators}
+
+	return zeroState, nil
 }
 
 func genDevnet(cmd *cobra.Command, args []string) error {
@@ -236,6 +256,7 @@ func (spec devnetSpec) makeServers(nodeSpecs []nodeSpec, basePort int, pprofBase
 		}
 		servers[i].credsDir = fmt.Sprintf("%s/%s-%d", spec.NildCredentialsDir, service, i)
 		servers[i].workDir = fmt.Sprintf("%s/%s-%d", baseDir, service, i)
+
 		var err error
 		servers[i].identity, err = spec.EnsureIdentity(servers[i])
 		if err != nil {

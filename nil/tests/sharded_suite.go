@@ -70,13 +70,15 @@ func (s *ShardedSuite) Cancel() {
 	}
 }
 
-func newZeroState(validators []config.ListValidators) *execution.ZeroStateConfig {
+func newZeroState(oldZeroState *execution.ZeroStateConfig, validators []config.ListValidators) *execution.ZeroStateConfig {
 	return &execution.ZeroStateConfig{
 		ConfigParams: execution.ConfigParams{
 			Validators: config.ParamValidators{
 				Validators: validators,
 			},
 		},
+		Contracts:     oldZeroState.Contracts,
+		MainPublicKey: oldZeroState.MainPublicKey,
 	}
 }
 
@@ -114,9 +116,8 @@ func createOneShardOneValidatorCfg(
 		Topology:             cfg.Topology,
 		CollatorTickPeriodMs: cfg.CollatorTickPeriodMs,
 		Network:              netCfg,
-		ZeroStateYaml:        cfg.ZeroStateYaml,
 		ValidatorKeysPath:    validatorKeysPath,
-		ZeroState:            newZeroState(validators),
+		ZeroState:            newZeroState(cfg.ZeroState, validators),
 		DisableConsensus:     cfg.DisableConsensus,
 	}
 }
@@ -153,9 +154,8 @@ func createAllShardsAllValidatorsCfg(
 		Topology:             cfg.Topology,
 		CollatorTickPeriodMs: cfg.CollatorTickPeriodMs,
 		Network:              netCfg,
-		ZeroStateYaml:        cfg.ZeroStateYaml,
 		ValidatorKeysPath:    validatorKeysPath,
-		ZeroState:            newZeroState(validators),
+		ZeroState:            newZeroState(cfg.ZeroState, validators),
 	}
 }
 
@@ -181,6 +181,12 @@ func (s *ShardedSuite) start(
 
 	if cfg.L1Fetcher == nil {
 		cfg.L1Fetcher = GetDummyL1Fetcher()
+	}
+
+	if cfg.ZeroState == nil {
+		var err error
+		cfg.ZeroState, err = execution.CreateDefaultZeroStateConfig(execution.MainPublicKey)
+		s.Require().NoError(err)
 	}
 
 	for index := range InstanceId(instanceCount) {

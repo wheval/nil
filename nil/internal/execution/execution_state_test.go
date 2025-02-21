@@ -233,7 +233,9 @@ func newState(t *testing.T) *ExecutionState {
 	state.BaseFee = types.DefaultGasPrice
 	require.NoError(t, err)
 
-	err = state.GenerateZeroStateYaml(DefaultZeroStateConfig)
+	defaultZeroStateConfig, err := CreateDefaultZeroStateConfig(MainPublicKey)
+	require.NoError(t, err)
+	err = state.GenerateZeroState(defaultZeroStateConfig)
 	require.NoError(t, err)
 	return state
 }
@@ -650,11 +652,15 @@ contracts:
   contract: tests/Counter
 `, address.Hex())
 
+	zeroState, err := ParseZeroStateConfig(zerostateCfg)
+	require.NoError(b, err)
+	zeroState.MainPublicKey = MainPublicKey
+
 	params := NewBlockGeneratorParams(1, 2)
 
 	gen, err := NewBlockGenerator(ctx, params, database, nil, nil)
 	require.NoError(b, err)
-	_, err = gen.GenerateZeroState(zerostateCfg, nil)
+	_, err = gen.GenerateZeroState(zeroState)
 	require.NoError(b, err)
 
 	txn := types.NewEmptyTransaction()

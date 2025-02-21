@@ -7,6 +7,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -24,7 +25,7 @@ type SuiteCometa struct {
 	tests.RpcSuite
 	cometaClient cometa.Client
 	cometaCfg    cometa.Config
-	zerostateCfg string
+	zerostateCfg *execution.ZeroStateConfig
 	testAddress  types.Address
 }
 
@@ -57,12 +58,15 @@ contracts:
   value: 100000000
   contract: tests/Test
 `
-	s.zerostateCfg, err = common.ParseTemplate(zerostateTmpl, map[string]any{
+	res, err := common.ParseTemplate(zerostateTmpl, map[string]any{
 		"SmartAccountAddress": types.MainSmartAccountAddress.Hex(),
 		"MainPublicKey":       hexutil.Encode(execution.MainPublicKey),
 		"TestAddress":         s.testAddress.Hex(),
 	})
 	s.Require().NoError(err)
+	s.zerostateCfg, err = execution.ParseZeroStateConfig(res)
+	check.PanicIfErr(err)
+	s.zerostateCfg.MainPublicKey = execution.MainPublicKey
 }
 
 func (s *SuiteCometaClickhouse) SetupSuite() {
@@ -122,7 +126,7 @@ func (s *SuiteCometa) SetupTest() {
 		CollatorTickPeriodMs: 200,
 		HttpUrl:              rpc.GetSockPath(s.T()),
 		Cometa:               &s.cometaCfg,
-		ZeroStateYaml:        s.zerostateCfg,
+		ZeroState:            s.zerostateCfg,
 		DisableConsensus:     true,
 	})
 	s.cometaClient = *cometa.NewClient(s.Endpoint)

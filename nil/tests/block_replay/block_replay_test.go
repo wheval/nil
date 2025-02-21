@@ -8,7 +8,6 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/db"
-	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc"
@@ -42,10 +41,9 @@ type SuiteBlockReplay struct {
 
 func (s *SuiteBlockReplay) SetupSuite() {
 	s.cfg = &nilservice.Config{
-		NShards:       4,
-		HttpUrl:       rpc.GetSockPath(s.T()),
-		ZeroStateYaml: execution.DefaultZeroStateConfig,
-		RunMode:       nilservice.NormalRunMode,
+		NShards: 4,
+		HttpUrl: rpc.GetSockPath(s.T()),
+		RunMode: nilservice.NormalRunMode,
 	}
 
 	s.DbInit = func() db.DB {

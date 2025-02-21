@@ -91,12 +91,16 @@ contracts:
 	nShards := uint32(3)
 	port := 10425
 
+	zeroState, err := execution.ParseZeroStateConfig(s.zerostateCfg)
+	s.Require().NoError(err)
+	zeroState.MainPublicKey = execution.MainPublicKey
+
 	const disableConsensus = true
 	s.Start(&nilservice.Config{
 		SplitShards:      false,
 		HttpUrl:          rpc.GetSockPath(s.T()),
 		NShards:          nShards,
-		ZeroStateYaml:    s.zerostateCfg,
+		ZeroState:        zeroState,
 		DisableConsensus: disableConsensus,
 	}, port)
 

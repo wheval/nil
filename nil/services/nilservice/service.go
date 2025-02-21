@@ -202,21 +202,9 @@ func initSyncers(ctx context.Context, syncers []*collate.Syncer) error {
 	return nil
 }
 
-func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) (*collate.SyncerConfig, error) {
+func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) *collate.SyncerConfig {
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
 	syncerTimeout := syncTimeoutFactor * collatorTickPeriod
-
-	var zeroState string
-	if len(cfg.ZeroStateYaml) != 0 {
-		zeroState = cfg.ZeroStateYaml
-	} else {
-		var err error
-		zeroState, err = execution.CreateZeroStateConfigWithMainPublicKey(cfg.MainKeysPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	zeroStateConfig := cfg.ZeroState
 
 	return &collate.SyncerConfig{
 		Name:                 name,
@@ -224,9 +212,8 @@ func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) (*collate.
 		Timeout:              syncerTimeout,
 		BootstrapPeers:       cfg.BootstrapPeers,
 		BlockGeneratorParams: cfg.BlockGeneratorParams(shardId),
-		ZeroState:            zeroState,
-		ZeroStateConfig:      zeroStateConfig,
-	}, nil
+		ZeroStateConfig:      cfg.ZeroState,
+	}
 }
 
 type syncersResult struct {
@@ -248,12 +235,7 @@ func createSyncers(name string, cfg *Config, nm *network.Manager, database db.DB
 
 	for i := range cfg.NShards {
 		shardId := types.ShardId(i)
-
-		syncerConfig, err := getSyncerConfig(name, cfg, shardId)
-		if err != nil {
-			return nil, err
-		}
-		syncer, err := collate.NewSyncer(syncerConfig, database, nm)
+		syncer, err := collate.NewSyncer(getSyncerConfig(name, cfg, shardId), database, nm)
 		if err != nil {
 			return nil, err
 		}
@@ -312,6 +294,34 @@ func (i *Node) Close(ctx context.Context) {
 	telemetry.Shutdown(ctx)
 }
 
+func runNormalOrCollatorsOnly(ctx context.Context, funcs []concurrent.Func, cfg *Config, database db.DB, networkManager *network.Manager, logger zerolog.Logger) ([]concurrent.Func, map[types.ShardId]txnpool.Pool, error) {
+	if err := cfg.LoadValidatorKeys(); err != nil {
+		return nil, nil, err
+	}
+
+	if !cfg.SplitShards && len(cfg.ZeroState.GetValidators()) == 0 {
+		if err := initDefaultValidator(cfg); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	syncersResult, err := createSyncers("sync", cfg, networkManager, database, logger)
+	if err != nil {
+		return nil, nil, err
+	}
+	funcs = append(funcs, syncersResult.funcs...)
+
+	var shardFuncs []concurrent.Func
+	shardFuncs, txnPools, err := createShards(ctx, cfg, database, networkManager, syncersResult, logger)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to create collators")
+		return nil, nil, err
+	}
+
+	funcs = append(funcs, shardFuncs...)
+	return funcs, txnPools, nil
+}
+
 func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, interop chan<- ServiceInterop, workers ...concurrent.Func) (*Node, error) {
 	logger := logging.NewLogger(name)
 
@@ -335,6 +345,15 @@ func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, i
 		cfg.CollatorTickPeriodMs = defaultCollatorTickPeriodMs
 	}
 
+	if cfg.ZeroState == nil {
+		var err error
+		cfg.ZeroState, err = execution.CreateDefaultZeroStateConfig(nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to create default zero state config")
+			return nil, err
+		}
+	}
+
 	var txnPools map[types.ShardId]txnpool.Pool
 	if cfg.Network != nil && cfg.RunMode != NormalRunMode {
 		cfg.Network.DHTMode = dht.ModeClient
@@ -348,34 +367,10 @@ func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, i
 	var syncersResult *syncersResult
 	switch cfg.RunMode {
 	case NormalRunMode, CollatorsOnlyRunMode:
-		if err := cfg.LoadValidatorKeys(); err != nil {
-			return nil, err
-		}
-
-		if cfg.ZeroState == nil {
-			cfg.ZeroState = &execution.ZeroStateConfig{}
-		}
-
-		if !cfg.SplitShards && len(cfg.ZeroState.GetValidators()) == 0 {
-			if err := initDefaultValiator(cfg); err != nil {
-				return nil, err
-			}
-		}
-
-		syncersResult, err = createSyncers("sync", cfg, networkManager, database, logger)
+		funcs, txnPools, err = runNormalOrCollatorsOnly(ctx, funcs, cfg, database, networkManager, logger)
 		if err != nil {
 			return nil, err
 		}
-		funcs = append(funcs, syncersResult.funcs...)
-
-		var shardFuncs []concurrent.Func
-		shardFuncs, txnPools, err = createShards(ctx, cfg, database, networkManager, syncersResult, logger)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to create collators")
-			return nil, err
-		}
-
-		funcs = append(funcs, shardFuncs...)
 	case ArchiveRunMode:
 		if err := validateArchiveNodeConfig(cfg, networkManager); err != nil {
 			logger.Error().Err(err).Msg("Invalid configuration")
@@ -527,7 +522,7 @@ func createNetworkManager(ctx context.Context, cfg *Config) (*network.Manager, e
 	return network.NewManager(ctx, cfg.Network)
 }
 
-func initDefaultValiator(cfg *Config) error {
+func initDefaultValidator(cfg *Config) error {
 	pubkey, err := cfg.ValidatorKeysManager.GetPublicKey()
 	if err != nil {
 		return err

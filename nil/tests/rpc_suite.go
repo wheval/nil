@@ -79,6 +79,12 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 		cfg.L1Fetcher = GetDummyL1Fetcher()
 	}
 
+	if cfg.ZeroState == nil {
+		var err error
+		cfg.ZeroState, err = execution.CreateDefaultZeroStateConfig(execution.MainPublicKey)
+		s.Require().NoError(err)
+	}
+
 	var serviceInterop chan nilservice.ServiceInterop
 	if cfg.RunMode == nilservice.CollatorsOnlyRunMode {
 		serviceInterop = make(chan nilservice.ServiceInterop, 1)

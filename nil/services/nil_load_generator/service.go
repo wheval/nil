@@ -38,6 +38,7 @@ type Config struct {
 	SwapAmount       string
 	UniswapAccounts  uint32
 	ThresholdAmount  string
+	MainKeysPath     string
 }
 
 var (
@@ -299,7 +300,13 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 	if err := rpcSwapLimit.Set(cfg.RpcSwapLimit); err != nil {
 		return err
 	}
-	service := cliservice.NewService(ctx, client, execution.MainPrivateKey, faucet)
+
+	mainPrivateKey, _, err := execution.LoadMainKeys(cfg.MainKeysPath)
+	if err != nil {
+		return err
+	}
+
+	service := cliservice.NewService(ctx, client, mainPrivateKey, faucet)
 	shardIdList, err := client.GetShardIdList(ctx)
 	if err != nil {
 		return err

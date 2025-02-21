@@ -4,25 +4,35 @@ package execution
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
+	nilcrypto "github.com/NilFoundation/nil/nil/internal/crypto"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	MainPrivateKey   *ecdsa.PrivateKey
+	MainPublicKey    []byte
+	DefaultGasCredit = types.Gas(DefaultGasLimit).ToValue(types.DefaultGasPrice)
+	DefaultSendValue = types.GasToValue(200_000_000)
 )
 
 const (
 	DefaultGasLimit = 100_000
 )
 
-var (
-	DefaultGasCredit = types.Gas(DefaultGasLimit).ToValue(types.DefaultGasPrice)
-
-	DefaultSendValue = types.GasToValue(200_000_000)
-)
+func init() {
+	var err error
+	MainPrivateKey, MainPublicKey, err = nilcrypto.GenerateKeyPair()
+	check.PanicIfErr(err)
+}
 
 func GenerateZeroState(t *testing.T, ctx context.Context,
 	shardId types.ShardId, txFabric db.DB,
@@ -35,15 +45,14 @@ func GenerateZeroState(t *testing.T, ctx context.Context,
 	require.NoError(t, err)
 	defer g.Rollback()
 
-	zerostateCfg, err := ParseZeroStateConfig(DefaultZeroStateConfig)
+	zerostateCfg, err := CreateDefaultZeroStateConfig(MainPublicKey)
 	require.NoError(t, err)
 	zerostateCfg.ConfigParams = ConfigParams{
 		GasPrice: config.ParamGasPrice{
 			Shards: []types.Uint256{*types.NewUint256(10), *types.NewUint256(10), *types.NewUint256(10)},
 		},
 	}
-
-	block, err := g.GenerateZeroState("", zerostateCfg)
+	block, err := g.GenerateZeroState(zerostateCfg)
 	require.NoError(t, err)
 	require.NotNil(t, block)
 	return block.Hash(shardId)
