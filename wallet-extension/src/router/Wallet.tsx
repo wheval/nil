@@ -4,6 +4,7 @@ import {
   areBlockchainFieldsSet,
   initializeFromStorageAndSetup,
 } from "../background/storage/state.ts";
+import { initializeTokens } from "../features/store/model/token.ts";
 import { ErrorPage, Loading, SetEndpoint, TestnetInfo } from "../pages/get-started";
 import {
   Endpoint,
@@ -19,7 +20,6 @@ import { AddCustomToken } from "../pages/wallet/AddCustomToken.tsx";
 import { ManageTokens } from "../pages/wallet/ManageTokens.tsx";
 import { ErrorScreen } from "./Error.tsx";
 import { WalletRoutes } from "./routes.ts";
-import { initializeTokens } from "../features/store/model/token.ts";
 
 export const WalletRouter = () => {
   const [isFieldsSet, setIsFieldsSet] = useState<boolean | null>(null);

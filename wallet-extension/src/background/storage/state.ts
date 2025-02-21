@@ -22,7 +22,6 @@ import {
   setExistingSmartAccount,
   setIsSmartAccountInitialized,
 } from "../../features/store/model/smartAccount.ts";
-import { initializeTokens } from "../../features/store/model/token.ts";
 
 // Saves other blockchain fields to Chrome storage
 export async function saveUserDetails(fields: {

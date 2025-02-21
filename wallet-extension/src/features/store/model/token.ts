@@ -1,10 +1,10 @@
 import type { SmartAccountV1 } from "@nilfoundation/niljs";
 import { createEffect, createEvent, createStore, sample } from "effector";
+import { type Token, getTokens, saveToken, setTokens } from "../../../background/storage/tokens.ts";
 import { fetchBalance, fetchSmartAccountTokens } from "../../blockchain";
 import { btcAddress, ethAddress, usdtAddress } from "../../utils/token.ts";
 import { setGlobalError } from "./error.ts";
 import { $smartAccount } from "./smartAccount.ts";
-import { getTokens, saveToken, setTokens, Token } from "../../../background/storage/tokens.ts";
 
 //Init
 const initialTokens: Token[] = [
@@ -74,21 +74,23 @@ export const fetchBalanceFx = createEffect<SmartAccountV1, bigint, Error>(async 
   }
 });
 
-export const addTokensFx = createEffect<Token, void, Error>(
-  async (token) => {
-    try {
-      await saveToken(token);
-    } catch (error) {
-      console.error("Failed to add token:", error);
-      throw error;
-    }
-  },
-);
+export const addTokensFx = createEffect<Token, void, Error>(async (token) => {
+  try {
+    await saveToken(token);
+  } catch (error) {
+    console.error("Failed to add token:", error);
+    throw error;
+  }
+});
 
-export const changeTokensFx = createEffect<{ address: string, show: boolean }, void, Error>(
+export const changeTokensFx = createEffect<{ address: string; show: boolean }, void, Error>(
   async (token) => {
     try {
-      await setTokens($tokens.getState().map((t) => (t.address === token.address ? {...t, show: token.show} : t)))
+      await setTokens(
+        $tokens
+          .getState()
+          .map((t) => (t.address === token.address ? { ...t, show: token.show } : t)),
+      );
     } catch (error) {
       console.error("Failed to change token:", error);
       throw error;
@@ -96,16 +98,14 @@ export const changeTokensFx = createEffect<{ address: string, show: boolean }, v
   },
 );
 
-export const fetchTokensFx = createEffect<string, Token[], Error>(
-  async (_) => {
-    try {
-      return await getTokens();
-    } catch (error) {
-      console.error("Failed to fetch tokens:", error);
-      throw error;
-    }
-  },
-);
+export const fetchTokensFx = createEffect<string, Token[], Error>(async (_) => {
+  try {
+    return await getTokens();
+  } catch (error) {
+    console.error("Failed to fetch tokens:", error);
+    throw error;
+  }
+});
 
 export const fetchBalanceTokensFx = createEffect<SmartAccountV1, Record<string, bigint>, Error>(
   async (smartAccount) => {
@@ -121,40 +121,38 @@ export const fetchBalanceTokensFx = createEffect<SmartAccountV1, Record<string, 
 
 // Store updates
 $balance.on(fetchBalanceFx.doneData, (_, balance) => balance);
-$balanceToken.on(fetchBalanceTokensFx.doneData, (_, tokens) => ({...tokens}));
+$balanceToken.on(fetchBalanceTokensFx.doneData, (_, tokens) => ({ ...tokens }));
 
 $tokens.on(fetchTokensFx.doneData, (_, tokens) => tokens);
 
 sample({
   source: addToken,
-  fn: (token) => ({...token, show: true, topupable: false}),
+  fn: (token) => ({ ...token, show: true, topupable: false }),
   target: addTokensFx,
 });
 
 sample({
   source: hideToken,
-  fn: (token) => ({address: token, show: false}),
+  fn: (token) => ({ address: token, show: false }),
   target: changeTokensFx,
 });
 
 sample({
   source: showToken,
-  fn: (token) => ({address: token, show: true}),
+  fn: (token) => ({ address: token, show: true }),
   target: changeTokensFx,
 });
 
-$tokens.on(addToken, (state, {name, address}) => [
+$tokens.on(addToken, (state, { name, address }) => [
   ...state,
-  {name, address, show: true, topupable: false},
+  { name, address, show: true, topupable: false },
 ]);
-$tokens.on(setInitialTokens, (_, __) => [
-  ...initialTokens,
-]);
+$tokens.on(setInitialTokens, (_, __) => [...initialTokens]);
 $tokens.on(hideToken, (state, address) =>
-  state.map((token) => (token.address === address ? {...token, show: false} : token)),
+  state.map((token) => (token.address === address ? { ...token, show: false } : token)),
 );
 $tokens.on(showToken, (state, address) =>
-  state.map((token) => (token.address === address ? {...token, show: true} : token)),
+  state.map((token) => (token.address === address ? { ...token, show: true } : token)),
 );
 
 // Automatically fetch balances when `refetchBalancesEvent` is triggered
@@ -180,7 +178,6 @@ sample({
   fn: (str) => str,
   target: fetchTokensFx,
 });
-
 
 // Watchers for debugging
 $balance.watch((balance) => {
