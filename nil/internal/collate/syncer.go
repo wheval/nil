@@ -131,14 +131,10 @@ func (s *Syncer) FetchSnapshot(ctx context.Context) error {
 	if snapIsRequired, err := s.shardIsEmpty(ctx); err != nil {
 		return err
 	} else if snapIsRequired {
-		var err error
 		for _, peer := range s.config.BootstrapPeers {
-			if err = fetchSnapshot(ctx, s.networkManager, &peer, s.db); err == nil {
+			if err = fetchSnapshot(ctx, s.networkManager, &peer, s.db, s.logger); err == nil {
 				return nil
 			}
-		}
-		if err != nil {
-			return fmt.Errorf("failed to fetch snapshot: %w", err)
 		}
 	}
 	return nil
