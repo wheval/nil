@@ -296,6 +296,22 @@ func (s *Syncer) fetchBlocksRange(ctx context.Context) <-chan *types.BlockWithEx
 	return nil
 }
 
+func (s *Syncer) logBlockDiffError(expected, got *types.Block, expHash, gotHash common.Hash) error {
+	msg := fmt.Sprintf("block hash mismatch: expected %x, got %x", expHash, gotHash)
+	blockMarshal, err := json.Marshal(got)
+	check.PanicIfErr(err)
+	lastBlockMarshal, err := json.Marshal(expected)
+	check.PanicIfErr(err)
+	s.logger.Error().
+		Stringer(logging.FieldBlockNumber, expected.Id).
+		Stringer("expectedHash", expHash).
+		Stringer("gotHash", gotHash).
+		RawJSON("expected", blockMarshal).
+		RawJSON("got", lastBlockMarshal).
+		Msg(msg)
+	return returnErrorOrPanic(errors.New(msg))
+}
+
 func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedData) error {
 	// TODO: zerostate block is not signed and its hash should be checked in a bit different way
 	// E.g. compare with network config value
@@ -326,19 +342,21 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 
 	if block.PrevBlock != lastHash {
 		txn := fmt.Sprintf("Prev block hash mismatch: expected %x, got %x", lastHash, block.PrevBlock)
-		blockMarshal, err := json.Marshal(block)
+		blockMarshal, err := json.Marshal(block.Block)
 		if err != nil {
 			return returnErrorOrPanic(err)
 		}
-		lastHashMarshal, err := json.Marshal(lastHash)
+		lastBlockMarshal, err := json.Marshal(lastBlock)
 		if err != nil {
 			return returnErrorOrPanic(err)
 		}
 		s.logger.Error().
 			Stringer(logging.FieldBlockNumber, block.Id).
 			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
-			RawJSON("expected", blockMarshal).
-			RawJSON("got", lastHashMarshal).
+			Stringer("lastBlockHashExpected", lastHash).
+			Stringer("lastBlockHashGot", block.PrevBlock).
+			RawJSON("blockJSON", blockMarshal).
+			RawJSON("lastBlockJSON", lastBlockMarshal).
 			Msg(txn)
 		return returnErrorOrPanic(errors.New(txn))
 	}
@@ -398,7 +416,7 @@ func returnErrorOrPanic(err error) error {
 	return err
 }
 
-func validateRepliedBlock(
+func (s *Syncer) validateRepliedBlock(
 	in *types.Block, replied *execution.BlockGenerationResult, inHash common.Hash, inTxns []*types.Transaction,
 ) error {
 	if replied.Block.OutTransactionsRoot != in.OutTransactionsRoot {
@@ -414,8 +432,7 @@ func validateRepliedBlock(
 			in.ConfigRoot, replied.Block.ConfigRoot))
 	}
 	if replied.BlockHash != inHash {
-		return returnErrorOrPanic(fmt.Errorf("block hash mismatch. Expected %x, got %x",
-			inHash, replied.BlockHash))
+		return s.logBlockDiffError(in, replied.Block, inHash, replied.BlockHash)
 	}
 	return nil
 }
@@ -472,7 +489,7 @@ func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtracte
 	}
 
 	// Check generated block and proposed are equal
-	if err = validateRepliedBlock(block.Block, resBlock, blockHash, block.OutTransactions); err != nil {
+	if err = s.validateRepliedBlock(block.Block, resBlock, blockHash, block.OutTransactions); err != nil {
 		return fmt.Errorf("failed to validate replied block: %w", err)
 	}
 

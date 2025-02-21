@@ -71,11 +71,13 @@ func (i *backendIBFT) BuildProposal(view *protoIBFT.View) []byte {
 
 	proposal, err := i.validator.BuildProposal(i.ctx)
 	if err != nil {
+		i.logger.Error().Err(err).Msg("failed to build proposal")
 		return nil
 	}
 
 	data, err := proposal.MarshalSSZ()
 	if err != nil {
+		i.logger.Error().Err(err).Msg("failed to marshal proposal")
 		return nil
 	}
 
@@ -148,6 +150,7 @@ func (i *backendIBFT) buildSignature(committedSeals []*messages.CommittedSeal, h
 func (i *backendIBFT) InsertProposal(proposal *protoIBFT.Proposal, committedSeals []*messages.CommittedSeal) {
 	proposalBlock, err := i.unmarshalProposal(proposal.RawProposal)
 	if err != nil {
+		i.logger.Error().Err(err).Msg("failed to unmarshal proposal")
 		return
 	}
 
