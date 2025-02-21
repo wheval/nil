@@ -185,7 +185,7 @@ export const Code = () => {
               className={css({
                 paddingBottom: "0!important",
                 height: "100%",
-                overflow: "auto",
+                overflow: "auto!important",
                 overscrollBehavior: "contain",
               })}
               data-testid="code-field"

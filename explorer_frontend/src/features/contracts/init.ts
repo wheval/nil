@@ -18,9 +18,9 @@ import {
   $callParams,
   $callResult,
   $contracts,
+  $deploySmartContractError,
   $deployedContracts,
   $deploymentArgs,
-  $error,
   $errors,
   $importedAddress,
   $importedSmartContractAddress,
@@ -82,9 +82,6 @@ $activeApp.on(choseApp, (_, { address, bytecode }) => {
   };
 });
 $activeApp.reset(closeApp);
-
-$error.on(compileCodeFx.failData, (_, error) => `${error}`);
-$error.reset(compileCodeFx.doneData);
 
 $deploymentArgs.on(setDeploymentArg, (args, { key, value }) => {
   return {
@@ -200,6 +197,10 @@ sample({
   clock: deploySmartContract,
   target: deploySmartContractFx,
 });
+
+$deploySmartContractError.reset($activeApp);
+$deploySmartContractError.reset(deploySmartContract);
+$deploySmartContractError.on(deploySmartContractFx.failData, (_, error) => String(error));
 
 $importedSmartContractAddress.on(setImportedSmartContractAddress, (_, address) => address);
 $importedSmartContractAddress.reset($activeApp);

@@ -52,8 +52,6 @@ export const $contractWithState = combine($contracts, $deployedContracts, (contr
   return contractsWithAddress;
 });
 
-export const $error = createStore<string | null>(null);
-
 export const $activeAppWithState = combine($activeApp, $contracts, (activeApp, contracts) => {
   if (activeApp === null) {
     return null;
@@ -86,6 +84,8 @@ export const setRandomShardId = createEvent();
 export const incrementShardId = createEvent("increment");
 export const decrementShardId = createEvent("decrement");
 export const triggerShardIdValidation = createEvent();
+
+export const $deploySmartContractError = createStore<string | null>(null);
 
 export const deploySmartContract = createEvent();
 export const deploySmartContractFx = createEffect<

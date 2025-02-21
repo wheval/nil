@@ -5,6 +5,7 @@ import {
   FormControl,
   HeadingMedium,
   Input,
+  ParagraphSmall,
   SPACE,
 } from "@nilfoundation/ui-kit";
 import { useUnit } from "effector-react";
@@ -12,6 +13,7 @@ import { useStyletron } from "styletron-react";
 import { $smartAccount } from "../../../account-connector/model";
 import { $constructor } from "../../init";
 import {
+  $deploySmartContractError,
   $deploymentArgs,
   $shardId,
   $shardIdIsValid,
@@ -23,14 +25,16 @@ import {
 import { ShardIdInput } from "./ShardIdInput";
 
 export const DeployTab = () => {
-  const [smartAccount, args, constuctorAbi, pending, shardId, shardIdIsValid] = useUnit([
-    $smartAccount,
-    $deploymentArgs,
-    $constructor,
-    deploySmartContractFx.pending,
-    $shardId,
-    $shardIdIsValid,
-  ]);
+  const [smartAccount, args, constuctorAbi, pending, shardId, shardIdIsValid, deployError] =
+    useUnit([
+      $smartAccount,
+      $deploymentArgs,
+      $constructor,
+      deploySmartContractFx.pending,
+      $shardId,
+      $shardIdIsValid,
+      $deploySmartContractError,
+    ]);
   const [css] = useStyletron();
 
   return (
@@ -134,6 +138,11 @@ export const DeployTab = () => {
         >
           Deploy
         </Button>
+        {deployError && (
+          <ParagraphSmall color={COLORS.red400} marginTop={SPACE[16]}>
+            {deployError}
+          </ParagraphSmall>
+        )}
       </div>
     </>
   );
