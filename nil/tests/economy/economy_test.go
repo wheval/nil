@@ -92,10 +92,14 @@ contracts:
 	s.abiTest, err = contracts.GetAbi(contracts.NameTest)
 	s.Require().NoError(err)
 
+	zeroState, err := execution.ParseZeroStateConfig(zerostateCfg)
+	s.Require().NoError(err)
+	zeroState.MainPublicKey = execution.MainPublicKey
+
 	s.Start(&nilservice.Config{
 		NShards:              s.ShardsNum,
 		HttpUrl:              rpc.GetSockPath(s.T()),
-		ZeroStateYaml:        zerostateCfg,
+		ZeroState:            zeroState,
 		CollatorTickPeriodMs: 200,
 		RunMode:              nilservice.CollatorsOnlyRunMode,
 	})

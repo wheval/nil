@@ -66,7 +66,6 @@ type Config struct {
 	TraceEVM             bool   `yaml:"-"`
 	CollatorTickPeriodMs uint32 `yaml:"-"`
 	Topology             string `yaml:"-"`
-	ZeroStateYaml        string `yaml:"-"`
 
 	// Consensus
 	Validators       map[types.ShardId][]config.ValidatorInfo `yaml:"validators,omitempty"`

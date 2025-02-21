@@ -52,7 +52,7 @@ contracts:
   contract: SmartAccount
   ctorArgs: [{{ .SmartAccountOwnerPublicKey }}]
 `
-	zerostate, err := common.ParseTemplate(zerostateTmpl, map[string]interface{}{
+	zerostateYaml, err := common.ParseTemplate(zerostateTmpl, map[string]interface{}{
 		"SmartAccountOwnerPublicKey": hexutil.Encode(execution.MainPublicKey),
 		"TestAddress1":               s.senderAddress1.Hex(),
 		"TestAddress2":               s.smartAccountAddress1.Hex(),
@@ -60,11 +60,15 @@ contracts:
 	})
 	s.Require().NoError(err)
 
+	zeroState, err := execution.ParseZeroStateConfig(zerostateYaml)
+	s.Require().NoError(err)
+	zeroState.MainPublicKey = execution.MainPublicKey
+
 	s.Start(&nilservice.Config{
-		NShards:       4,
-		HttpUrl:       rpc.GetSockPath(s.T()),
-		ZeroStateYaml: zerostate,
-		RunMode:       nilservice.CollatorsOnlyRunMode,
+		NShards:   4,
+		HttpUrl:   rpc.GetSockPath(s.T()),
+		ZeroState: zeroState,
+		RunMode:   nilservice.CollatorsOnlyRunMode,
 	})
 }
 

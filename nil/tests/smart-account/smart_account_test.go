@@ -21,10 +21,9 @@ type SuiteSmartAccountRpc struct {
 
 func (s *SuiteSmartAccountRpc) SetupSuite() {
 	s.Start(&nilservice.Config{
-		NShards:       4,
-		HttpUrl:       rpc.GetSockPath(s.T()),
-		ZeroStateYaml: execution.DefaultZeroStateConfig,
-		RunMode:       nilservice.CollatorsOnlyRunMode,
+		NShards: 4,
+		HttpUrl: rpc.GetSockPath(s.T()),
+		RunMode: nilservice.CollatorsOnlyRunMode,
 	})
 }
 

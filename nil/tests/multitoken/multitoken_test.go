@@ -98,11 +98,16 @@ contracts:
 }
 
 func (s *SuiteMultiTokenRpc) SetupTest() {
+	var err error
+	zeroState, err := execution.ParseZeroStateConfig(s.zerostateCfg)
+	s.Require().NoError(err)
+	zeroState.MainPublicKey = execution.MainPublicKey
+
 	s.Start(&nilservice.Config{
-		NShards:       s.ShardsNum,
-		HttpUrl:       rpc.GetSockPath(s.T()),
-		ZeroStateYaml: s.zerostateCfg,
-		RunMode:       nilservice.CollatorsOnlyRunMode,
+		NShards:   s.ShardsNum,
+		HttpUrl:   rpc.GetSockPath(s.T()),
+		ZeroState: zeroState,
+		RunMode:   nilservice.CollatorsOnlyRunMode,
 	})
 }
 

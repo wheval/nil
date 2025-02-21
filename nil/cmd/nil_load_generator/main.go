@@ -30,6 +30,7 @@ func main() {
 	rootCmd.Flags().StringVar(&cfg.ThresholdAmount, "threshold-amount", "3000000000", "threshold amount")
 	rootCmd.Flags().StringVar(&cfg.SwapAmount, "swap-amount", "1000", "swap amount")
 	rootCmd.Flags().StringVar(&cfg.RpcSwapLimit, "rpc-swap-limit", "10000000", "rpc swap limit")
+	rootCmd.Flags().StringVar(&cfg.MainKeysPath, "main-keys-path", "keys.yaml", "path to keys.yaml")
 	rootCmd.Flags().Uint32Var(&cfg.UniswapAccounts, "rpc-uniswap-accounts", 5, "number of uniswap accounts")
 	rootCmd.Flags().StringVar(&cfg.LogLevel, "log-level", "info", "log level: trace|debug|info|warn|error|fatal|panic")
 

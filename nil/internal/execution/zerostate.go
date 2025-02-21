@@ -16,22 +16,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	MainPrivateKey *ecdsa.PrivateKey
-	MainPublicKey  []byte
-)
-
-var DefaultZeroStateConfig string
-
-func init() {
-	var err error
-	MainPrivateKey, MainPublicKey, err = nilcrypto.GenerateKeyPair()
-	check.PanicIfErr(err)
-
-	DefaultZeroStateConfig, err = CreateDefaultZeroStateConfig(MainPublicKey)
-	check.PanicIfErr(err)
-}
-
 type ContractDescr struct {
 	Name     string         `yaml:"name"`
 	Address  *types.Address `yaml:"address,omitempty"`
@@ -42,8 +26,8 @@ type ContractDescr struct {
 }
 
 type MainKeys struct {
-	MainPrivateKey string `yaml:"mainPrivateKey"`
-	MainPublicKey  string `yaml:"mainPublicKey"`
+	MainPrivateKey hexutil.Bytes `yaml:"mainPrivateKey"`
+	MainPublicKey  hexutil.Bytes `yaml:"mainPublicKey"`
 }
 
 type ConfigParams struct {
@@ -52,15 +36,12 @@ type ConfigParams struct {
 }
 
 type ZeroStateConfig struct {
-	ConfigParams ConfigParams     `yaml:"config,omitempty"`
-	Contracts    []*ContractDescr `yaml:"contracts"`
+	ConfigParams  ConfigParams     `yaml:"config,omitempty"`
+	Contracts     []*ContractDescr `yaml:"contracts"`
+	MainPublicKey hexutil.Bytes    `yaml:"mainPublicKey"`
 }
 
-func (cfg *ZeroStateConfig) GetValidators() []config.ListValidators {
-	return cfg.ConfigParams.Validators.Validators
-}
-
-func CreateDefaultZeroStateConfig(mainPublicKey []byte) (string, error) {
+func CreateDefaultZeroStateConfig(mainPublicKey []byte) (*ZeroStateConfig, error) {
 	zerostate := `
 contracts:
 - name: MainSmartAccount
@@ -93,22 +74,43 @@ contracts:
   value: 0
   contract: system/L1BlockInfo
 `
+	if mainPublicKey == nil {
+		var err error
+		_, mainPublicKey, err = nilcrypto.GenerateKeyPair()
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return common.ParseTemplate(zerostate, map[string]interface{}{
+	res, err := common.ParseTemplate(zerostate, map[string]interface{}{
 		"MainSmartAccountAddress": types.MainSmartAccountAddress.Hex(),
 		"L1BlockInfoAddress":      types.L1BlockInfoAddress.Hex(),
-		"MainPublicKey":           hexutil.Encode(MainPublicKey),
-		"MainSmartAccountPubKey":  hexutil.Encode(MainPublicKey),
+		"MainPublicKey":           hexutil.Encode(mainPublicKey),
 		"FaucetAddress":           types.FaucetAddress.Hex(),
 		"EthFaucetAddress":        types.EthFaucetAddress.Hex(),
 		"UsdtFaucetAddress":       types.UsdtFaucetAddress.Hex(),
 		"BtcFaucetAddress":        types.BtcFaucetAddress.Hex(),
 		"UsdcFaucetAddress":       types.UsdcFaucetAddress.Hex(),
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	zeroStateConfig, err := ParseZeroStateConfig(res)
+	if err != nil {
+		return nil, err
+	}
+	zeroStateConfig.MainPublicKey = mainPublicKey
+
+	return zeroStateConfig, nil
 }
 
-func DumpMainKeys(fname string) error {
-	keys := MainKeys{"0x" + nilcrypto.PrivateKeyToEthereumFormat(MainPrivateKey), hexutil.Encode(MainPublicKey)}
+func (cfg *ZeroStateConfig) GetValidators() []config.ListValidators {
+	return cfg.ConfigParams.Validators.Validators
+}
+
+func DumpMainKeys(fname string, mainPrivateKey *ecdsa.PrivateKey, mainPublicKey []byte) error {
+	keys := MainKeys{crypto.FromECDSA(mainPrivateKey), mainPublicKey}
 
 	data, err := yaml.Marshal(&keys)
 	if err != nil {
@@ -125,29 +127,21 @@ func DumpMainKeys(fname string) error {
 	return err
 }
 
-func LoadMainKeys(fname string) error {
+func LoadMainKeys(fname string) (*ecdsa.PrivateKey, []byte, error) {
 	var keys MainKeys
 
 	data, err := os.ReadFile(fname)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	if err := yaml.Unmarshal(data, &keys); err != nil {
-		return err
+		return nil, nil, err
 	}
-	MainPrivateKey, err = crypto.HexToECDSA(keys.MainPrivateKey[2:])
+	mainPrivateKey, err := crypto.ToECDSA(keys.MainPrivateKey)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	MainPublicKey, err = hexutil.Decode(keys.MainPublicKey)
-	return err
-}
-
-func CreateZeroStateConfigWithMainPublicKey(mainKeysPath string) (string, error) {
-	if err := LoadMainKeys(mainKeysPath); err != nil {
-		logger.Debug().Str("path", mainKeysPath).Msg("Failed to load main keys, using default")
-	}
-	return CreateDefaultZeroStateConfig(MainPublicKey)
+	return mainPrivateKey, keys.MainPublicKey, err
 }
 
 func (c *ZeroStateConfig) FindContractByName(name string) *ContractDescr {
@@ -171,35 +165,6 @@ func ParseZeroStateConfig(configYaml string) (*ZeroStateConfig, error) {
 	var config ZeroStateConfig
 	err := yaml.Unmarshal([]byte(configYaml), &config)
 	return &config, err
-}
-
-func (es *ExecutionState) GenerateZeroStateYaml(configYaml string) error {
-	config, err := ParseZeroStateConfig(configYaml)
-	if err != nil {
-		return err
-	}
-	return es.GenerateZeroState(config)
-}
-
-func (es *ExecutionState) GenerateMergedZeroState(leftConfig *ZeroStateConfig, configYaml string) error {
-	var rightConfig *ZeroStateConfig
-	var err error
-	if configYaml != "" {
-		if rightConfig, err = ParseZeroStateConfig(configYaml); err != nil {
-			return err
-		}
-	} else {
-		rightConfig = &ZeroStateConfig{}
-	}
-	if leftConfig == nil {
-		leftConfig = &ZeroStateConfig{}
-	}
-	return es.GenerateZeroState(
-		&ZeroStateConfig{
-			ConfigParams: leftConfig.ConfigParams,
-			Contracts:    append(leftConfig.Contracts, rightConfig.Contracts...),
-		},
-	)
 }
 
 func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error {
@@ -252,7 +217,7 @@ func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error 
 			case string:
 				switch {
 				case arg == "MainPublicKey":
-					args = append(args, MainPublicKey)
+					args = append(args, []byte(stateConfig.MainPublicKey))
 				case arg[:2] == "0x":
 					args = append(args, hexutil.FromHex(arg))
 				default:

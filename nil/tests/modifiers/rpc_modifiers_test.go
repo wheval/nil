@@ -9,6 +9,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/crypto"
+	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc"
@@ -40,7 +41,7 @@ func (s *SuiteModifiersRpc) SetupSuite() {
 	s.abi, err = contracts.GetAbi(contracts.NameTransactionCheck)
 	s.Require().NoError(err)
 
-	zerostate := fmt.Sprintf(`
+	zerostateYaml := fmt.Sprintf(`
 contracts:
 - name: SmartAccount
   address: %s
@@ -53,11 +54,15 @@ contracts:
   contract: tests/TransactionCheck
 `, s.smartAccountAddr.Hex(), hexutil.Encode(s.smartAccountPublicKey), s.testAddr)
 
+	zeroState, err := execution.ParseZeroStateConfig(zerostateYaml)
+	s.Require().NoError(err)
+	zeroState.MainPublicKey = execution.MainPublicKey
+
 	s.Start(&nilservice.Config{
-		NShards:       4,
-		HttpUrl:       rpc.GetSockPath(s.T()),
-		ZeroStateYaml: zerostate,
-		RunMode:       nilservice.CollatorsOnlyRunMode,
+		NShards:   4,
+		HttpUrl:   rpc.GetSockPath(s.T()),
+		ZeroState: zeroState,
+		RunMode:   nilservice.CollatorsOnlyRunMode,
 	})
 }
 

@@ -148,7 +148,7 @@ func (g *BlockGenerator) updateGasPrices(gasPrices []types.Uint256) error {
 	return nil
 }
 
-func (g *BlockGenerator) GenerateZeroState(zeroStateYaml string, config *ZeroStateConfig) (*types.Block, error) {
+func (g *BlockGenerator) GenerateZeroState(config *ZeroStateConfig) (*types.Block, error) {
 	g.logger.Info().Msg("Generating zero-state...")
 	g.executionState.BaseFee = types.DefaultGasPrice
 
@@ -160,7 +160,7 @@ func (g *BlockGenerator) GenerateZeroState(zeroStateYaml string, config *ZeroSta
 		g.executionState.MainChainHash = mainBlockHash
 	}
 
-	if err := g.executionState.GenerateMergedZeroState(config, zeroStateYaml); err != nil {
+	if err := g.executionState.GenerateZeroState(config); err != nil {
 		return nil, err
 	}
 

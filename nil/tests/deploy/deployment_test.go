@@ -58,10 +58,15 @@ contracts:
 }
 
 func (s *SuiteDeployment) SetupTest() {
+	var err error
+	zeroState, err := execution.ParseZeroStateConfig(s.zerostateCfg)
+	s.Require().NoError(err)
+	zeroState.MainPublicKey = execution.MainPublicKey
+
 	s.Start(&nilservice.Config{
 		NShards:              s.ShardsNum,
 		HttpUrl:              rpc.GetSockPath(s.T()),
-		ZeroStateYaml:        s.zerostateCfg,
+		ZeroState:            zeroState,
 		CollatorTickPeriodMs: 300,
 		RunMode:              nilservice.CollatorsOnlyRunMode,
 	})

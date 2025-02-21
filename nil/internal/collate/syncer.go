@@ -30,7 +30,6 @@ type SyncerConfig struct {
 	ShardId         types.ShardId
 	Timeout         time.Duration // pull blocks if no new blocks appear in the topic for this duration
 	BootstrapPeers  []network.AddrInfo
-	ZeroState       string
 	ZeroStateConfig *execution.ZeroStateConfig
 }
 
@@ -357,23 +356,14 @@ func (s *Syncer) GenerateZerostate(ctx context.Context) error {
 		return nil
 	}
 
-	if len(s.config.BlockGeneratorParams.MainKeysPath) != 0 && s.config.ShardId == types.BaseShardId {
-		if err := execution.LoadMainKeys(s.config.BlockGeneratorParams.MainKeysPath); err != nil {
-			if err := execution.DumpMainKeys(s.config.BlockGeneratorParams.MainKeysPath); err != nil {
-				return err
-			}
-		}
-	}
-
 	s.logger.Info().Msg("Generating zero-state...")
-
 	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, nil, nil)
 	if err != nil {
 		return err
 	}
 	defer gen.Rollback()
 
-	if _, err := gen.GenerateZeroState(s.config.ZeroState, s.config.ZeroStateConfig); err != nil {
+	if _, err := gen.GenerateZeroState(s.config.ZeroStateConfig); err != nil {
 		return err
 	}
 	return nil
