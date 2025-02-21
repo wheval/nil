@@ -45,6 +45,7 @@ type RpcSuite struct {
 	Client    client.Client
 	ShardsNum uint32
 	Endpoint  string
+	Config    *nilservice.Config
 }
 
 func init() {
@@ -63,6 +64,7 @@ func PatchConfigWithTestDefaults(cfg *nilservice.Config) {
 func (s *RpcSuite) Start(cfg *nilservice.Config) {
 	s.T().Helper()
 
+	s.Config = cfg
 	s.ShardsNum = cfg.NShards
 	s.Context, s.CtxCancel = context.WithCancel(context.Background())
 

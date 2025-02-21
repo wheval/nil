@@ -44,10 +44,12 @@ func (c *APIImpl) fetchSeqno(ctx context.Context, addr types.Address) (types.Seq
 }
 
 func (c *APIImpl) getOrFetchSeqno(ctx context.Context, faucetAddress types.Address) (types.Seqno, error) {
-	seqno, ok := c.seqnos[faucetAddress]
-	if ok {
-		return seqno, nil
-	}
+	// todo: currently, no better solution than to fetch seqno each time
+	// Keeping in-memory seqno is not reliable because of possible desync with the chain.
+	// seqno, ok := c.seqnos[faucetAddress]
+	// if ok {
+	//	return seqno, nil
+	// }
 
 	seqno, err := c.fetchSeqno(ctx, faucetAddress)
 	if err != nil {
@@ -94,7 +96,7 @@ func (c *APIImpl) TopUpViaFaucet(ctx context.Context, faucetAddress, contractAdd
 	if err != nil && !errors.Is(err, rpc.ErrRPCError) && !errors.Is(err, jsonrpc.ErrTransactionDiscarded) {
 		return common.EmptyHash, err
 	}
-	if errors.Is(err, rpc.ErrRPCError) {
+	if err != nil {
 		actualSeqno, err2 := c.fetchSeqno(ctx, faucetAddress)
 		if err2 != nil {
 			return common.EmptyHash, fmt.Errorf("failed to send transaction %d with %w and failed to get seqno: %w", seqno, err, err2)

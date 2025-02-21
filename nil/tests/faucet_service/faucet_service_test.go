@@ -14,7 +14,7 @@ import (
 
 type FaucetRpc struct {
 	tests.RpcSuite
-	client        *faucet.Client
+	faucetClient  *faucet.Client
 	builtinFaucet bool
 }
 
@@ -27,9 +27,9 @@ func (s *FaucetRpc) SetupSuite() {
 	})
 
 	if s.builtinFaucet {
-		s.client = faucet.NewClient(sockPath)
+		s.faucetClient = faucet.NewClient(sockPath)
 	} else {
-		s.client, _ = tests.StartFaucetService(s.T(), s.Context, &s.Wg, s.Client)
+		s.faucetClient, _ = tests.StartFaucetService(s.T(), s.Context, &s.Wg, s.Client)
 	}
 	time.Sleep(time.Second)
 }
@@ -38,30 +38,74 @@ func (s *FaucetRpc) TearDownSuite() {
 	s.Cancel()
 }
 
-func (s *FaucetRpc) TestSendRawTransaction() {
-	faucets := types.GetTokens()
-	res, err := s.client.GetFaucets()
+func (s *FaucetRpc) topUpAndWait(faucetAddr, addr types.Address, amount types.Value) {
+	s.T().Helper()
+
+	hash, err := s.faucetClient.TopUpViaFaucet(faucetAddr, addr, amount)
 	s.Require().NoError(err)
-	s.Require().Equal(faucets, res)
+
+	receipt := s.WaitForReceipt(hash)
+	s.Require().True(receipt.AllSuccess())
+}
+
+func (s *FaucetRpc) TestDefaultToken() {
+	s.Run("GetFaucets", func() {
+		faucets := types.GetTokens()
+		s.Require().Equal(types.FaucetAddress, faucets["NIL"])
+
+		res, err := s.faucetClient.GetFaucets()
+		s.Require().NoError(err)
+		s.Require().Equal(faucets, res)
+	})
+
+	s.Run("TopUpViaFaucet", func() {
+		addr := types.GenerateRandomAddress(types.BaseShardId)
+		total := types.NewZeroValue()
+		amount := types.NewValueFromUint64(100)
+		for range 5 {
+			amount = amount.Mul64(10)
+			s.topUpAndWait(types.FaucetAddress, addr, amount)
+
+			total = total.Add(amount)
+			b, err := s.Client.GetBalance(s.Context, addr, "latest")
+			s.Require().NoError(err)
+			s.Require().Equal(total, b)
+		}
+	})
+
+	if !s.builtinFaucet {
+		s.Run("TopUpViaFaucet from another service", func() {
+			otherClient := faucet.NewClient(s.Config.HttpUrl)
+			viaFaucet, err := otherClient.TopUpViaFaucet(types.FaucetAddress,
+				types.GenerateRandomAddress(types.BaseShardId), types.NewValueFromUint64(100))
+			s.Require().NoError(err)
+
+			receipt := s.WaitForReceipt(viaFaucet)
+			s.Require().True(receipt.Success)
+		})
+
+		s.Run("TopUpViaFaucet works on the initial service", func() {
+			s.topUpAndWait(types.FaucetAddress,
+				types.GenerateRandomAddress(types.BaseShardId), types.NewValueFromUint64(100))
+		})
+	}
 }
 
 func (s *FaucetRpc) TestSendToken() {
-	expectedTokens := types.TokensMap{
-		types.TokenId(types.EthFaucetAddress.Bytes()):  types.NewValueFromUint64(111),
-		types.TokenId(types.BtcFaucetAddress.Bytes()):  types.NewValueFromUint64(222),
-		types.TokenId(types.UsdtFaucetAddress.Bytes()): types.NewValueFromUint64(333),
-		types.TokenId(types.UsdcFaucetAddress.Bytes()): types.NewValueFromUint64(444),
-	}
+	expectedTokens := types.TokensMap{}
 
-	for i, addr := range []types.Address{types.EthFaucetAddress, types.BtcFaucetAddress, types.UsdtFaucetAddress, types.UsdcFaucetAddress} {
+	wallet := types.MainSmartAccountAddress
+	for i, addr := range []types.Address{
+		types.EthFaucetAddress,
+		types.BtcFaucetAddress,
+		types.UsdtFaucetAddress,
+		types.UsdcFaucetAddress,
+	} {
 		amount := types.NewValueFromUint64(111 * uint64(i+1))
-		viaFaucet, err := s.client.TopUpViaFaucet(addr, types.MainSmartAccountAddress, amount)
-		s.Require().NoError(err)
-
-		receipt := s.WaitForReceipt(viaFaucet)
-		s.Require().True(receipt.Success)
+		expectedTokens[types.TokenId(addr.Bytes())] = amount
+		s.topUpAndWait(addr, wallet, amount)
 	}
-	tokens, err := s.RpcSuite.Client.GetTokens(s.Context, types.MainSmartAccountAddress, "latest")
+	tokens, err := s.RpcSuite.Client.GetTokens(s.Context, wallet, "latest")
 	s.Require().NoError(err)
 	s.Require().Equal(expectedTokens, tokens)
 }
