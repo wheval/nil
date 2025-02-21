@@ -118,6 +118,7 @@ func NewConfigAccessorByNumberTx(ctx context.Context, tx db.RoTx, mainShardBlock
 	return NewConfigAccessorTx(tx, &mainShardHash)
 }
 
+// NewConfigAccessorTx creates a new configAccessorImpl reading the whole trie from the MPT.
 func NewConfigAccessorTx(tx db.RoTx, mainShardHash *common.Hash) (ConfigAccessor, error) {
 	trie, err := GetConfigTrie(tx, mainShardHash)
 	if err != nil {
@@ -135,16 +136,6 @@ func NewConfigAccessorFromMap(data map[string][]byte) ConfigAccessor {
 		data,
 		make(map[string][]byte),
 	}
-}
-
-// NewConfigAccessor creates a new configAccessorImpl reading the whole trie from the MPT.
-func NewConfigAccessor(ctx context.Context, db db.DB, mainShardHash *common.Hash) (ConfigAccessor, error) {
-	tx, err := db.CreateRoTx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create read-only transaction: %w", err)
-	}
-	defer tx.Rollback()
-	return NewConfigAccessorTx(tx, mainShardHash)
 }
 
 // Commit updates the config trie with the current state of the configAccessorImpl.

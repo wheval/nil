@@ -1,7 +1,6 @@
 package jsonrpc
 
 import (
-	"context"
 	"math/big"
 	"testing"
 
@@ -42,7 +41,7 @@ func (s *SuiteEthCall) unpackGetValue(data []byte) uint64 {
 
 func (s *SuiteEthCall) SetupSuite() {
 	shardId := types.BaseShardId
-	ctx := context.Background()
+	ctx := s.T().Context()
 
 	var err error
 	s.db, err = db.NewBadgerDbInMemory()
@@ -51,7 +50,7 @@ func (s *SuiteEthCall) SetupSuite() {
 	s.contracts, err = solc.CompileSource("../../../internal/execution/testdata/call.sol")
 	s.Require().NoError(err)
 
-	mainBlockHash := execution.GenerateZeroState(s.T(), ctx, types.MainShardId, s.db)
+	mainBlock := execution.GenerateZeroState(s.T(), types.MainShardId, s.db)
 
 	m1 := execution.NewDeployTransaction(types.BuildDeployPayload(hexutil.FromHex(s.contracts["Caller"].Code), common.EmptyHash),
 		shardId, types.GenerateRandomAddress(shardId), 0, types.GasToValue(100_000_000))
@@ -65,7 +64,7 @@ func (s *SuiteEthCall) SetupSuite() {
 
 	s.lastBlockHash = execution.GenerateBlockFromTransactions(s.T(), ctx, shardId, 0, s.lastBlockHash, s.db, nil, m1, m2)
 
-	execution.GenerateBlockFromTransactions(s.T(), ctx, types.MainShardId, 0, mainBlockHash, s.db,
+	execution.GenerateBlockFromTransactions(s.T(), ctx, types.MainShardId, 0, mainBlock.Hash(types.MainShardId), s.db,
 		map[types.ShardId]common.Hash{shardId: s.lastBlockHash})
 
 	s.api = NewTestEthAPI(s.T(), ctx, s.db, 2)
@@ -76,7 +75,7 @@ func (s *SuiteEthCall) TearDownSuite() {
 }
 
 func (s *SuiteEthCall) TestSmcCall() {
-	ctx := context.Background()
+	ctx := s.T().Context()
 
 	abi := solc.ExtractABI(s.contracts["SimpleContract"])
 	calldata, err := abi.Pack("getValue")
@@ -117,7 +116,7 @@ func (s *SuiteEthCall) TestSmcCall() {
 }
 
 func (s *SuiteEthCall) TestChainCall() {
-	ctx := context.Background()
+	ctx := s.T().Context()
 
 	abi := solc.ExtractABI(s.contracts["SimpleContract"])
 	getCalldata, err := abi.Pack("getValue")

@@ -1,7 +1,6 @@
 package collate
 
 import (
-	"context"
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common/logging"
@@ -17,13 +16,11 @@ import (
 type ProposerTestSuite struct {
 	suite.Suite
 
-	ctx     context.Context
 	shardId types.ShardId
 	db      db.DB
 }
 
 func (s *ProposerTestSuite) SetupSuite() {
-	s.ctx = context.Background()
 	s.shardId = types.BaseShardId
 }
 
@@ -50,7 +47,7 @@ func newTestProposer(params Params, pool TxnPool) *proposer {
 func (s *ProposerTestSuite) generateProposal(p *proposer) *execution.Proposal {
 	s.T().Helper()
 
-	proposal, err := p.GenerateProposal(s.ctx, s.db)
+	proposal, err := p.GenerateProposal(s.T().Context(), s.db)
 	s.Require().NoError(err)
 	s.Require().NotNil(proposal)
 
@@ -59,8 +56,8 @@ func (s *ProposerTestSuite) generateProposal(p *proposer) *execution.Proposal {
 
 func (s *ProposerTestSuite) TestBlockGas() {
 	s.Run("GenerateZeroState", func() {
-		execution.GenerateZeroState(s.T(), s.ctx, types.MainShardId, s.db)
-		execution.GenerateZeroState(s.T(), s.ctx, s.shardId, s.db)
+		execution.GenerateZeroState(s.T(), types.MainShardId, s.db)
+		execution.GenerateZeroState(s.T(), s.shardId, s.db)
 	})
 
 	to := contracts.CounterAddress(s.T(), s.shardId)
@@ -98,7 +95,14 @@ func (s *ProposerTestSuite) TestCollator() {
 	generateBlock := func() *execution.Proposal {
 		proposal := s.generateProposal(p)
 
-		blockGenerator, err := execution.NewBlockGenerator(s.ctx, params.BlockGeneratorParams, s.db, nil, nil)
+		tx, err := s.db.CreateRoTx(s.T().Context())
+		s.Require().NoError(err)
+		defer tx.Rollback()
+
+		block, err := db.ReadBlock(tx, shardId, proposal.PrevBlockHash)
+		s.Require().NoError(err)
+
+		blockGenerator, err := execution.NewBlockGenerator(s.T().Context(), params.BlockGeneratorParams, s.db, block)
 		s.Require().NoError(err)
 		defer blockGenerator.Rollback()
 
@@ -109,8 +113,8 @@ func (s *ProposerTestSuite) TestCollator() {
 	}
 
 	s.Run("GenerateZeroState", func() {
-		execution.GenerateZeroState(s.T(), s.ctx, types.MainShardId, s.db)
-		execution.GenerateZeroState(s.T(), s.ctx, shardId, s.db)
+		execution.GenerateZeroState(s.T(), types.MainShardId, s.db)
+		execution.GenerateZeroState(s.T(), shardId, s.db)
 	})
 
 	balance := s.getMainBalance()
@@ -226,12 +230,15 @@ func (s *ProposerTestSuite) getMainBalance() types.Value {
 func (s *ProposerTestSuite) getBalance(shardId types.ShardId, addr types.Address) types.Value {
 	s.T().Helper()
 
-	tx, err := s.db.CreateRwTx(s.ctx)
+	tx, err := s.db.CreateRoTx(s.T().Context())
 	s.Require().NoError(err)
 	defer tx.Rollback()
 
+	block, _, err := db.ReadLastBlock(tx, shardId)
+	s.Require().NoError(err)
+
 	state, err := execution.NewExecutionState(tx, shardId, execution.StateParams{
-		GetBlockFromDb: true,
+		Block:          block,
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	s.Require().NoError(err)
@@ -246,7 +253,7 @@ func (s *ProposerTestSuite) getBalance(shardId types.ShardId, addr types.Address
 func (s *ProposerTestSuite) checkSeqno(shardId types.ShardId) {
 	s.T().Helper()
 
-	tx, err := s.db.CreateRoTx(s.ctx)
+	tx, err := s.db.CreateRoTx(s.T().Context())
 	s.Require().NoError(err)
 	defer tx.Rollback()
 
@@ -275,7 +282,7 @@ func (s *ProposerTestSuite) checkSeqno(shardId types.ShardId) {
 func (s *ProposerTestSuite) checkReceipt(shardId types.ShardId, m *types.Transaction) *types.Receipt {
 	s.T().Helper()
 
-	tx, err := s.db.CreateRoTx(s.ctx)
+	tx, err := s.db.CreateRoTx(s.T().Context())
 	s.Require().NoError(err)
 	defer tx.Rollback()
 

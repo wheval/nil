@@ -8,7 +8,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/rs/zerolog"
 )
 
 func (i *backendIBFT) calcProposer(height, round uint64) (*config.ValidatorInfo, error) {
@@ -70,7 +69,7 @@ type validatorValue struct {
 }
 
 func (v *validatorValue) getValidators(ctx context.Context) ([]config.ValidatorInfo, error) {
-	return config.GetValidatorListForShard(ctx, v.txFabric, types.BlockNumber(v.height), v.shardId, zerolog.Nop())
+	return config.GetValidatorListForShard(ctx, v.txFabric, types.BlockNumber(v.height), v.shardId)
 }
 
 func (v *validatorValue) init(ctx context.Context) {

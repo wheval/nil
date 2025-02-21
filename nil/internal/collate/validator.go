@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
@@ -21,6 +22,20 @@ type Validator struct {
 	logger zerolog.Logger
 }
 
+func (s *Validator) getBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
+	tx, err := s.txFabric.CreateRoTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	block, err := db.ReadBlock(tx, s.params.ShardId, hash)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+
 func (s *Validator) BuildProposal(ctx context.Context) (*execution.Proposal, error) {
 	proposer := newProposer(s.params, s.params.Topology, s.pool, s.logger)
 	proposal, err := proposer.GenerateProposal(ctx, s.txFabric)
@@ -31,14 +46,18 @@ func (s *Validator) BuildProposal(ctx context.Context) (*execution.Proposal, err
 }
 
 func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Proposal) (*types.Block, error) {
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric,
-		&proposal.PrevBlockHash, proposal.GetMainShardHash(s.params.ShardId))
+	prevBlock, err := s.getBlock(ctx, proposal.PrevBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, prevBlock)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create block generator: %w", err)
 	}
 	defer gen.Rollback()
 
-	gasPrices := gen.CollectGasPrices(proposal.PrevBlockHash, proposal.ShardHashes)
+	gasPrices := gen.CollectGasPrices(proposal.PrevBlockId)
 	res, err := gen.BuildBlock(proposal, gasPrices)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate block: %w", err)
@@ -47,8 +66,12 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 }
 
 func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Proposal, sig *types.BlsAggregateSignature) error {
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric,
-		&proposal.PrevBlockHash, proposal.GetMainShardHash(s.params.ShardId))
+	prevBlock, err := s.getBlock(ctx, proposal.PrevBlockHash)
+	if err != nil {
+		return err
+	}
+
+	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, prevBlock)
 	if err != nil {
 		return fmt.Errorf("failed to create block generator: %w", err)
 	}

@@ -34,14 +34,12 @@ func init() {
 	check.PanicIfErr(err)
 }
 
-func GenerateZeroState(t *testing.T, ctx context.Context,
-	shardId types.ShardId, txFabric db.DB,
-) common.Hash {
+func GenerateZeroState(t *testing.T, shardId types.ShardId, txFabric db.DB) *types.Block {
 	t.Helper()
 
-	g, err := NewBlockGenerator(ctx,
+	g, err := NewBlockGenerator(t.Context(),
 		NewBlockGeneratorParams(shardId, 1),
-		txFabric, nil, nil)
+		txFabric, nil)
 	require.NoError(t, err)
 	defer g.Rollback()
 
@@ -55,7 +53,7 @@ func GenerateZeroState(t *testing.T, ctx context.Context,
 	block, err := g.GenerateZeroState(zerostateCfg)
 	require.NoError(t, err)
 	require.NotNil(t, block)
-	return block.Hash(shardId)
+	return block
 }
 
 func GenerateBlockFromTransactions(t *testing.T, ctx context.Context,
@@ -75,7 +73,7 @@ func GenerateBlockFromTransactionsWithoutExecution(t *testing.T, ctx context.Con
 }
 
 func generateBlockFromTransactions(t *testing.T, ctx context.Context, execute bool,
-	shardId types.ShardId, blockId types.BlockNumber, prevBlock common.Hash,
+	shardId types.ShardId, blockId types.BlockNumber, prevBlockHash common.Hash,
 	txFabric db.DB, childChainBlocks map[types.ShardId]common.Hash, txns ...*types.Transaction,
 ) common.Hash {
 	t.Helper()
@@ -84,8 +82,15 @@ func generateBlockFromTransactions(t *testing.T, ctx context.Context, execute bo
 	require.NoError(t, err)
 	defer tx.Rollback()
 
+	prevBlock, err := db.ReadBlock(tx, shardId, prevBlockHash)
+	if err != nil {
+		require.ErrorIs(t, err, db.ErrKeyNotFound)
+	} else {
+		require.NoError(t, err)
+	}
+
 	es, err := NewExecutionState(tx, shardId, StateParams{
-		BlockHash:      prevBlock,
+		Block:          prevBlock,
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)

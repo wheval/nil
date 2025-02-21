@@ -228,14 +228,12 @@ func NewEVMBlockContext(es *ExecutionState) (*vm.BlockContext, error) {
 }
 
 type StateParams struct {
-	BlockHash      common.Hash
-	GetBlockFromDb bool
+	Block          *types.Block
 	ConfigAccessor config.ConfigAccessor
 }
 
 func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*ExecutionState, error) {
 	var resTx db.RwTx
-	var err error
 	isReadOnly := false
 	if rwTx, ok := tx.(db.RwTx); ok {
 		resTx = rwTx
@@ -246,31 +244,16 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 		return nil, errors.New("invalid tx type")
 	}
 
-	accessor := NewStateAccessor().Access(resTx, shardId)
-
-	if params.GetBlockFromDb {
-		params.BlockHash, err = db.ReadLastBlockHash(resTx, shardId)
-		if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
-			return nil, fmt.Errorf("failed getting last block: %w", err)
-		}
-	}
-
 	var baseFeePerGas types.Value
-	if params.BlockHash != common.EmptyHash {
-		block, err := accessor.GetBlock().ByHash(params.BlockHash)
-		if err != nil {
-			return nil, fmt.Errorf("failed getting previous block by hash: %w", err)
-		}
-		baseFeePerGas = calculateBaseFee(block.Block().BaseFee, block.Block().GasUsed)
-	}
-
-	if params.ConfigAccessor == nil {
-		return nil, errors.New("config accessor is required")
+	var prevBlockHash common.Hash
+	if params.Block != nil {
+		baseFeePerGas = calculateBaseFee(params.Block.BaseFee, params.Block.GasUsed)
+		prevBlockHash = params.Block.Hash(shardId)
 	}
 
 	res := &ExecutionState{
 		tx:               resTx,
-		PrevBlock:        params.BlockHash,
+		PrevBlock:        prevBlockHash,
 		ShardId:          shardId,
 		ChildChainBlocks: map[types.ShardId]common.Hash{},
 		Accounts:         map[types.Address]*AccountState{},
@@ -282,8 +265,7 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 		journal:          newJournal(),
 		transientStorage: newTransientStorage(),
 
-		shardAccessor: accessor,
-
+		shardAccessor:  NewStateAccessor().Access(resTx, shardId),
 		configAccessor: params.ConfigAccessor,
 
 		BaseFee:  baseFeePerGas,
@@ -1727,9 +1709,14 @@ func (es *ExecutionState) resetVm() {
 }
 
 func (es *ExecutionState) MarshalJSON() ([]byte, error) {
-	prevBlock, err := es.shardAccessor.GetBlock().ByHash(es.PrevBlock)
+	prevBlockRes, err := es.shardAccessor.GetBlock().ByHash(es.PrevBlock)
 	if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
 		return nil, err
+	}
+
+	var prevBlock *types.Block
+	if err == nil {
+		prevBlock = prevBlockRes.Block()
 	}
 
 	data := struct {
@@ -1753,7 +1740,7 @@ func (es *ExecutionState) MarshalJSON() ([]byte, error) {
 		InTransactionTreeRoot:  es.InTransactionTree.RootHash(),
 		OutTransactionTreeRoot: es.OutTransactionTree.RootHash(),
 		ReceiptTreeRoot:        es.ReceiptTree.RootHash(),
-		PrevBlock:              prevBlock.Block(),
+		PrevBlock:              prevBlock,
 		PrevBlockHash:          es.PrevBlock,
 		MainChainHash:          es.MainChainHash,
 		ShardId:                es.ShardId,

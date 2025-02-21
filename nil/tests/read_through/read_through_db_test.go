@@ -51,7 +51,7 @@ func (s *SuiteReadThroughDb) initCache() {
 	s.cache.DbInit = func() db.DB {
 		inDb, err := db.NewBadgerDbInMemory()
 		check.PanicIfErr(err)
-		db, err := readthroughdb.NewReadThroughDbWithMasterChain(s.cache.Context, s.server.Client, inDb, transport.LatestBlockNumber)
+		db, err := readthroughdb.NewReadThroughDbWithMainShard(s.cache.Context, s.server.Client, inDb, transport.LatestBlockNumber)
 		check.PanicIfErr(err)
 		return db
 	}

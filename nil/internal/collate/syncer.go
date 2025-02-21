@@ -33,6 +33,11 @@ type SyncerConfig struct {
 	ZeroStateConfig *execution.ZeroStateConfig
 }
 
+var (
+	errOldBlock   = errors.New("received old block")
+	errOutOfOrder = errors.New("received block is out of order")
+)
+
 type Syncer struct {
 	config *SyncerConfig
 
@@ -213,38 +218,15 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 		Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
 		Msg("Received block")
 
-	lastBlock, lastHash, err := s.readLastBlock(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	if block.Id <= lastBlock.Id {
-		s.logger.Trace().
-			Stringer(logging.FieldBlockNumber, block.Id).
-			Msg("Received old block")
-		return false, nil
-	}
-
-	if block.Id != lastBlock.Id+1 {
-		s.logger.Debug().
-			Stringer(logging.FieldBlockNumber, block.Id).
-			Msgf("Received block %d is out of order with the last block %d", block.Id, lastBlock.Id)
-
-		// todo: queue the block for later processing
-		return false, nil
-	}
-
-	if block.PrevBlock != lastHash {
-		txn := fmt.Sprintf("Prev block hash mismatch: expected %x, got %x", lastHash, block.PrevBlock)
-		s.logger.Error().
-			Stringer(logging.FieldBlockNumber, block.Id).
-			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
-			Msg(txn)
-		panic(txn)
-	}
-
 	if err := s.saveBlock(ctx, b); err != nil {
-		return false, err
+		switch {
+		case errors.Is(err, errOutOfOrder):
+			return false, nil
+		case errors.Is(err, errOldBlock):
+			return false, nil
+		default:
+			return false, err
+		}
 	}
 
 	return true, nil
@@ -263,6 +245,9 @@ func (s *Syncer) fetchBlocks(ctx context.Context) {
 		for block := range blocksCh {
 			count++
 			if err := s.saveBlock(ctx, block); err != nil {
+				if errors.Is(err, errOldBlock) {
+					continue
+				}
 				s.logger.Error().
 					Err(err).
 					Stringer(logging.FieldBlockNumber, block.Id).
@@ -311,18 +296,44 @@ func (s *Syncer) fetchBlocksRange(ctx context.Context) <-chan *types.BlockWithEx
 }
 
 func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedData) error {
-	if block == nil {
-		return nil
-	}
-
 	// TODO: zerostate block is not signed and its hash should be checked in a bit different way
 	// E.g. compare with network config value
 	if block.Block.Id == 0 {
 		return nil
 	}
 
+	lastBlock, lastHash, err := s.readLastBlock(ctx)
+	if err != nil {
+		return err
+	}
+
+	if block.Id <= lastBlock.Id {
+		s.logger.Trace().
+			Err(errOldBlock).
+			Stringer(logging.FieldBlockNumber, block.Id).
+			Send()
+		return errOldBlock
+	}
+
+	if block.Id != lastBlock.Id+1 {
+		s.logger.Debug().
+			Stringer(logging.FieldBlockNumber, block.Id).
+			Msgf("Received block %d is out of order with the last block %d", block.Id, lastBlock.Id)
+		// todo: queue the block for later processing
+		return errOutOfOrder
+	}
+
+	if block.PrevBlock != lastHash {
+		txn := fmt.Sprintf("Prev block hash mismatch: expected %x, got %x", lastHash, block.PrevBlock)
+		s.logger.Error().
+			Stringer(logging.FieldBlockNumber, block.Id).
+			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
+			Msg(txn)
+		return returnErrorOrPanic(errors.New(txn))
+	}
+
 	if !s.config.DisableConsensus {
-		if err := s.blockVerifier.VerifyBlock(ctx, block.Block, s.logger); err != nil {
+		if err := s.blockVerifier.VerifyBlock(ctx, block.Block); err != nil {
 			s.logger.Error().
 				Uint64(logging.FieldBlockNumber, uint64(block.Id)).
 				Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
@@ -357,7 +368,7 @@ func (s *Syncer) GenerateZerostate(ctx context.Context) error {
 	}
 
 	s.logger.Info().Msg("Generating zero-state...")
-	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, nil, nil)
+	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, nil)
 	if err != nil {
 		return err
 	}
@@ -399,22 +410,18 @@ func validateRepliedBlock(
 }
 
 func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtractedData) error {
-	mainShardHash := block.Block.MainChainHash
-	if s.config.ShardId.IsMainShard() {
-		mainShardHash = block.Block.PrevBlock
+	roTx, err := s.db.CreateRoTx(ctx)
+	if err != nil {
+		return err
 	}
-	if !s.config.ShardId.IsMainShard() {
-		roTx, err := s.db.CreateRoTx(ctx)
-		if err != nil {
-			return err
-		}
-		defer roTx.Rollback()
-		if _, err = db.ReadBlock(roTx, types.MainShardId, mainShardHash); err != nil {
-			return fmt.Errorf("failed to read main shard block: %w", err)
-		}
+	defer roTx.Rollback()
+
+	prevBlock, err := db.ReadBlock(roTx, s.config.ShardId, block.Block.PrevBlock)
+	if err != nil {
+		return fmt.Errorf("failed to read previous block: %w", err)
 	}
 
-	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, &block.Block.PrevBlock, &mainShardHash)
+	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, prevBlock)
 	if err != nil {
 		return err
 	}
