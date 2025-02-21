@@ -126,10 +126,10 @@ export async function topUpSpecificCurrency(
 // Get faucet address by token symbol
 async function getFaucetAddress(faucetClient: FaucetClient, symbol: string): Promise<Hex> {
   const faucets = await faucetClient.getAllFaucets();
-  if (!faucets || !faucets[symbol]) {
+  if (!faucets || !faucets[symbol.toUpperCase()]) {
     throw new Error(`No faucet available for ${symbol}`);
   }
-  return faucets[symbol];
+  return faucets[symbol.toUpperCase()];
 }
 
 function logTopUpActivity(
