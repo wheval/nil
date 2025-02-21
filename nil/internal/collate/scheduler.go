@@ -114,7 +114,7 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 			return err
 		}
 
-		return v.InsertProposal(ctx, proposal, nil)
+		return v.InsertProposal(ctx, proposal, &types.ConsensusParams{})
 	} else {
 		id, err := s.readLastBlockId(ctx)
 		if err != nil {

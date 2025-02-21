@@ -50,10 +50,16 @@ type BlockData struct {
 	L1BlockNumber       uint64           `json:"l1BlockNumber" ch:"l1_block_number"`
 }
 
+type ConsensusParams struct {
+	ProposerIndex uint64                 `json:"proposerIndex" ch:"round"`
+	Round         uint64                 `json:"round" ch:"round"`
+	Signature     *BlsAggregateSignature `json:"signature" ch:"signature"`
+}
+
 type Block struct {
 	BlockData
-	LogsBloom Bloom                 `json:"logsBloom" ch:"logs_bloom"`
-	Signature BlsAggregateSignature `json:"signature" ch:"signature"`
+	LogsBloom Bloom `json:"logsBloom" ch:"logs_bloom"`
+	ConsensusParams
 }
 
 type RawBlockWithExtractedData struct {

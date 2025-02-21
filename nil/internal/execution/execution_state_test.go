@@ -76,7 +76,7 @@ func (s *SuiteExecutionState) TestExecState() {
 	var blockRes *BlockGenerationResult
 
 	s.Run("CommitBlock", func() {
-		blockRes, err = es.Commit(0, nil)
+		blockRes, err = es.Commit(0, &types.ConsensusParams{})
 		s.Require().NoError(err)
 	})
 
@@ -369,7 +369,7 @@ func TestAccountState(t *testing.T) {
 	code := types.Code([]byte{'c', 'a', 'f', 'e'})
 	acc.SetCode(code.Hash(), code)
 
-	_, err = state.Commit(0, nil)
+	_, err = state.Commit(0, &types.ConsensusParams{})
 	require.NoError(t, err)
 
 	// Drop local state account cache
@@ -688,7 +688,7 @@ contracts:
 
 		gen, err = NewBlockGenerator(ctx, params, database, nil)
 		require.NoError(b, err)
-		_, err = gen.GenerateBlock(proposal, nil)
+		_, err = gen.GenerateBlock(proposal, &types.ConsensusParams{})
 		require.NoError(b, err)
 
 		tx.Rollback()

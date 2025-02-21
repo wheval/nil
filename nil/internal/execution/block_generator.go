@@ -178,7 +178,7 @@ func (g *BlockGenerator) GenerateZeroState(config *ZeroStateConfig) (*types.Bloc
 		return nil, err
 	}
 
-	res, err := g.finalize(0, nil)
+	res, err := g.finalize(0, &types.ConsensusParams{})
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func (g *BlockGenerator) BuildBlock(proposal *Proposal, gasPrices []types.Uint25
 	return g.executionState.BuildBlock(proposal.PrevBlockId + 1)
 }
 
-func (g *BlockGenerator) GenerateBlock(proposal *Proposal, sig *types.BlsAggregateSignature) (*BlockGenerationResult, error) {
+func (g *BlockGenerator) GenerateBlock(proposal *Proposal, params *types.ConsensusParams) (*BlockGenerationResult, error) {
 	g.mh.StartProcessingMeasurement(g.ctx, g.executionState.GasPrice, proposal.PrevBlockId+1)
 	defer func() { g.mh.EndProcessingMeasurement(g.ctx, g.counters) }()
 
@@ -301,7 +301,7 @@ func (g *BlockGenerator) GenerateBlock(proposal *Proposal, sig *types.BlsAggrega
 		return nil, fmt.Errorf("failed to write collator state: %w", err)
 	}
 
-	return g.finalize(proposal.PrevBlockId+1, sig)
+	return g.finalize(proposal.PrevBlockId+1, params)
 }
 
 func ValidateInternalTransaction(transaction *types.Transaction) error {
@@ -370,17 +370,17 @@ func (g *BlockGenerator) addReceipt(execResult *ExecutionResult) {
 	}
 }
 
-func (g *BlockGenerator) finalize(blockId types.BlockNumber, sig *types.BlsAggregateSignature) (*BlockGenerationResult, error) {
+func (g *BlockGenerator) finalize(blockId types.BlockNumber, params *types.ConsensusParams) (*BlockGenerationResult, error) {
 	blockRes, err := g.executionState.BuildBlock(blockId)
 	if err != nil {
 		return nil, err
 	}
 
-	return blockRes, g.Finalize(blockRes, sig)
+	return blockRes, g.Finalize(blockRes, params)
 }
 
-func (g *BlockGenerator) Finalize(blockRes *BlockGenerationResult, sig *types.BlsAggregateSignature) error {
-	if err := g.executionState.CommitBlock(blockRes.Block, sig); err != nil {
+func (g *BlockGenerator) Finalize(blockRes *BlockGenerationResult, params *types.ConsensusParams) error {
+	if err := g.executionState.CommitBlock(blockRes.Block, params); err != nil {
 		return err
 	}
 

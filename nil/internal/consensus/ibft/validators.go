@@ -10,7 +10,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 )
 
-func (i *backendIBFT) calcProposer(height, round uint64) (*config.ValidatorInfo, error) {
+func (i *backendIBFT) calcProposer(height, round uint64, prevValidator *uint64) (*config.ValidatorInfo, uint64, error) {
 	validators, err := i.validatorsCache.getValidators(i.ctx, height)
 	if err != nil {
 		i.logger.Error().
@@ -18,11 +18,18 @@ func (i *backendIBFT) calcProposer(height, round uint64) (*config.ValidatorInfo,
 			Uint64(logging.FieldRound, round).
 			Uint64(logging.FieldHeight, height).
 			Msg("Failed to get validators")
-		return nil, err
+		return nil, 0, err
 	}
 
-	index := (height + round) % uint64(len(validators))
-	return &validators[index], nil
+	var seed uint64
+	if prevValidator == nil {
+		seed = round
+	} else {
+		seed = *prevValidator + round + 1
+	}
+
+	index := seed % uint64(len(validators))
+	return &validators[index], index, nil
 }
 
 type validatorsMap struct {

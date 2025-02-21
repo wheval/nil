@@ -7,6 +7,8 @@ import (
 	"github.com/NilFoundation/nil/nil/go-ibft/messages"
 	protoIBFT "github.com/NilFoundation/nil/nil/go-ibft/messages/proto"
 	"github.com/NilFoundation/nil/nil/internal/config"
+	"github.com/NilFoundation/nil/nil/internal/db"
+	"github.com/NilFoundation/nil/nil/internal/types"
 )
 
 func (i *backendIBFT) IsValidProposal(rawProposal []byte) bool {
@@ -65,8 +67,30 @@ func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 	return true
 }
 
+func (i *backendIBFT) getPrevProposer(height uint64) *uint64 {
+	// It doesn't make sense for 0 block
+	// For the first block we should start from the first validator (offset = 0)
+	if height < 2 {
+		return nil
+	}
+
+	tx, err := i.db.CreateRoTx(i.ctx)
+	if err != nil {
+		return nil
+	}
+	defer tx.Rollback()
+
+	block, err := db.ReadBlockByNumber(tx, i.shardId, types.BlockNumber(height-1))
+	if err != nil {
+		return nil
+	}
+
+	return &block.ProposerIndex
+}
+
 func (i *backendIBFT) IsProposer(id []byte, height, round uint64) bool {
-	proposer, err := i.calcProposer(height, round)
+	prevProposerIndex := i.getPrevProposer(height)
+	proposer, _, err := i.calcProposer(height, round, prevProposerIndex)
 	if err != nil {
 		i.logger.Error().
 			Err(err).
