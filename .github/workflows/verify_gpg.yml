@@ -1,0 +1,33 @@
+name: Verify GPG Signatures
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-gpg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Fetch trusted public keys from OpenPGP keyserver
+        run: |
+          while read fingerprint; do
+            echo "Fetching key for $fingerprint..."
+            fingerprint=$(echo "$fingerprint" | awk '{print $1}')
+            gpg --keyserver hkps://keys.openpgp.org --recv-keys "$fingerprint" || echo "⚠️  Failed to fetch key for $fingerprint. Skipping..."
+          done < .github/trusted_fingerprints.txt
+
+      - name: Verify commits
+        run: |
+          git fetch --unshallow
+          for commit in $(git rev-list --no-merges origin/main..HEAD); do
+            if ! git verify-commit $commit; then
+              echo "❌ Commit $commit is not signed or not trusted!"
+              exit 1
+            fi
+          done
