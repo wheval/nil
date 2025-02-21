@@ -2,6 +2,7 @@ package collate
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -325,9 +326,19 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 
 	if block.PrevBlock != lastHash {
 		txn := fmt.Sprintf("Prev block hash mismatch: expected %x, got %x", lastHash, block.PrevBlock)
+		blockMarshal, err := json.Marshal(block)
+		if err != nil {
+			return returnErrorOrPanic(err)
+		}
+		lastHashMarshal, err := json.Marshal(lastHash)
+		if err != nil {
+			return returnErrorOrPanic(err)
+		}
 		s.logger.Error().
 			Stringer(logging.FieldBlockNumber, block.Id).
 			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
+			RawJSON("expected", blockMarshal).
+			RawJSON("got", lastHashMarshal).
 			Msg(txn)
 		return returnErrorOrPanic(errors.New(txn))
 	}
