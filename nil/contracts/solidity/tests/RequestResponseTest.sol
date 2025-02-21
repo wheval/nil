@@ -98,8 +98,9 @@ contract RequestResponseTest is NilTokenBase {
      * Test fibonacci implementation via awaitCall.
      * Here we have two awaitCall in a row, so it should be properly handled by the system.
      */
-    function fibonacci(int32 n) public {
+    function fibonacci(int32 n) public returns(int32) {
         value = fibonacciRec(n);
+        return value;
     }
 
     function fibonacciRec(int32 n) public returns (int32) {
@@ -196,6 +197,101 @@ contract RequestResponseTest is NilTokenBase {
         require(success, "Request failed");
         (intValue, strValue) = abi.decode(context, (uint, string));
         counterValue = abi.decode(returnData, (int32));
+    }
+
+    /**
+     * Nested sendRequest: request requestCounterGet which requests Counter.get
+     */
+    function nestedRequest(
+        address callee,
+        address counter
+    ) public {
+        bytes memory context = abi.encodeWithSelector(this.responseNestedRequest.selector);
+        bytes memory callData = abi.encodeWithSelector(this.requestCounterGet.selector, counter, 123, "test");
+        Nil.sendRequest(
+            callee,
+            0,
+            Nil.ASYNC_REQUEST_MIN_GAS,
+            context,
+            callData
+        );
+    }
+
+    function responseNestedRequest(
+        bool success,
+        bytes memory returnData,
+        bytes memory context
+    ) public {
+        require(success, "Request failed");
+    }
+
+    /**
+     * sendRequest from callback
+     * Call Counter.Add(5), Counter.Add(4), Counter.Add(3), Counter.Add(2), Counter.Add(1)
+     */
+    function sendRequestFromCallback(
+        address counter
+    ) public {
+        bytes memory context = abi.encodeWithSelector(this.responseSendRequestFromCallback.selector, int32(5), counter);
+        bytes memory callData = abi.encodeWithSignature("add(int32)", 5);
+        Nil.sendRequest(
+            counter,
+            0,
+            Nil.ASYNC_REQUEST_MIN_GAS,
+            context,
+            callData
+        );
+    }
+
+    function responseSendRequestFromCallback(
+        bool success,
+        bytes memory returnData,
+        bytes memory context
+    ) public {
+        require(success, "Request failed");
+        (int32 sendNext, address counter) = abi.decode(context, (int32, address));
+        if (sendNext == 0) {
+            return;
+        }
+
+        sendNext -= 1;
+
+        bytes memory context = abi.encodeWithSelector(this.responseSendRequestFromCallback.selector, sendNext, counter);
+        bytes memory callData = abi.encodeWithSignature("add(int32)", sendNext);
+        Nil.sendRequest(
+            counter,
+            0,
+            Nil.ASYNC_REQUEST_MIN_GAS,
+            context,
+            callData
+        );
+    }
+
+    /**
+     * Nested awaitCall during sendRequest. Response to sendRequest should be sent after response to awaitCall is arrived.
+     */
+    function sendRequestWithNestedAwaitCall(
+        address callee
+    ) public {
+        bytes memory context = abi.encodeWithSelector(this.responseSendRequestWithNestedAwaitCall.selector);
+        bytes memory callData = abi.encodeWithSelector(this.fibonacci.selector, 3);
+        Nil.sendRequest(
+            callee,
+            0,
+            Nil.ASYNC_REQUEST_MIN_GAS,
+            context,
+            callData
+        );
+    }
+
+    function responseSendRequestWithNestedAwaitCall(
+        bool success,
+        bytes memory returnData,
+        bytes memory context
+    ) public {
+        require(success, "Request failed");
+        int32 res = abi.decode(returnData, (int32));
+        require(res == 2, "Fibonacci(3) should be 2");
     }
 
     /**
