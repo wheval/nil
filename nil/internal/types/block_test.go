@@ -30,7 +30,7 @@ func TestBlock_SignAndVerifySignature(t *testing.T) {
 	sigBytes, err := sig.Marshal()
 	require.NoError(t, err)
 
-	block.Signature = BlsAggregateSignature{
+	block.Signature = &BlsAggregateSignature{
 		Sig:  sigBytes,
 		Mask: []byte{1},
 	}
@@ -51,7 +51,7 @@ func TestBlock_SignAndVerifySignature(t *testing.T) {
 	require.ErrorContains(t, err, "mismatching mask lengths")
 
 	// Verify with empty signature
-	block.Signature = BlsAggregateSignature{}
+	block.Signature = &BlsAggregateSignature{}
 	err = block.VerifySignature(nil, BaseShardId)
 	require.ErrorContains(t, err, "not enough data")
 }

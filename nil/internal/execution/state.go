@@ -1397,17 +1397,17 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 	}, nil
 }
 
-func (es *ExecutionState) Commit(blockId types.BlockNumber, sig *types.BlsAggregateSignature) (*BlockGenerationResult, error) {
+func (es *ExecutionState) Commit(blockId types.BlockNumber, params *types.ConsensusParams) (*BlockGenerationResult, error) {
 	blockRes, err := es.BuildBlock(blockId)
 	if err != nil {
 		return nil, err
 	}
-	return blockRes, es.CommitBlock(blockRes.Block, sig)
+	return blockRes, es.CommitBlock(blockRes.Block, params)
 }
 
-func (es *ExecutionState) CommitBlock(block *types.Block, sig *types.BlsAggregateSignature) error {
-	if sig != nil {
-		block.Signature = *sig
+func (es *ExecutionState) CommitBlock(block *types.Block, params *types.ConsensusParams) error {
+	if params != nil {
+		block.ConsensusParams = *params
 	}
 
 	if TraceBlocksEnabled {

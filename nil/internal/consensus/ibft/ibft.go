@@ -32,7 +32,7 @@ type ConsensusParams struct {
 type validator interface {
 	BuildProposal(ctx context.Context) (*execution.Proposal, error)
 	VerifyProposal(ctx context.Context, proposal *execution.Proposal) (*types.Block, error)
-	InsertProposal(ctx context.Context, proposal *execution.Proposal, sig *types.BlsAggregateSignature) error
+	InsertProposal(ctx context.Context, proposal *execution.Proposal, params *types.ConsensusParams) error
 }
 
 type backendIBFT struct {
@@ -165,8 +165,19 @@ func (i *backendIBFT) InsertProposal(proposal *protoIBFT.Proposal, committedSeal
 		return // error is logged in buildSignature
 	}
 
-	if err := i.validator.InsertProposal(i.ctx, proposalBlock, sig); err != nil {
-		logger.Error().Err(err).Msg("failed to insert proposal")
+	prevProposerIndex := i.getPrevProposer(height)
+	_, proposerIndex, err := i.calcProposer(height, proposal.Round, prevProposerIndex)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to calculate current proposer")
+		return
+	}
+
+	if err := i.validator.InsertProposal(i.ctx, proposalBlock, &types.ConsensusParams{
+		Round:         proposal.Round,
+		ProposerIndex: proposerIndex,
+		Signature:     sig,
+	}); err != nil {
+		logger.Error().Err(err).Msg("Failed to insert proposal")
 	}
 }
 

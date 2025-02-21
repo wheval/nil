@@ -65,7 +65,7 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 	return res.Block, nil
 }
 
-func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Proposal, sig *types.BlsAggregateSignature) error {
+func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Proposal, params *types.ConsensusParams) error {
 	prevBlock, err := s.getBlock(ctx, proposal.PrevBlockHash)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Prop
 	}
 	defer gen.Rollback()
 
-	res, err := gen.GenerateBlock(proposal, sig)
+	res, err := gen.GenerateBlock(proposal, params)
 	if err != nil {
 		return fmt.Errorf("failed to generate block: %w", err)
 	}
