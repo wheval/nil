@@ -1,8 +1,8 @@
-import btc from "../../../public/icons/currency/btc.svg";
-import custom from "../../../public/icons/currency/custom.svg";
-import eth from "../../../public/icons/currency/ethereum.svg";
-import nil from "../../../public/icons/currency/nil.svg";
-import usdt from "../../../public/icons/currency/usdt.svg";
+import btc from "../../../public/icons/token/btc.svg";
+import custom from "../../../public/icons/token/custom.svg";
+import eth from "../../../public/icons/token/ethereum.svg";
+import nil from "../../../public/icons/token/nil.svg";
+import usdt from "../../../public/icons/token/usdt.svg";
 import { Currency } from "../components/currency";
 
 // Converts a value in Wei (bigint) to Ether (string) with 18 decimal precision
@@ -29,7 +29,7 @@ if (!btcAddress) {
 }
 
 // Returns the icon for the given currency name
-export const getCurrencyIcon = (name: string) => {
+export const getTokenIcon = (name: string) => {
   switch (name) {
     case Currency.ETH:
       return eth;
@@ -53,7 +53,7 @@ export function getCurrencies(
   return tokens
     .filter((token) => !onlyActive || token.show)
     .map((token) => {
-      const icon = getCurrencyIcon(token.name);
+      const icon = getTokenIcon(token.name);
       return { icon, label: token.name, address: token.address };
     });
 }
@@ -64,7 +64,7 @@ export function getTopupCurrencies(
   return tokens
     .filter((token) => token.topupable)
     .map((token) => {
-      const icon = getCurrencyIcon(token.name);
+      const icon = getTokenIcon(token.name);
       return { icon, label: token.name, address: token.address };
     });
 }

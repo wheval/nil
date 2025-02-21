@@ -1,8 +1,8 @@
 import type { SmartAccountV1 } from "@nilfoundation/niljs";
 import { createEffect, createEvent, createStore, sample } from "effector";
 import { persist } from "effector-storage/local";
-import { fetchBalance, fetchSmartAccountCurrencies } from "../../blockchain";
-import { btcAddress, ethAddress, usdtAddress } from "../../utils/currency.ts";
+import { fetchBalance, fetchSmartAccountTokens } from "../../blockchain";
+import { btcAddress, ethAddress, usdtAddress } from "../../utils/token.ts";
 import { setGlobalError } from "./error.ts";
 import { $smartAccount } from "./smartAccount.ts";
 
@@ -36,7 +36,7 @@ const initialTokens: { name: string; address: string; show: boolean; topupable: 
 
 // Stores
 export const $balance = createStore<bigint | null>(null);
-export const $balanceCurrency = createStore<Record<string, bigint> | null>(null);
+export const $balanceToken = createStore<Record<string, bigint> | null>(null);
 export const $tokens =
   createStore<{ name: string; address: string; show: boolean; topupable: boolean }[]>(
     initialTokens,
@@ -53,19 +53,19 @@ export const showToken = createEvent<string>();
 export const addToken = createEvent<{ name: string; address: string }>();
 
 // Utils
-export const getCurrencySymbolByAddress = (address: string): string => {
+export const getTokenSymbolByAddress = (address: string): string => {
   return $tokens.getState().filter((token) => token.address === address)[0].name ?? "";
 };
 
-export const getBalanceForCurrency = (
+export const getBalanceForToken = (
   address: string,
   nilBalance: bigint,
-  balanceCurrencies: Record<string, bigint>,
+  balanceTokens: Record<string, bigint>,
 ) => {
   if (address === "") {
     return nilBalance;
   }
-  return balanceCurrencies[address] ?? 0n;
+  return balanceTokens[address] ?? 0n;
 };
 
 // Effects
@@ -79,16 +79,16 @@ export const fetchBalanceFx = createEffect<SmartAccountV1, bigint, Error>(async 
   }
 });
 
-export const fetchBalanceCurrenciesFx = createEffect<SmartAccountV1, Record<string, bigint>, Error>(
+export const fetchBalanceTokenssFx = createEffect<SmartAccountV1, Record<string, bigint>, Error>(
   async (smartAccount) => {
     try {
-      const currencies = await fetchSmartAccountCurrencies(smartAccount);
-      console.log("Fetched currencies:", currencies);
+      const tokens = await fetchSmartAccountTokens(smartAccount);
+      console.log("Fetched tokens:", tokens);
 
-      return currencies;
+      return tokens;
     } catch (error) {
-      console.error("Failed to fetch smartAccount currencies:", error);
-      setGlobalError("Failed to fetch smartAccount currencies");
+      console.error("Failed to fetch smartAccount tokens:", error);
+      setGlobalError("Failed to fetch smartAccount tokens");
       throw error;
     }
   },
@@ -96,7 +96,7 @@ export const fetchBalanceCurrenciesFx = createEffect<SmartAccountV1, Record<stri
 
 // Store updates
 $balance.on(fetchBalanceFx.doneData, (_, balance) => balance);
-$balanceCurrency.on(fetchBalanceCurrenciesFx.doneData, (_, currencies) => ({ ...currencies }));
+$balanceToken.on(fetchBalanceTokenssFx.doneData, (_, tokens) => ({ ...tokens }));
 
 $tokens.on(addToken, (state, { name, address }) => [
   ...state,
@@ -115,7 +115,7 @@ sample({
   clock: refetchBalancesEvent,
   filter: (smartAccount) => smartAccount !== null && smartAccount !== undefined,
   fn: (smartAccount) => smartAccount as SmartAccountV1,
-  target: [fetchBalanceFx, fetchBalanceCurrenciesFx],
+  target: [fetchBalanceFx, fetchBalanceTokenssFx],
 });
 
 // Automatically fetch balances on smartAccount updates
@@ -124,7 +124,7 @@ sample({
   clock: $smartAccount.updates,
   filter: (smartAccount) => smartAccount !== null && smartAccount !== undefined,
   fn: (smartAccount) => smartAccount as SmartAccountV1,
-  target: [fetchBalanceFx, fetchBalanceCurrenciesFx],
+  target: [fetchBalanceFx, fetchBalanceTokenssFx],
 });
 
 // Watchers for debugging
@@ -132,6 +132,6 @@ $balance.watch((balance) => {
   console.log("Updated balance:", balance);
 });
 
-$balanceCurrency.watch((currencies) => {
-  console.log("Updated balance currencies:", currencies);
+$balanceToken.watch((tokens) => {
+  console.log("Updated balance tokens:", tokens);
 });

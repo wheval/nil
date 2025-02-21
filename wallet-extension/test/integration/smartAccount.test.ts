@@ -1,11 +1,11 @@
 import {
   fetchBalance,
-  fetchSmartAccountCurrencies,
+  fetchSmartAccountTokens,
   initializeOrDeploySmartAccount,
   sendCurrency,
   topUpAllCurrencies,
 } from "../../src/features/blockchain";
-import { btcAddress } from "../../src/features/utils/currency.ts";
+import { btcAddress } from "../../src/features/utils/token.ts";
 import { setup } from "./helper.ts";
 
 test("Initialize and deploy smart account, fetch balance and tokens", async () => {
@@ -28,7 +28,7 @@ test("Initialize and deploy smart account, fetch balance and tokens", async () =
 
   // 3. Fetch balance and tokens
   const balance = await fetchBalance(smartAccount);
-  const tokens = await fetchSmartAccountCurrencies(smartAccount);
+  const tokens = await fetchSmartAccountTokens(smartAccount);
 
   expect(balance).not.toBeNull();
   expect(typeof balance).toBe("bigint");
@@ -49,7 +49,7 @@ test("Initialize and deploy smart account, fetch balance and tokens", async () =
 
   // 5. Fetch balance and tokens again
   const balanceReinit = await fetchBalance(smartAccountReinit);
-  const tokensReinit = await fetchSmartAccountCurrencies(smartAccountReinit);
+  const tokensReinit = await fetchSmartAccountTokens(smartAccountReinit);
 
   expect(balanceReinit).toBe(balance);
   expect(tokensReinit).toEqual(tokens);
@@ -79,7 +79,7 @@ test("Send NIL currency and token between accounts and validate balances", async
 
   // 4. Fetch sender's initial balances
   const senderInitialBalance = await fetchBalance(sender);
-  const senderInitialTokens = await fetchSmartAccountCurrencies(sender);
+  const senderInitialTokens = await fetchSmartAccountTokens(sender);
   const recipientInitialBalance = await fetchBalance(recipient);
 
   // 5. Send NIL currency from sender to recipient
@@ -109,8 +109,8 @@ test("Send NIL currency and token between accounts and validate balances", async
   });
 
   // 8. Fetch updated token balances
-  const senderTokensAfterBTC = await fetchSmartAccountCurrencies(sender);
-  const recipientTokensAfterBTC = await fetchSmartAccountCurrencies(recipient);
+  const senderTokensAfterBTC = await fetchSmartAccountTokens(sender);
+  const recipientTokensAfterBTC = await fetchSmartAccountTokens(recipient);
 
   // Check exact token balances after transaction
   expect(senderTokensAfterBTC[btcAddress]).toBe(senderInitialTokens[btcAddress] - sendAmountBTC);

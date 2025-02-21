@@ -7,15 +7,15 @@ import { useNavigate } from "react-router-dom";
 import animationData from "../../../public/animation/wallet-creation.json";
 import { Box, Logo } from "../../features/components/shared";
 import { $globalError } from "../../features/store/model/error.ts";
-import { $balanceCurrency, fetchBalanceCurrenciesFx } from "../../features/store/model/token.ts";
+import { $balanceToken, fetchBalanceTokenssFx } from "../../features/store/model/token.ts";
 import { WalletRoutes } from "../../router";
 
 export const Loading = () => {
   const navigate = useNavigate();
   const { t } = useTranslation("translation");
   const animationContainerRef = useRef<HTMLDivElement | null>(null);
-  const isPending = useStore(fetchBalanceCurrenciesFx.pending);
-  const balanceCurrency = useStore($balanceCurrency);
+  const isPending = useStore(fetchBalanceTokenssFx.pending);
+  const balanceCurrency = useStore($balanceToken);
   const globalError = useStore($globalError);
 
   useEffect(() => {

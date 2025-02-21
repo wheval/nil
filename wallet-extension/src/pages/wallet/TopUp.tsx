@@ -24,7 +24,7 @@ import { $faucetClient } from "../../features/store/model/blockchain";
 import { $smartAccount } from "../../features/store/model/smartAccount.ts";
 import { $tokens } from "../../features/store/model/token.ts";
 import { convertTopUpAmount, getQuickAmounts, validateTopUpAmount } from "../../features/utils";
-import { getTopupCurrencies } from "../../features/utils/currency.ts";
+import { getTopupCurrencies } from "../../features/utils/token.ts";
 import { WalletRoutes } from "../../router";
 
 export const TopUp = () => {

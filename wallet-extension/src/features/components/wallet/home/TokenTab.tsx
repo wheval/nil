@@ -4,20 +4,20 @@ import { useStore } from "effector-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import nilIcon from "../../../../../public/icons/currency/nil.svg";
+import nilIcon from "../../../../../public/icons/token/nil.svg";
 import { WalletRoutes } from "../../../../router";
 import {
   $balance,
-  $balanceCurrency,
+  $balanceToken,
   $tokens,
-  getBalanceForCurrency,
+  getBalanceForToken,
 } from "../../../store/model/token.ts";
-import { convertWeiToEth, formatAddress, getCurrencies, getCurrencyIcon } from "../../../utils";
+import { convertWeiToEth, formatAddress, getCurrencies, getTokenIcon } from "../../../utils";
 import { Box, Icon } from "../../shared";
 
-export const CurrencyTab = () => {
+export const TokenTab = () => {
   const balance = useStore($balance);
-  const balanceCurrency = useStore($balanceCurrency);
+  const balanceCurrency = useStore($balanceToken);
   const allTokens = useStore($tokens);
   const [clicked, setClicked] = useState(false);
   const { t } = useTranslation("translation");
@@ -31,7 +31,7 @@ export const CurrencyTab = () => {
   };
 
   const tokens = availableTokens.map((token) => {
-    const amount = getBalanceForCurrency(token.address, balance ?? 0n, balanceCurrency ?? {});
+    const amount = getBalanceForToken(token.address, balance ?? 0n, balanceCurrency ?? {});
     if (token.address === "") {
       return {
         icon: nilIcon,
@@ -44,7 +44,7 @@ export const CurrencyTab = () => {
       };
     }
     return {
-      icon: getCurrencyIcon(token.label),
+      icon: getTokenIcon(token.label),
       title: token.label,
       subtitle: token.label !== "" ? "Mock token" : formatAddress(token.address as Hex),
       subtitleColor: "gray",

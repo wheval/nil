@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Box, InputErrorMessage, ScreenHeader } from "../../features/components/shared";
-import { $balanceCurrency, addToken } from "../../features/store/model/token.ts";
+import { $balanceToken, addToken } from "../../features/store/model/token.ts";
 import { WalletRoutes } from "../../router";
 
 export const AddCustomToken = () => {
@@ -14,7 +14,7 @@ export const AddCustomToken = () => {
   const [addressError, setAddressError] = useState("");
 
   const navigate = useNavigate();
-  const balanceCurrency = useStore($balanceCurrency);
+  const balanceCurrency = useStore($balanceToken);
 
   const handleTokenNameInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTokenName(e.target.value);

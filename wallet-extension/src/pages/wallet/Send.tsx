@@ -25,9 +25,9 @@ import {
 import { $smartAccount } from "../../features/store/model/smartAccount.ts";
 import {
   $balance,
-  $balanceCurrency,
+  $balanceToken,
   $tokens,
-  getBalanceForCurrency,
+  getBalanceForToken,
 } from "../../features/store/model/token.ts";
 import {
   convertWeiToEth,
@@ -43,7 +43,7 @@ export const Send = () => {
   const navigate = useNavigate();
   const smartAccount = useStore($smartAccount);
   const tokens = useStore($tokens);
-  const balanceCurrencies = useStore($balanceCurrency);
+  const balanceCurrencies = useStore($balanceToken);
   const nilBalance = useStore($balance);
 
   const currencies = getCurrencies(tokens, true);
@@ -56,7 +56,7 @@ export const Send = () => {
   const [estimatedFee, setEstimatedFee] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]);
 
-  const balance = getBalanceForCurrency(
+  const balance = getBalanceForToken(
     selectedCurrency.address,
     nilBalance ?? 0n,
     balanceCurrencies ?? {},

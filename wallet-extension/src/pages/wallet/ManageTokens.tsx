@@ -7,23 +7,23 @@ import {
   ParagraphSmall,
   SearchIcon,
 } from "@nilfoundation/ui-kit";
-import { useStore } from "effector-react";
+import { useStore, useUnit } from "effector-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import addOne from "../../../public/icons/add-one.svg";
-import nilIcon from "../../../public/icons/currency/nil.svg";
 import reduceOne from "../../../public/icons/reduce-one.svg";
+import nilIcon from "../../../public/icons/token/nil.svg";
 import { Box, Icon, ScreenHeader } from "../../features/components/shared";
 import {
   $balance,
-  $balanceCurrency,
+  $balanceToken,
   $tokens,
-  getCurrencySymbolByAddress,
+  getTokenSymbolByAddress,
   hideToken,
   showToken,
 } from "../../features/store/model/token.ts";
-import { convertWeiToEth, formatAddress, getCurrencyIcon } from "../../features/utils";
+import { convertWeiToEth, formatAddress, getTokenIcon } from "../../features/utils";
 import { WalletRoutes } from "../../router";
 
 export const ManageTokens = () => {
@@ -31,8 +31,7 @@ export const ManageTokens = () => {
   const [searchValue, setSearchValue] = useState("");
   const navigate = useNavigate();
   const balance = useStore($balance);
-  const balanceCurrency = useStore($balanceCurrency);
-  const storedTokens = useStore($tokens);
+  const [balanceToken, storedTokens] = useUnit([$balanceToken, $tokens]);
 
   const addCustomTokenNavigate = () => {
     navigate(WalletRoutes.WALLET.ADD_CUSTOM_TOKEN);
@@ -43,8 +42,8 @@ export const ManageTokens = () => {
 
   const tokens = storedTokens
     .map((token) => {
-      const title = getCurrencySymbolByAddress(token.address);
-      const tokenBalance = balanceCurrency?.[token.address] ?? 0n;
+      const title = getTokenSymbolByAddress(token.address);
+      const tokenBalance = balanceToken?.[token.address] ?? 0n;
       if (token.address === "") {
         return {
           icon: nilIcon,
@@ -58,7 +57,7 @@ export const ManageTokens = () => {
         };
       }
       return {
-        icon: getCurrencyIcon(title),
+        icon: getTokenIcon(title),
         title: title,
         subtitle: title !== "" ? "Mock token" : formatAddress(token.address as Hex),
         subtitleColor: "gray",
@@ -72,8 +71,6 @@ export const ManageTokens = () => {
       (token) =>
         searchValue === "" || token.title.toLowerCase().includes(searchValue.toLowerCase()),
     );
-
-  console.log(tokens);
 
   const activeTokens = tokens.filter((token) => token.show);
   const hiddenTokens = tokens.filter((token) => !token.show);
@@ -144,7 +141,7 @@ export const ManageTokens = () => {
                   textOverflow: "ellipsis",
                 }}
               >
-                {token.title || "Custom Currency"}
+                {token.title || "Custom Token"}
               </HeadingMedium>
             </Box>
           </Box>
@@ -226,7 +223,7 @@ export const ManageTokens = () => {
                   textOverflow: "ellipsis",
                 }}
               >
-                {token.title || "Custom Currency"}
+                {token.title || "Custom Token"}
               </HeadingMedium>
             </Box>
           </Box>
