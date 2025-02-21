@@ -88,6 +88,7 @@ test("Send NIL token and token between accounts and validate balances", async ()
     to: recipient.address,
     value: 0.00001,
     tokenAddress: "",
+    symbol: "",
   });
 
   // 6. Fetch updated balances after NIL transfer
@@ -106,6 +107,7 @@ test("Send NIL token and token between accounts and validate balances", async ()
     to: recipient.address,
     value: Number(sendAmountBTC),
     tokenAddress: btcAddress,
+    symbol: "",
   });
 
   // 8. Fetch updated token balances

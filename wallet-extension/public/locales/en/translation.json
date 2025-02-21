@@ -74,6 +74,9 @@
       "copiedButton": "Copied",
       "getEndpointButton": "Open RPC Bot"
     },
+    "connectionPage": {
+      "title": "Manage DApps"
+    },
     "sendPage": {
       "title": "Send",
       "fromSection": {
@@ -95,6 +98,7 @@
       "title": "Settings",
       "endpointSection": "View endpoint",
       "getSupport": "Get support",
+      "manageConnection": "Manage DApps",
       "feedback": "Share Feedback",
       "community": "Join community",
       "footerVersion": "Version"
@@ -128,6 +132,23 @@
         "button": "Add token",
         "addressError": "Invalid address or token already added"
       }
+    }
+  },
+  "requests": {
+    "connect": {
+      "title": "Connect Request",
+      "requestedLabel": "Requested:",
+      "walletLabel": "Connect to",
+      "walletName": "Main Wallet",
+      "notification": "This DApp will view your wallet and suggest transactions.",
+      "cancelButton": "Cancel",
+      "connectButton": "Connect"
+    },
+    "sendSign": {
+      "title": "Transaction request",
+      "requestedLabel": "Requested:",
+      "confirmButton": "Confirm",
+      "cancelButton": "Cancel"
     }
   }
 }

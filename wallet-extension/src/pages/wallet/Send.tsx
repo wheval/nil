@@ -121,6 +121,7 @@ export const Send = () => {
         to: toAddress as Hex,
         value: Number(amount),
         tokenAddress: selectedToken.address,
+        symbol: selectedToken.label,
       });
       console.log(`Successfully sent ${amount} ${selectedToken.label} to ${toAddress}`);
       navigate(WalletRoutes.WALLET.BASE);

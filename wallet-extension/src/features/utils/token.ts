@@ -62,7 +62,7 @@ export function getTopupTokens(
   tokens: { name: string; address: string; show: boolean; topupable: boolean }[],
 ) {
   return tokens
-    .filter((token) => token.topupable)
+    .filter((token) => token.topupable && token.show)
     .map((token) => {
       const icon = getTokenIcon(token.name);
       return { icon, label: token.name, address: token.address };
