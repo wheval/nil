@@ -7,6 +7,7 @@ import { Box, Icon, InputErrorMessage, Logo } from "../../features/components/sh
 import { setEndpoint } from "../../features/store/model/endpoint";
 import { type ValidationResult, validateRpcEndpoint } from "../../features/utils";
 import { WalletRoutes } from "../../router";
+import { setInitialTokens } from "../../features/store/model/token.ts";
 
 export const SetEndpoint = () => {
   const navigate = useNavigate();
