@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common/concurrent"
@@ -26,6 +27,7 @@ type L1BlockFetcherRpc struct {
 	header    *l1types.Header
 	logger    zerolog.Logger
 	nodeIndex int
+	lock      sync.RWMutex
 }
 
 var rpcNodeList = []string{
@@ -48,6 +50,8 @@ func NewL1BlockFetcherRpc(ctx context.Context) L1BlockFetcher {
 }
 
 func (p *L1BlockFetcherRpc) GetLastBlockInfo(ctx context.Context) (*l1types.Header, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
 	if p.header == nil {
 		return nil, errors.New("no blocks have been fetched yet")
 	}
@@ -68,8 +72,9 @@ func (p *L1BlockFetcherRpc) fetch() {
 			return
 		}
 	}
-	err := p.client.Call(&p.header, "eth_getBlockByNumber", "latest", false)
-	if err != nil {
+
+	var header *l1types.Header
+	if err := p.client.Call(&header, "eth_getBlockByNumber", "latest", false); err != nil {
 		p.logger.Warn().
 			Err(err).
 			Str("node", rpcNodeList[p.nodeIndex]).
@@ -77,6 +82,10 @@ func (p *L1BlockFetcherRpc) fetch() {
 		if err = p.switchNode(); err != nil {
 			p.logger.Error().Err(err).Msg("failed to switch node")
 		}
+	} else {
+		p.lock.Lock()
+		defer p.lock.Unlock()
+		p.header = header
 	}
 }
 
