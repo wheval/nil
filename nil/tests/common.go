@@ -154,6 +154,23 @@ func AbiPack(t *testing.T, abi *abi.ABI, name string, args ...any) []byte {
 	return data
 }
 
+func SendTransactionViaSmartAccount(t *testing.T, client client.Client, addrFrom types.Address, addrTo types.Address, key *ecdsa.PrivateKey,
+	calldata []byte,
+) *jsonrpc.RPCReceipt {
+	t.Helper()
+
+	txHash, err := client.SendTransactionViaSmartAccount(t.Context(), addrFrom, calldata, types.NewFeePackFromGas(1_000_000), types.NewZeroValue(),
+		[]types.TokenBalance{}, addrTo, key)
+	require.NoError(t, err)
+
+	receipt := WaitIncludedInMain(t, t.Context(), client, txHash)
+	require.True(t, receipt.Success)
+	require.Equal(t, "Success", receipt.Status)
+	require.Len(t, receipt.OutReceipts, 1)
+
+	return receipt
+}
+
 func SendExternalTransactionNoCheck(t *testing.T, ctx context.Context, client client.Client, bytecode types.Code, contractAddress types.Address) *jsonrpc.RPCReceipt {
 	t.Helper()
 

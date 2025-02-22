@@ -6,7 +6,7 @@ import "./SmartAccount.sol";
 
 contract Faucet {
     uint256 private constant WITHDRAW_PER_TIMEOUT_LIMIT = 10**16;
-    uint256 private constant TIMEOUT = 1000; // 900s == 15min
+    uint256 private constant TIMEOUT = 200; // 200 blocks
 
     struct LimitInfo {
         uint prevT;

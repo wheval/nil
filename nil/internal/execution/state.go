@@ -10,7 +10,6 @@ import (
 	"math"
 	"math/big"
 	"sort"
-	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
@@ -213,9 +212,13 @@ func NewEVMBlockContext(es *ExecutionState) (*vm.BlockContext, error) {
 
 	currentBlockId := uint64(0)
 	var header *types.Block
+	time := uint64(0)
 	if err == nil {
 		header = data.Block()
 		currentBlockId = header.Id.Uint64() + 1
+		// TODO: we need to use header.Timestamp instead of but it's always zero for now.
+		// Let's return some kind of logical timestamp (monotonic increasing block number).
+		time = header.Id.Uint64()
 	}
 	return &vm.BlockContext{
 		GetHash:     getHashFn(es, header),
@@ -223,7 +226,7 @@ func NewEVMBlockContext(es *ExecutionState) (*vm.BlockContext, error) {
 		Random:      &common.EmptyHash,
 		BaseFee:     big.NewInt(10),
 		BlobBaseFee: big.NewInt(10),
-		Time:        uint64(time.Now().Second()),
+		Time:        time,
 	}, nil
 }
 

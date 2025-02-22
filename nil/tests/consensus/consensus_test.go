@@ -4,6 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/hexutil"
+	"github.com/NilFoundation/nil/nil/internal/abi"
+	"github.com/NilFoundation/nil/nil/internal/contracts"
+	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
@@ -13,6 +18,45 @@ import (
 
 type SuiteConsensus struct {
 	tests.ShardedSuite
+
+	zeroState           *execution.ZeroStateConfig
+	testAddress         types.Address
+	smartAccountAddress types.Address
+	abiTest             *abi.ABI
+}
+
+func (s *SuiteConsensus) SetupSuite() {
+	var err error
+	s.testAddress, err = contracts.CalculateAddress(contracts.NameTest, 1, []byte{1})
+	s.Require().NoError(err)
+
+	s.smartAccountAddress = types.MainSmartAccountAddress
+
+	zerostateTmpl := `
+contracts:
+- name: MainSmartAccount
+  address: {{ .SmartAccountAddress }}
+  value: 100000000000000000000
+  contract: SmartAccount
+  ctorArgs: [{{ .MainPublicKey }}]
+- name: Test
+  address: {{ .TestAddress }}
+  value: 100000000000000000000
+  contract: tests/Test
+`
+	zerostateCfg, err := common.ParseTemplate(zerostateTmpl, map[string]any{
+		"SmartAccountAddress": s.smartAccountAddress.Hex(),
+		"MainPublicKey":       hexutil.Encode(execution.MainPublicKey),
+		"TestAddress":         s.testAddress.Hex(),
+	})
+	s.Require().NoError(err)
+
+	s.zeroState, err = execution.ParseZeroStateConfig(zerostateCfg)
+	s.Require().NoError(err)
+	s.zeroState.MainPublicKey = execution.MainPublicKey
+
+	s.abiTest, err = contracts.GetAbi(contracts.NameTest)
+	s.Require().NoError(err)
 }
 
 func (s *SuiteConsensus) SetupTest() {
@@ -21,6 +65,7 @@ func (s *SuiteConsensus) SetupTest() {
 	s.StartShardAllValidators(&nilservice.Config{
 		NShards:              nShards,
 		CollatorTickPeriodMs: 200,
+		ZeroState:            s.zeroState,
 	}, 10625)
 }
 
@@ -42,6 +87,13 @@ func (s *SuiteConsensus) TestConsensus() {
 			}, 30*time.Second, 1*time.Second)
 		}
 	}
+
+	// Call smart contract
+	data, err := s.abiTest.Pack("saveTime")
+	s.Require().NoError(err)
+	receipt := tests.SendTransactionViaSmartAccount(
+		s.T(), s.Instances[0].Client, s.smartAccountAddress, s.testAddress, execution.MainPrivateKey, data)
+	s.Require().True(receipt.AllSuccess())
 
 	// Check that all validators have the same block
 	nShards := s.GetNShards()
