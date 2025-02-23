@@ -19,41 +19,39 @@ import (
 type SuiteCliTestCall struct {
 	tests.ShardedSuite
 
-	client       client.Client
-	endpoint     string
-	zerostateCfg string
-	testAddress  types.Address
-	cfgPath      string
+	client      client.Client
+	endpoint    string
+	zeroState   *execution.ZeroStateConfig
+	testAddress types.Address
+	cfgPath     string
 }
 
 func (s *SuiteCliTestCall) SetupSuite() {
 	var err error
-
 	s.TmpDir = s.T().TempDir()
 	s.cfgPath = s.TmpDir + "/config.ini"
 
 	s.testAddress, err = contracts.CalculateAddress(contracts.NameTest, 1, []byte{1})
 	s.Require().NoError(err)
 
-	s.zerostateCfg = fmt.Sprintf(`
+	zerostateCfg := fmt.Sprintf(`
 contracts:
 - name: Test
   address: %s
   value: 100000000000000
   contract: tests/Test
 `, s.testAddress.Hex())
+
+	s.zeroState, err = execution.ParseZeroStateConfig(zerostateCfg)
+	s.Require().NoError(err)
+	s.zeroState.MainPublicKey = execution.MainPublicKey
 }
 
 func (s *SuiteCliTestCall) SetupTest() {
-	var err error
-	zeroState, err := execution.ParseZeroStateConfig(s.zerostateCfg)
-	s.Require().NoError(err)
-	zeroState.MainPublicKey = execution.MainPublicKey
-
 	s.Start(&nilservice.Config{
 		NShards:              2,
 		CollatorTickPeriodMs: 200,
-		ZeroState:            zeroState,
+		ZeroState:            s.zeroState,
 	}, 10525)
 
 	s.client, s.endpoint = s.StartRPCNode(tests.WithDhtBootstrapByValidators, nil)

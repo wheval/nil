@@ -59,6 +59,8 @@ func (s *SuiteRegression) SetupTest() {
 		RunMode:   nilservice.CollatorsOnlyRunMode,
 		ZeroState: zeroStateConfig,
 	})
+	tests.WaitShardTick(s.T(), s.Context, s.Client, types.MainShardId)
+	tests.WaitShardTick(s.T(), s.Context, s.Client, types.BaseShardId)
 }
 
 func (s *SuiteRegression) TearDownTest() {

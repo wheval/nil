@@ -9,6 +9,7 @@ contract Test is NilBase {
     event testEvent(uint indexed a, uint indexed b);
 
     uint32 private internalValue = 0;
+    uint256 private timestamp = 0;
 
     constructor() payable {}
 
@@ -125,6 +126,10 @@ contract Test is NilBase {
     }
 
     function bounce(string calldata err) external payable {}
+
+    function saveTime() public {
+        timestamp = block.timestamp;
+    }
 
     // Add output transaction, and then revert if `value` is zero. In that case output transaction should be removed.
     function testFailedAsyncCall(address dst, int32 value) public onlyExternal {

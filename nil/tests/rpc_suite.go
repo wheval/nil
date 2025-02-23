@@ -184,17 +184,7 @@ func (s *RpcSuite) SendTransactionViaSmartAccount(addrFrom types.Address, addrTo
 	calldata []byte,
 ) *jsonrpc.RPCReceipt {
 	s.T().Helper()
-
-	txHash, err := s.Client.SendTransactionViaSmartAccount(s.Context, addrFrom, calldata, types.NewFeePackFromGas(1_000_000), types.NewZeroValue(),
-		[]types.TokenBalance{}, addrTo, key)
-	s.Require().NoError(err)
-
-	receipt := s.WaitIncludedInMain(txHash)
-	s.Require().True(receipt.Success)
-	s.Require().Equal("Success", receipt.Status)
-	s.Require().Len(receipt.OutReceipts, 1)
-
-	return receipt
+	return SendTransactionViaSmartAccount(s.T(), s.Client, addrFrom, addrTo, key, calldata)
 }
 
 func (s *RpcSuite) SendExternalTransaction(bytecode types.Code, contractAddress types.Address) *jsonrpc.RPCReceipt {

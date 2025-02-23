@@ -23,8 +23,6 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/NilFoundation/badger/v4 v4.0.0-20250130131510-9e58fda915b8 h1:VEswMEp8ifAKT+zpG8GZL4Vr73z4x14Djot/samBt5o=
 github.com/NilFoundation/badger/v4 v4.0.0-20250130131510-9e58fda915b8/go.mod h1:q2blcADYfBlwNmD/GTsBu6pmahdPPPDbfFDKfi+a7JY=
-github.com/NilFoundation/fastssz v0.1.5-0.20241127134502-50c6ef93352f h1:VMmSwezF1VSL0TSe7MBkBhL5cx8gjpwe3iD4Ymsn1Ig=
-github.com/NilFoundation/fastssz v0.1.5-0.20241127134502-50c6ef93352f/go.mod h1:ICVhD5I5Y8/nM5alj6F0YCgp5W6h/E0eNz5djSsq114=
 github.com/NilFoundation/fastssz v0.1.5-0.20250218121538-03800b866858 h1:BbR6F2igm2Q2ymzGVU83O2S74y04/1sP7qQDg63uT/8=
 github.com/NilFoundation/fastssz v0.1.5-0.20250218121538-03800b866858/go.mod h1:ICVhD5I5Y8/nM5alj6F0YCgp5W6h/E0eNz5djSsq114=
 github.com/VictoriaMetrics/fastcache v1.12.2 h1:N0y9ASrJ0F6h0QaC3o6uJb3NIZ9VKLjCM7NQbSmF7WI=
