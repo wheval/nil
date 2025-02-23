@@ -6,7 +6,7 @@ import { deployNilContract } from "../src/deploy";
 task("deploy-incrementer").setAction(async (taskArgs, _) => {
   const smartAccount = await createSmartAccount();
 
-  const IncrementerJson = require("../../artifacts/contracts/Incrementer.sol/Incrementer.json");
+  const IncrementerJson = require("../artifacts/contracts/Incrementer.sol/Incrementer.json");
 
   const { contract, address } = await deployNilContract(
     smartAccount,

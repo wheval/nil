@@ -25,7 +25,11 @@ export async function deployNilContract(
   const receipts = await waitTillCompleted(smartAccount.client, hash);
   if (!receipts.every((receipt) => receipt.success)) {
     throw new Error(
-      `One or more receipts indicate failure: ${JSON.stringify(receipts)}`,
+      `One or more receipts indicate failure: ${JSON.stringify(receipts, (_, value) =>
+                                                               typeof value === 'bigint'
+                                                                 ? Number(value)
+                                                                 : value)}`,
+
     );
   }
   console.log("Contract deployed at address: " + address);
