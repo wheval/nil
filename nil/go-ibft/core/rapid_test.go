@@ -203,10 +203,10 @@ func generatePropertyTestEvent(t *rapid.T) *propertyTestSetup {
 
 // TestProperty is a property-based test
 // that assures the cluster can handle rounds properly in any cases.
-func TestProperty(rootT *testing.T) {
-	rootT.Parallel()
+func TestProperty(t *testing.T) {
+	t.Parallel()
 
-	rapid.Check(rootT, func(t *rapid.T) {
+	rapid.Check(t, func(t *rapid.T) {
 		var multicastFn func(message *proto.IbftMessage)
 
 		var (
@@ -340,7 +340,7 @@ func TestProperty(rootT *testing.T) {
 			// Start the main run loops
 			cluster.runSequence(height)
 
-			ctx, cancelFn := context.WithTimeout(rootT.Context(), ctxTimeout)
+			ctx, cancelFn := context.WithTimeout(t.Context(), ctxTimeout)
 			err := cluster.awaitNCompletions(ctx, int64(quorum(setup.nodes)))
 			require.NoError(t, err, "unable to wait for nodes to complete on height %d", height)
 			cancelFn()
