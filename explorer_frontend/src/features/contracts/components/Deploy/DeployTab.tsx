@@ -133,7 +133,7 @@ export const DeployTab = () => {
             deploySmartContract();
           }}
           isLoading={pending}
-          disabled={pending || !smartAccount || shardId === null || !shardIdIsValid}
+          disabled={!smartAccount || shardId === null || !shardIdIsValid}
         >
           Deploy
         </Button>
