@@ -84,6 +84,7 @@ export const ManageTokens = () => {
         padding: "24px",
         boxSizing: "border-box",
         overflowY: "auto",
+        overflowX: "hidden",
         flex: 1,
       }}
     >
@@ -162,17 +163,19 @@ export const ManageTokens = () => {
             >
               {token.rightText}
             </ParagraphSmall>
-            <Icon
-              src={reduceOne}
-              alt="Hide token"
-              size={16}
-              iconSize="16"
-              background="transparent"
-              pointer={true}
-              onClick={() => {
-                hideToken(token.address);
-              }}
-            />
+            {token.address !== "" && (
+              <Icon
+                src={reduceOne}
+                alt="Hide token"
+                size={16}
+                iconSize="16"
+                background="transparent"
+                pointer={true}
+                onClick={() => {
+                  hideToken(token.address);
+                }}
+              />
+            )}
           </Box>
         </Box>
       ))}
@@ -267,7 +270,6 @@ export const ManageTokens = () => {
           bottom: "24px",
           zIndex: 100,
           width: "87%",
-          marginRight: "24px",
         }}
       >
         <Button
