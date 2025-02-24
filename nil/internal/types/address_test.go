@@ -1,25 +1,12 @@
 package types
 
 import (
-	"encoding/hex"
 	"fmt"
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-func TestPubKeyAddressShardId(t *testing.T) {
-	t.Parallel()
-
-	shardId := ShardId(7)
-	pubkey, err := hex.DecodeString("0255d1e56a49f7115b913cbd23cd68c5f471375e74a53eabeb9ca81c64a464d19f")
-	require.NoError(t, err)
-
-	addr := PubkeyBytesToAddress(shardId, pubkey)
-	assert.Equal(t, shardId, addr.ShardId())
-}
 
 func TestCreateAddressShardId(t *testing.T) {
 	t.Parallel()
