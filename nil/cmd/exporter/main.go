@@ -86,7 +86,7 @@ You could config it via config file or flags or environment variables.`,
 	rootCmd.Flags().StringP("clickhouse-login", "l", "", "Clickhouse login")
 	rootCmd.Flags().StringP("clickhouse-password", "p", "", "Clickhouse password")
 	rootCmd.Flags().StringP("clickhouse-database", "d", "", "Clickhouse database")
-	rootCmd.Flags().BoolP("only-scheme-init", "s", false, "Only scheme initialization")
+	rootCmd.Flags().Bool("allow-db-clear", false, "Drop db if versions differ")
 
 	check.PanicIfErr(viper.BindPFlags(rootCmd.Flags()))
 
@@ -97,23 +97,17 @@ You could config it via config file or flags or environment variables.`,
 	clickhouseLogin := viper.GetString("clickhouse-login")
 	clickhouseDatabase := viper.GetString("clickhouse-database")
 	apiEndpoint := viper.GetString("api-endpoint")
-	onlySchemeInit := viper.GetBool("only-scheme-init")
+	allowDbDrop := viper.GetBool("allow-db-clear")
 
 	ctx := context.Background()
 
 	clickhouseExporter, err := clickhouse.NewClickhouseDriver(ctx, clickhouseEndpoint, clickhouseLogin, clickhousePassword, clickhouseDatabase)
 	check.PanicIfErr(err)
 
-	if onlySchemeInit {
-		check.PanicIfErr(clickhouseExporter.SetupScheme(ctx))
-
-		logger.Info().Msg("Scheme initialized")
-		return
-	}
-
 	check.PanicIfErr(internal.StartExporter(ctx, &internal.Cfg{
 		Client:         rpc.NewClient(apiEndpoint, logger),
 		ExporterDriver: clickhouseExporter,
+		AllowDbDrop:    allowDbDrop,
 		BlocksChan:     make(chan *internal.BlockWithShardId, 1000),
 	}))
 

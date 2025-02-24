@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common/concurrent"
@@ -13,21 +14,14 @@ import (
 const (
 	BlockBufferSize     = 10000
 	InitialRoundsAmount = 1000
-	LongSleepTimeout    = 3 * time.Second
 )
 
 func StartExporter(ctx context.Context, cfg *Cfg) error {
 	logger.Info().Msg("Starting exporter...")
 
-	var shards []types.ShardId
-	for {
-		var err error
-		shards, err = setupExporter(ctx, cfg)
-		if err == nil {
-			break
-		}
-		logger.Error().Err(err).Msgf("Failed to setup exporter. Retrying in %s...", LongSleepTimeout)
-		time.Sleep(LongSleepTimeout)
+	shards, err := setupExporter(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to setup exporter: %w", err)
 	}
 
 	workers := make([]concurrent.Func, 0, 2*len(shards)+1)

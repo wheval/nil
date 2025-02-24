@@ -9,7 +9,6 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/NilFoundation/nil/nil/cmd/exporter/internal"
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/types"
 )
@@ -119,35 +118,6 @@ func NewLogWithBinary(log *types.Log, binary []byte, receipt *types.Receipt) *Lo
 	return res
 }
 
-var tableSchemeCache map[string]reflectedScheme = nil
-
-func initSchemeCache() map[string]reflectedScheme {
-	tableScheme := make(map[string]reflectedScheme)
-
-	blockScheme, err := reflectSchemeToClickhouse(&BlockWithBinary{})
-	check.PanicIfErr(err)
-
-	tableScheme["blocks"] = blockScheme
-	transactionScheme, err := reflectSchemeToClickhouse(&TransactionWithBinary{})
-	check.PanicIfErr(err)
-
-	tableScheme["transactions"] = transactionScheme
-	logScheme, err := reflectSchemeToClickhouse(&LogWithBinary{})
-	check.PanicIfErr(err)
-
-	tableScheme["logs"] = logScheme
-
-	return tableScheme
-}
-
-func getTableScheme() map[string]reflectedScheme {
-	if tableSchemeCache == nil {
-		tableSchemeCache = initSchemeCache()
-	}
-
-	return tableSchemeCache
-}
-
 func NewClickhouseDriver(_ context.Context, endpoint, login, password, database string) (*ClickhouseDriver, error) {
 	// Create connection to Clickhouse
 	connectionOptions := clickhouse.Options{
@@ -186,7 +156,7 @@ func (d *ClickhouseDriver) Reconnect() error {
 }
 
 func (d *ClickhouseDriver) SetupScheme(ctx context.Context) error {
-	return setupSchemeForClickhouse(ctx, d.conn)
+	return setupSchemes(ctx, d.conn)
 }
 
 func rowToBlock(rows driver.Rows) (*types.Block, error) {
@@ -246,63 +216,6 @@ order by a.id asc
 	}
 
 	return types.BlockNumber(blockNumber), true, nil
-}
-
-func setupSchemeForClickhouse(ctx context.Context, conn driver.Conn) error {
-	// Create table for blocks
-	tableScheme := getTableScheme()
-	blockScheme, ok := tableScheme["blocks"]
-	if !ok {
-		return errors.New("scheme for blocks not found")
-	}
-
-	err := conn.Exec(ctx, blockScheme.CreateTableQuery(
-		"blocks",
-		"ReplacingMergeTree",
-		[]string{"shard_id", "hash"},
-		[]string{"shard_id", "hash"},
-	))
-	if err != nil {
-		return fmt.Errorf("failed to create table blocks: %w", err)
-	}
-
-	// Create table for transactions
-	transactionsScheme, ok := tableScheme["transactions"]
-	if !ok {
-		return errors.New("scheme for transactions not found")
-	}
-
-	err = conn.Exec(
-		ctx,
-		transactionsScheme.CreateTableQuery(
-			"transactions",
-			"ReplacingMergeTree",
-			[]string{"hash", "outgoing"},
-			[]string{"hash", "outgoing"},
-		),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create table transactions: %w", err)
-	}
-
-	// Create table for receipts
-	logScheme, ok := tableScheme["logs"]
-	if !ok {
-		return errors.New("scheme for receipts not found")
-	}
-
-	if err = conn.Exec(
-		ctx, logScheme.CreateTableQuery(
-			"logs",
-			"ReplacingMergeTree",
-			[]string{"transaction_hash"},
-			[]string{"transaction_hash"},
-		),
-	); err != nil {
-		return fmt.Errorf("failed to create table logs: %w", err)
-	}
-
-	return nil
 }
 
 type blockWithSSZ struct {
