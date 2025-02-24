@@ -2,7 +2,6 @@ package collate
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -12,11 +11,9 @@ import (
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
-	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
-	"github.com/NilFoundation/nil/nil/internal/signer"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi/pb"
 	"github.com/multiformats/go-multistream"
@@ -34,11 +31,6 @@ type SyncerConfig struct {
 	ZeroStateConfig *execution.ZeroStateConfig
 }
 
-var (
-	errOldBlock   = errors.New("received old block")
-	errOutOfOrder = errors.New("received block is out of order")
-)
-
 type Syncer struct {
 	config *SyncerConfig
 
@@ -51,13 +43,13 @@ type Syncer struct {
 
 	waitForSync *sync.WaitGroup
 
-	subsMutex     sync.Mutex
-	subsId        uint64
-	subs          map[uint64]chan struct{}
-	blockVerifier *signer.BlockVerifier
+	subsMutex sync.Mutex
+	subsId    uint64
+	subs      map[uint64]chan struct{}
+	validator *Validator
 }
 
-func NewSyncer(cfg *SyncerConfig, db db.DB, networkManager *network.Manager) (*Syncer, error) {
+func NewSyncer(cfg *SyncerConfig, validator *Validator, db db.DB, networkManager *network.Manager) (*Syncer, error) {
 	var waitForSync sync.WaitGroup
 	waitForSync.Add(1)
 
@@ -69,20 +61,20 @@ func NewSyncer(cfg *SyncerConfig, db db.DB, networkManager *network.Manager) (*S
 		logger: logging.NewLogger(cfg.Name).With().
 			Stringer(logging.FieldShardId, cfg.ShardId).
 			Logger(),
-		waitForSync:   &waitForSync,
-		subs:          make(map[uint64]chan struct{}),
-		blockVerifier: signer.NewBlockVerifier(cfg.ShardId, db),
+		waitForSync: &waitForSync,
+		subs:        make(map[uint64]chan struct{}),
+		validator:   validator,
 	}, nil
 }
 
-func (s *Syncer) readLastBlock(ctx context.Context) (*types.Block, common.Hash, error) {
-	rotx, err := s.db.CreateRoTx(ctx)
+func readLastBlock(ctx context.Context, database db.DB, shardId types.ShardId) (*types.Block, common.Hash, error) {
+	rotx, err := database.CreateRoTx(ctx)
 	if err != nil {
 		return nil, common.EmptyHash, err
 	}
 	defer rotx.Rollback()
 
-	block, hash, err := db.ReadLastBlock(rotx, s.config.ShardId)
+	block, hash, err := db.ReadLastBlock(rotx, shardId)
 	if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
 		return nil, common.EmptyHash, err
 	}
@@ -90,6 +82,10 @@ func (s *Syncer) readLastBlock(ctx context.Context) (*types.Block, common.Hash, 
 		return block, hash, err
 	}
 	return nil, common.EmptyHash, nil
+}
+
+func (s *Syncer) readLastBlock(ctx context.Context) (*types.Block, common.Hash, error) {
+	return readLastBlock(ctx, s.db, s.config.ShardId)
 }
 
 func (s *Syncer) shardIsEmpty(ctx context.Context) (bool, error) {
@@ -222,6 +218,7 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 	if err := s.saveBlock(ctx, b); err != nil {
 		switch {
 		case errors.Is(err, errOutOfOrder):
+			// todo: queue the block for later processing
 			return false, nil
 		case errors.Is(err, errOldBlock):
 			return false, nil
@@ -296,85 +293,8 @@ func (s *Syncer) fetchBlocksRange(ctx context.Context) <-chan *types.BlockWithEx
 	return nil
 }
 
-func (s *Syncer) logBlockDiffError(expected, got *types.Block, expHash, gotHash common.Hash) error {
-	msg := fmt.Sprintf("block hash mismatch: expected %x, got %x", expHash, gotHash)
-	blockMarshal, err := json.Marshal(got)
-	check.PanicIfErr(err)
-	lastBlockMarshal, err := json.Marshal(expected)
-	check.PanicIfErr(err)
-	s.logger.Error().
-		Stringer(logging.FieldBlockNumber, expected.Id).
-		Stringer("expectedHash", expHash).
-		Stringer("gotHash", gotHash).
-		RawJSON("expected", blockMarshal).
-		RawJSON("got", lastBlockMarshal).
-		Msg(msg)
-	return returnErrorOrPanic(errors.New(msg))
-}
-
 func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedData) error {
-	// TODO: zerostate block is not signed and its hash should be checked in a bit different way
-	// E.g. compare with network config value
-	if block.Block.Id == 0 {
-		return nil
-	}
-
-	lastBlock, lastHash, err := s.readLastBlock(ctx)
-	if err != nil {
-		return err
-	}
-
-	if block.Id <= lastBlock.Id {
-		s.logger.Trace().
-			Err(errOldBlock).
-			Stringer(logging.FieldBlockNumber, block.Id).
-			Send()
-		return errOldBlock
-	}
-
-	if block.Id != lastBlock.Id+1 {
-		s.logger.Debug().
-			Stringer(logging.FieldBlockNumber, block.Id).
-			Msgf("Received block %d is out of order with the last block %d", block.Id, lastBlock.Id)
-		// todo: queue the block for later processing
-		return errOutOfOrder
-	}
-
-	if block.PrevBlock != lastHash {
-		txn := fmt.Sprintf("Prev block hash mismatch: expected %x, got %x", lastHash, block.PrevBlock)
-		blockMarshal, err := json.Marshal(block.Block)
-		if err != nil {
-			return returnErrorOrPanic(err)
-		}
-		lastBlockMarshal, err := json.Marshal(lastBlock)
-		if err != nil {
-			return returnErrorOrPanic(err)
-		}
-		s.logger.Error().
-			Stringer(logging.FieldBlockNumber, block.Id).
-			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
-			Stringer("lastBlockHashExpected", lastHash).
-			Stringer("lastBlockHashGot", block.PrevBlock).
-			RawJSON("blockJSON", blockMarshal).
-			RawJSON("lastBlockJSON", lastBlockMarshal).
-			Msg(txn)
-		return returnErrorOrPanic(errors.New(txn))
-	}
-
-	if !s.config.DisableConsensus {
-		if err := s.blockVerifier.VerifyBlock(ctx, block.Block); err != nil {
-			s.logger.Error().
-				Uint64(logging.FieldBlockNumber, uint64(block.Id)).
-				Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
-				Stringer(logging.FieldShardId, s.config.ShardId).
-				Stringer(logging.FieldSignature, block.Signature).
-				Err(err).
-				Msg("Failed to verify block signature")
-			return err
-		}
-	}
-
-	if err := s.replayBlock(ctx, block); err != nil {
+	if err := s.validator.ReplayBlock(ctx, block); err != nil {
 		return err
 	}
 	s.notify()
@@ -414,89 +334,4 @@ func returnErrorOrPanic(err error) error {
 		check.PanicIfErr(err)
 	}
 	return err
-}
-
-func (s *Syncer) validateRepliedBlock(
-	in *types.Block, replied *execution.BlockGenerationResult, inHash common.Hash, inTxns []*types.Transaction,
-) error {
-	if replied.Block.OutTransactionsRoot != in.OutTransactionsRoot {
-		return returnErrorOrPanic(fmt.Errorf("out transactions root mismatch. Expected %x, got %x",
-			in.OutTransactionsRoot, replied.Block.OutTransactionsRoot))
-	}
-	if len(replied.OutTxns) != len(inTxns) {
-		return returnErrorOrPanic(fmt.Errorf("out transactions count mismatch. Expected %d, got %d",
-			len(inTxns), len(replied.InTxns)))
-	}
-	if replied.Block.ConfigRoot != in.ConfigRoot {
-		return returnErrorOrPanic(fmt.Errorf("config root mismatch. Expected %x, got %x",
-			in.ConfigRoot, replied.Block.ConfigRoot))
-	}
-	if replied.BlockHash != inHash {
-		return s.logBlockDiffError(in, replied.Block, inHash, replied.BlockHash)
-	}
-	return nil
-}
-
-func (s *Syncer) replayBlock(ctx context.Context, block *types.BlockWithExtractedData) error {
-	roTx, err := s.db.CreateRoTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer roTx.Rollback()
-
-	prevBlock, err := db.ReadBlock(roTx, s.config.ShardId, block.Block.PrevBlock)
-	if err != nil {
-		return fmt.Errorf("failed to read previous block: %w", err)
-	}
-
-	gen, err := execution.NewBlockGenerator(ctx, s.config.BlockGeneratorParams, s.db, prevBlock)
-	if err != nil {
-		return err
-	}
-	defer gen.Rollback()
-
-	blockHash := block.Block.Hash(s.config.ShardId)
-	s.logger.Trace().
-		Stringer(logging.FieldBlockNumber, block.Block.Id).
-		Stringer(logging.FieldBlockHash, blockHash).
-		Msg("Replaying block")
-
-	proposal := &execution.Proposal{
-		PrevBlockId:   block.Block.Id - 1,
-		PrevBlockHash: block.Block.PrevBlock,
-		MainChainHash: block.Block.MainChainHash,
-		ShardHashes:   block.ChildBlocks,
-	}
-	proposal.InternalTxns, proposal.ExternalTxns = execution.SplitInTransactions(block.InTransactions)
-	proposal.ForwardTxns, _ = execution.SplitOutTransactions(block.OutTransactions, s.config.ShardId)
-
-	var gasPrices []types.Uint256
-	if s.config.ShardId.IsMainShard() {
-		if gasPricesBytes, ok := block.Config[config.NameGasPrice]; ok {
-			param := &config.ParamGasPrice{}
-			if err := param.UnmarshalSSZ(gasPricesBytes); err != nil {
-				return fmt.Errorf("failed to unmarshal gas prices: %w", err)
-			}
-			gasPrices = param.Shards
-		}
-	}
-
-	// First we build block without writing it into the database, because we need to check that the resulted block is
-	// the same as the proposed one.
-	resBlock, err := gen.BuildBlock(proposal, gasPrices)
-	if err != nil {
-		return fmt.Errorf("failed to build block: %w", err)
-	}
-
-	// Check generated block and proposed are equal
-	if err = s.validateRepliedBlock(block.Block, resBlock, blockHash, block.OutTransactions); err != nil {
-		return fmt.Errorf("failed to validate replied block: %w", err)
-	}
-
-	// Finally, write generated block into the database
-	if err = gen.Finalize(resBlock, &block.ConsensusParams); err != nil {
-		return fmt.Errorf("failed to finalize block: %w", err)
-	}
-
-	return nil
 }

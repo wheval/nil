@@ -44,44 +44,39 @@ type Scheduler struct {
 	consensus      Consensus
 	syncer         *Syncer
 	txFabric       db.DB
-	pool           txnpool.Pool
+	validator      *Validator
 	networkManager *network.Manager
 
-	params Params
+	params *Params
 
 	logger zerolog.Logger
 
 	l1Fetcher rollup.L1BlockFetcher
 }
 
-func NewScheduler(txFabric db.DB, pool txnpool.Pool, params Params, networkManager *network.Manager) *Scheduler {
+func NewScheduler(validator *Validator, txFabric db.DB, consensus Consensus, networkManager *network.Manager) *Scheduler {
+	params := validator.params
 	return &Scheduler{
 		txFabric:       txFabric,
-		pool:           pool,
+		validator:      validator,
 		networkManager: networkManager,
 		params:         params,
 		logger: logging.NewLogger("collator").With().
 			Stringer(logging.FieldShardId, params.ShardId).
 			Logger(),
 		l1Fetcher: params.L1Fetcher,
+		consensus: consensus,
 	}
 }
 
 func (s *Scheduler) Validator() *Validator {
-	return &Validator{
-		params:         s.params,
-		txFabric:       s.txFabric,
-		pool:           s.pool,
-		networkManager: s.networkManager,
-		logger:         s.logger,
-	}
+	return s.validator
 }
 
 func (s *Scheduler) Run(ctx context.Context, syncer *Syncer, consensus Consensus) error {
 	syncer.WaitComplete()
 
 	s.logger.Info().Msg("Starting collation...")
-	s.consensus = consensus
 	s.syncer = syncer
 
 	// Enable handler for blocks relaying
@@ -108,13 +103,12 @@ func (s *Scheduler) Run(ctx context.Context, syncer *Syncer, consensus Consensus
 
 func (s *Scheduler) doCollate(ctx context.Context) error {
 	if s.params.DisableConsensus {
-		v := s.Validator()
-		proposal, err := v.BuildProposal(ctx)
+		proposal, err := s.validator.BuildProposal(ctx)
 		if err != nil {
 			return err
 		}
 
-		return v.InsertProposal(ctx, proposal, &types.ConsensusParams{})
+		return s.validator.InsertProposal(ctx, proposal, &types.ConsensusParams{})
 	} else {
 		id, err := s.readLastBlockId(ctx)
 		if err != nil {
