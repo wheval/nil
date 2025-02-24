@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
@@ -33,6 +34,7 @@ type Validator struct {
 	networkManager *network.Manager
 	blockVerifier  *signer.BlockVerifier
 
+	mutex  sync.Mutex
 	logger zerolog.Logger
 }
 
@@ -97,6 +99,9 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 }
 
 func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Proposal, params *types.ConsensusParams) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if err := s.validateProposal(ctx, proposal); err != nil {
 		return err
 	}
@@ -206,6 +211,9 @@ func (s *Validator) validateProposal(ctx context.Context, proposal *execution.Pr
 }
 
 func (s *Validator) ReplayBlock(ctx context.Context, block *types.BlockWithExtractedData) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	prevBlock, err := s.getBlock(ctx, block.Block.PrevBlock)
 	if err != nil {
 		return err
