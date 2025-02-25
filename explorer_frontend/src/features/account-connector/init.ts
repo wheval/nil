@@ -100,7 +100,7 @@ createSmartAccountFx.use(async ({ privateKey, rpcUrl }) => {
       {
         smartAccountAddress: smartAccount.address,
         faucetAddress: faucets.NIL,
-        amount: BigInt(1e18),
+        amount: convertEthToWei(0.1),
       },
       client,
     );
@@ -271,7 +271,7 @@ topupSmartAccountTokenFx.use(async ({ smartAccount, topupInput, faucets, rpcUrl 
     {
       smartAccountAddress: smartAccount.address,
       faucetAddress: tokenFaucetAddress,
-      amount: Number(amount),
+      amount: tokenFaucetAddress === faucets.NIL ? convertEthToWei(Number(amount)) : BigInt(amount),
     },
     publicClient,
   );
