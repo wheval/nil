@@ -23,7 +23,7 @@ func (api *LocalShardApi) GasPrice(ctx context.Context) (types.Value, error) {
 		return types.Value{}, fmt.Errorf("cannot open config accessor: %w", err)
 	}
 	param, err := config.GetParamGasPrice(cfg)
-	if err != nil {
+	if err != nil || len(param.Shards) <= int(api.ShardId) {
 		return types.Value{}, fmt.Errorf("cannot get gas price: %w", err)
 	}
 	return types.Value{Uint256: &param.Shards[api.ShardId]}, nil

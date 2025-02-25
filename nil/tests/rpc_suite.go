@@ -130,6 +130,8 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 		}, BlockWaitTimeout, BlockPollInterval)
 	} else {
 		s.waitZerostate()
+		WaitShardTick(s.T(), s.Context, s.Client, types.MainShardId)
+		WaitShardTick(s.T(), s.Context, s.Client, types.BaseShardId)
 	}
 }
 
