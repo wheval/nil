@@ -33,6 +33,7 @@ type NodeApiRo interface {
 
 	GasPrice(ctx context.Context, shardId types.ShardId) (types.Value, error)
 	GetShardIdList(ctx context.Context) ([]types.ShardId, error)
+	GetNumShards(ctx context.Context) (uint64, error)
 }
 
 type NodeApi interface {
@@ -60,6 +61,7 @@ type ShardApiRo interface {
 
 	GasPrice(ctx context.Context) (types.Value, error)
 	GetShardIdList(ctx context.Context) ([]types.ShardId, error)
+	GetNumShards(ctx context.Context) (uint64, error)
 
 	setAsP2pRequestHandlersIfAllowed(ctx context.Context, networkManager *network.Manager, readonly bool, logger zerolog.Logger) error
 	setNodeApi(nodeApi NodeApi)

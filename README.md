@@ -215,6 +215,7 @@ The current RPC is loosely modeled after the Ethereum RPC. The RPC exposes the f
 ### Shards
 
 * `GetShardIdList()`
+* `GetNumShards()`
 
 ### Calls
 

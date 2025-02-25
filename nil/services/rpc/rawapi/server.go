@@ -34,6 +34,7 @@ type NetworkTransportProtocolRo interface {
 
 	GasPrice() pb.GasPriceResponse
 	GetShardIdList() pb.ShardIdListResponse
+	GetNumShards() pb.Uint64Response
 }
 
 // NetworkTransportProtocol is a helper interface for associating the argument and result types of Api methods

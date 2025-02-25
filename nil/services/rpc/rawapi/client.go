@@ -167,6 +167,10 @@ func (api *ShardApiAccessor) GetShardIdList(ctx context.Context) ([]types.ShardI
 	return sendRequestAndGetResponseWithCallerMethodName[[]types.ShardId](ctx, api, "GetShardIdList")
 }
 
+func (api *ShardApiAccessor) GetNumShards(ctx context.Context) (uint64, error) {
+	return sendRequestAndGetResponseWithCallerMethodName[uint64](ctx, api, "GetNumShards")
+}
+
 func (api *ShardApiAccessor) GetTransactionCount(ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (uint64, error) {
 	return sendRequestAndGetResponseWithCallerMethodName[uint64](ctx, api, "GetTransactionCount", address, blockReference)
 }

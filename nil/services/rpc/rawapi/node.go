@@ -225,6 +225,20 @@ func (api *NodeApiOverShardApis) GetShardIdList(ctx context.Context) ([]types.Sh
 	return result, nil
 }
 
+func (api *NodeApiOverShardApis) GetNumShards(ctx context.Context) (uint64, error) {
+	methodName := methodNameChecked("GetNumShards")
+	shardId := types.MainShardId
+	shardApi, ok := api.Apis[shardId]
+	if !ok {
+		return 0, makeShardNotFoundError(methodName, shardId)
+	}
+	result, err := shardApi.GetNumShards(ctx)
+	if err != nil {
+		return 0, makeCallError(methodName, shardId, err)
+	}
+	return result, nil
+}
+
 func (api *NodeApiOverShardApis) GetTransactionCount(ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (uint64, error) {
 	methodName := methodNameChecked("GetTransactionCount")
 	shardId := address.ShardId()
