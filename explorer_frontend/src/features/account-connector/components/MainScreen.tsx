@@ -153,9 +153,10 @@ const MainScreen = () => {
               overrides={{
                 Root: {
                   style: {
-                    flex: 1, // Makes input take full available width
+                    flex: 1,
                     height: "48px",
                     background: COLORS.gray700,
+                    boxShadow: "none",
                     ":hover": {
                       background: COLORS.gray600,
                     },
@@ -163,7 +164,6 @@ const MainScreen = () => {
                 },
               }}
             />
-
             {/* Copy Button */}
             <Button
               kind={BUTTON_KIND.secondary}
