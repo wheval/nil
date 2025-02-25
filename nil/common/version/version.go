@@ -13,7 +13,7 @@ import (
 
 type versionInfo struct {
 	GitTag      string
-	GitRevision string
+	GitRevCount string
 	GitCommit   string
 }
 
@@ -35,7 +35,7 @@ const (
 func GetVersionInfo() versionInfo {
 	versionInfoCacheMutex.Lock()
 	defer versionInfoCacheMutex.Unlock()
-	if versionInfoCache.GitRevision == "" {
+	if versionInfoCache.GitRevCount == "" {
 		// If the versionMagic string has been patched with something that looks like a version
 		// then use it. Otherwise initialize the version with some sane default.
 		re := regexp.MustCompile(`(\d+\.\d+\.\d+)-(\d+)-([a-f0-9]+)`)
@@ -43,12 +43,12 @@ func GetVersionInfo() versionInfo {
 
 		if len(matches) == 0 {
 			if _, gitCommit, err := ParseBuildInfo(); err == nil {
-				versionInfoCache = versionInfo{GitTag: "0.1.0", GitRevision: "1", GitCommit: gitCommit}
+				versionInfoCache = versionInfo{GitTag: "0.1.0", GitRevCount: "1", GitCommit: gitCommit}
 			} else {
-				versionInfoCache = versionInfo{GitTag: "0.1.0", GitRevision: "1", GitCommit: unknownVersion}
+				versionInfoCache = versionInfo{GitTag: "0.1.0", GitRevCount: "1", GitCommit: unknownVersion}
 			}
 		} else {
-			versionInfoCache = versionInfo{GitTag: matches[1], GitRevision: matches[2], GitCommit: matches[3]}
+			versionInfoCache = versionInfo{GitTag: matches[1], GitRevCount: matches[2], GitCommit: matches[3]}
 		}
 	}
 	return versionInfoCache
@@ -99,15 +99,15 @@ func BuildVersionString(appTitle string) string {
 		"OS":       runtime.GOOS,
 		"Arch":     runtime.GOARCH,
 		"Commit":   GetVersionInfo().GitCommit,
-		"Revision": GetGitRevision(),
+		"Revision": GetGitRevCount(),
 	})
 }
 
-func GetGitRevision() string {
-	if GetVersionInfo().GitRevision == "" {
+func GetGitRevCount() string {
+	if GetVersionInfo().GitRevCount == "" {
 		return unknownRevision
 	}
-	return GetVersionInfo().GitRevision
+	return GetVersionInfo().GitRevCount
 }
 
 func FormatVersion(template string, templateArgs map[string]any) string {
