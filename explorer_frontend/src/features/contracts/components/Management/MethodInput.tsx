@@ -71,7 +71,7 @@ const MethodInput: FC<MethodInputProps> = ({
       ) : (
         <FormControl label={name} caption={type}>
           <Input
-            value={params ? `${params[paramName]}` || "" : ""}
+            value={params?.[paramName] ? String(params[paramName]) : ""}
             onChange={(e) => {
               const value = e.target.value;
               paramsHandler({ functionName: methodName, paramName, value });

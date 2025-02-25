@@ -235,3 +235,5 @@ sample({
     };
   },
 });
+
+$error.reset(compileCodeFx.doneData);
