@@ -18,6 +18,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -131,17 +132,19 @@ func (devnet devnet) generateZeroState(nShards uint32, servers []server) (*execu
 		}
 	}
 	mainKeyPath := devnet.spec.NildCredentialsDir + "/keys.yaml"
-	_, mainPublicKey, err := execution.LoadMainKeys(mainKeyPath)
+	mainPrivateKey, err := execution.LoadMainKeys(mainKeyPath)
+	mainPublicKey := crypto.CompressPubkey(&mainPrivateKey.PublicKey)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 	if err != nil {
 		var mainPrivateKey *ecdsa.PrivateKey
+
 		mainPrivateKey, mainPublicKey, err = nilcrypto.GenerateKeyPair()
 		if err != nil {
 			return nil, err
 		}
-		if err := execution.DumpMainKeys(mainKeyPath, mainPrivateKey, mainPublicKey); err != nil {
+		if err := execution.DumpMainKeys(mainKeyPath, mainPrivateKey); err != nil {
 			return nil, err
 		}
 	}

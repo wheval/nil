@@ -2,7 +2,6 @@ package tests
 
 import (
 	"crypto/ecdsa"
-	"fmt"
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common/hexutil"
@@ -41,22 +40,12 @@ func (s *SuiteModifiersRpc) SetupSuite() {
 	s.abi, err = contracts.GetAbi(contracts.NameTransactionCheck)
 	s.Require().NoError(err)
 
-	zerostateYaml := fmt.Sprintf(`
-contracts:
-- name: SmartAccount
-  address: %s
-  value: 100000000000000000
-  contract: SmartAccount
-  ctorArgs: [%s]
-- name: TransactionCheck
-  address: %s
-  value: 100000000000000000
-  contract: tests/TransactionCheck
-`, s.smartAccountAddr.Hex(), hexutil.Encode(s.smartAccountPublicKey), s.testAddr)
-
-	zeroState, err := execution.ParseZeroStateConfig(zerostateYaml)
-	s.Require().NoError(err)
-	zeroState.MainPublicKey = execution.MainPublicKey
+	zeroState := &execution.ZeroStateConfig{
+		Contracts: []*execution.ContractDescr{
+			{Name: "SmartAccount", Contract: "SmartAccount", Address: s.smartAccountAddr, Value: types.NewValueFromUint64(100000000000000000), CtorArgs: []interface{}{hexutil.Encode(s.smartAccountPublicKey)}},
+			{Name: "TransactionCheck", Contract: "tests/TransactionCheck", Address: s.testAddr, Value: types.NewValueFromUint64(100000000000000000)},
+		},
+	}
 
 	s.Start(&nilservice.Config{
 		NShards:   4,

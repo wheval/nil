@@ -2,7 +2,6 @@ package execution
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
@@ -40,7 +39,7 @@ func (suite *SuiteZeroState) SetupSuite() {
 
 	faucetAddress := defaultZeroStateConfig.GetContractAddress("Faucet")
 	suite.Require().NotNil(faucetAddress)
-	suite.faucetAddr = *faucetAddress
+	suite.faucetAddr = faucetAddress
 
 	suite.faucetABI, err = contracts.GetAbi(contracts.NameFaucet)
 	suite.Require().NoError(err)
@@ -104,7 +103,6 @@ func (suite *SuiteZeroState) TestWithdrawFromFaucet() {
 func TestZerostateFromConfig(t *testing.T) {
 	t.Parallel()
 
-	var configYaml string
 	var state *ExecutionState
 
 	database, err := db.NewBadgerDbInMemory()
@@ -113,21 +111,16 @@ func TestZerostateFromConfig(t *testing.T) {
 	require.NoError(t, err)
 	defer tx.Rollback()
 
-	// Test config params
-	configYaml = `
-config:
-  gasPrice:
-    shards: ["1", "2", "3"]
-`
 	configAccessor, err := config.NewConfigAccessorTx(tx, nil)
 	require.NoError(t, err)
 	state, err = NewExecutionState(tx, 0, StateParams{ConfigAccessor: configAccessor})
 	require.NoError(t, err)
 
-	zeroState, err := ParseZeroStateConfig(configYaml)
-	require.NoError(t, err)
-	zeroState.MainPublicKey = MainPublicKey
-
+	zeroState := &ZeroStateConfig{
+		ConfigParams: ConfigParams{
+			GasPrice: config.ParamGasPrice{Shards: []types.Uint256{*types.NewUint256(1), *types.NewUint256(2), *types.NewUint256(3)}},
+		},
+	}
 	err = state.GenerateZeroState(zeroState)
 	require.NoError(t, err)
 	require.Equal(t, 0, state.GasPrice.Cmp(types.NewValueFromUint64(1)))
@@ -136,9 +129,11 @@ config:
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)
-	zeroState, err = ParseZeroStateConfig(configYaml)
-	require.NoError(t, err)
-	zeroState.MainPublicKey = MainPublicKey
+	zeroState = &ZeroStateConfig{
+		ConfigParams: ConfigParams{
+			GasPrice: config.ParamGasPrice{Shards: []types.Uint256{*types.NewUint256(1), *types.NewUint256(2), *types.NewUint256(3)}},
+		},
+	}
 
 	err = state.GenerateZeroState(zeroState)
 	require.NoError(t, err)
@@ -148,9 +143,11 @@ config:
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)
-	zeroState, err = ParseZeroStateConfig(configYaml)
-	require.NoError(t, err)
-	zeroState.MainPublicKey = MainPublicKey
+	zeroState = &ZeroStateConfig{
+		ConfigParams: ConfigParams{
+			GasPrice: config.ParamGasPrice{Shards: []types.Uint256{*types.NewUint256(1), *types.NewUint256(2), *types.NewUint256(3)}},
+		},
+	}
 
 	err = state.GenerateZeroState(zeroState)
 	require.NoError(t, err)
@@ -158,24 +155,14 @@ config:
 
 	smartAccountAddr := types.ShardAndHexToAddress(types.MainShardId, "0x111111111111111111111111111111111111")
 
-	configYaml = fmt.Sprintf(`
-contracts:
-- name: Faucet
-  value: 87654321
-  contract: Faucet
-- name: MainSmartAccount
-  address: %s
-  value: 12345678
-  contract: SmartAccount
-  ctorArgs: [MainPublicKey]
-`, smartAccountAddr.Hex())
-
 	state, err = NewExecutionState(tx, types.MainShardId, StateParams{ConfigAccessor: configAccessor})
 	require.NoError(t, err)
-	zeroState, err = ParseZeroStateConfig(configYaml)
-	require.NoError(t, err)
-	zeroState.MainPublicKey = MainPublicKey
-
+	zeroState = &ZeroStateConfig{
+		Contracts: []*ContractDescr{
+			{Name: "Faucet", Value: types.NewValueFromUint64(87654321), Contract: "Faucet"},
+			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: smartAccountAddr, Value: types.NewValueFromUint64(12345678), CtorArgs: []any{MainPublicKey}},
+		},
+	}
 	err = state.GenerateZeroState(zeroState)
 	require.NoError(t, err)
 	require.Equal(t, types.DefaultGasPrice, state.GasPrice)
@@ -195,41 +182,29 @@ contracts:
 	require.Equal(t, faucet.Balance, types.NewValueFromUint64(87654321))
 
 	// Test should fail because contract hasn't `code` item
-	configYaml2 := `
-contracts:
-- name: Faucet
-`
 	state, err = NewExecutionState(tx, types.BaseShardId, StateParams{
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)
-	zeroState, err = ParseZeroStateConfig(configYaml2)
-	require.NoError(t, err)
-	zeroState.MainPublicKey = MainPublicKey
-
+	zeroState = &ZeroStateConfig{
+		Contracts: []*ContractDescr{
+			{Name: "Faucet"},
+		},
+	}
 	err = state.GenerateZeroState(zeroState)
 	require.Error(t, err)
 
 	// Test only one contract should deployed in specific shard
-	configYaml3 := fmt.Sprintf(`
-contracts:
-- name: Faucet
-  value: 87654321
-  shard: 1
-  contract: Faucet
-- name: MainSmartAccount
-  address: %s
-  value: 12345678
-  contract: SmartAccount
-  ctorArgs: [MainPublicKey]
-`, smartAccountAddr.Hex())
 	state, err = NewExecutionState(tx, types.BaseShardId, StateParams{
 		ConfigAccessor: config.GetStubAccessor(),
 	})
 	require.NoError(t, err)
-	zeroState, err = ParseZeroStateConfig(configYaml3)
-	require.NoError(t, err)
-	zeroState.MainPublicKey = MainPublicKey
+	zeroState = &ZeroStateConfig{
+		Contracts: []*ContractDescr{
+			{Name: "Faucet", Value: types.NewValueFromUint64(87654321), Contract: "Faucet", Shard: 1},
+			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: smartAccountAddr, Value: types.NewValueFromUint64(12345678), CtorArgs: []any{MainPublicKey}},
+		},
+	}
 
 	err = state.GenerateZeroState(zeroState)
 	require.NoError(t, err)
