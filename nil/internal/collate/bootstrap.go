@@ -59,6 +59,7 @@ func fetchShardSnap(ctx context.Context, nm *network.Manager, peerId network.Pee
 	}
 	defer stream.Close()
 
+	logger.Info().Msgf("Start to fetch data snapshot from %s", peerId)
 	// TODO: Here we need to check signatures of fetched blocks, this would require checking every block in the stream, which can be slow.
 	if err := db.Fetch(ctx, stream); err != nil {
 		logger.Error().Err(err).Msgf("Failed to fetch snapshot from %s", peerId)
@@ -84,6 +85,5 @@ func fetchSnapshot(ctx context.Context, nm *network.Manager, peerAddr *network.A
 		logger.Error().Err(err).Msgf("Failed to connect to %s to fetch snapshot", peerAddr)
 		return err
 	}
-	logger.Info().Msgf("Start to fetch data snapshot from %s", peerAddr)
 	return fetchShardSnap(ctx, nm, peerId, db, logger)
 }
