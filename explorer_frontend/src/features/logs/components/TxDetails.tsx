@@ -16,7 +16,7 @@ const StyledLabel = styled(MonoLabelMedium, {
 
 export const TxDetials: FC<TxDetialsProps> = ({ txHash }) => {
   const [css] = useStyletron();
-  const { data: tx, loading, error } = useRepeatedGetTxByHash(txHash);
+  const { data: tx, loading, error } = useRepeatedGetTxByHash(txHash, 5000);
 
   return (
     <div
@@ -41,7 +41,16 @@ export const TxDetials: FC<TxDetialsProps> = ({ txHash }) => {
           <Spinner />
         </div>
       )}
-      {error && <div>Error</div>}
+      {error && (
+        <div
+          className={css({
+            gridColumn: "1 / 3",
+            color: COLORS.gray400,
+          })}
+        >
+          Error occured while fetching the transaction details
+        </div>
+      )}
       {tx && (
         <>
           <StyledLabel>shard + block height:</StyledLabel>
