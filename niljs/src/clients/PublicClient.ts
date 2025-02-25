@@ -473,18 +473,46 @@ class PublicClient extends BaseClient {
 
     const params: unknown[] = [sendData, blockNumberOrHash];
 
-    const resStr = await this.request<{ feeCredit: Hex; averagePriorityFee: Hex; maxBaseFee: Hex }>(
-      {
-        method: "eth_estimateFee",
-        params,
-      },
-    );
+    const resStr = await this.request<{
+      feeCredit: Hex;
+      averagePriorityFee: Hex;
+      maxBaseFee: Hex;
+    }>({
+      method: "eth_estimateFee",
+      params,
+    });
 
     const res = {
       feeCredit: BigInt(resStr.feeCredit),
       averagePriorityFee: BigInt(resStr.averagePriorityFee),
       maxBaseFee: BigInt(resStr.maxBaseFee),
     };
+
+    return res;
+  }
+
+  /**
+   * Returns the list of shard IDs.
+   * @returns The list of shard IDs.
+   */
+  public async getShardIdList() {
+    const res = await this.request<number[]>({
+      method: "eth_getShardIdList",
+      params: [],
+    });
+
+    return res;
+  }
+
+  /**
+   * Returns the number of shards.
+   * @returns The number of shards.
+   */
+  public async getNumShards() {
+    const res = await this.request<number>({
+      method: "eth_getNumShards",
+      params: [],
+    });
 
     return res;
   }

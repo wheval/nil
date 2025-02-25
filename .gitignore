@@ -76,3 +76,5 @@ node_modules
 
 /docs_ai_backend/.next
 /docs_interactive_tutorials_service/.next
+
+openrpc.json

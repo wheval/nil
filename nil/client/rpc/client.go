@@ -73,6 +73,7 @@ const (
 	Eth_getBalance                       = "eth_getBalance"
 	Eth_getTokens                        = "eth_getTokens" //nolint:gosec
 	Eth_getShardIdList                   = "eth_getShardIdList"
+	Eth_getNumShards                     = "eth_getNumShards"
 	Eth_gasPrice                         = "eth_gasPrice"
 	Eth_chainId                          = "eth_chainId"
 	Debug_getBlockByHash                 = "debug_getBlockByHash"
@@ -665,6 +666,15 @@ func (c *Client) GetShardIdList(ctx context.Context) ([]types.ShardId, error) {
 		return []types.ShardId{}, err
 	}
 	return shardIdList, nil
+}
+
+func (c *Client) GetNumShards(ctx context.Context) (uint64, error) {
+	res, err := c.call(ctx, Eth_getNumShards)
+	if err != nil {
+		return 0, err
+	}
+
+	return toUint64(res)
 }
 
 func (c *Client) DeployContract(

@@ -202,6 +202,10 @@ func (c *DirectClient) GetShardIdList(ctx context.Context) ([]types.ShardId, err
 	return c.ethApi.GetShardIdList(ctx)
 }
 
+func (c *DirectClient) GetNumShards(ctx context.Context) (uint64, error) {
+	return c.ethApi.GetNumShards(ctx)
+}
+
 func (c *DirectClient) DeployContract(
 	ctx context.Context, shardId types.ShardId, smartAccountAddress types.Address, payload types.DeployPayload,
 	value types.Value, fee types.FeePack, pk *ecdsa.PrivateKey,

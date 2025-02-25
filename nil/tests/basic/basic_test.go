@@ -88,6 +88,10 @@ func (s *SuiteRpc) TestRpcBasic() {
 	}
 	s.Require().Equal(shardIdListExp, shardIdListRes)
 
+	numShards, err := s.Client.GetNumShards(s.Context)
+	s.Require().NoError(err)
+	s.Require().Equal(uint64(s.ShardsNum), numShards)
+
 	gasPrice, err := s.Client.GasPrice(s.Context, types.BaseShardId)
 	s.Require().NoError(err)
 	s.Require().Equal(types.DefaultGasPrice, gasPrice)

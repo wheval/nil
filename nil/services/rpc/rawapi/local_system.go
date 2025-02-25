@@ -49,3 +49,11 @@ func (api *LocalShardApi) GetShardIdList(ctx context.Context) ([]types.ShardId, 
 	treeShards.SetRootHash(block.ChildBlocksRootHash)
 	return treeShards.Keys()
 }
+
+func (api *LocalShardApi) GetNumShards(ctx context.Context) (uint64, error) {
+	shards, err := api.GetShardIdList(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(len(shards) + 1), nil
+}

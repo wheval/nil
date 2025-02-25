@@ -11,8 +11,8 @@ import {
 import { useUnit } from "effector-react";
 import type { FC } from "react";
 import { useStyletron } from "styletron-react";
-import { $shardsAmount } from "../../../shards/models/model";
 import { $shardIdIsValid, decrementShardId, incrementShardId } from "../../models/base";
+import { $shardsAmount } from "../../models/shardsAmount";
 
 type ShardIdInputProps = {
   shardId: number | null;

@@ -5,9 +5,8 @@ import { persist } from "effector-storage/local";
 import { debug } from "patronum";
 import type { App } from "../../types";
 import { $rpcUrl, $smartAccount } from "../account-connector/model";
-import { $solidityVersion, compileCodeFx } from "../code/model";
+import { $solidityVersion, compileCodeFx, loadedPlaygroundPage } from "../code/model";
 import { $cometaService } from "../cometa/model";
-import { $shardsAmount } from "../shards/models/model";
 import { getTokenAddressBySymbol } from "../tokens";
 import {
   $activeApp,
@@ -64,6 +63,7 @@ import {
   validateSmartContractAddressFx,
 } from "./models/base";
 import { exportApp, exportAppFx } from "./models/exportApp";
+import { $shardsAmount, getShardsAmountFx } from "./models/shardsAmount";
 
 compileCodeFx.doneData.watch(console.log);
 
@@ -650,4 +650,15 @@ sample({
   source: $activeAppWithState,
   filter: $activeAppWithState.map((app) => !!app && !app.address),
   target: triggerShardIdValidation,
+});
+
+sample({
+  clock: getShardsAmountFx.doneData,
+  target: $shardsAmount,
+});
+
+sample({
+  clock: merge([loadedPlaygroundPage, $rpcUrl.updates]),
+  target: getShardsAmountFx,
+  source: $rpcUrl,
 });

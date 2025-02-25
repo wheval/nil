@@ -247,6 +247,15 @@ type EthAPIRo interface {
 	GetShardIdList(ctx context.Context) ([]types.ShardId, error)
 
 	/*
+		@name GetNumShards
+		@summary Returns the number of shards in the network.
+		@description
+		@tags [Shards]
+		@returns numShards NumShards
+	*/
+	GetNumShards(ctx context.Context) (uint64, error)
+
+	/*
 		@name Call
 		@summary Executes a new transaction call immediately without creating a transaction.
 		@description Implements eth_call.

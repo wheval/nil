@@ -27,6 +27,7 @@ package jsonrpc
 // @component FilterChanges filterChanges array "The array of logs, block headers or pending transactions that have occurred since the last poll of the filter."
 // @component FilterLogs filterLogs array "The array of logs that have been recorded since the last poll of the filter."
 // @component ShardIds shardIds array "The array of shard IDs."
+// @component NumShards numShards integer "The number of shards."
 // @component GasShardId shardId integer "The ID of the shard whose gas price is requested."
 // @component BaseFee baseFee integer "The current base fee the given shard."
 // @component GasPrice gasPrice integer "The current gas price in the given shard."

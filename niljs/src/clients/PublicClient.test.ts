@@ -239,3 +239,43 @@ test("getTokens", async ({ expect }) => {
     params: [addHexPrefix(defaultAddress), "latest"],
   });
 });
+
+test("getShardIdList", async ({ expect }) => {
+  const fn = vi.fn();
+  fn.mockReturnValue([]);
+
+  const client = new PublicClient({
+    transport: new MockTransport(fn),
+    shardId: 1,
+  });
+
+  const shardIdList = await client.getShardIdList();
+
+  expect(shardIdList).toBeDefined();
+  expect(shardIdList).toBeInstanceOf(Array);
+  expect(fn).toHaveBeenCalledOnce();
+  expect(fn).toHaveBeenLastCalledWith({
+    method: "eth_getShardIdList",
+    params: [],
+  });
+});
+
+test("getNumShards", async ({ expect }) => {
+  const fn = vi.fn();
+  fn.mockReturnValue(1);
+
+  const client = new PublicClient({
+    transport: new MockTransport(fn),
+    shardId: 1,
+  });
+
+  const numShards = await client.getNumShards();
+
+  expect(numShards).toBeDefined();
+  expect(numShards).toBe(1);
+  expect(fn).toHaveBeenCalledOnce();
+  expect(fn).toHaveBeenLastCalledWith({
+    method: "eth_getNumShards",
+    params: [],
+  });
+});

@@ -49,6 +49,7 @@ type Client interface {
 	GetBlockTransactionCount(ctx context.Context, shardId types.ShardId, blockId any) (uint64, error)
 	GetBalance(ctx context.Context, address types.Address, blockId any) (types.Value, error)
 	GetShardIdList(ctx context.Context) ([]types.ShardId, error)
+	GetNumShards(ctx context.Context) (uint64, error)
 	GasPrice(ctx context.Context, shardId types.ShardId) (types.Value, error)
 	ChainId(ctx context.Context) (types.ChainId, error)
 
