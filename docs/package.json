@@ -12,7 +12,6 @@
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
     "test": "vitest",
-    "test:useNilD": "USE_NILD=true vitest",
     "generate-cli-docs": "npx tsx nil/scripts/cliRefGenerator.ts",
     "build": "npm run generate-cli-docs && docusaurus build",
     "lint": "biome check .",
