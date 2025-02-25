@@ -3,6 +3,7 @@ package collate
 import (
 	"testing"
 
+	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
@@ -63,7 +64,8 @@ func (s *ProposerTestSuite) TestBlockGas() {
 	to := contracts.CounterAddress(s.T(), s.shardId)
 	m1 := execution.NewSendMoneyTransaction(s.T(), to, 0)
 	m2 := execution.NewSendMoneyTransaction(s.T(), to, 1)
-	pool := &MockTxnPool{Txns: []*types.Transaction{m1, m2}}
+	pool := &MockTxnPool{}
+	pool.Add(m1, m2)
 
 	params := s.newParams()
 
@@ -125,14 +127,13 @@ func (s *ProposerTestSuite) TestCollator() {
 	m2 := execution.NewSendMoneyTransaction(s.T(), to, 1)
 
 	s.Run("SendTokens", func() {
-		pool.Txns = []*types.Transaction{m1, m2}
+		pool.Reset()
+		pool.Add(m1, m2)
 
 		proposal := generateBlock()
 		r1 := s.checkReceipt(shardId, m1)
 		r2 := s.checkReceipt(shardId, m2)
 		s.Equal(pool.Txns, proposal.ExternalTxns)
-
-		pool.Txns = nil
 
 		// Each transaction subtracts its value + actual gas used from the balance.
 		balance = balance.
@@ -172,13 +173,14 @@ func (s *ProposerTestSuite) TestCollator() {
 	})
 
 	s.Run("DoNotProcessDuplicates", func() {
-		pool.Txns = []*types.Transaction{m1, m2}
+		pool.Reset()
+		pool.Add(m1, m2)
 
 		proposal := generateBlock()
 		s.Empty(proposal.ExternalTxns)
 		s.Empty(proposal.InternalTxns)
 		s.Empty(proposal.ForwardTxns)
-		s.Equal(pool.Txns, pool.LastDiscarded)
+		s.Equal([]common.Hash{m1.Hash(), m2.Hash()}, pool.LastDiscarded)
 		s.Equal(txnpool.DuplicateHash, pool.LastReason)
 	})
 
@@ -186,26 +188,27 @@ func (s *ProposerTestSuite) TestCollator() {
 		m := execution.NewDeployTransaction(contracts.CounterDeployPayload(s.T()), shardId, to, 0, types.Value{})
 		m.Flags.ClearBit(types.TransactionFlagInternal)
 		s.Equal(to, m.To)
-		pool.Txns = []*types.Transaction{m}
+		pool.Reset()
+		pool.Add(m)
 
 		generateBlock()
-		pool.Txns = nil
 		s.checkReceipt(shardId, m)
 	})
 
 	s.Run("Execute", func() {
 		m := execution.NewExecutionTransaction(to, to, 0, contracts.NewCounterAddCallData(s.T(), 3))
-		pool.Txns = []*types.Transaction{m}
+		pool.Reset()
+		pool.Add(m)
 
 		generateBlock()
-		pool.Txns = nil
 		s.checkReceipt(shardId, m)
 	})
 
 	s.Run("CheckRefundsSeqno", func() {
 		m01 := execution.NewSendMoneyTransaction(s.T(), to, 2)
 		m02 := execution.NewSendMoneyTransaction(s.T(), to, 3)
-		pool.Txns = []*types.Transaction{m01, m02}
+		pool.Reset()
+		pool.Add(m01, m02)
 
 		// send tokens
 		generateBlock()

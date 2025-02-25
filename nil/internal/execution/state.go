@@ -724,18 +724,29 @@ func (es *ExecutionState) ContractExists(address types.Address) (bool, error) {
 		(storageRoot != common.EmptyHash), nil // non-empty storage
 }
 
-func (es *ExecutionState) AddInTransaction(transaction *types.Transaction) common.Hash {
+func (es *ExecutionState) AddInTransactionWithHash(transaction *types.Transaction, hash common.Hash) {
+	// Refund transactions can be identical (see comment to AddOutTransaction).
+	// Otherwise, adding the same transaction twice is an error in the code.
+	check.PanicIfNot(hash != es.InTransactionHash || transaction.IsRefund())
+
 	// We store a copy of the transaction, because the original transaction will be modified.
 	es.InTransactions = append(es.InTransactions, common.CopyPtr(transaction))
-	es.InTransactionHash = transaction.Hash()
-	es.InTransactionHashes = append(es.InTransactionHashes, es.InTransactionHash)
-	return es.InTransactionHash
+	es.InTransactionHash = hash
+	es.InTransactionHashes = append(es.InTransactionHashes, hash)
+}
+
+func (es *ExecutionState) AddInTransaction(transaction *types.Transaction) common.Hash {
+	hash := transaction.Hash()
+	es.AddInTransactionWithHash(transaction, hash)
+	return hash
 }
 
 func (es *ExecutionState) DropInTransaction() {
+	check.PanicIfNot(len(es.InTransactions) == len(es.InTransactionHashes))
+
 	es.InTransactions = es.InTransactions[:len(es.InTransactions)-1]
 	es.InTransactionHashes = es.InTransactionHashes[:len(es.InTransactionHashes)-1]
-	check.PanicIfNotf(len(es.InTransactions) == len(es.InTransactionHashes), "InTransactions and InTransactionHashes should have the same length")
+
 	if len(es.InTransactionHashes) > 0 {
 		es.InTransactionHash = es.InTransactionHashes[len(es.InTransactions)-1]
 	} else {
@@ -761,9 +772,11 @@ func (es *ExecutionState) updateGasPrice(txn *types.Transaction) error {
 	return nil
 }
 
-func (es *ExecutionState) AppendOutTransactionForTx(txId common.Hash, txn *types.Transaction) {
-	outTxn := &types.OutboundTransaction{Transaction: txn, ForwardKind: types.ForwardKindNone}
-	es.OutTransactions[txId] = append(es.OutTransactions[txId], outTxn)
+func (es *ExecutionState) AppendForwardTransaction(txn *types.Transaction) {
+	// setting all forward txns to the same empty hash preserves ordering
+	parentHash := common.EmptyHash
+	outTxn := &types.OutboundTransaction{Transaction: txn, TxnHash: txn.Hash(), ForwardKind: types.ForwardKindNone}
+	es.OutTransactions[parentHash] = append(es.OutTransactions[parentHash], outTxn)
 }
 
 func (es *ExecutionState) AddOutRequestTransaction(
@@ -837,6 +850,8 @@ func (es *ExecutionState) AddOutTransaction(caller types.Address, payload *types
 	txn.MaxPriorityFeePerGas = es.GetInTransaction().MaxPriorityFeePerGas
 	txn.MaxFeePerGas = es.GetInTransaction().MaxFeePerGas
 
+	txnHash := txn.Hash()
+
 	// In case of bounce transaction, we don't debit token from account
 	// In case of refund transaction, we don't transfer tokens
 	if !txn.IsBounce() && !txn.IsRefund() {
@@ -860,6 +875,7 @@ func (es *ExecutionState) AddOutTransaction(caller types.Address, payload *types
 	}
 
 	logger.Trace().
+		Stringer(logging.FieldTransactionHash, txnHash).
 		Stringer(logging.FieldTransactionFrom, txn.From).
 		Stringer(logging.FieldTransactionTo, txn.To).
 		Msg("Outbound transaction added")
@@ -869,7 +885,7 @@ func (es *ExecutionState) AddOutTransaction(caller types.Address, payload *types
 		index:   len(es.OutTransactions[es.InTransactionHash]),
 	})
 
-	outTxn := &types.OutboundTransaction{Transaction: txn, ForwardKind: payload.ForwardKind}
+	outTxn := &types.OutboundTransaction{Transaction: txn, TxnHash: txnHash, ForwardKind: payload.ForwardKind}
 	es.OutTransactions[es.InTransactionHash] = append(es.OutTransactions[es.InTransactionHash], outTxn)
 
 	return txn, nil
@@ -880,7 +896,7 @@ func (es *ExecutionState) sendBounceTransaction(txn *types.Transaction, execResu
 		return false, nil
 	}
 	if txn.BounceTo == types.EmptyAddress {
-		logger.Debug().Stringer(logging.FieldTransactionHash, txn.Hash()).Msg("Bounce transaction not sent, no bounce address")
+		logger.Debug().Msg("Bounce transaction not sent, no bounce address")
 		return false, nil
 	}
 
@@ -1236,22 +1252,25 @@ func (es *ExecutionState) AddReceipt(execResult *ExecutionResult) {
 	es.Receipts = append(es.Receipts, r)
 }
 
-func GetOutTransactions(es *ExecutionState) []*types.Transaction {
-	res := make([]*types.Transaction, 0, len(es.OutTransactions[common.EmptyHash]))
+func GetOutTransactions(es *ExecutionState) ([]*types.Transaction, []common.Hash) {
+	txns := make([]*types.Transaction, 0, len(es.OutTransactions[common.EmptyHash]))
+	hashes := make([]common.Hash, 0, len(es.OutTransactions[common.EmptyHash]))
 
 	// First, forwarded txns
 	for _, m := range es.OutTransactions[common.EmptyHash] {
-		res = append(res, m.Transaction)
+		txns = append(txns, m.Transaction)
+		hashes = append(hashes, m.TxnHash)
 	}
 
 	// Then, outgoing txns in the order of their parent txns
 	for _, h := range es.InTransactionHashes {
 		for _, m := range es.OutTransactions[h] {
-			res = append(res, m.Transaction)
+			txns = append(txns, m.Transaction)
+			hashes = append(hashes, m.TxnHash)
 		}
 	}
 
-	return res
+	return txns, hashes
 }
 
 func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGenerationResult, error) {
@@ -1286,7 +1305,7 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 		inTxnValues = append(inTxnValues, txn)
 	}
 
-	outTxnValues := GetOutTransactions(es)
+	outTxnValues, outTxnHashes := GetOutTransactions(es)
 	outTxnKeys := make([]types.TransactionIndex, 0, len(es.InTransactions))
 	for i := range outTxnValues {
 		outTxnKeys = append(outTxnKeys, types.TransactionIndex(i))
@@ -1395,7 +1414,9 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 		Block:        block,
 		BlockHash:    block.Hash(es.ShardId),
 		InTxns:       es.InTransactions,
+		InTxnHashes:  es.InTransactionHashes,
 		OutTxns:      outTxnValues,
+		OutTxnHashes: outTxnHashes,
 		ConfigParams: configParams,
 	}, nil
 }
@@ -1405,16 +1426,18 @@ func (es *ExecutionState) Commit(blockId types.BlockNumber, params *types.Consen
 	if err != nil {
 		return nil, err
 	}
-	return blockRes, es.CommitBlock(blockRes.Block, params)
+	return blockRes, es.CommitBlock(blockRes, params)
 }
 
-func (es *ExecutionState) CommitBlock(block *types.Block, params *types.ConsensusParams) error {
+func (es *ExecutionState) CommitBlock(src *BlockGenerationResult, params *types.ConsensusParams) error {
+	block := src.Block
+	blockHash := src.BlockHash
 	if params != nil {
 		block.ConsensusParams = *params
 	}
 
 	if TraceBlocksEnabled {
-		blocksTracer.Trace(es, block)
+		blocksTracer.Trace(es, block, blockHash)
 	}
 
 	for k, v := range es.Errors {
@@ -1423,7 +1446,6 @@ func (es *ExecutionState) CommitBlock(block *types.Block, params *types.Consensu
 		}
 	}
 
-	blockHash := block.Hash(es.ShardId)
 	if err := db.WriteBlock(es.tx, es.ShardId, blockHash, block); err != nil {
 		return err
 	}

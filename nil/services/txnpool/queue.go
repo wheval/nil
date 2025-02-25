@@ -1,5 +1,7 @@
 package txnpool
 
+import "github.com/NilFoundation/nil/nil/internal/types"
+
 type TxnQueue struct {
 	data []*metaTxn
 }
@@ -23,7 +25,7 @@ func (q *TxnQueue) Size() int {
 	return len(q.data)
 }
 
-func (q *TxnQueue) Remove(txn *metaTxn) bool {
+func (q *TxnQueue) Remove(txn *types.TxnWithHash) bool {
 	for i, elem := range q.data {
 		if elem.Seqno == txn.Seqno && elem.From.Equal(txn.From) {
 			q.data = append(q.data[:i], q.data[i+1:]...)

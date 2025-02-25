@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/mpt"
@@ -44,8 +45,8 @@ func (bt *BlocksTracer) Close() error {
 	return bt.file.Close()
 }
 
-func (bt *BlocksTracer) PrintTransaction(txn *types.Transaction) {
-	bt.Printf("hash: %s\n", txn.Hash().Hex())
+func (bt *BlocksTracer) PrintTransaction(txn *types.Transaction, hash common.Hash) {
+	bt.Printf("hash: %s\n", hash.Hex())
 	bt.Printf("flags: %v\n", txn.Flags)
 	bt.Printf("seqno: %d\n", txn.Seqno)
 	bt.Printf("from: %s\n", txn.From.Hex())
@@ -83,7 +84,7 @@ func (bt *BlocksTracer) PrintTransaction(txn *types.Transaction) {
 	}
 }
 
-func (bt *BlocksTracer) Trace(es *ExecutionState, block *types.Block) {
+func (bt *BlocksTracer) Trace(es *ExecutionState, block *types.Block, blockHash common.Hash) {
 	bt.lock.Lock()
 	defer bt.lock.Unlock()
 
@@ -102,7 +103,7 @@ func (bt *BlocksTracer) Trace(es *ExecutionState, block *types.Block) {
 	bt.WithIndent(func(t *BlocksTracer) {
 		bt.Printf("shard: %d\n", es.ShardId)
 		bt.Printf("id: %d\n", block.Id)
-		bt.Printf("hash: %s\n", block.Hash(es.ShardId).Hex())
+		bt.Printf("hash: %s\n", blockHash.Hex())
 		bt.Printf("gas_price: %v\n", es.GasPrice)
 		bt.Printf("contracts_num: %d\n", contractsNum)
 		if len(es.InTransactions) != 0 {
@@ -112,7 +113,8 @@ func (bt *BlocksTracer) Trace(es *ExecutionState, block *types.Block) {
 					bt.Printf("%d:\n", i)
 
 					bt.WithIndent(func(t *BlocksTracer) {
-						bt.PrintTransaction(txn)
+						txnHash := es.InTransactionHashes[i]
+						bt.PrintTransaction(txn, txnHash)
 						bt.Printf("receipt:\n")
 						receipt := es.Receipts[i]
 
@@ -127,7 +129,7 @@ func (bt *BlocksTracer) Trace(es *ExecutionState, block *types.Block) {
 							bt.Printf("address: %s\n", receipt.ContractAddress.Hex())
 						})
 
-						outTransactions, ok := es.OutTransactions[txn.Hash()]
+						outTransactions, ok := es.OutTransactions[txnHash]
 						if ok {
 							bt.Printf("out_transactions:\n")
 
@@ -135,7 +137,7 @@ func (bt *BlocksTracer) Trace(es *ExecutionState, block *types.Block) {
 								for j, outTxn := range outTransactions {
 									bt.Printf("%d:\n", j)
 									bt.WithIndent(func(t *BlocksTracer) {
-										bt.PrintTransaction(outTxn.Transaction)
+										bt.PrintTransaction(outTxn.Transaction, outTxn.TxnHash)
 									})
 								}
 							})

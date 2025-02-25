@@ -191,7 +191,6 @@ func (p *proposer) handleL1Attributes(tx db.RoTx) error {
 	}
 
 	p.logger.Debug().
-		Stringer("hash", txn.Hash()).
 		Stringer("block_num", block.Number).
 		Stringer("base_fee", block.BaseFee).
 		Msg("Add L1 block update transaction")
@@ -237,21 +236,20 @@ func CreateL1BlockUpdateTransaction(header *l1types.Header) (*types.Transaction,
 	return txn, nil
 }
 
-func (p *proposer) handleTransaction(txn *types.Transaction, payer execution.Payer) error {
+func (p *proposer) handleTransaction(txn *types.Transaction, txnHash common.Hash, payer execution.Payer) error {
 	if assert.Enable {
-		txnHash := txn.Hash()
 		defer func() {
 			check.PanicIfNotf(txnHash == txn.Hash(), "Transaction hash changed during execution")
 		}()
 	}
 
-	p.executionState.AddInTransaction(txn)
+	p.executionState.AddInTransactionWithHash(txn, txnHash)
 
 	res := p.executionState.HandleTransaction(p.ctx, txn, payer)
 	if res.FatalError != nil {
 		return res.FatalError
 	} else if res.Failed() {
-		p.logger.Debug().Stringer(logging.FieldTransactionHash, txn.Hash()).
+		p.logger.Debug().Stringer(logging.FieldTransactionHash, txnHash).
 			Err(res.Error).
 			Msg("Transaction execution failed. It doesn't prevent adding it to the block.")
 	}
@@ -267,29 +265,30 @@ func (p *proposer) handleTransactionsFromPool(tx db.RoTx) error {
 
 	sa := execution.NewStateAccessor()
 
-	var duplicates, unverified []*types.Transaction
-	handle := func(txn *types.Transaction) (bool, error) {
-		hash := txn.Hash()
+	var duplicates, unverified []common.Hash
+	handle := func(mt *types.TxnWithHash) (bool, error) {
+		txnHash := mt.Hash()
+		txn := mt.Transaction
 
-		if txnData, err := sa.Access(tx, p.params.ShardId).GetInTransaction().ByHash(hash); err != nil &&
+		if txnData, err := sa.Access(tx, p.params.ShardId).GetInTransaction().ByHash(txnHash); err != nil &&
 			!errors.Is(err, db.ErrKeyNotFound) {
 			return false, err
 		} else if err == nil && txnData.Transaction() != nil {
-			p.logger.Trace().Stringer(logging.FieldTransactionHash, hash).
+			p.logger.Trace().Stringer(logging.FieldTransactionHash, txnHash).
 				Msg("Transaction is already in the blockchain. Dropping...")
 
-			duplicates = append(duplicates, txn)
+			duplicates = append(duplicates, txnHash)
 			return false, nil
 		}
 
 		if res := execution.ValidateExternalTransaction(p.executionState, txn); res.FatalError != nil {
 			return false, res.FatalError
 		} else if res.Failed() {
-			p.logger.Info().Stringer(logging.FieldTransactionHash, hash).
+			p.logger.Info().Stringer(logging.FieldTransactionHash, txnHash).
 				Err(res.Error).Msg("External txn validation failed. Saved failure receipt. Dropping...")
 
-			execution.AddFailureReceipt(hash, txn.To, res)
-			unverified = append(unverified, txn)
+			execution.AddFailureReceipt(txnHash, txn.To, res)
+			unverified = append(unverified, txnHash)
 			return false, nil
 		}
 
@@ -298,7 +297,7 @@ func (p *proposer) handleTransactionsFromPool(tx db.RoTx) error {
 			return false, err
 		}
 
-		if err := p.handleTransaction(txn, execution.NewAccountPayer(acc, txn)); err != nil {
+		if err := p.handleTransaction(txn, txnHash, execution.NewAccountPayer(acc, txn)); err != nil {
 			return false, err
 		}
 
@@ -313,7 +312,7 @@ func (p *proposer) handleTransactionsFromPool(tx db.RoTx) error {
 				break
 			}
 
-			p.proposal.ExternalTxns = append(p.proposal.ExternalTxns, txn)
+			p.proposal.ExternalTxns = append(p.proposal.ExternalTxns, txn.Transaction)
 		}
 	}
 
@@ -395,10 +394,13 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 				}
 
 				if txn.To.ShardId() == p.params.ShardId {
+					txnHash := txn.Hash()
 					if err := execution.ValidateInternalTransaction(txn); err != nil {
-						p.logger.Warn().Err(err).Msg("Invalid internal transaction")
+						p.logger.Warn().Err(err).
+							Stringer(logging.FieldTransactionHash, txnHash).
+							Msg("Invalid internal transaction")
 					} else {
-						if err := p.handleTransaction(txn, execution.NewTransactionPayer(txn, p.executionState)); err != nil {
+						if err := p.handleTransaction(txn, txnHash, execution.NewTransactionPayer(txn, p.executionState)); err != nil {
 							return err
 						}
 

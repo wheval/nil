@@ -36,7 +36,7 @@ func sortBySeqnoLess(a, b *metaTxn) bool {
 func NewBySenderAndSeqno(logger zerolog.Logger) *ByReceiverAndSeqno {
 	return &ByReceiverAndSeqno{
 		tree:       btree.NewG(32, sortBySeqnoLess),
-		search:     &metaTxn{Transaction: &types.Transaction{}},
+		search:     &metaTxn{TxnWithHash: &types.TxnWithHash{Transaction: &types.Transaction{}}},
 		toTxnCount: map[types.Address]int{},
 		logger:     logger,
 	}
@@ -104,7 +104,7 @@ func (b *ByReceiverAndSeqno) has(mt *metaTxn) bool { //nolint:unused
 
 func (b *ByReceiverAndSeqno) logTrace(txn *metaTxn, format string, args ...any) {
 	b.logger.Trace().
-		Stringer(logging.FieldTransactionHash, txn.hash).
+		Stringer(logging.FieldTransactionHash, txn.Hash()).
 		Stringer(logging.FieldTransactionTo, txn.To).
 		Uint64(logging.FieldTransactionSeqno, txn.Seqno.Uint64()).
 		Msgf(format, args...)

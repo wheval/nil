@@ -46,8 +46,10 @@ type BlockGenerator struct {
 type BlockGenerationResult struct {
 	Block        *types.Block
 	BlockHash    common.Hash
-	OutTxns      []*types.Transaction
 	InTxns       []*types.Transaction
+	InTxnHashes  []common.Hash
+	OutTxns      []*types.Transaction
+	OutTxnHashes []common.Hash
 	ConfigParams map[string][]byte
 }
 
@@ -234,8 +236,7 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, gasPrices []t
 	}
 
 	for _, txn := range proposal.ForwardTxns {
-		// setting all to the same empty hash preserves ordering
-		g.executionState.AppendOutTransactionForTx(common.EmptyHash, txn)
+		g.executionState.AppendForwardTransaction(txn)
 	}
 
 	g.executionState.ChildChainBlocks = make(map[types.ShardId]common.Hash, len(proposal.ShardHashes))
@@ -253,13 +254,9 @@ func (g *BlockGenerator) handleTxn(txn *types.Transaction) error {
 		g.counters.ExecTransactions++
 	}
 
-	var txnHash common.Hash
-	if assert.Enable {
-		txnHash = txn.Hash()
-	}
+	txnHash := g.executionState.AddInTransaction(txn)
 
 	var res *ExecutionResult
-	g.executionState.AddInTransaction(txn)
 	if txn.IsInternal() {
 		res = g.handleInternalInTransaction(txn)
 		g.counters.InternalTransactions++
@@ -380,7 +377,7 @@ func (g *BlockGenerator) finalize(blockId types.BlockNumber, params *types.Conse
 }
 
 func (g *BlockGenerator) Finalize(blockRes *BlockGenerationResult, params *types.ConsensusParams) error {
-	if err := g.executionState.CommitBlock(blockRes.Block, params); err != nil {
+	if err := g.executionState.CommitBlock(blockRes, params); err != nil {
 		return err
 	}
 

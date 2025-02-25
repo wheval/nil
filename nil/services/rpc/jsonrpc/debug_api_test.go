@@ -32,39 +32,44 @@ func TestDebugGetBlock(t *testing.T) {
 	defer tx.Rollback()
 
 	txn := types.NewEmptyTransaction()
+	txnHash := txn.Hash()
 	errStr := "test error"
 	inTransactionTree := execution.NewDbTransactionTrie(tx, types.MainShardId)
 	require.NoError(t, inTransactionTree.Update(types.TransactionIndex(0), txn))
-	require.NoError(t, db.WriteError(tx, txn.Hash(), errStr))
+	require.NoError(t, db.WriteError(tx, txnHash, errStr))
 
 	blockWithErrors := &types.Block{
 		BlockData: types.BlockData{
 			Id:                 258,
-			PrevBlock:          common.EmptyHash,
-			SmartContractsRoot: common.EmptyHash,
 			InTransactionsRoot: inTransactionTree.RootHash(),
 		},
+	}
+	b1 := &execution.BlockGenerationResult{
+		Block:       blockWithErrors,
+		BlockHash:   blockWithErrors.Hash(types.MainShardId),
+		InTxns:      []*types.Transaction{txn},
+		InTxnHashes: []common.Hash{txnHash},
 	}
 
 	block := &types.Block{
 		BlockData: types.BlockData{
-			Id:                 259,
-			PrevBlock:          common.EmptyHash,
-			SmartContractsRoot: common.EmptyHash,
+			Id: 259,
 		},
+	}
+	b2 := &execution.BlockGenerationResult{
+		Block:     block,
+		BlockHash: block.Hash(types.MainShardId),
 	}
 
 	var hexBytes []byte
-	for _, b := range []*types.Block{blockWithErrors, block} {
-		hexBytes, err = b.MarshalSSZ()
+	for _, b := range []*execution.BlockGenerationResult{b1, b2} {
+		hexBytes, err = b.Block.MarshalSSZ()
 		require.NoError(t, err)
 
-		hash := b.Hash(types.MainShardId)
-		err = db.WriteBlock(tx, types.MainShardId, hash, b)
+		err = db.WriteBlock(tx, types.MainShardId, b.BlockHash, b.Block)
 		require.NoError(t, err)
 
-		blockResult := &execution.BlockGenerationResult{BlockHash: hash, Block: b}
-		err = execution.PostprocessBlock(tx, types.MainShardId, blockResult)
+		err = execution.PostprocessBlock(tx, types.MainShardId, b)
 		require.NoError(t, err)
 	}
 
@@ -100,7 +105,7 @@ func TestDebugGetBlock(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res3.InTransactions, 1)
 	require.Len(t, res3.Errors, 1)
-	require.Equal(t, errStr, res3.Errors[txn.Hash()])
+	require.Equal(t, errStr, res3.Errors[txnHash])
 
 	// When: Get existing block without additional data
 	res4, err := api.GetBlockByNumber(ctx, types.MainShardId, transport.BlockNumber(blockWithErrors.Id), false)
