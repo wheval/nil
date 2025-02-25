@@ -204,14 +204,6 @@ func (a *Address) Type() string {
 	return "Address"
 }
 
-func PubkeyBytesToAddress(shardId ShardId, pubBytes []byte) Address {
-	raw := make([]byte, ShardIdSize, AddrSize)
-	raw = setShardId(raw, shardId)
-	offset := common.HashSize - AddrSize + ShardIdSize
-	raw = append(raw, common.PoseidonHash(pubBytes).Bytes()[offset:]...)
-	return BytesToAddress(raw)
-}
-
 func createAddress(shardId ShardId, deployPayload []byte) Address {
 	raw := make([]byte, ShardIdSize, AddrSize)
 	raw = setShardId(raw, shardId)
