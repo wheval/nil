@@ -25,7 +25,7 @@ nild run --http-port 8529 --collator-tick-ms=100 >nild.log 2>&1 &
 NILD_PID=$!
 sleep 2
 
-if CI=true npm run test:useNilD; then
+if CI=true npm run test; then
     exit 0
 else
     STATUS=$?

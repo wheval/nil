@@ -63,13 +63,13 @@ file=path/to/test start=START_COMMENT end=END_COMMENT
 Before running tests, launch `nild`, `faucet` and `cometa`. Then:
 
 ```bash
-npm run test:useNilD
+npm run test
 ```
 
 To run an individual test:
 
 ```bash
-npm run test:useNilD path/to/test
+npm run test path/to/test
 ```
 
 ## License
