@@ -156,7 +156,7 @@ sample({
             break;
           }
           case input.type.slice(0, 5) === "bytes": {
-            value = input.name && input.name in args ? !!args[input.name] : "";
+            value = input.name && input.name in args ? args[input.name] : "";
             break;
           }
           case input.type.slice(0, 3) === "int": {
