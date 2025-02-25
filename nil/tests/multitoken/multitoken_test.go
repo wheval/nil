@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
@@ -29,7 +28,6 @@ type SuiteMultiTokenRpc struct {
 	testAddressNoAccess  types.Address
 	abiTest              *abi.ABI
 	abiSmartAccount      *abi.ABI
-	zerostateCfg         string
 }
 
 func (s *SuiteMultiTokenRpc) SetupSuite() {
@@ -49,47 +47,6 @@ func (s *SuiteMultiTokenRpc) SetupSuite() {
 	s.testAddressNoAccess, err = contracts.CalculateAddress(contracts.NameTokensTestNoExternalAccess, 1, nil)
 	s.Require().NoError(err)
 
-	zerostateTmpl := `
-contracts:
-- name: TestSmartAccountShard2
-  address: {{ .TestAddress1 }}
-  value: 100000000000000
-  contract: SmartAccount
-  ctorArgs: [{{ .MainPublicKey }}]
-- name: TestSmartAccountShard3
-  address: {{ .TestAddress2 }}
-  value: 100000000000000
-  contract: SmartAccount
-  ctorArgs: [{{ .MainPublicKey }}]
-- name: TestSmartAccountShard3a
-  address: {{ .TestAddress3 }}
-  value: 100000000000000
-  contract: SmartAccount
-  ctorArgs: [{{ .MainPublicKey }}]
-- name: TokensTest1_0
-  address: {{ .TokensTestAddress1_0 }}
-  value: 100000000000000
-  contract: tests/TokensTest
-- name: TokensTest1_1
-  address: {{ .TokensTestAddress1_1 }}
-  value: 100000000000000
-  contract: tests/TokensTest
-- name: TokensTestNoAccess
-  address: {{ .TokensTestNoAccess }}
-  value: 100000000000000
-  contract: tests/TokensTestNoExternalAccess
-`
-	s.zerostateCfg, err = common.ParseTemplate(zerostateTmpl, map[string]interface{}{
-		"MainPublicKey":        hexutil.Encode(execution.MainPublicKey),
-		"TestAddress1":         s.smartAccountAddress1.Hex(),
-		"TestAddress2":         s.smartAccountAddress2.Hex(),
-		"TestAddress3":         s.smartAccountAddress3.Hex(),
-		"TokensTestAddress1_0": s.testAddress1_0.Hex(),
-		"TokensTestAddress1_1": s.testAddress1_1.Hex(),
-		"TokensTestNoAccess":   s.testAddressNoAccess.Hex(),
-	})
-	s.Require().NoError(err)
-
 	s.abiSmartAccount, err = contracts.GetAbi("SmartAccount")
 	s.Require().NoError(err)
 
@@ -98,15 +55,23 @@ contracts:
 }
 
 func (s *SuiteMultiTokenRpc) SetupTest() {
-	var err error
-	zeroState, err := execution.ParseZeroStateConfig(s.zerostateCfg)
+	smartAccountValue, err := types.NewValueFromDecimal("100000000000000")
 	s.Require().NoError(err)
-	zeroState.MainPublicKey = execution.MainPublicKey
+	zerostateCfg := &execution.ZeroStateConfig{
+		Contracts: []*execution.ContractDescr{
+			{Name: "TestSmartAccountShard2", Contract: "SmartAccount", Address: s.smartAccountAddress1, Value: smartAccountValue, CtorArgs: []any{execution.MainPublicKey}},
+			{Name: "TestSmartAccountShard3", Contract: "SmartAccount", Address: s.smartAccountAddress2, Value: smartAccountValue, CtorArgs: []any{execution.MainPublicKey}},
+			{Name: "TestSmartAccountShard3a", Contract: "SmartAccount", Address: s.smartAccountAddress3, Value: smartAccountValue, CtorArgs: []any{execution.MainPublicKey}},
+			{Name: "TokensTest1_0", Contract: contracts.NameTokensTest, Address: s.testAddress1_0, Value: smartAccountValue},
+			{Name: "TokensTest1_1", Contract: contracts.NameTokensTest, Address: s.testAddress1_1, Value: smartAccountValue},
+			{Name: "TokensTestNoAccess", Contract: contracts.NameTokensTestNoExternalAccess, Address: s.testAddressNoAccess, Value: smartAccountValue},
+		},
+	}
 
 	s.Start(&nilservice.Config{
 		NShards:   s.ShardsNum,
 		HttpUrl:   rpc.GetSockPath(s.T()),
-		ZeroState: zeroState,
+		ZeroState: zerostateCfg,
 		RunMode:   nilservice.CollatorsOnlyRunMode,
 	})
 }
@@ -529,7 +494,7 @@ func (s *SuiteMultiTokenRpc) TestBounce() {
 	// Check that nothing credited tp destination account
 	tokens, err = s.Client.GetTokens(s.Context, s.testAddress1_0, "latest")
 	s.Require().NoError(err)
-	s.Require().Equal(types.NewValueFromUint64(0), tokens[*tokenSmartAccount1.id])
+	s.Require().Equal(types.Value0, tokens[*tokenSmartAccount1.id])
 
 	// Check that token wasn't changed
 	tokens, err = s.Client.GetTokens(s.Context, s.smartAccountAddress1, "latest")

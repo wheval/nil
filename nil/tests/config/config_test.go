@@ -98,18 +98,17 @@ func (s *SuiteConfigParams) TestConfigReadWriteGasPrice() {
 		Contracts: []*execution.ContractDescr{
 			{
 				Name:     "TestConfig",
-				Address:  &s.testAddressMain,
+				Address:  s.testAddressMain,
 				Value:    types.GasToValue(10_000_000_000),
 				Contract: contracts.NameConfigTest,
 			},
 			{
 				Name:     "TestConfig",
-				Address:  &s.testAddress,
+				Address:  s.testAddress,
 				Value:    types.GasToValue(10_000_000_000),
 				Contract: contracts.NameConfigTest,
 			},
 		},
-		MainPublicKey: execution.MainPublicKey,
 	}
 
 	// Manually set gas price for all shards. It is necessary because the initial prices are set only during the first

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -17,8 +16,7 @@ import (
 type SuiteRegression struct {
 	tests.RpcSuite
 
-	zerostateCfg string
-	testAddress  types.Address
+	testAddress types.Address
 }
 
 func (s *SuiteRegression) SetupSuite() {
@@ -27,37 +25,23 @@ func (s *SuiteRegression) SetupSuite() {
 	var err error
 	s.testAddress, err = contracts.CalculateAddress(contracts.NameTest, 1, []byte{1})
 	s.Require().NoError(err)
-
-	zerostateTmpl := `
-contracts:
-- name: MainSmartAccount
-  address: {{ .MainSmartAccountAddress }}
-  value: 10000000000000000000
-  contract: SmartAccount
-  ctorArgs: [{{ .MainPublicKey }}]
-- name: Test
-  address: {{ .TestAddress }}
-  value: 100000000000000
-  contract: tests/Test
-`
-	s.zerostateCfg, err = common.ParseTemplate(zerostateTmpl, map[string]interface{}{
-		"MainPublicKey":           hexutil.Encode(execution.MainPublicKey),
-		"MainSmartAccountAddress": types.MainSmartAccountAddress.Hex(),
-		"TestAddress":             s.testAddress.Hex(),
-	})
-	s.Require().NoError(err)
 }
 
 func (s *SuiteRegression) SetupTest() {
-	zeroStateConfig, err := execution.ParseZeroStateConfig(s.zerostateCfg)
+	smartAccountValue, err := types.NewValueFromDecimal("10000000000000000000")
 	s.Require().NoError(err)
-	zeroStateConfig.MainPublicKey = execution.MainPublicKey
+	zeroState := &execution.ZeroStateConfig{
+		Contracts: []*execution.ContractDescr{
+			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: types.MainSmartAccountAddress, Value: smartAccountValue, CtorArgs: []any{execution.MainPublicKey}},
+			{Name: "Test", Contract: "tests/Test", Address: s.testAddress, Value: types.NewValueFromUint64(100000000000000)},
+		},
+	}
 
 	s.Start(&nilservice.Config{
 		NShards:   s.ShardsNum,
 		HttpUrl:   rpc.GetSockPath(s.T()),
 		RunMode:   nilservice.CollatorsOnlyRunMode,
-		ZeroState: zeroStateConfig,
+		ZeroState: zeroState,
 	})
 	tests.WaitShardTick(s.T(), s.Context, s.Client, types.MainShardId)
 	tests.WaitShardTick(s.T(), s.Context, s.Client, types.BaseShardId)

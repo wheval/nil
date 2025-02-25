@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -21,7 +20,6 @@ type SuiteDeployment struct {
 	addressDeployer types.Address
 	abiDeployer     *abi.ABI
 	abiDeployee     *abi.ABI
-	zerostateCfg    string
 }
 
 func (s *SuiteDeployment) SetupSuite() {
@@ -29,25 +27,6 @@ func (s *SuiteDeployment) SetupSuite() {
 
 	var err error
 	s.addressDeployer, err = contracts.CalculateAddress(contracts.NameDeployer, 1, []byte{1})
-	s.Require().NoError(err)
-
-	zerostateTmpl := `
-contracts:
-- name: MainSmartAccount
-  address: {{ .SmartAccountAddress }}
-  value: 100000000000000
-  contract: SmartAccount
-  ctorArgs: [{{ .MainPublicKey }}]
-- name: Deployer
-  address: {{ .DeployerAddress }}
-  value: 100000000000000
-  contract: tests/Deployer
-`
-	s.zerostateCfg, err = common.ParseTemplate(zerostateTmpl, map[string]any{
-		"SmartAccountAddress": types.MainSmartAccountAddress.Hex(),
-		"MainPublicKey":       hexutil.Encode(execution.MainPublicKey),
-		"DeployerAddress":     s.addressDeployer.Hex(),
-	})
 	s.Require().NoError(err)
 
 	s.abiDeployer, err = contracts.GetAbi(contracts.NameDeployer)
@@ -58,10 +37,15 @@ contracts:
 }
 
 func (s *SuiteDeployment) SetupTest() {
-	var err error
-	zeroState, err := execution.ParseZeroStateConfig(s.zerostateCfg)
+	smartAccountValue, err := types.NewValueFromDecimal("100000000000000")
 	s.Require().NoError(err)
-	zeroState.MainPublicKey = execution.MainPublicKey
+
+	zeroState := &execution.ZeroStateConfig{
+		Contracts: []*execution.ContractDescr{
+			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: types.MainSmartAccountAddress, Value: smartAccountValue, CtorArgs: []any{execution.MainPublicKey}},
+			{Name: "Deployer", Contract: "tests/Deployer", Address: s.addressDeployer, Value: smartAccountValue},
+		},
+	}
 
 	s.Start(&nilservice.Config{
 		NShards:              s.ShardsNum,

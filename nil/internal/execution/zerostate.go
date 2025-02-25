@@ -10,19 +10,18 @@ import (
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
-	nilcrypto "github.com/NilFoundation/nil/nil/internal/crypto"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/yaml.v3"
 )
 
 type ContractDescr struct {
-	Name     string         `yaml:"name"`
-	Address  *types.Address `yaml:"address,omitempty"`
-	Value    types.Value    `yaml:"value"`
-	Shard    types.ShardId  `yaml:"shard,omitempty"`
-	Contract string         `yaml:"contract"`
-	CtorArgs []any          `yaml:"ctorArgs,omitempty"`
+	Name     string        `yaml:"name"`
+	Address  types.Address `yaml:"address,omitempty"`
+	Value    types.Value   `yaml:"value"`
+	Shard    types.ShardId `yaml:"shard,omitempty"`
+	Contract string        `yaml:"contract"`
+	CtorArgs []any         `yaml:"ctorArgs,omitempty"`
 }
 
 type MainKeys struct {
@@ -36,72 +35,31 @@ type ConfigParams struct {
 }
 
 type ZeroStateConfig struct {
-	ConfigParams  ConfigParams     `yaml:"config,omitempty"`
-	Contracts     []*ContractDescr `yaml:"contracts"`
-	MainPublicKey hexutil.Bytes    `yaml:"mainPublicKey"`
+	ConfigParams ConfigParams     `yaml:"config,omitempty"`
+	Contracts    []*ContractDescr `yaml:"contracts"`
 }
 
 func CreateDefaultZeroStateConfig(mainPublicKey []byte) (*ZeroStateConfig, error) {
-	zerostate := `
-contracts:
-- name: MainSmartAccount
-  address: {{ .MainSmartAccountAddress }}
-  value: 10000000000000000000000
-  contract: SmartAccount
-  ctorArgs: [{{ .MainPublicKey }}]
-- name: Faucet
-  address: {{ .FaucetAddress }}
-  value: 20000000000000000000000
-  contract: Faucet
-- name: EthFaucet
-  address: {{ .EthFaucetAddress }}
-  value: 100000000000000
-  contract: FaucetToken
-- name: UsdtFaucet
-  address: {{ .UsdtFaucetAddress }}
-  value: 100000000000000
-  contract: FaucetToken
-- name: BtcFaucet
-  address: {{ .BtcFaucetAddress }}
-  value: 100000000000000
-  contract: FaucetToken
-- name: UsdcFaucet
-  address: {{ .UsdcFaucetAddress }}
-  value: 100000000000000
-  contract: FaucetToken
-- name: L1BlockInfo
-  address: {{ .L1BlockInfoAddress }}
-  value: 0
-  contract: system/L1BlockInfo
-`
-	if mainPublicKey == nil {
-		var err error
-		_, mainPublicKey, err = nilcrypto.GenerateKeyPair()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	res, err := common.ParseTemplate(zerostate, map[string]interface{}{
-		"MainSmartAccountAddress": types.MainSmartAccountAddress.Hex(),
-		"L1BlockInfoAddress":      types.L1BlockInfoAddress.Hex(),
-		"MainPublicKey":           hexutil.Encode(mainPublicKey),
-		"FaucetAddress":           types.FaucetAddress.Hex(),
-		"EthFaucetAddress":        types.EthFaucetAddress.Hex(),
-		"UsdtFaucetAddress":       types.UsdtFaucetAddress.Hex(),
-		"BtcFaucetAddress":        types.BtcFaucetAddress.Hex(),
-		"UsdcFaucetAddress":       types.UsdcFaucetAddress.Hex(),
-	})
+	smartAccountValue, err := types.NewValueFromDecimal("10000000000000000000000")
 	if err != nil {
 		return nil, err
 	}
-
-	zeroStateConfig, err := ParseZeroStateConfig(res)
+	faucetValue := smartAccountValue.Mul(types.NewValueFromUint64(uint64(2)))
+	tokenValue, err := types.NewValueFromDecimal("100000000000000")
 	if err != nil {
 		return nil, err
 	}
-	zeroStateConfig.MainPublicKey = mainPublicKey
-
+	zeroStateConfig := &ZeroStateConfig{
+		Contracts: []*ContractDescr{
+			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: types.MainSmartAccountAddress, Value: smartAccountValue, CtorArgs: []any{mainPublicKey}},
+			{Name: "Faucet", Contract: "Faucet", Address: types.FaucetAddress, Value: faucetValue},
+			{Name: "EthFaucet", Contract: "FaucetToken", Address: types.EthFaucetAddress, Value: tokenValue},
+			{Name: "UsdtFaucet", Contract: "FaucetToken", Address: types.UsdtFaucetAddress, Value: tokenValue},
+			{Name: "BtcFaucet", Contract: "FaucetToken", Address: types.BtcFaucetAddress, Value: tokenValue},
+			{Name: "UsdcFaucet", Contract: "FaucetToken", Address: types.UsdcFaucetAddress, Value: tokenValue},
+			{Name: "L1BlockInfo", Contract: "system/L1BlockInfo", Address: types.L1BlockInfoAddress, Value: types.Value0},
+		},
+	}
 	return zeroStateConfig, nil
 }
 
@@ -109,7 +67,8 @@ func (cfg *ZeroStateConfig) GetValidators() []config.ListValidators {
 	return cfg.ConfigParams.Validators.Validators
 }
 
-func DumpMainKeys(fname string, mainPrivateKey *ecdsa.PrivateKey, mainPublicKey []byte) error {
+func DumpMainKeys(fname string, mainPrivateKey *ecdsa.PrivateKey) error {
+	mainPublicKey := crypto.CompressPubkey(&mainPrivateKey.PublicKey)
 	keys := MainKeys{crypto.FromECDSA(mainPrivateKey), mainPublicKey}
 
 	data, err := yaml.Marshal(&keys)
@@ -127,21 +86,21 @@ func DumpMainKeys(fname string, mainPrivateKey *ecdsa.PrivateKey, mainPublicKey 
 	return err
 }
 
-func LoadMainKeys(fname string) (*ecdsa.PrivateKey, []byte, error) {
+func LoadMainKeys(fname string) (*ecdsa.PrivateKey, error) {
 	var keys MainKeys
 
 	data, err := os.ReadFile(fname)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if err := yaml.Unmarshal(data, &keys); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	mainPrivateKey, err := crypto.ToECDSA(keys.MainPrivateKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return mainPrivateKey, keys.MainPublicKey, err
+	return mainPrivateKey, err
 }
 
 func (c *ZeroStateConfig) FindContractByName(name string) *ContractDescr {
@@ -153,18 +112,12 @@ func (c *ZeroStateConfig) FindContractByName(name string) *ContractDescr {
 	return nil
 }
 
-func (c *ZeroStateConfig) GetContractAddress(name string) *types.Address {
+func (c *ZeroStateConfig) GetContractAddress(name string) types.Address {
 	contract := c.FindContractByName(name)
 	if contract != nil {
 		return contract.Address
 	}
-	return nil
-}
-
-func ParseZeroStateConfig(configYaml string) (*ZeroStateConfig, error) {
-	var config ZeroStateConfig
-	err := yaml.Unmarshal([]byte(configYaml), &config)
-	return &config, err
+	return types.EmptyAddress
 }
 
 func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error {
@@ -196,8 +149,8 @@ func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error 
 			return err
 		}
 		var addr types.Address
-		if contract.Address != nil {
-			addr = *contract.Address
+		if contract.Address != types.EmptyAddress {
+			addr = contract.Address
 		} else {
 			addr = types.CreateAddress(contract.Shard, types.BuildDeployPayload(code, common.EmptyHash))
 		}
@@ -216,8 +169,6 @@ func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error 
 			switch arg := arg.(type) {
 			case string:
 				switch {
-				case arg == "MainPublicKey":
-					args = append(args, []byte(stateConfig.MainPublicKey))
 				case arg[:2] == "0x":
 					args = append(args, hexutil.FromHex(arg))
 				default:

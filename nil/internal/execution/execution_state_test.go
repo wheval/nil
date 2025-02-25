@@ -644,17 +644,11 @@ func BenchmarkBlockGeneration(b *testing.B) {
 	address, err := contracts.CalculateAddress(contracts.NameCounter, 1, nil)
 	require.NoError(b, err)
 
-	zerostateCfg := fmt.Sprintf(`
-contracts:
-- name: Counter
-  address: %s
-  value: 10000000
-  contract: tests/Counter
-`, address.Hex())
-
-	zeroState, err := ParseZeroStateConfig(zerostateCfg)
-	require.NoError(b, err)
-	zeroState.MainPublicKey = MainPublicKey
+	zeroState := &ZeroStateConfig{
+		Contracts: []*ContractDescr{
+			{Name: "Counter", Contract: "tests/Counter", Address: address, Value: types.NewValueFromUint64(10000000)},
+		},
+	}
 
 	params := NewBlockGeneratorParams(1, 2)
 

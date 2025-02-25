@@ -7,7 +7,6 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
-	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -25,7 +24,6 @@ type SuiteCometa struct {
 	tests.RpcSuite
 	cometaClient cometa.Client
 	cometaCfg    cometa.Config
-	zerostateCfg *execution.ZeroStateConfig
 	testAddress  types.Address
 }
 
@@ -45,28 +43,6 @@ func (s *SuiteCometa) SetupSuite() {
 
 	s.testAddress, err = contracts.CalculateAddress(contracts.NameTest, 1, []byte{1})
 	s.Require().NoError(err)
-
-	zerostateTmpl := `
-contracts:
-- name: MainSmartAccount
-  address: {{ .SmartAccountAddress }}
-  value: 1000000000000000000000
-  contract: SmartAccount
-  ctorArgs: [{{ .MainPublicKey }}]
-- name: Test
-  address: {{ .TestAddress }}
-  value: 100000000
-  contract: tests/Test
-`
-	res, err := common.ParseTemplate(zerostateTmpl, map[string]any{
-		"SmartAccountAddress": types.MainSmartAccountAddress.Hex(),
-		"MainPublicKey":       hexutil.Encode(execution.MainPublicKey),
-		"TestAddress":         s.testAddress.Hex(),
-	})
-	s.Require().NoError(err)
-	s.zerostateCfg, err = execution.ParseZeroStateConfig(res)
-	check.PanicIfErr(err)
-	s.zerostateCfg.MainPublicKey = execution.MainPublicKey
 }
 
 func (s *SuiteCometaClickhouse) SetupSuite() {
@@ -120,13 +96,21 @@ func (s *SuiteCometaBadger) SetupSuite() {
 }
 
 func (s *SuiteCometa) SetupTest() {
+	mainSmartAccountValue, err := types.NewValueFromDecimal("1000000000000000000000")
+	s.Require().NoError(err)
+	zerostateCfg := &execution.ZeroStateConfig{
+		Contracts: []*execution.ContractDescr{
+			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: types.MainSmartAccountAddress, Value: mainSmartAccountValue, CtorArgs: []any{execution.MainPublicKey}},
+			{Name: "Tests", Contract: "tests/Test", Address: s.testAddress, Value: types.NewValueFromUint64(100000000)},
+		},
+	}
 	s.cometaCfg.DbPath = s.T().TempDir() + "/cometa.db"
 	s.Start(&nilservice.Config{
 		NShards:              2,
 		CollatorTickPeriodMs: 200,
 		HttpUrl:              rpc.GetSockPath(s.T()),
 		Cometa:               &s.cometaCfg,
-		ZeroState:            s.zerostateCfg,
+		ZeroState:            zerostateCfg,
 		DisableConsensus:     true,
 	})
 	s.cometaClient = *cometa.NewClient(s.Endpoint)

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -27,7 +26,6 @@ type SuiteAsyncAwait struct {
 	counterAddress1 types.Address
 	abiTest         *abi.ABI
 	abiCounter      *abi.ABI
-	zerostateCfg    string
 	accounts        []types.Address
 }
 
@@ -54,46 +52,20 @@ func (s *SuiteAsyncAwait) SetupSuite() {
 	s.abiCounter, err = contracts.GetAbi(contracts.NameCounter)
 	s.Require().NoError(err)
 
-	zerostateTmpl := `
-contracts:
-- name: MainSmartAccount
-  address: {{ .MainSmartAccountAddress }}
-  value: 100000000000000
-  contract: SmartAccount
-  ctorArgs: [{{ .MainPublicKey }}]
-- name: Test0
-  address: {{ .TestAddress0 }}
-  value: 100000000000000
-  contract: tests/RequestResponseTest
-- name: Test1
-  address: {{ .TestAddress1 }}
-  value: 0
-  contract: tests/RequestResponseTest
-- name: Counter0
-  address: {{ .CounterAddress0 }}
-  value: 100000000000000
-  contract: tests/Counter
-- name: Counter1
-  address: {{ .CounterAddress1 }}
-  value: 100000000000000
-  contract: tests/Counter
-`
-	s.zerostateCfg, err = common.ParseTemplate(zerostateTmpl, map[string]interface{}{
-		"MainPublicKey":           hexutil.Encode(execution.MainPublicKey),
-		"MainSmartAccountAddress": types.MainSmartAccountAddress.Hex(),
-		"TestAddress0":            s.testAddress0.Hex(),
-		"TestAddress1":            s.testAddress1.Hex(),
-		"CounterAddress0":         s.counterAddress0.Hex(),
-		"CounterAddress1":         s.counterAddress1.Hex(),
-	})
-	s.Require().NoError(err)
-
 	nShards := uint32(3)
 	port := 10425
 
-	zeroState, err := execution.ParseZeroStateConfig(s.zerostateCfg)
+	smartAccountValue, err := types.NewValueFromDecimal("100000000000000")
 	s.Require().NoError(err)
-	zeroState.MainPublicKey = execution.MainPublicKey
+	zeroState := &execution.ZeroStateConfig{
+		Contracts: []*execution.ContractDescr{
+			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: types.MainSmartAccountAddress, Value: smartAccountValue, CtorArgs: []any{execution.MainPublicKey}},
+			{Name: "Test0", Contract: "tests/RequestResponseTest", Address: s.testAddress0, Value: smartAccountValue},
+			{Name: "Test1", Contract: "tests/RequestResponseTest", Address: s.testAddress1, Value: types.Value0},
+			{Name: "Counter0", Contract: "tests/Counter", Address: s.counterAddress0, Value: smartAccountValue},
+			{Name: "Counter1", Contract: "tests/Counter", Address: s.counterAddress1, Value: smartAccountValue},
+		},
+	}
 
 	const disableConsensus = true
 	s.Start(&nilservice.Config{

@@ -5,8 +5,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -52,49 +50,23 @@ func (s *SuiteEconomy) SetupSuite() {
 		s.testAddress4:        "test4",
 	}
 
-	zerostateTmpl := `
-contracts:
-- name: MainSmartAccount
-  address: {{ .SmartAccountAddress }}
-  value: 100000000000000000000
-  contract: SmartAccount
-  ctorArgs: [{{ .MainPublicKey }}]
-- name: Test1
-  address: {{ .TestAddress1 }}
-  value: 100000000000000000000
-  contract: tests/Test
-- name: Test2
-  address: {{ .TestAddress2 }}
-  value: 0
-  contract: tests/Test
-- name: Test3
-  address: {{ .TestAddress3 }}
-  value: 0
-  contract: tests/Test
-- name: Test4
-  address: {{ .TestAddress4 }}
-  value: 0
-  contract: tests/Test
-`
-	zerostateCfg, err := common.ParseTemplate(zerostateTmpl, map[string]any{
-		"SmartAccountAddress": s.smartAccountAddress.Hex(),
-		"MainPublicKey":       hexutil.Encode(execution.MainPublicKey),
-		"TestAddress1":        s.testAddress1.Hex(),
-		"TestAddress2":        s.testAddress2.Hex(),
-		"TestAddress3":        s.testAddress3.Hex(),
-		"TestAddress4":        s.testAddress4.Hex(),
-	})
-	s.Require().NoError(err)
-
 	s.abiSmartAccount, err = contracts.GetAbi("SmartAccount")
 	s.Require().NoError(err)
 
 	s.abiTest, err = contracts.GetAbi(contracts.NameTest)
 	s.Require().NoError(err)
 
-	zeroState, err := execution.ParseZeroStateConfig(zerostateCfg)
+	smartAccountValue, err := types.NewValueFromDecimal("100000000000000000000")
 	s.Require().NoError(err)
-	zeroState.MainPublicKey = execution.MainPublicKey
+	zeroState := &execution.ZeroStateConfig{
+		Contracts: []*execution.ContractDescr{
+			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: s.smartAccountAddress, Value: smartAccountValue, CtorArgs: []any{execution.MainPublicKey}},
+			{Name: "Test1", Contract: "tests/Test", Address: s.testAddress1, Value: smartAccountValue},
+			{Name: "Test2", Contract: "tests/Test", Address: s.testAddress2, Value: types.Value0},
+			{Name: "Test3", Contract: "tests/Test", Address: s.testAddress3, Value: types.Value0},
+			{Name: "Test4", Contract: "tests/Test", Address: s.testAddress4, Value: types.Value0},
+		},
+	}
 
 	s.Start(&nilservice.Config{
 		NShards:              s.ShardsNum,
@@ -151,7 +123,7 @@ func (s *SuiteEconomy) TestSeparateGasAndValue() {
 	s.Require().NoError(err)
 
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1))
@@ -213,7 +185,7 @@ func (s *SuiteEconomy) TestSeparateGasAndValue() {
 	s.Require().True(info[s.smartAccountAddress].IsSuccess())
 	s.Require().True(info[s.testAddress1].IsSuccess())
 	s.Require().False(info[s.testAddress2].IsSuccess())
-	s.Require().Zero(info[s.testAddress1].RefundReceived.Cmp(types.NewValueFromUint64(0)))
+	s.Require().Zero(info[s.testAddress1].RefundReceived.Cmp(types.Value0))
 	s.Require().Positive(info[s.smartAccountAddress].RefundReceived.Cmp(types.NewValueFromUint64(1_000_000)))
 	s.checkBalance(info, initialBalance)
 }
@@ -261,7 +233,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
@@ -278,7 +250,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
@@ -295,7 +267,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
@@ -319,7 +291,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3))
@@ -339,7 +311,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		types.NewFeePackFromGas(300_000), types.NewValueFromUint64(0), nil)
+		types.NewFeePackFromGas(300_000), types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
@@ -365,7 +337,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		types.NewFeePackFromGas(400_000), types.NewValueFromUint64(0), nil)
+		types.NewFeePackFromGas(400_000), types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3))
@@ -397,7 +369,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		types.NewFeePackFromGas(400_000), types.NewValueFromUint64(0), nil)
+		types.NewFeePackFromGas(400_000), types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
@@ -432,7 +404,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
@@ -467,7 +439,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().False(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
@@ -494,7 +466,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().False(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1))
@@ -526,7 +498,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
@@ -558,7 +530,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().True(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3))
@@ -608,7 +580,7 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 	})
 	data = s.AbiPack(s.abiTest, "testForwarding", args)
 	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.NewValueFromUint64(0), nil)
+		feePack, types.Value0, nil)
 	info = s.AnalyzeReceipt(receipt, s.namesMap)
 	s.Require().False(info.AllSuccess())
 	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1))

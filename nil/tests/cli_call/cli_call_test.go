@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -21,7 +20,6 @@ type SuiteCliTestCall struct {
 
 	client      client.Client
 	endpoint    string
-	zeroState   *execution.ZeroStateConfig
 	testAddress types.Address
 	cfgPath     string
 }
@@ -33,25 +31,17 @@ func (s *SuiteCliTestCall) SetupSuite() {
 
 	s.testAddress, err = contracts.CalculateAddress(contracts.NameTest, 1, []byte{1})
 	s.Require().NoError(err)
-
-	zerostateCfg := fmt.Sprintf(`
-contracts:
-- name: Test
-  address: %s
-  value: 100000000000000
-  contract: tests/Test
-`, s.testAddress.Hex())
-
-	s.zeroState, err = execution.ParseZeroStateConfig(zerostateCfg)
-	s.Require().NoError(err)
-	s.zeroState.MainPublicKey = execution.MainPublicKey
 }
 
 func (s *SuiteCliTestCall) SetupTest() {
+	zeroState := &execution.ZeroStateConfig{
+		Contracts: []*execution.ContractDescr{{Name: "Test", Contract: "tests/Test", Address: s.testAddress, Value: types.NewValueFromUint64(100000000000000)}},
+	}
+
 	s.Start(&nilservice.Config{
 		NShards:              2,
 		CollatorTickPeriodMs: 200,
-		ZeroState:            s.zeroState,
+		ZeroState:            zeroState,
 	}, 10525)
 
 	s.client, s.endpoint = s.StartRPCNode(tests.WithDhtBootstrapByValidators, nil)

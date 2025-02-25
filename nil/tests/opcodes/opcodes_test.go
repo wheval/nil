@@ -4,8 +4,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -34,35 +32,13 @@ func (s *SuitOpcodes) SetupSuite() {
 	s.smartAccountAddress1 = contracts.SmartAccountAddress(s.T(), 1, nil, execution.MainPublicKey)
 	s.smartAccountAddress2 = contracts.SmartAccountAddress(s.T(), 2, nil, execution.MainPublicKey)
 
-	zerostateTmpl := `
-contracts:
-- name: TestSenderShard1
-  address: {{ .TestAddress1 }}
-  value: 100000000000000
-  contract: tests/Sender
-  ctorArgs: []
-- name: TestSmartAccountShard1
-  address: {{ .TestAddress2 }}
-  value: 0
-  contract: SmartAccount
-  ctorArgs: [{{ .SmartAccountOwnerPublicKey }}]
-- name: TestSmartAccountShard2
-  address: {{ .TestAddress3 }}
-  value: 0
-  contract: SmartAccount
-  ctorArgs: [{{ .SmartAccountOwnerPublicKey }}]
-`
-	zerostateYaml, err := common.ParseTemplate(zerostateTmpl, map[string]interface{}{
-		"SmartAccountOwnerPublicKey": hexutil.Encode(execution.MainPublicKey),
-		"TestAddress1":               s.senderAddress1.Hex(),
-		"TestAddress2":               s.smartAccountAddress1.Hex(),
-		"TestAddress3":               s.smartAccountAddress2.Hex(),
-	})
-	s.Require().NoError(err)
-
-	zeroState, err := execution.ParseZeroStateConfig(zerostateYaml)
-	s.Require().NoError(err)
-	zeroState.MainPublicKey = execution.MainPublicKey
+	zeroState := &execution.ZeroStateConfig{
+		Contracts: []*execution.ContractDescr{
+			{Name: "TestSenderShard1", Contract: "tests/Sender", Address: s.senderAddress1, Value: types.NewValueFromUint64(100000000000000)},
+			{Name: "TestSmartAccountShard1", Contract: "SmartAccount", Address: s.smartAccountAddress1, Value: types.Value{}, CtorArgs: []any{execution.MainPublicKey}},
+			{Name: "TestSmartAccountShard2", Contract: "SmartAccount", Address: s.smartAccountAddress2, Value: types.Value{}, CtorArgs: []any{execution.MainPublicKey}},
+		},
+	}
 
 	s.Start(&nilservice.Config{
 		NShards:   4,

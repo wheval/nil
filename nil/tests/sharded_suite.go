@@ -77,8 +77,7 @@ func newZeroState(oldZeroState *execution.ZeroStateConfig, validators []config.L
 				Validators: validators,
 			},
 		},
-		Contracts:     oldZeroState.Contracts,
-		MainPublicKey: oldZeroState.MainPublicKey,
+		Contracts: oldZeroState.Contracts,
 	}
 }
 

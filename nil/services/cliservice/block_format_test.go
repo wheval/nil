@@ -54,7 +54,7 @@ func TestDebugBlockToText(t *testing.T) {
 		From:      types.BytesToAddress(hexutil.FromHex("0x0100")),
 		RefundTo:  types.BytesToAddress(hexutil.FromHex("0x0300")),
 		BounceTo:  types.BytesToAddress(hexutil.FromHex("0x0400")),
-		Value:     types.NewValueFromUint64(0),
+		Value:     types.Value0,
 		Token:     nil,
 		Signature: []byte("Signature"),
 	}
