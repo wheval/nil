@@ -40,7 +40,7 @@ contract ExternallyAccessible is NilBase {
     }
 
     // dummy function which can only be called with an external transaction
-    function doSth(uint256 data) onlyExternal pure returns (bool) {
+    function doSth(uint256 data) onlyExternal public view returns (bool) {
         return data == 0;
     }
 }
