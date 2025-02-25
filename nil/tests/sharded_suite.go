@@ -285,6 +285,8 @@ func (s *ShardedSuite) StartArchiveNode(params *ArchiveNodeConfig) (client.Clien
 		DisableConsensus: params.DisableConsensus,
 	}
 
+	PatchConfigWithTestDefaults(cfg)
+
 	cfg.MyShards = slices.Collect(common.Range(0, uint(cfg.NShards)))
 	netCfg.DHTBootstrapPeers = slices.Collect(common.Transform(slices.Values(s.Instances), getShardAddress))
 	if params.WithBootstrapPeers {

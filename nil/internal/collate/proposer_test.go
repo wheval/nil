@@ -34,13 +34,13 @@ func (s *ProposerTestSuite) TearDownTest() {
 	s.db.Close()
 }
 
-func (s *ProposerTestSuite) newParams() Params {
-	return Params{
+func (s *ProposerTestSuite) newParams() *Params {
+	return &Params{
 		BlockGeneratorParams: execution.NewBlockGeneratorParams(s.shardId, 2),
 	}
 }
 
-func newTestProposer(params Params, pool TxnPool) *proposer {
+func newTestProposer(params *Params, pool TxnPool) *proposer {
 	return newProposer(params, new(TrivialShardTopology), pool, logging.NewLogger("proposer"))
 }
 

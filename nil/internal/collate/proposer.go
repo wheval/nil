@@ -29,7 +29,7 @@ const (
 )
 
 type proposer struct {
-	params Params
+	params *Params
 
 	topology ShardTopology
 	pool     TxnPool
@@ -44,7 +44,7 @@ type proposer struct {
 	l1BlockFetcher rollup.L1BlockFetcher
 }
 
-func newProposer(params Params, topology ShardTopology, pool TxnPool, logger zerolog.Logger) *proposer {
+func newProposer(params *Params, topology ShardTopology, pool TxnPool, logger zerolog.Logger) *proposer {
 	if params.MaxGasInBlock == 0 {
 		params.MaxGasInBlock = defaultMaxGasInBlock
 	}

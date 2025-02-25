@@ -33,11 +33,9 @@ func (i *backendIBFT) calcProposer(height, round uint64, prevValidator *uint64) 
 }
 
 type validatorsMap struct {
+	shardId  types.ShardId
 	txFabtic db.DB
-
-	shardId types.ShardId
-
-	m sync.Map
+	m        sync.Map
 }
 
 func newValidatorsMap(txFabric db.DB, shardId types.ShardId) *validatorsMap {
