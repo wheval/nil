@@ -12,7 +12,7 @@ type BlockWithShardId struct {
 }
 
 type ExportDriver interface {
-	SetupScheme(context.Context) error
+	SetupScheme(ctx context.Context) error
 	ExportBlocks(context.Context, []*BlockWithShardId) error
 	FetchBlock(context.Context, types.ShardId, types.BlockNumber) (*types.Block, bool, error)
 	FetchLatestProcessedBlock(context.Context, types.ShardId) (*types.Block, bool, error)

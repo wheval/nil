@@ -159,14 +159,8 @@ func (s reflectedScheme) Fields() string {
 	return strings.Join(fields, ", ")
 }
 
-func (s reflectedScheme) CreateTableQuery(tableName, engine string, primaryKeys []string, orderKeys []string) string {
-	query := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s
-						(%s)
-		 ENGINE = %s
-		PRIMARY KEY (%s)
-		order by (%s)
-`, tableName, s.Fields(), engine, strings.Join(primaryKeys, ", "), strings.Join(orderKeys, ", "))
+func (s reflectedScheme) CreateTableQuery(tableName, engine string, primaryKeys, orderKeys []string) string {
+	query := createTableQuery(tableName, s.Fields(), engine, primaryKeys, orderKeys)
 	logger.Debug().Msgf("CreateTableQuery: %s", query)
 	return query
 }

@@ -9,6 +9,7 @@ import (
 type Cfg struct {
 	ExporterDriver ExportDriver
 	Client         client.Client
+	AllowDbDrop    bool
 	BlocksChan     chan *BlockWithShardId
 	exportRound    atomic.Uint32
 }
