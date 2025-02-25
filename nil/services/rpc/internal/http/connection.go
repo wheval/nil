@@ -3,14 +3,19 @@ package http
 import (
 	"io"
 	"net/http"
+	"strconv"
 	"time"
+
+	"github.com/NilFoundation/nil/nil/common/check"
+	"github.com/NilFoundation/nil/nil/common/version"
 )
 
 const (
 	MaxRequestContentLength  = 1024 * 1024 * 32 // 32MB
-	minSupportedRevision     = 356
 	minSupportedNiljsVersion = "0.24.0"
 )
+
+var minSupportedRevision = 1
 
 type (
 	remoteCtxKey    struct{}
@@ -25,6 +30,12 @@ type HttpServerConn struct {
 	io.Reader
 	io.Writer
 	Request *http.Request
+}
+
+func init() {
+	num, err := strconv.Atoi(version.GetGitRevision())
+	check.PanicIfErr(err)
+	minSupportedRevision = num
 }
 
 // Close does nothing and always returns nil.
