@@ -110,7 +110,7 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 
 		return s.validator.InsertProposal(ctx, proposal, &types.ConsensusParams{})
 	} else {
-		id, err := s.readLastBlockId(ctx)
+		block, _, err := s.validator.GetLastBlock(ctx)
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 
 		consCh := make(chan error, 1)
 		go func() {
-			consCh <- s.consensus.RunSequence(ctx, id.Uint64()+1)
+			consCh <- s.consensus.RunSequence(ctx, block.Id.Uint64()+1)
 		}()
 
 		select {
@@ -136,19 +136,4 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 			return err
 		}
 	}
-}
-
-func (s *Scheduler) readLastBlockId(ctx context.Context) (types.BlockNumber, error) {
-	roTx, err := s.txFabric.CreateRoTx(ctx)
-	if err != nil {
-		return 0, err
-	}
-	defer roTx.Rollback()
-
-	b, _, err := db.ReadLastBlock(roTx, s.params.ShardId)
-	if err != nil {
-		return 0, err
-	}
-
-	return b.Id, nil
 }

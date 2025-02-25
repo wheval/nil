@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
@@ -67,29 +66,8 @@ func NewSyncer(cfg *SyncerConfig, validator *Validator, db db.DB, networkManager
 	}, nil
 }
 
-func readLastBlock(ctx context.Context, database db.DB, shardId types.ShardId) (*types.Block, common.Hash, error) {
-	rotx, err := database.CreateRoTx(ctx)
-	if err != nil {
-		return nil, common.EmptyHash, err
-	}
-	defer rotx.Rollback()
-
-	block, hash, err := db.ReadLastBlock(rotx, shardId)
-	if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
-		return nil, common.EmptyHash, err
-	}
-	if err == nil {
-		return block, hash, err
-	}
-	return nil, common.EmptyHash, nil
-}
-
-func (s *Syncer) readLastBlock(ctx context.Context) (*types.Block, common.Hash, error) {
-	return readLastBlock(ctx, s.db, s.config.ShardId)
-}
-
 func (s *Syncer) shardIsEmpty(ctx context.Context) (bool, error) {
-	block, _, err := s.readLastBlock(ctx)
+	block, _, err := s.validator.GetLastBlock(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -152,7 +130,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 		return nil
 	}
 
-	block, hash, err := s.readLastBlock(ctx)
+	block, hash, err := s.validator.GetLastBlock(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read last block number: %w", err)
 	}
@@ -270,7 +248,7 @@ func (s *Syncer) fetchBlocksRange(ctx context.Context) <-chan *types.BlockWithEx
 
 	s.logger.Trace().Msgf("Found %d peers to fetch block from:\n%v", len(peers), peers)
 
-	lastBlock, _, err := s.readLastBlock(ctx)
+	lastBlock, _, err := s.validator.GetLastBlock(ctx)
 	if err != nil {
 		return nil
 	}

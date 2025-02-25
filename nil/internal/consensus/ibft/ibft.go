@@ -33,6 +33,7 @@ type validator interface {
 	BuildProposal(ctx context.Context) (*execution.Proposal, error)
 	VerifyProposal(ctx context.Context, proposal *execution.Proposal) (*types.Block, error)
 	InsertProposal(ctx context.Context, proposal *execution.Proposal, params *types.ConsensusParams) error
+	GetLastBlock(ctx context.Context) (*types.Block, common.Hash, error)
 }
 
 type backendIBFT struct {
@@ -41,7 +42,6 @@ type backendIBFT struct {
 	// `transportCtx`is the context bound to the transport goroutine
 	// It should be used in methods that are called from the transport goroutine with `AddMessage`
 	transportCtx    context.Context
-	db              db.DB
 	consensus       *core.IBFT
 	shardId         types.ShardId
 	validator       validator
@@ -63,12 +63,6 @@ func (i *backendIBFT) unmarshalProposal(raw []byte) (*execution.Proposal, error)
 }
 
 func (i *backendIBFT) BuildProposal(view *protoIBFT.View) []byte {
-	tx, err := i.db.CreateRoTx(i.ctx)
-	if err != nil {
-		return nil
-	}
-	defer tx.Rollback()
-
 	proposal, err := i.validator.BuildProposal(i.ctx)
 	if err != nil {
 		i.logger.Error().Err(err).Msg("failed to build proposal")
@@ -199,7 +193,6 @@ func NewConsensus(cfg *ConsensusParams) *backendIBFT {
 	}
 
 	backend := &backendIBFT{
-		db:              cfg.Db,
 		shardId:         cfg.ShardId,
 		validator:       cfg.Validator,
 		logger:          logger,

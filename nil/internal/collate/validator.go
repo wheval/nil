@@ -34,7 +34,10 @@ type Validator struct {
 	networkManager *network.Manager
 	blockVerifier  *signer.BlockVerifier
 
-	mutex  sync.Mutex
+	mutex         sync.RWMutex
+	lastBlock     *types.Block
+	lastBlockHash common.Hash
+
 	logger zerolog.Logger
 }
 
@@ -49,6 +52,41 @@ func NewValidator(params *Params, txFabric db.DB, pool TxnPool, nm *network.Mana
 			Stringer(logging.FieldShardId, params.ShardId).
 			Logger(),
 	}
+}
+
+func (s *Validator) getLastBlockUnlocked(ctx context.Context) (*types.Block, common.Hash, error) {
+	if s.lastBlock != nil {
+		return s.lastBlock, s.lastBlockHash, nil
+	}
+
+	rotx, err := s.txFabric.CreateRoTx(ctx)
+	if err != nil {
+		return nil, common.EmptyHash, err
+	}
+	defer rotx.Rollback()
+
+	block, hash, err := db.ReadLastBlock(rotx, s.params.ShardId)
+	if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
+		return nil, common.EmptyHash, err
+	}
+	if err == nil {
+		return block, hash, err
+	}
+	return nil, common.EmptyHash, nil
+}
+
+func (s *Validator) GetLastBlock(ctx context.Context) (*types.Block, common.Hash, error) {
+	s.mutex.RLock()
+	lastBlock, lastBlockHash := s.lastBlock, s.lastBlockHash
+	s.mutex.RUnlock()
+
+	if lastBlock != nil {
+		return lastBlock, lastBlockHash, nil
+	}
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.getLastBlockUnlocked(ctx)
 }
 
 func (s *Validator) getBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
@@ -70,6 +108,7 @@ func (s *Validator) TxPool() TxnPool {
 }
 
 func (s *Validator) BuildProposal(ctx context.Context) (*execution.Proposal, error) {
+	// No lock since it doesn't directly access last block/hash
 	proposer := newProposer(s.params, s.params.Topology, s.pool, s.logger)
 	proposal, err := proposer.GenerateProposal(ctx, s.txFabric)
 	if err != nil {
@@ -79,9 +118,14 @@ func (s *Validator) BuildProposal(ctx context.Context) (*execution.Proposal, err
 }
 
 func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Proposal) (*types.Block, error) {
-	prevBlock, err := s.getBlock(ctx, proposal.PrevBlockHash)
+	// No lock since it accesses last block/hash only inside "locked" GetLastBlock function
+	prevBlock, prevBlockHash, err := s.GetLastBlock(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	if prevBlockHash != proposal.PrevBlockHash {
+		return nil, fmt.Errorf("%w: expected %x, got %x", errHashMismatch, prevBlockHash, proposal.PrevBlockHash)
 	}
 
 	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, prevBlock)
@@ -101,8 +145,11 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Proposal, params *types.ConsensusParams) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	return s.insertProposalUnlocked(ctx, proposal, params)
+}
 
-	if err := s.validateProposal(ctx, proposal); err != nil {
+func (s *Validator) insertProposalUnlocked(ctx context.Context, proposal *execution.Proposal, params *types.ConsensusParams) error {
+	if err := s.validateProposalUnlocked(ctx, proposal); err != nil {
 		return err
 	}
 
@@ -126,6 +173,8 @@ func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.Prop
 		s.logger.Warn().Err(err).
 			Msgf("Failed to remove %d committed transactions from pool", len(proposal.ExternalTxns))
 	}
+
+	s.setLastBlockUnlocked(res.Block, res.BlockHash)
 
 	return PublishBlock(ctx, s.networkManager, s.params.ShardId, &types.BlockWithExtractedData{
 		Block:           res.Block,
@@ -173,8 +222,8 @@ func (s *Validator) validateRepliedBlock(
 	return nil
 }
 
-func (s *Validator) validateProposal(ctx context.Context, proposal *execution.Proposal) error {
-	lastBlock, lastHash, err := readLastBlock(ctx, s.txFabric, s.params.ShardId)
+func (s *Validator) validateProposalUnlocked(ctx context.Context, proposal *execution.Proposal) error {
+	lastBlock, lastBlockHash, err := s.getLastBlockUnlocked(ctx)
 	if err != nil {
 		return err
 	}
@@ -195,15 +244,15 @@ func (s *Validator) validateProposal(ctx context.Context, proposal *execution.Pr
 		return errOutOfOrder
 	}
 
-	if proposal.PrevBlockHash != lastHash {
+	if lastBlockHash != proposal.PrevBlockHash {
 		lastBlockMarshal, err := json.Marshal(lastBlock)
 		check.PanicIfErr(err)
 
 		s.logger.Error().
 			RawJSON("lastBlock", lastBlockMarshal).
-			Stringer("lastHash", lastHash).
+			Stringer("lastHash", lastBlockHash).
 			Stringer("expectedLastHash", proposal.PrevBlockHash).
-			Msgf("Previous block hash mismatch: expected %x, got %x", lastHash, proposal.PrevBlockHash)
+			Msgf("Previous block hash mismatch: expected %x, got %x", lastBlockHash, proposal.PrevBlockHash)
 		return errHashMismatch
 	}
 
@@ -213,12 +262,10 @@ func (s *Validator) validateProposal(ctx context.Context, proposal *execution.Pr
 func (s *Validator) ReplayBlock(ctx context.Context, block *types.BlockWithExtractedData) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	return s.replayBlockUnlocked(ctx, block)
+}
 
-	prevBlock, err := s.getBlock(ctx, block.Block.PrevBlock)
-	if err != nil {
-		return err
-	}
-
+func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockWithExtractedData) error {
 	blockHash := block.Block.Hash(s.params.ShardId)
 	s.logger.Trace().
 		Stringer(logging.FieldBlockNumber, block.Block.Id).
@@ -258,10 +305,15 @@ func (s *Validator) ReplayBlock(ctx context.Context, block *types.BlockWithExtra
 		}
 	}
 
-	if err := s.validateProposal(ctx, proposal); err != nil {
+	if err := s.validateProposalUnlocked(ctx, proposal); err != nil {
 		if errors.Is(err, errHashMismatch) {
 			return returnErrorOrPanic(err)
 		}
+		return err
+	}
+
+	prevBlock, _, err := s.getLastBlockUnlocked(ctx)
+	if err != nil {
 		return err
 	}
 
@@ -288,5 +340,12 @@ func (s *Validator) ReplayBlock(ctx context.Context, block *types.BlockWithExtra
 		return fmt.Errorf("failed to finalize block: %w", err)
 	}
 
+	s.setLastBlockUnlocked(resBlock.Block, blockHash)
+
 	return nil
+}
+
+func (s *Validator) setLastBlockUnlocked(block *types.Block, hash common.Hash) {
+	s.lastBlock = block
+	s.lastBlockHash = hash
 }
