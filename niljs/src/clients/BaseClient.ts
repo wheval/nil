@@ -12,18 +12,18 @@ class BaseClient {
   /**
    * The ITransport to be used in the client. See {@link ITransport}.
    *
-   * @protected
+   * @readonly
    * @type {ITransport}
    */
-  protected transport: ITransport;
+  readonly transport: ITransport;
 
   /**
    * The ID of the shard with which the client needs to interact.
    * The shard with this ID will be used in every call made by the client.
-   * @protected
+   * @public
    * @type {number | undefined}
    */
-  protected shardId?: number;
+  public shardId?: number;
 
   /**
    * Creates an instance of BaseClient.
