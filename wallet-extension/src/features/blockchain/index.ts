@@ -1,12 +1,12 @@
 export { fetchBalance, fetchSmartAccountTokens } from "./balance.ts";
 export {
-  topUpAllCurrencies,
-  topUpSpecificCurrency,
+  topUpAllTokens,
+  topUpSpecificToken,
   createFaucetClient,
 } from "./faucet.ts";
 export {
   createClient,
   createSigner,
   initializeOrDeploySmartAccount,
-  sendCurrency,
+  sendToken,
 } from "./smartAccount.ts";

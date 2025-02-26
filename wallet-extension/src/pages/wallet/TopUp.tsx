@@ -11,20 +11,20 @@ import { useStore } from "effector-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { topUpSpecificCurrency } from "../../features/blockchain";
-import { Currency } from "../../features/components/currency";
+import { topUpSpecificToken } from "../../features/blockchain";
 import {
   Box,
-  CurrencyInput,
   InputErrorMessage,
   MainAddressInput,
   ScreenHeader,
+  TokenInput,
 } from "../../features/components/shared";
+import { TokenNames } from "../../features/components/token";
 import { $faucetClient } from "../../features/store/model/blockchain";
 import { $smartAccount } from "../../features/store/model/smartAccount.ts";
 import { $tokens } from "../../features/store/model/token.ts";
 import { convertTopUpAmount, getQuickAmounts, validateTopUpAmount } from "../../features/utils";
-import { getTopupCurrencies } from "../../features/utils/token.ts";
+import { getTopupTokens } from "../../features/utils/token.ts";
 import { WalletRoutes } from "../../router";
 
 export const TopUp = () => {
@@ -37,17 +37,17 @@ export const TopUp = () => {
   const faucetClient = useStore($faucetClient);
   const tokens = useStore($tokens);
 
-  const currencies = getTopupCurrencies(tokens);
-  const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]);
+  const topupTokens = getTopupTokens(tokens);
+  const [selectedToken, setSelectedToken] = useState(topupTokens[0]);
   const [amount, setAmount] = useState("");
 
-  const quickAmounts = getQuickAmounts(selectedCurrency.label);
+  const quickAmounts = getQuickAmounts(selectedToken.label);
 
-  const handleCurrencyChange = (params: { value: { label: string }[] }) => {
-    const selected = currencies.find((currency) => currency.label === params.value[0].label);
+  const handleTokenChange = (params: { value: { label: string }[] }) => {
+    const selected = topupTokens.find((token) => token.label === params.value[0].label);
     if (selected) {
       setInputError("");
-      setSelectedCurrency(selected);
+      setSelectedToken(selected);
       setTopUpError("");
     }
   };
@@ -67,7 +67,7 @@ export const TopUp = () => {
 
     if (!smartAccount) return console.error("SmartAccount is not initialized");
 
-    const validationError = validateTopUpAmount(amount, selectedCurrency.label);
+    const validationError = validateTopUpAmount(amount, selectedToken.label);
     if (validationError) {
       setInputError(validationError);
       return;
@@ -80,11 +80,11 @@ export const TopUp = () => {
         return;
       }
 
-      const finalAmount = convertTopUpAmount(amount, selectedCurrency.label);
-      await topUpSpecificCurrency(
+      const finalAmount = convertTopUpAmount(amount, selectedToken.label);
+      await topUpSpecificToken(
         smartAccount as SmartAccountV1,
         faucetClient as FaucetClient,
-        selectedCurrency.label,
+        selectedToken.label,
         finalAmount,
       );
 
@@ -119,11 +119,11 @@ export const TopUp = () => {
         <HeadingMedium $style={{ color: COLORS.gray50, marginBottom: "12px" }}>
           {t("wallet.topUpPage.amountSection")}
         </HeadingMedium>
-        <CurrencyInput
+        <TokenInput
           error={inputError}
-          selectedCurrency={selectedCurrency}
-          currencies={currencies}
-          onCurrencyChange={handleCurrencyChange}
+          selectedToken={selectedToken}
+          tokens={topupTokens}
+          onTokenChange={handleTokenChange}
           value={amount}
           onChange={handleAmountChange}
         />
@@ -159,7 +159,7 @@ export const TopUp = () => {
       {/* Top Up Button */}
       <Box $align="center" $justify="center" $style={{ marginTop: "auto", width: "100%" }}>
         {/* Show NIL Faucet Warning */}
-        {selectedCurrency.label === Currency.NIL && topUpError === "" && (
+        {selectedToken.label === TokenNames.NIL && topUpError === "" && (
           <Notification
             closeable={true}
             kind={NOTIFICATION_KIND.warning}

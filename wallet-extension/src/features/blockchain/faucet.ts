@@ -1,6 +1,6 @@
 import { FaucetClient, type Hex, HttpTransport, type SmartAccountV1 } from "@nilfoundation/niljs";
 import { ActivityType } from "../../background/storage";
-import { Currency } from "../components/currency";
+import { TokenNames } from "../components/token";
 import { addActivity } from "../store/model/activities.ts";
 import { convertWeiToEth } from "../utils";
 import { fetchBalance } from "./balance.ts";
@@ -20,7 +20,7 @@ export function createFaucetClient(rpcEndpoint: string): FaucetClient {
 }
 
 // Top up the smartAccount with *all* tokens from every available faucet
-export async function topUpAllCurrencies(
+export async function topUpAllTokens(
   smartAccount: SmartAccountV1,
   faucetClient: FaucetClient,
   amount = 10n,
@@ -49,16 +49,16 @@ export async function topUpAllCurrencies(
 
     // Await all promises to ensure completion or capture errors
     await Promise.all(promises);
-    console.log("Successfully topped up all currencies");
+    console.log("Successfully topped up all tokens");
   } catch (e) {
     // Log the overall error and rethrow it
-    console.error("Error during top-up of all currencies:", e);
-    throw new Error("Failed to top up all currencies");
+    console.error("Error during top-up of all tokens:", e);
+    throw new Error("Failed to top up all tokens");
   }
 }
 
-// TopUp smartAccount with specific currency
-export async function topUpSpecificCurrency(
+// TopUp smartAccount with specific token
+export async function topUpSpecificToken(
   smartAccount: SmartAccountV1,
   faucetClient: FaucetClient,
   symbol: string,
@@ -71,7 +71,7 @@ export async function topUpSpecificCurrency(
   let txHash: string | null = null;
 
   let initialBalance: bigint | null = null;
-  if (symbol === Currency.NIL) {
+  if (symbol === TokenNames.NIL) {
     initialBalance = await fetchBalance(smartAccount);
   }
 
@@ -99,7 +99,7 @@ export async function topUpSpecificCurrency(
     let actualReceived: string = amount.toString();
 
     // Compute actual received amount if NIL
-    if (symbol === Currency.NIL && initialBalance !== null) {
+    if (symbol === TokenNames.NIL && initialBalance !== null) {
       const finalBalance = await fetchBalance(smartAccount);
       actualReceived = convertWeiToEth(finalBalance - initialBalance, 11);
       console.log(

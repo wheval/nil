@@ -6,7 +6,7 @@ import {
   createFaucetClient,
   createSigner,
   initializeOrDeploySmartAccount,
-  topUpAllCurrencies,
+  topUpAllTokens,
 } from "../../blockchain";
 import { generateRandomShard } from "../../utils";
 import { createEffect, createEvent, createStore } from "../store.ts";
@@ -47,7 +47,7 @@ export const createSmartAccountFx = createEffect<
     setPublicClient(client);
     setFaucetClient(faucetClient);
 
-    await topUpAllCurrencies(smartAccount, faucetClient);
+    await topUpAllTokens(smartAccount, faucetClient);
 
     await saveUserDetails({
       rpcEndpoint: endpoint,
