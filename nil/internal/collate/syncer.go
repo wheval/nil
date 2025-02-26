@@ -30,6 +30,9 @@ type SyncerConfig struct {
 	ZeroStateConfig *execution.ZeroStateConfig
 }
 
+// every n-th block will be reported to info log (to avoid spamming)
+const blockReportInterval = 100
+
 type Syncer struct {
 	config *SyncerConfig
 
@@ -170,7 +173,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 				s.fetchBlocks(ctx)
 			}
 		case <-time.After(s.config.Timeout):
-			s.logger.Debug().Msgf("No new block in the topic for %s, pulling blocks actively", s.config.Timeout)
+			s.logger.Warn().Msgf("No new block in the topic for %s, pulling blocks actively", s.config.Timeout)
 
 			s.fetchBlocks(ctx)
 		}
@@ -190,7 +193,6 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 	block := b.Block
 	s.logger.Debug().
 		Stringer(logging.FieldBlockNumber, block.Id).
-		Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
 		Msg("Received block")
 
 	if err := s.saveBlock(ctx, b); err != nil {
@@ -203,6 +205,13 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 		default:
 			return false, err
 		}
+	}
+
+	if uint64(block.Id)%uint64(blockReportInterval) == 0 {
+		s.logger.Info().
+			Uint64(logging.FieldBlockNumber, uint64(block.Id)).
+			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
+			Msg("Saved block")
 	}
 
 	return true, nil

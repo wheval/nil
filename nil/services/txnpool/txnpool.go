@@ -16,27 +16,25 @@ import (
 
 type Pool interface {
 	Add(ctx context.Context, txns ...*types.Transaction) ([]DiscardReason, error)
-	Discard(ctx context.Context, txns []*types.Transaction, reason DiscardReason) error
+	Discard(ctx context.Context, txns []common.Hash, reason DiscardReason) error
 	OnCommitted(ctx context.Context, committed []*types.Transaction) error
 	// IdHashKnown check whether transaction with given Id hash is known to the pool
 	IdHashKnown(hash common.Hash) (bool, error)
 	Started() bool
 
-	Peek(ctx context.Context, n int) ([]*types.Transaction, error)
+	Peek(ctx context.Context, n int) ([]*types.TxnWithHash, error)
 	SeqnoToAddress(addr types.Address) (seqno types.Seqno, inPool bool)
 	TransactionCount() int
 	Get(hash common.Hash) (*types.Transaction, error)
 }
 
 type metaTxn struct {
-	*types.Transaction
-	hash common.Hash
+	*types.TxnWithHash
 }
 
 func newMetaTxn(txn *types.Transaction) *metaTxn {
 	return &metaTxn{
-		Transaction: txn,
-		hash:        txn.Hash(),
+		TxnWithHash: types.NewTxnWithHash(txn),
 	}
 }
 
@@ -103,14 +101,14 @@ func (p *TxnPool) listen(ctx context.Context, sub *network.Subscription) {
 		reasons, err := p.add(mm)
 		if err != nil {
 			p.logger.Error().Err(err).
-				Stringer(logging.FieldTransactionHash, mm.hash).
+				Stringer(logging.FieldTransactionHash, mm.Hash()).
 				Msg("Failed to add transaction from network")
 			continue
 		}
 
 		if reasons[0] != NotSet {
 			p.logger.Debug().
-				Stringer(logging.FieldTransactionHash, mm.hash).
+				Stringer(logging.FieldTransactionHash, mm.Hash()).
 				Msgf("Discarded transaction from network with reason %s", reasons[0])
 		}
 	}
@@ -134,7 +132,7 @@ func (p *TxnPool) Add(ctx context.Context, txns ...*types.Transaction) ([]Discar
 
 		if err := PublishPendingTransaction(ctx, p.networkManager, p.cfg.ShardId, mm); err != nil {
 			p.logger.Error().Err(err).
-				Stringer(logging.FieldTransactionHash, mm.hash).
+				Stringer(logging.FieldTransactionHash, mm.Hash()).
 				Msg("Failed to publish transaction to network")
 		}
 	}
@@ -158,7 +156,7 @@ func (p *TxnPool) add(txns ...*metaTxn) ([]DiscardReason, error) {
 			continue
 		}
 
-		if _, ok := p.byHash[string(txn.hash.Bytes())]; ok {
+		if _, ok := p.byHash[string(txn.Hash().Bytes())]; ok {
 			discardReasons[i] = DuplicateHash
 			continue
 		}
@@ -170,7 +168,7 @@ func (p *TxnPool) add(txns ...*metaTxn) ([]DiscardReason, error) {
 		discardReasons[i] = NotSet // unnecessary
 		p.logger.Debug().
 			Uint64(logging.FieldShardId, uint64(txn.To.ShardId())).
-			Stringer(logging.FieldTransactionHash, txn.hash).
+			Stringer(logging.FieldTransactionHash, txn.Hash()).
 			Stringer(logging.FieldTransactionTo, txn.To).
 			Msg("Added new transaction.")
 	}
@@ -183,7 +181,7 @@ func (p *TxnPool) validateTxn(txn *metaTxn) (DiscardReason, bool) {
 	if has && seqno > txn.Seqno {
 		p.logger.Debug().
 			Uint64(logging.FieldShardId, uint64(txn.To.ShardId())).
-			Stringer(logging.FieldTransactionHash, txn.hash).
+			Stringer(logging.FieldTransactionHash, txn.Hash()).
 			Uint64(logging.FieldAccountSeqno, seqno.Uint64()).
 			Uint64(logging.FieldTransactionSeqno, txn.Seqno.Uint64()).
 			Msg("Seqno too low.")
@@ -250,7 +248,7 @@ func shouldReplace(existing, candidate *metaTxn) bool {
 		existing.FeeCredit = existingFee
 	}()
 
-	return bytes.Equal(existing.Hash().Bytes(), candidate.hash.Bytes())
+	return bytes.Equal(existing.Transaction.Hash().Bytes(), candidate.Hash().Bytes())
 }
 
 func (p *TxnPool) addLocked(txn *metaTxn) DiscardReason {
@@ -262,7 +260,7 @@ func (p *TxnPool) addLocked(txn *metaTxn) DiscardReason {
 			return NotReplaced
 		}
 
-		p.queue.Remove(found)
+		p.queue.Remove(found.TxnWithHash)
 		p.discardLocked(found, ReplacedByHigherTip)
 	}
 
@@ -270,7 +268,7 @@ func (p *TxnPool) addLocked(txn *metaTxn) DiscardReason {
 		return PoolOverflow
 	}
 
-	hashStr := string(txn.hash.Bytes())
+	hashStr := string(txn.Hash().Bytes())
 	p.byHash[hashStr] = txn
 
 	replaced := p.all.replaceOrInsert(txn)
@@ -283,22 +281,22 @@ func (p *TxnPool) addLocked(txn *metaTxn) DiscardReason {
 // dropping transaction from all sub-structures and from db
 // Important: don't call it while iterating by "all"
 func (p *TxnPool) discardLocked(mm *metaTxn, reason DiscardReason) {
-	hashStr := string(mm.hash.Bytes())
+	hashStr := string(mm.Hash().Bytes())
 	delete(p.byHash, hashStr)
 	p.all.delete(mm, reason)
 }
 
-func (p *TxnPool) Discard(_ context.Context, txns []*types.Transaction, reason DiscardReason) error {
+func (p *TxnPool) Discard(_ context.Context, hashes []common.Hash, reason DiscardReason) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	for _, txn := range txns {
-		mm := p.getLocked(txn.Hash())
+	for _, hash := range hashes {
+		mm := p.getLocked(hash)
 		if mm == nil {
 			continue
 		}
 
-		p.queue.Remove(mm)
+		p.queue.Remove(mm.TxnWithHash)
 		p.discardLocked(mm, reason)
 	}
 
@@ -346,13 +344,13 @@ func (p *TxnPool) removeCommitted(bySeqno *ByReceiverAndSeqno, txns []*types.Tra
 
 			p.logger.Trace().
 				Uint64(logging.FieldShardId, uint64(txn.To.ShardId())).
-				Stringer(logging.FieldTransactionHash, txn.hash).
+				Stringer(logging.FieldTransactionHash, txn.Hash()).
 				Stringer(logging.FieldTransactionTo, txn.To).
 				Uint64(logging.FieldTransactionSeqno, txn.Seqno.Uint64()).
 				Msg("Remove committed.")
 
 			toDel = append(toDel, txn)
-			p.queue.Remove(txn)
+			p.queue.Remove(txn.TxnWithHash)
 			return true
 		})
 
@@ -373,16 +371,16 @@ func (p *TxnPool) removeCommitted(bySeqno *ByReceiverAndSeqno, txns []*types.Tra
 	return nil
 }
 
-func (p *TxnPool) Peek(ctx context.Context, n int) ([]*types.Transaction, error) {
+func (p *TxnPool) Peek(ctx context.Context, n int) ([]*types.TxnWithHash, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	mms := p.queue.Peek(n)
-	txns := make([]*types.Transaction, len(mms))
-	for i, mm := range mms {
-		txns[i] = mm.Transaction
+	queued := p.queue.Peek(n)
+	res := make([]*types.TxnWithHash, len(queued))
+	for i, txn := range queued {
+		res[i] = txn.TxnWithHash
 	}
-	return txns, nil
+	return res, nil
 }
 
 func (p *TxnPool) TransactionCount() int {

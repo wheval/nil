@@ -228,7 +228,7 @@ func (s *SuiteTxnPool) TestOnNewBlock() {
 	transactions, err := s.pool.Peek(s.ctx, 10)
 	s.Require().NoError(err)
 	s.Require().Len(transactions, 1)
-	s.Equal(txn22, transactions[0])
+	s.Equal(types.NewTxnWithHash(txn22), transactions[0])
 	s.Equal(1, s.pool.TransactionCount())
 }
 

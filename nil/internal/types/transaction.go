@@ -176,7 +176,8 @@ type Transaction struct {
 
 type OutboundTransaction struct {
 	*Transaction
-	ForwardKind ForwardKind `json:"forwardFee,omitempty" ch:"forward_kind"`
+	TxnHash     common.Hash `json:"txnHash" ch:"txn_hash"`
+	ForwardKind ForwardKind `json:"forwardKind,omitempty" ch:"forward_kind"`
 }
 
 type ExternalTransaction struct {
@@ -579,3 +580,19 @@ func (m TransactionFlags) IsResponse() bool {
 }
 
 //go:generate go run github.com/NilFoundation/fastssz/sszgen --path transaction.go -include ../../common/length.go,address.go,gas.go,value.go,code.go,shard.go,bloom.go,log.go,../../common/hash.go,signature.go,account.go,bitflags.go --objs Transaction,ExternalTransaction,InternalTransactionPayload,TransactionDigest,TransactionFlags,EvmState,AsyncContext,AsyncResponsePayload
+
+type TxnWithHash struct {
+	*Transaction
+	hash common.Hash
+}
+
+func NewTxnWithHash(txn *Transaction) *TxnWithHash {
+	return &TxnWithHash{
+		Transaction: txn,
+		hash:        txn.Hash(),
+	}
+}
+
+func (m *TxnWithHash) Hash() common.Hash {
+	return m.hash
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -15,8 +16,8 @@ import (
 )
 
 type TxnPool interface {
-	Peek(ctx context.Context, n int) ([]*types.Transaction, error)
-	Discard(ctx context.Context, txns []*types.Transaction, reason txnpool.DiscardReason) error
+	Peek(ctx context.Context, n int) ([]*types.TxnWithHash, error)
+	Discard(ctx context.Context, txns []common.Hash, reason txnpool.DiscardReason) error
 	OnCommitted(ctx context.Context, committed []*types.Transaction) error
 }
 

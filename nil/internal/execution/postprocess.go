@@ -44,30 +44,26 @@ func (pp *blockPostprocessor) fillBlockHashByNumberIndex() error {
 }
 
 func (pp *blockPostprocessor) fillBlockHashAndTransactionIndexByTransactionHash() error {
-	fill := func(root common.Hash, table db.ShardedTableName) error {
-		mptTransactions := NewDbTransactionTrieReader(pp.tx, pp.shardId)
-		mptTransactions.SetRootHash(root)
-		txns, err := mptTransactions.Entries()
-		if err != nil {
-			return err
-		}
-
-		for _, kv := range txns {
-			blockHashAndTransactionIndex := db.BlockHashAndTransactionIndex{BlockHash: pp.blockResult.BlockHash, TransactionIndex: kv.Key}
+	fill := func(txnHashes []common.Hash, table db.ShardedTableName) error {
+		for i, hash := range txnHashes {
+			blockHashAndTransactionIndex := db.BlockHashAndTransactionIndex{
+				BlockHash:        pp.blockResult.BlockHash,
+				TransactionIndex: types.TransactionIndex(i),
+			}
 			value, err := blockHashAndTransactionIndex.MarshalSSZ()
 			if err != nil {
 				return err
 			}
 
-			if err := pp.tx.PutToShard(pp.shardId, table, kv.Val.Hash().Bytes(), value); err != nil {
+			if err := pp.tx.PutToShard(pp.shardId, table, hash.Bytes(), value); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
 
-	if err := fill(pp.blockResult.Block.InTransactionsRoot, db.BlockHashAndInTransactionIndexByTransactionHash); err != nil {
+	if err := fill(pp.blockResult.InTxnHashes, db.BlockHashAndInTransactionIndexByTransactionHash); err != nil {
 		return err
 	}
-	return fill(pp.blockResult.Block.OutTransactionsRoot, db.BlockHashAndOutTransactionIndexByTransactionHash)
+	return fill(pp.blockResult.OutTxnHashes, db.BlockHashAndOutTransactionIndexByTransactionHash)
 }

@@ -31,7 +31,24 @@ func writeTestBlock(t *testing.T, tx db.RwTx, shardId types.ShardId, blockNumber
 	}
 	hash := block.Hash(types.BaseShardId)
 	require.NoError(t, db.WriteBlock(tx, types.BaseShardId, hash, &block))
-	return &execution.BlockGenerationResult{BlockHash: hash, Block: &block}
+
+	require.Equal(t, len(transactions), len(receipts))
+	inTxnHashes := make([]common.Hash, len(transactions))
+	for i, r := range receipts {
+		inTxnHashes[i] = r.TxnHash
+	}
+	outTxnHashes := make([]common.Hash, len(outTransactions))
+	for i, txn := range outTransactions {
+		outTxnHashes[i] = txn.Hash()
+	}
+	return &execution.BlockGenerationResult{
+		BlockHash:    hash,
+		Block:        &block,
+		InTxns:       transactions,
+		InTxnHashes:  inTxnHashes,
+		OutTxns:      outTransactions,
+		OutTxnHashes: outTxnHashes,
+	}
 }
 
 func writeTransactions(t *testing.T, tx db.RwTx, shardId types.ShardId, transactions []*types.Transaction) *execution.TransactionTrie {
