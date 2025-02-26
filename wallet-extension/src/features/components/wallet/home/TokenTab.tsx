@@ -12,7 +12,7 @@ import {
   $tokens,
   getBalanceForToken,
 } from "../../../store/model/token.ts";
-import { convertWeiToEth, formatAddress, getTokens, getTokenIcon } from "../../../utils";
+import { convertWeiToEth, formatAddress, getTokenIcon, getTokens } from "../../../utils";
 import { Box, Icon } from "../../shared";
 
 export const TokenTab = () => {

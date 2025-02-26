@@ -14,14 +14,14 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { parseEther } from "viem";
 import { sendToken } from "../../features/blockchain";
-import { TokenNames } from "../../features/components/token";
 import {
   Box,
-  TokenInput,
   InputErrorMessage,
   MainAddressInput,
   ScreenHeader,
+  TokenInput,
 } from "../../features/components/shared";
+import { TokenNames } from "../../features/components/token";
 import { $smartAccount } from "../../features/store/model/smartAccount.ts";
 import {
   $balance,
@@ -56,11 +56,7 @@ export const Send = () => {
   const [estimatedFee, setEstimatedFee] = useState("");
   const [selectedToken, setSelectedToken] = useState(tokens[0]);
 
-  const balance = getBalanceForToken(
-    selectedToken.address,
-    nilBalance ?? 0n,
-    balanceTokens ?? {},
-  );
+  const balance = getBalanceForToken(selectedToken.address, nilBalance ?? 0n, balanceTokens ?? {});
 
   // Validation Function
   const validateTransaction = useCallback(() => {
@@ -106,15 +102,7 @@ export const Send = () => {
     }, 500); // **Debounce effect - Waits 500ms after last change before running**
 
     return () => clearTimeout(timeoutId);
-  }, [
-    toAddress,
-    amount,
-    selectedToken,
-    balanceTokens,
-    balance,
-    smartAccount,
-    validateTransaction,
-  ]);
+  }, [toAddress, amount, selectedToken, balanceTokens, balance, smartAccount, validateTransaction]);
 
   const handleSend = async () => {
     if (!validateTransaction()) return;
@@ -194,9 +182,7 @@ export const Send = () => {
           tokens={tokens}
           onTokenChange={(params) => {
             setEstimatedFee("");
-            const selected = tokens.find(
-              (token) => params.value[0]?.label === token.label,
-            );
+            const selected = tokens.find((token) => params.value[0]?.label === token.label);
             if (selected) setSelectedToken(selected);
           }}
           value={amount}
@@ -224,9 +210,7 @@ export const Send = () => {
             color={amountError === "Insufficient Funds" ? COLORS.red300 : COLORS.gray200}
           >
             {amountError === "Insufficient Funds" ? `${amountError} - ` : ""}Balance:{" "}
-            {selectedToken.label === TokenNames.NIL
-              ? convertWeiToEth(balance)
-              : balance.toString()}
+            {selectedToken.label === TokenNames.NIL ? convertWeiToEth(balance) : balance.toString()}
           </ParagraphSmall>
 
           <Box

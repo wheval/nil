@@ -12,14 +12,14 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { topUpSpecificToken } from "../../features/blockchain";
-import { TokenNames } from "../../features/components/token";
 import {
   Box,
-  TokenInput,
   InputErrorMessage,
   MainAddressInput,
   ScreenHeader,
+  TokenInput,
 } from "../../features/components/shared";
+import { TokenNames } from "../../features/components/token";
 import { $faucetClient } from "../../features/store/model/blockchain";
 import { $smartAccount } from "../../features/store/model/smartAccount.ts";
 import { $tokens } from "../../features/store/model/token.ts";
