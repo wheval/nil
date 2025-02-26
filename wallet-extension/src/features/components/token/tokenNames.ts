@@ -1,4 +1,4 @@
-export enum Currency {
+export enum TokenNames {
   ETH = "ETH",
   NIL = "NIL",
   USDT = "USDT",

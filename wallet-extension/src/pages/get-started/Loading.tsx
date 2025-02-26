@@ -15,7 +15,7 @@ export const Loading = () => {
   const { t } = useTranslation("translation");
   const animationContainerRef = useRef<HTMLDivElement | null>(null);
   const isPending = useStore(fetchBalanceTokensFx.pending);
-  const balanceCurrency = useStore($balanceToken);
+  const balanceToken = useStore($balanceToken);
   const globalError = useStore($globalError);
 
   useEffect(() => {
@@ -43,10 +43,10 @@ export const Loading = () => {
 
   useEffect(() => {
     if (!isPending) {
-      if (balanceCurrency == null) return;
+      if (balanceToken == null) return;
       navigate(WalletRoutes.WALLET.BASE);
     }
-  }, [isPending, balanceCurrency, navigate]);
+  }, [isPending, balanceToken, navigate]);
 
   return (
     <Box

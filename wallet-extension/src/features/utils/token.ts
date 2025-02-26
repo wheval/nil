@@ -3,7 +3,7 @@ import custom from "../../../public/icons/token/custom.svg";
 import eth from "../../../public/icons/token/ethereum.svg";
 import nil from "../../../public/icons/token/nil.svg";
 import usdt from "../../../public/icons/token/usdt.svg";
-import { Currency } from "../components/currency";
+import { TokenNames } from "../components/token";
 
 // Converts a value in Wei (bigint) to Ether (string) with 18 decimal precision
 export const convertWeiToEth = (wei: bigint, decimals = 18): string => {
@@ -28,25 +28,25 @@ if (!btcAddress) {
   throw new Error("Environment variable VITE_BTC_ADDRESS is not defined");
 }
 
-// Returns the icon for the given currency name
+// Returns the icon for the given token name
 export const getTokenIcon = (name: string) => {
   switch (name) {
-    case Currency.ETH:
+    case TokenNames.ETH:
       return eth;
-    case Currency.NIL:
+    case TokenNames.NIL:
       return nil;
     case "Nil":
       return nil;
-    case Currency.USDT:
+    case TokenNames.USDT:
       return usdt;
-    case Currency.BTC:
+    case TokenNames.BTC:
       return btc;
     default:
       return custom;
   }
 };
 
-export function getCurrencies(
+export function getTokens(
   tokens: { name: string; address: string; show: boolean }[],
   onlyActive: boolean,
 ) {
@@ -58,7 +58,7 @@ export function getCurrencies(
     });
 }
 
-export function getTopupCurrencies(
+export function getTopupTokens(
   tokens: { name: string; address: string; show: boolean; topupable: boolean }[],
 ) {
   return tokens

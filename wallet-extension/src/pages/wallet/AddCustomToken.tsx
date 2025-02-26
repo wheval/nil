@@ -14,7 +14,7 @@ export const AddCustomToken = () => {
   const [addressError, setAddressError] = useState("");
 
   const navigate = useNavigate();
-  const balanceCurrency = useStore($balanceToken);
+  const balanceToken = useStore($balanceToken);
 
   const handleTokenNameInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTokenName(e.target.value);
@@ -28,7 +28,7 @@ export const AddCustomToken = () => {
     if (!isHex) {
       return false;
     }
-    return !balanceCurrency || !balanceCurrency[address];
+    return !balanceToken || !balanceToken[address];
   };
 
   return (

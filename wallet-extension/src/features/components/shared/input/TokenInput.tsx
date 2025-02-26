@@ -1,24 +1,24 @@
 import { COLORS, Input, Select } from "@nilfoundation/ui-kit";
 import { Box, Icon } from "../index.ts";
 
-export interface CurrencyInterface {
+export interface TokenInterface {
   label: string;
   icon: {};
 }
 
-interface CurrencyInputProps {
-  selectedCurrency: CurrencyInterface;
-  currencies: CurrencyInterface[];
-  onCurrencyChange: (params: { value: { label: string }[] }) => void;
+interface TokenInputProps {
+  selectedToken: TokenInterface;
+  tokens: TokenInterface[];
+  onTokenChange: (params: { value: { label: string }[] }) => void;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   error: string;
 }
 
-export const CurrencyInput: React.FC<CurrencyInputProps> = ({
-  selectedCurrency,
-  currencies,
-  onCurrencyChange,
+export const TokenInput: React.FC<TokenInputProps> = ({
+  selectedToken,
+  tokens,
+  onTokenChange,
   value,
   onChange,
   error,
@@ -60,10 +60,10 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
             flexDirection: "row",
           }}
         >
-          {/* Selected Currency Icon */}
+          {/* Selected Token Icon */}
           <Icon
-            src={selectedCurrency.icon}
-            alt={`${selectedCurrency.label} Icon`}
+            src={selectedToken.icon}
+            alt={`${selectedToken.label} Icon`}
             size={32}
             iconSize="100%"
             background="transparent"
@@ -72,9 +72,9 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
 
           {/* Dropdown */}
           <Select
-            options={currencies.map((currency) => ({
-              label: currency.label,
-              id: currency.label,
+            options={tokens.map((token) => ({
+              label: token.label,
+              id: token.label,
             }))}
             searchable={false}
             placeholder=""
@@ -100,8 +100,8 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
                 },
               },
             }}
-            onChange={onCurrencyChange}
-            value={[{ label: selectedCurrency.label, id: selectedCurrency.label }]}
+            onChange={onTokenChange}
+            value={[{ label: selectedToken.label, id: selectedToken.label }]}
           />
         </Box>
       }

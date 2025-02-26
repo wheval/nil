@@ -2,7 +2,7 @@ import type { Hex, SmartAccountV1, Token } from "@nilfoundation/niljs";
 import { hexToBigInt, toHex } from "@nilfoundation/niljs";
 import { formatEther, parseEther } from "viem";
 import { estimateFee } from "../blockchain/smartAccount.ts";
-import { Currency } from "../components/currency";
+import { TokenNames } from "../components/token";
 
 export const MIN_SEND_AMOUNT_NIL = 0.00001;
 export const MIN_SEND_AMOUNT_OTHER = 1;
@@ -10,7 +10,7 @@ export const MIN_SEND_AMOUNT_OTHER = 1;
 // Validate send amount
 export function validateSendAmount(
   amount: string,
-  selectedCurrency: string,
+  selectedToken: string,
   balance: bigint,
 ): string | null {
   if (!amount.trim()) return "Please enter an amount";
@@ -18,9 +18,9 @@ export function validateSendAmount(
   const numericAmount = Number(amount);
   if (Number.isNaN(numericAmount)) return "Invalid input. Please enter a valid number";
 
-  return selectedCurrency === Currency.NIL
+  return selectedToken === TokenNames.NIL
     ? validateNilSendAmount(numericAmount, Number(balance), amount)
-    : validateOtherCurrencySendAmount(numericAmount, selectedCurrency, Number(balance));
+    : validateOtherTokenSendAmount(numericAmount, selectedToken, Number(balance));
 }
 
 function validateNilSendAmount(
@@ -33,15 +33,15 @@ function validateNilSendAmount(
   return null;
 }
 
-function validateOtherCurrencySendAmount(
+function validateOtherTokenSendAmount(
   amount: number,
-  currency: string,
+  token: string,
   balance: number,
 ): string | null {
   if (amount > balance) return "Insufficient Funds";
   if (amount < MIN_SEND_AMOUNT_OTHER)
-    return `Minimum send amount is ${MIN_SEND_AMOUNT_OTHER} ${currency}`;
-  if (!Number.isInteger(amount)) return `${currency} does not support decimal values`;
+    return `Minimum send amount is ${MIN_SEND_AMOUNT_OTHER} ${token}`;
+  if (!Number.isInteger(amount)) return `${token} does not support decimal values`;
   return null;
 }
 

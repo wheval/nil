@@ -1,20 +1,20 @@
 import { convertEthToWei } from "@nilfoundation/niljs";
-import { Currency } from "../components/currency";
+import { TokenNames } from "../components/token";
 
 export const MAX_AMOUNT_NIL = 1;
 export const MIN_AMOUNT_NIL = 0.0001;
 export const MAX_AMOUNT_OTHER = 100;
 export const MIN_AMOUNT_OTHER = 1;
 
-export function validateAmount(amount: string, selectedCurrency: string): string | null {
+export function validateAmount(amount: string, selectedToken: string): string | null {
   if (!amount.trim()) return "Please enter an amount";
 
   const numericAmount = Number(amount);
   if (Number.isNaN(numericAmount)) return "Invalid input. Please enter a valid number";
 
-  return selectedCurrency === Currency.NIL
+  return selectedToken === TokenNames.NIL
     ? validateNilAmount(numericAmount)
-    : validateOtherCurrencyAmount(numericAmount, selectedCurrency);
+    : validateOtherTokenAmount(numericAmount, selectedToken);
 }
 
 function validateNilAmount(amount: number): string | null {
@@ -23,17 +23,17 @@ function validateNilAmount(amount: number): string | null {
   return null;
 }
 
-function validateOtherCurrencyAmount(amount: number, currency: string): string | null {
-  if (amount < MIN_AMOUNT_OTHER) return `Minimum allowed amount is ${MIN_AMOUNT_OTHER} ${currency}`;
-  if (amount > MAX_AMOUNT_OTHER) return `Maximum allowed amount is ${MAX_AMOUNT_OTHER} ${currency}`;
-  if (!Number.isInteger(amount)) return `${currency} does not support decimal values`;
+function validateOtherTokenAmount(amount: number, token: string): string | null {
+  if (amount < MIN_AMOUNT_OTHER) return `Minimum allowed amount is ${MIN_AMOUNT_OTHER} ${token}`;
+  if (amount > MAX_AMOUNT_OTHER) return `Maximum allowed amount is ${MAX_AMOUNT_OTHER} ${token}`;
+  if (!Number.isInteger(amount)) return `${token} does not support decimal values`;
   return null;
 }
 
-export function convertAmount(amount: string, selectedCurrency: string): bigint {
-  return selectedCurrency === Currency.NIL ? convertEthToWei(Number(amount)) : BigInt(amount);
+export function convertAmount(amount: string, selectedToken: string): bigint {
+  return selectedToken === TokenNames.NIL ? convertEthToWei(Number(amount)) : BigInt(amount);
 }
 
-export function getQuickAmounts(selectedCurrency: string): number[] {
-  return selectedCurrency === Currency.NIL ? [0.0001, 0.003, 0.05] : [1, 5, 10];
+export function getQuickAmounts(selectedToken: string): number[] {
+  return selectedToken === TokenNames.NIL ? [0.0001, 0.003, 0.05] : [1, 5, 10];
 }

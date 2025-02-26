@@ -12,17 +12,17 @@ import {
   $tokens,
   getBalanceForToken,
 } from "../../../store/model/token.ts";
-import { convertWeiToEth, formatAddress, getCurrencies, getTokenIcon } from "../../../utils";
+import { convertWeiToEth, formatAddress, getTokens, getTokenIcon } from "../../../utils";
 import { Box, Icon } from "../../shared";
 
 export const TokenTab = () => {
   const balance = useStore($balance);
-  const balanceCurrency = useStore($balanceToken);
+  const balanceToken = useStore($balanceToken);
   const allTokens = useStore($tokens);
   const [clicked, setClicked] = useState(false);
   const { t } = useTranslation("translation");
   const navigate = useNavigate();
-  const availableTokens = getCurrencies(allTokens, true);
+  const availableTokens = getTokens(allTokens, true);
 
   const handleCopy = (address: string) => {
     navigator.clipboard.writeText(address).then(() => {
@@ -31,7 +31,7 @@ export const TokenTab = () => {
   };
 
   const tokens = availableTokens.map((token) => {
-    const amount = getBalanceForToken(token.address, balance ?? 0n, balanceCurrency ?? {});
+    const amount = getBalanceForToken(token.address, balance ?? 0n, balanceToken ?? {});
     if (token.address === "") {
       return {
         icon: nilIcon,
@@ -57,7 +57,7 @@ export const TokenTab = () => {
   if (tokens.length === 0) {
     return (
       <Box $style={{ textAlign: "center", paddingTop: "40px" }}>
-        <ParagraphSmall $style={{ color: COLORS.gray200 }}>No currencies found</ParagraphSmall>
+        <ParagraphSmall $style={{ color: COLORS.gray200 }}>No tokens found</ParagraphSmall>
       </Box>
     );
   }
@@ -111,7 +111,7 @@ export const TokenTab = () => {
                   textOverflow: "ellipsis",
                 }}
               >
-                {token.title || "Custom Currency"}
+                {token.title || "Custom Token"}
               </HeadingMedium>
               <ParagraphSmall
                 onClick={() => {
@@ -174,7 +174,7 @@ export const TokenTab = () => {
             },
           }}
         >
-          {t("wallet.manageTokens.currencyTab.button")}
+          {t("wallet.manageTokens.tokenTab.button")}
         </Button>
       </Box>
     </Box>

@@ -111,7 +111,7 @@
       "button": "Join =nil; community"
     },
     "manageTokens": {
-      "currencyTab": {
+      "tokenTab": {
         "button": "Manage Tokens"
       },
       "manageTokensPage": {

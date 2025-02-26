@@ -3,14 +3,14 @@ import {
   fetchBalance,
   fetchSmartAccountTokens,
   initializeOrDeploySmartAccount,
-  topUpAllCurrencies,
-  topUpSpecificCurrency,
+  topUpAllTokens,
+  topUpSpecificToken,
 } from "../../src/features/blockchain";
-import { Currency } from "../../src/features/components/currency";
+import { TokenNames } from "../../src/features/components/token";
 import { btcAddress } from "../../src/features/utils/token.ts";
 import { setup } from "./helper.ts";
 
-test("Top up all currencies and verify balances", async () => {
+test("Top up all tokens and verify balances", async () => {
   // 1. Set up smart account
   const { client, signer, shardId, faucetClient } = await setup();
   const smartAccount = await initializeOrDeploySmartAccount({
@@ -24,8 +24,8 @@ test("Top up all currencies and verify balances", async () => {
   const initialBalance = await fetchBalance(smartAccount);
   const initialTokens = await fetchSmartAccountTokens(smartAccount);
 
-  // 3. Top up all currencies
-  await topUpAllCurrencies(smartAccount, faucetClient);
+  // 3. Top up all tokens
+  await topUpAllTokens(smartAccount, faucetClient);
 
   // 4. Fetch balances after top-up
   const finalBalance = await fetchBalance(smartAccount);
@@ -38,7 +38,7 @@ test("Top up all currencies and verify balances", async () => {
   }
 });
 
-test("Top up NIL currency and verify exact balance change", async () => {
+test("Top up NIL token and verify exact balance change", async () => {
   // 1. Set up smart account
   const { client, signer, shardId, faucetClient } = await setup();
   const smartAccount = await initializeOrDeploySmartAccount({
@@ -51,9 +51,9 @@ test("Top up NIL currency and verify exact balance change", async () => {
   // 2. Fetch initial NIL balance
   const initialBalance = await fetchBalance(smartAccount);
 
-  // 3. Top up NIL currency
+  // 3. Top up NIL token
   const topUpAmountNIL = convertEthToWei(0.0001);
-  await topUpSpecificCurrency(smartAccount, faucetClient, Currency.NIL, topUpAmountNIL);
+  await topUpSpecificToken(smartAccount, faucetClient, TokenNames.NIL, topUpAmountNIL);
 
   // 4. Fetch updated NIL balance
   const finalBalance = await fetchBalance(smartAccount);
@@ -77,7 +77,7 @@ test("Top up BTC token and verify balance update", async () => {
 
   // 3. Top up BTC token
   const topUpAmountBTC = 5n;
-  await topUpSpecificCurrency(smartAccount, faucetClient, Currency.BTC, topUpAmountBTC);
+  await topUpSpecificToken(smartAccount, faucetClient, TokenNames.BTC, topUpAmountBTC);
 
   // 4. Fetch updated token balances
   const finalTokens = await fetchSmartAccountTokens(smartAccount);

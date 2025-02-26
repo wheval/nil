@@ -2,8 +2,8 @@ import {
   fetchBalance,
   fetchSmartAccountTokens,
   initializeOrDeploySmartAccount,
-  sendCurrency,
-  topUpAllCurrencies,
+  sendToken,
+  topUpAllTokens,
 } from "../../src/features/blockchain";
 import { btcAddress } from "../../src/features/utils/token.ts";
 import { setup } from "./helper.ts";
@@ -20,8 +20,8 @@ test("Initialize and deploy smart account, fetch balance and tokens", async () =
     faucetClient,
   });
 
-  // 2. TopUp with currencies
-  await topUpAllCurrencies(smartAccount, faucetClient);
+  // 2. TopUp with tokens
+  await topUpAllTokens(smartAccount, faucetClient);
 
   expect(smartAccount).not.toBeNull();
   expect(smartAccount.address).toBeDefined();
@@ -55,7 +55,7 @@ test("Initialize and deploy smart account, fetch balance and tokens", async () =
   expect(tokensReinit).toEqual(tokens);
 });
 
-test("Send NIL currency and token between accounts and validate balances", async () => {
+test("Send NIL token and token between accounts and validate balances", async () => {
   // 1. Set up sender account
   const senderSetup = await setup();
   const sender = await initializeOrDeploySmartAccount({
@@ -74,16 +74,16 @@ test("Send NIL currency and token between accounts and validate balances", async
     faucetClient: recipientSetup.faucetClient,
   });
 
-  // 3. Top up sender with all currencies
-  await topUpAllCurrencies(sender, senderSetup.faucetClient);
+  // 3. Top up sender with all tokens
+  await topUpAllTokens(sender, senderSetup.faucetClient);
 
   // 4. Fetch sender's initial balances
   const senderInitialBalance = await fetchBalance(sender);
   const senderInitialTokens = await fetchSmartAccountTokens(sender);
   const recipientInitialBalance = await fetchBalance(recipient);
 
-  // 5. Send NIL currency from sender to recipient
-  await sendCurrency({
+  // 5. Send NIL token from sender to recipient
+  await sendToken({
     smartAccount: sender,
     to: recipient.address,
     value: 0.00001,
@@ -101,7 +101,7 @@ test("Send NIL currency and token between accounts and validate balances", async
   // 7. Send BTC token from sender to recipient
   const sendAmountBTC = 5n;
 
-  await sendCurrency({
+  await sendToken({
     smartAccount: sender,
     to: recipient.address,
     value: Number(sendAmountBTC),

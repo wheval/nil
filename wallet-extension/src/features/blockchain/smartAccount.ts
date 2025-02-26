@@ -15,10 +15,10 @@ import {
 import { SmartAccount } from "@nilfoundation/smart-contracts";
 import { encodeFunctionData } from "viem";
 import { ActivityType } from "../../background/storage";
-import { Currency } from "../components/currency";
+import { TokenNames } from "../components/token";
 import { addActivity } from "../store/model/activities.ts";
 import { generateRandomSalt } from "../utils";
-import { topUpSpecificCurrency } from "./faucet.ts";
+import { topUpSpecificToken } from "./faucet.ts";
 
 // Create Public Client
 export function createClient(rpcEndpoint: string, shardId: number): PublicClient {
@@ -74,12 +74,12 @@ export async function initializeOrDeploySmartAccount(params: {
     });
 
     try {
-      // Top up smartAccount with 0.1 native currency
-      await topUpSpecificCurrency(
+      // Top up smartAccount with 0.1 native token
+      await topUpSpecificToken(
         smartAccount,
         faucetClient,
-        Currency.NIL,
-        Number(convertEthToWei(0.009)),
+        TokenNames.NIL,
+        convertEthToWei(0.009),
         false,
       );
     } catch (e) {
@@ -103,8 +103,8 @@ export async function initializeOrDeploySmartAccount(params: {
   }
 }
 
-// Send currency
-export async function sendCurrency({
+// Send token
+export async function sendToken({
   smartAccount,
   to,
   value,
@@ -148,7 +148,7 @@ export async function sendCurrency({
   }
 }
 
-// Get transaction parameters for NIL (native currency)
+// Get transaction parameters for NIL (native token)
 function getNilTransactionParams(to: Hex, value: number, feeCredit: bigint) {
   return {
     to,

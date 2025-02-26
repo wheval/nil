@@ -10,7 +10,7 @@ Welcome to the **=nil; Wallet Extension** — a user-friendly way to manage acco
     - Create a new wallet
     - Send & Receive tokens
     - Check your balance
-    - Top-up test currencies
+    - Top-up test tokens
 - [ ] **Wallet SDK for dApp Developers**
 - [ ] **Playground Integration**
 - [ ] **Further Improvements & Feature Requests**

@@ -13,11 +13,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { parseEther } from "viem";
-import { sendCurrency } from "../../features/blockchain";
-import { Currency } from "../../features/components/currency";
+import { sendToken } from "../../features/blockchain";
+import { TokenNames } from "../../features/components/token";
 import {
   Box,
-  CurrencyInput,
+  TokenInput,
   InputErrorMessage,
   MainAddressInput,
   ScreenHeader,
@@ -32,7 +32,7 @@ import {
 import {
   convertWeiToEth,
   fetchEstimatedFee,
-  getCurrencies,
+  getTokens,
   validateSendAmount,
 } from "../../features/utils";
 import { validateSmartAccountAddress } from "../../features/utils/inputValidation";
@@ -42,11 +42,11 @@ export const Send = () => {
   const { t } = useTranslation("translation");
   const navigate = useNavigate();
   const smartAccount = useStore($smartAccount);
-  const tokens = useStore($tokens);
-  const balanceCurrencies = useStore($balanceToken);
+  const availableTokens = useStore($tokens);
+  const balanceTokens = useStore($balanceToken);
   const nilBalance = useStore($balance);
 
-  const currencies = getCurrencies(tokens, true);
+  const tokens = getTokens(availableTokens, true);
 
   const [toAddress, setToAddress] = useState("");
   const [amount, setAmount] = useState("");
@@ -54,30 +54,30 @@ export const Send = () => {
   const [amountError, setAmountError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState("");
-  const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]);
+  const [selectedToken, setSelectedToken] = useState(tokens[0]);
 
   const balance = getBalanceForToken(
-    selectedCurrency.address,
+    selectedToken.address,
     nilBalance ?? 0n,
-    balanceCurrencies ?? {},
+    balanceTokens ?? {},
   );
 
   // Validation Function
   const validateTransaction = useCallback(() => {
-    if (!smartAccount || !balanceCurrencies) return false;
+    if (!smartAccount || !balanceTokens) return false;
 
     const addressValidation = validateSmartAccountAddress(toAddress, smartAccount.address);
-    const amountValidation = validateSendAmount(amount, selectedCurrency.label, balance);
+    const amountValidation = validateSendAmount(amount, selectedToken.label, balance);
 
     setAddressError(addressValidation.isValid ? "" : addressValidation.error);
     setAmountError(amountValidation ?? "");
 
     return addressValidation.isValid && !amountValidation;
-  }, [smartAccount, balanceCurrencies, toAddress, amount, selectedCurrency, balance]);
+  }, [smartAccount, balanceTokens, toAddress, amount, selectedToken, balance]);
 
   // Debounced Gas Fee Calculation
   useEffect(() => {
-    if (!toAddress || !amount || !balanceCurrencies || !balance || !smartAccount) {
+    if (!toAddress || !amount || !balanceTokens || !balance || !smartAccount) {
       setEstimatedFee("");
       return;
     }
@@ -90,12 +90,12 @@ export const Send = () => {
           smartAccount as SmartAccountV1,
           toAddress as Hex,
           amount,
-          selectedCurrency.address,
+          selectedToken.address,
         );
         setEstimatedFee(fee);
 
         // Adjust amount to leave gas for NIL transactions
-        if (selectedCurrency.label === Currency.NIL && parseEther(amount) === balance) {
+        if (selectedToken.label === TokenNames.NIL && parseEther(amount) === balance) {
           const adjustedValue = parseEther(amount) - parseEther(String(Number(fee) * 2));
           setAmount(convertWeiToEth(adjustedValue));
         }
@@ -109,8 +109,8 @@ export const Send = () => {
   }, [
     toAddress,
     amount,
-    selectedCurrency,
-    balanceCurrencies,
+    selectedToken,
+    balanceTokens,
     balance,
     smartAccount,
     validateTransaction,
@@ -128,13 +128,13 @@ export const Send = () => {
 
     setIsLoading(true);
     try {
-      await sendCurrency({
+      await sendToken({
         smartAccount: smartAccount as SmartAccountV1,
         to: toAddress as Hex,
         value: Number(amount),
-        tokenAddress: selectedCurrency.address,
+        tokenAddress: selectedToken.address,
       });
-      console.log(`Successfully sent ${amount} ${selectedCurrency.label} to ${toAddress}`);
+      console.log(`Successfully sent ${amount} ${selectedToken.label} to ${toAddress}`);
       navigate(WalletRoutes.WALLET.BASE);
     } catch (error) {
       console.error("Send failed:", error);
@@ -188,16 +188,16 @@ export const Send = () => {
         <HeadingMedium $style={{ color: COLORS.gray50, marginBottom: "5px" }}>
           {t("wallet.sendPage.amountSection.heading")}
         </HeadingMedium>
-        <CurrencyInput
+        <TokenInput
           error={amountError}
-          selectedCurrency={selectedCurrency}
-          currencies={currencies}
-          onCurrencyChange={(params) => {
+          selectedToken={selectedToken}
+          tokens={tokens}
+          onTokenChange={(params) => {
             setEstimatedFee("");
-            const selected = currencies.find(
-              (currency) => params.value[0]?.label === currency.label,
+            const selected = tokens.find(
+              (token) => params.value[0]?.label === token.label,
             );
-            if (selected) setSelectedCurrency(selected);
+            if (selected) setSelectedToken(selected);
           }}
           value={amount}
           onChange={(e) => {
@@ -224,7 +224,7 @@ export const Send = () => {
             color={amountError === "Insufficient Funds" ? COLORS.red300 : COLORS.gray200}
           >
             {amountError === "Insufficient Funds" ? `${amountError} - ` : ""}Balance:{" "}
-            {selectedCurrency.label === Currency.NIL
+            {selectedToken.label === TokenNames.NIL
               ? convertWeiToEth(balance)
               : balance.toString()}
           </ParagraphSmall>
@@ -234,7 +234,7 @@ export const Send = () => {
             $justify="center"
             onClick={() => {
               setAmountError("");
-              if (selectedCurrency.label === Currency.NIL) {
+              if (selectedToken.label === TokenNames.NIL) {
                 setAmount(convertWeiToEth(balance));
                 return;
               }
