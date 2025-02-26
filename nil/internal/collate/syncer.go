@@ -47,7 +47,7 @@ type Syncer struct {
 
 	subsMutex sync.Mutex
 	subsId    uint64
-	subs      map[uint64]chan struct{}
+	subs      map[uint64]chan types.BlockNumber
 	validator *Validator
 }
 
@@ -64,7 +64,7 @@ func NewSyncer(cfg *SyncerConfig, validator *Validator, db db.DB, networkManager
 			Stringer(logging.FieldShardId, cfg.ShardId).
 			Logger(),
 		waitForSync: &waitForSync,
-		subs:        make(map[uint64]chan struct{}),
+		subs:        make(map[uint64]chan types.BlockNumber),
 		validator:   validator,
 	}, nil
 }
@@ -81,11 +81,11 @@ func (s *Syncer) WaitComplete() {
 	s.waitForSync.Wait()
 }
 
-func (s *Syncer) Subscribe() (uint64, <-chan struct{}) {
+func (s *Syncer) Subscribe() (uint64, <-chan types.BlockNumber) {
 	s.subsMutex.Lock()
 	defer s.subsMutex.Unlock()
 
-	ch := make(chan struct{}, 1)
+	ch := make(chan types.BlockNumber, 1)
 	id := s.subsId
 	s.subs[id] = ch
 	s.subsId++
@@ -100,12 +100,12 @@ func (s *Syncer) Unsubscribe(id uint64) {
 	delete(s.subs, id)
 }
 
-func (s *Syncer) notify() {
+func (s *Syncer) notify(blockId types.BlockNumber) {
 	s.subsMutex.Lock()
 	defer s.subsMutex.Unlock()
 
 	for _, ch := range s.subs {
-		ch <- struct{}{}
+		ch <- blockId
 	}
 }
 
@@ -141,7 +141,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 	s.logger.Debug().
 		Stringer(logging.FieldBlockHash, hash).
 		Uint64(logging.FieldBlockNumber, uint64(block.Id)).
-		Msg("Initialized sync proposer at starting block")
+		Msg("Initialized syncer at starting block")
 
 	s.logger.Info().Msg("Starting sync")
 
@@ -162,7 +162,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			s.logger.Debug().Msg("Sync proposer is terminated")
+			s.logger.Debug().Msg("Syncer is terminated")
 			return nil
 		case data := <-ch:
 			saved, err := s.processTopicTransaction(ctx, data)
@@ -284,7 +284,7 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 	if err := s.validator.ReplayBlock(ctx, block); err != nil {
 		return err
 	}
-	s.notify()
+	s.notify(block.Id)
 
 	s.logger.Trace().
 		Stringer(logging.FieldBlockNumber, block.Block.Id).

@@ -122,19 +122,31 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 		ctx, cancelFn := context.WithCancel(ctx)
 		defer cancelFn()
 
+		height := block.Id.Uint64() + 1
 		consCh := make(chan error, 1)
 		go func() {
-			consCh <- s.consensus.RunSequence(ctx, block.Id.Uint64()+1)
+			consCh <- s.consensus.RunSequence(ctx, height)
 		}()
 
-		select {
-		case <-syncCh:
-			cancelFn()
-			err := <-consCh
-			s.logger.Debug().Err(err).Msg("Consensus interrupted by syncer")
-			return nil
-		case err := <-consCh:
-			return err
+		for {
+			select {
+			case newBlockId := <-syncCh:
+				if newBlockId < types.BlockNumber(height) {
+					continue
+				}
+
+				// We receive new block via syncer.
+				// We need to interrupt current sequence and start new one.
+				cancelFn()
+				err := <-consCh
+				s.logger.Debug().
+					Uint64(logging.FieldBlockNumber, height).
+					Err(err).
+					Msg("Consensus interrupted by syncer")
+				return nil
+			case err := <-consCh:
+				return err
+			}
 		}
 	}
 }

@@ -25,16 +25,36 @@ func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 		return false
 	}
 
+	// Here (and below) we use transportCtx because this method could be called from the transport goroutine
+	// or i.ctx can be changed in case we start new sequence for the next height.
+	lastBlock, _, err := i.validator.GetLastBlock(i.transportCtx)
+	if err != nil {
+		i.logger.Error().
+			Err(err).
+			Msg("Failed to get last block")
+		return false
+	}
+
+	var height uint64
 	loggerCtx := i.logger.With().Hex(logging.FieldPublicKey, msg.From)
 	if view := msg.GetView(); view != nil {
 		loggerCtx = loggerCtx.
 			Uint64(logging.FieldHeight, view.Height).
 			Uint64(logging.FieldRound, view.Round)
+		height = view.Height
 	}
 	logger := loggerCtx.Logger()
 
-	// Here we use transportCtx because this method could be called from the transport goroutine
-	validators, err := i.validatorsCache.getValidators(i.transportCtx, msg.View.Height)
+	// Current message is from future.
+	// Some validator could commit block and start new sequence before we committed that block.
+	// Use last known config since validators list is static for now.
+	// TODO: consider some options to fix it.
+	if expectedHeight := uint64(lastBlock.Id + 1); height > expectedHeight {
+		logger.Warn().Msgf("Got message with height=%d while expected=%d", height, expectedHeight)
+		height = expectedHeight
+	}
+
+	validators, err := i.validatorsCache.getValidators(i.transportCtx, height)
 	if err != nil {
 		logger.Error().
 			Err(err).
