@@ -56,7 +56,11 @@ func NewInMemMPT() *MerklePatriciaTrie {
 }
 
 func (s InMemHolder) Get(key []byte) ([]byte, error) {
-	return s[string(key)], nil
+	v, ok := s[string(key)]
+	if !ok {
+		return nil, db.ErrKeyNotFound
+	}
+	return v, nil
 }
 
 func (s *InMemHolder) Set(key, value []byte) error {

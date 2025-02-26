@@ -198,7 +198,7 @@ type AsyncCallArgs struct {
 	CallData    []byte
 }
 
-func (s *SuiteEconomy) TestGasForwarding() { //nolint
+func (s *SuiteEconomy) TestGasForwarding() { //nolint:maintidx
 	var (
 		receipt        *jsonrpc.RPCReceipt
 		data           []byte
@@ -223,368 +223,397 @@ func (s *SuiteEconomy) TestGasForwarding() { //nolint
 
 	args := make([]AsyncCallArgs, 0, 10)
 
-	// w -> t1 -> {t2[rem]}
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   big.NewInt(0),
-		ForwardKind: types.ForwardKindRemaining,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+	s.Run("w -> t1 -> {t2[rem]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   big.NewInt(0),
+			ForwardKind: types.ForwardKindRemaining,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			feePack, types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
+		initialBalance = s.checkBalance(info, initialBalance)
 	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
-	initialBalance = s.checkBalance(info, initialBalance)
 
-	// w -> t1 -> {t2[no]}: no forwarding, all gas is refunded
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   s.GasToValue(uint64(1_000_000)).ToBig(),
-		ForwardKind: types.ForwardKindNone,
-		RefundTo:    s.smartAccountAddress,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+	// no forwarding, all gas is refunded
+	s.Run("w -> t1 -> {t2[no]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   s.GasToValue(uint64(1_000_000)).ToBig(),
+			ForwardKind: types.ForwardKindNone,
+			RefundTo:    s.smartAccountAddress,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			feePack, types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
+		s.Require().True(info[s.testAddress1].ValueForwarded.IsZero())
+		initialBalance = s.checkBalance(info, initialBalance)
 	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
-	s.Require().True(info[s.testAddress1].ValueForwarded.IsZero())
-	initialBalance = s.checkBalance(info, initialBalance)
 
-	// w -> t1 -> {t2[percent]}: refund rest from t1
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   big.NewInt(70),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+	// refund rest from t1
+	s.Run("w -> t1 -> {t2[rem]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   big.NewInt(70),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			feePack, types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
+		s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
+		s.Require().False(info[s.testAddress2].RefundSent.IsZero())
+		initialBalance = s.checkBalance(info, initialBalance)
 	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
-	s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
-	s.Require().False(info[s.testAddress2].RefundSent.IsZero())
-	initialBalance = s.checkBalance(info, initialBalance)
 
-	// w -> t1 -> {t2[percent], t3[no]}: no forward for t3, fee is debited from account
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   big.NewInt(70),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+	// no forward for t3, fee is debited from account
+	s.Run("w -> t1 -> {t2[percent], t3[no]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   big.NewInt(70),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress3,
+			FeeCredit:   types.GasToValue(100_000).ToBig(),
+			ForwardKind: types.ForwardKindNone,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			feePack, types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3))
+		s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
+		s.Require().False(info[s.testAddress2].RefundSent.IsZero())
+		s.Require().Equal(info[s.testAddress1].ValueForwarded, info[s.testAddress2].ValueUsed.Add(info[s.testAddress2].RefundSent))
+		initialBalance = s.checkBalance(info, initialBalance)
 	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress3,
-		FeeCredit:   types.GasToValue(100_000).ToBig(),
-		ForwardKind: types.ForwardKindNone,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
-	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3))
-	s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
-	s.Require().False(info[s.testAddress2].RefundSent.IsZero())
-	s.Require().Equal(info[s.testAddress1].ValueForwarded, info[s.testAddress2].ValueUsed.Add(info[s.testAddress2].RefundSent))
-	initialBalance = s.checkBalance(info, initialBalance)
 
-	// w -> t1 -> {t2[val]}: refund rest from t1
-	args = args[:0]
-	forwardValue := types.GasToValue(50_000)
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   forwardValue.ToBig(),
-		ForwardKind: types.ForwardKindValue,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+	// refund rest from t1
+	s.Run("w -> t1 -> {t2[val]}", func() {
+		args = args[:0]
+		forwardValue := types.GasToValue(50_000)
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   forwardValue.ToBig(),
+			ForwardKind: types.ForwardKindValue,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			types.NewFeePackFromGas(300_000), types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
+		s.Require().Equal(0, info[s.testAddress1].ValueForwarded.Cmp(forwardValue))
+		s.Require().False(info[s.testAddress1].RefundSent.IsZero())
+		s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].ValueForwarded.
+			Add(info[s.testAddress1].ValueUsed).Add(info[s.testAddress1].RefundSent))
+		initialBalance = s.checkBalance(info, initialBalance)
 	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		types.NewFeePackFromGas(300_000), types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2))
-	s.Require().Equal(0, info[s.testAddress1].ValueForwarded.Cmp(forwardValue))
-	s.Require().False(info[s.testAddress1].RefundSent.IsZero())
-	s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].ValueForwarded.
-		Add(info[s.testAddress1].ValueUsed).Add(info[s.testAddress1].RefundSent))
-	initialBalance = s.checkBalance(info, initialBalance)
 
-	// w -> t1 -> {t2[val], t3[percent]}: refund rest from t1
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   types.GasToValue(200_000).ToBig(),
-		ForwardKind: types.ForwardKindValue,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+	// refund rest from t1
+	s.Run("w -> t1 -> {t2[val], t3[percent]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   types.GasToValue(200_000).ToBig(),
+			ForwardKind: types.ForwardKindValue,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress3,
+			FeeCredit:   big.NewInt(60),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			types.NewFeePackFromGas(400_000), types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3))
+		s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
+		s.Require().False(info[s.testAddress1].RefundSent.IsZero())
+		s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].ValueForwarded.
+			Add(info[s.testAddress1].ValueUsed).Add(info[s.testAddress1].RefundSent))
+		initialBalance = s.checkBalance(info, initialBalance)
 	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress3,
-		FeeCredit:   big.NewInt(60),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
-	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		types.NewFeePackFromGas(400_000), types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3))
-	s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
-	s.Require().False(info[s.testAddress1].RefundSent.IsZero())
-	s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].ValueForwarded.
-		Add(info[s.testAddress1].ValueUsed).Add(info[s.testAddress1].RefundSent))
-	initialBalance = s.checkBalance(info, initialBalance)
 
-	// w -> t1 -> {t2[val], t3[percent], t4[rem]}: no refund from t1
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   types.GasToValue(200_000).ToBig(),
-		ForwardKind: types.ForwardKindValue,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
-	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress3,
-		FeeCredit:   big.NewInt(60),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
-	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress4,
-		FeeCredit:   big.NewInt(123),
-		ForwardKind: types.ForwardKindRemaining,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(3)),
-	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		types.NewFeePackFromGas(400_000), types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
-	s.Require().Equal(uint32(1), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[0]))
-	s.Require().Equal(uint32(2), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[1]))
-	s.Require().Equal(uint32(3), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[2]))
-	s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
-	s.Require().True(info[s.testAddress1].RefundSent.IsZero())
-	s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].ValueForwarded.
-		Add(info[s.testAddress1].ValueUsed))
-	initialBalance = s.checkBalance(info, initialBalance)
-
-	// w -> t1 -> {t2[percent], t3[percent], t4[rem]}: percent is not 100%, so there is enough for remaining forwarding
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   big.NewInt(30),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
-	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress3,
-		FeeCredit:   big.NewInt(40),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
-	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress4,
-		FeeCredit:   big.NewInt(123),
-		ForwardKind: types.ForwardKindRemaining,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(3)),
-	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
-	s.Require().Equal(uint32(1), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[0]))
-	s.Require().Equal(uint32(2), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[1]))
-	s.Require().Equal(uint32(3), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[2]))
-	s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
-	s.Require().True(info[s.testAddress1].RefundSent.IsZero())
-	s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].ValueForwarded.
-		Add(info[s.testAddress1].ValueUsed))
-	initialBalance = s.checkBalance(info, initialBalance)
-
-	// w -> t1 -> {t2[percent], t3[percent], t4[rem]}: percent is 100%, should fail since no gas for t4
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   big.NewInt(60),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
-	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress3,
-		FeeCredit:   big.NewInt(40),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
-	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress4,
-		FeeCredit:   big.NewInt(123),
-		ForwardKind: types.ForwardKindRemaining,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(3)),
-	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().False(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
-	s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
-	s.Require().True(info[s.testAddress1].RefundSent.IsZero())
-	s.Require().True(info[s.testAddress4].ValueUsed.IsZero())
-	s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].ValueForwarded.Add(info[s.testAddress1].RefundSent).
-		Add(info[s.testAddress1].ValueUsed))
-	initialBalance = s.checkBalance(info, initialBalance)
-
-	// w -> t1 -> {t2[percent], t3[percent]}: fail - percentage is more than 100%
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   big.NewInt(60),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
-	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress3,
-		FeeCredit:   big.NewInt(50),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
-	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().False(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1))
-	s.Require().True(info[s.testAddress1].ValueForwarded.IsZero())
-	s.Require().False(info[s.testAddress1].RefundSent.IsZero())
-	s.Require().True(info[s.testAddress1].ValueSent.IsZero())
-	s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].RefundSent.Add(info[s.testAddress1].ValueUsed))
-	initialBalance = s.checkBalance(info, initialBalance)
-
-	// w -> t1 -> {t2[percent], t3[rem], t4[rem]}: equal parts, no refund
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   big.NewInt(40),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
-	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress3,
-		FeeCredit:   big.NewInt(123),
-		ForwardKind: types.ForwardKindRemaining,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
-	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress4,
-		FeeCredit:   big.NewInt(456),
-		ForwardKind: types.ForwardKindRemaining,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(3)),
-	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
-	s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
-	s.Require().True(info[s.testAddress1].RefundSent.IsZero())
-	// Check test3 and test4 get same fee credit
-	s.Require().Equal(info[s.testAddress1].OutTransactions[s.testAddress3].FeeCredit,
-		info[s.testAddress1].OutTransactions[s.testAddress4].FeeCredit)
-	s.Require().Equal(info[s.smartAccountAddress].ValueSent,
-		info[s.testAddress1].ValueForwarded.
+	// no refund from t1
+	s.Run("w -> t1 -> {t2[val], t3[percent], t4[rem]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   types.GasToValue(200_000).ToBig(),
+			ForwardKind: types.ForwardKindValue,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress3,
+			FeeCredit:   big.NewInt(60),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress4,
+			FeeCredit:   big.NewInt(123),
+			ForwardKind: types.ForwardKindRemaining,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(3)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			types.NewFeePackFromGas(400_000), types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
+		s.Require().Equal(uint32(1), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[0]))
+		s.Require().Equal(uint32(2), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[1]))
+		s.Require().Equal(uint32(3), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[2]))
+		s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
+		s.Require().True(info[s.testAddress1].RefundSent.IsZero())
+		s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].ValueForwarded.
 			Add(info[s.testAddress1].ValueUsed))
-	initialBalance = s.checkBalance(info, initialBalance)
+		initialBalance = s.checkBalance(info, initialBalance)
+	})
 
-	// w -> t1 -> {t2[percent, refundTo=t3], t3[rem, refundTo=t2]}: specify refundTo
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		RefundTo:    s.testAddress3,
-		FeeCredit:   big.NewInt(70),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+	// percent is not 100%, so there is enough for remaining forwarding
+	s.Run("w -> t1 -> {t2[percent], t3[percent], t4[rem]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   big.NewInt(30),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress3,
+			FeeCredit:   big.NewInt(40),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress4,
+			FeeCredit:   big.NewInt(123),
+			ForwardKind: types.ForwardKindRemaining,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(3)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			feePack, types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
+		s.Require().Equal(uint32(1), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[0]))
+		s.Require().Equal(uint32(2), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[1]))
+		s.Require().Equal(uint32(3), unpackStubEvent(receipt.OutReceipts[0].OutReceipts[2]))
+		s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
+		s.Require().True(info[s.testAddress1].RefundSent.IsZero())
+		s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].ValueForwarded.
+			Add(info[s.testAddress1].ValueUsed))
+		initialBalance = s.checkBalance(info, initialBalance)
 	})
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress3,
-		RefundTo:    s.testAddress2,
-		FeeCredit:   big.NewInt(123),
-		ForwardKind: types.ForwardKindRemaining,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
-	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3))
-	s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
-	s.Require().False(info[s.testAddress2].RefundSent.IsZero())
-	s.Require().Equal(info[s.testAddress2].RefundSent, info[s.testAddress3].RefundReceived)
-	s.Require().Equal(info[s.testAddress2].RefundReceived, info[s.testAddress3].RefundSent)
-	initialBalance = s.checkBalance(info, initialBalance)
 
-	// t1 -> {t2[rem]}: forward from external transaction
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   big.NewInt(0),
-		ForwardKind: types.ForwardKindRemaining,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+	// percent is 100%, should fail since no gas for t4
+	s.Run("w -> t1 -> {t2[percent], t3[percent], t4[rem]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   big.NewInt(60),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress3,
+			FeeCredit:   big.NewInt(40),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress4,
+			FeeCredit:   big.NewInt(123),
+			ForwardKind: types.ForwardKindRemaining,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(3)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			feePack, types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().False(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
+		s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
+		s.Require().True(info[s.testAddress1].RefundSent.IsZero())
+		s.Require().True(info[s.testAddress4].ValueUsed.IsZero())
+		s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].ValueForwarded.Add(info[s.testAddress1].RefundSent).
+			Add(info[s.testAddress1].ValueUsed))
+		initialBalance = s.checkBalance(info, initialBalance)
 	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendExternalTransaction(data, s.testAddress1)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().True(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.testAddress1, s.testAddress2))
-	initialBalance = s.checkBalance(info, initialBalance)
 
-	// t1 -> {t2[rem]}: fail - forward too much from external transaction, should correctly refund to account
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   big.NewInt(101),
-		ForwardKind: types.ForwardKindPercentage,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+	// w -> t1 -> {t2[percent], t3[percent]}
+	s.Run("w -> t1 -> {t2[percent], t3[percent]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   big.NewInt(60),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress3,
+			FeeCredit:   big.NewInt(50),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			feePack, types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().False(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1))
+		s.Require().True(info[s.testAddress1].ValueForwarded.IsZero())
+		s.Require().False(info[s.testAddress1].RefundSent.IsZero())
+		s.Require().True(info[s.testAddress1].ValueSent.IsZero())
+		s.Require().Equal(info[s.smartAccountAddress].ValueSent, info[s.testAddress1].RefundSent.Add(info[s.testAddress1].ValueUsed))
+		initialBalance = s.checkBalance(info, initialBalance)
 	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendExternalTransactionNoCheck(data, s.testAddress1)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().False(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.testAddress1))
-	initialBalance = s.checkBalance(info, initialBalance)
 
-	// w -> t1 -> {t2[val]}: fail - val is greater than available feeCredit
-	args = args[:0]
-	args = append(args, AsyncCallArgs{
-		Addr:        s.testAddress2,
-		FeeCredit:   big.NewInt(math.MaxInt64),
-		ForwardKind: types.ForwardKindValue,
-		CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+	// equal parts, no refund
+	s.Run("w -> t1 -> {t2[percent], t3[rem], t4[rem]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   big.NewInt(40),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress3,
+			FeeCredit:   big.NewInt(123),
+			ForwardKind: types.ForwardKindRemaining,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress4,
+			FeeCredit:   big.NewInt(456),
+			ForwardKind: types.ForwardKindRemaining,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(3)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			feePack, types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3, s.testAddress4))
+		s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
+		s.Require().True(info[s.testAddress1].RefundSent.IsZero())
+		// Check test3 and test4 get same fee credit
+		s.Require().Equal(info[s.testAddress1].OutTransactions[s.testAddress3].FeeCredit,
+			info[s.testAddress1].OutTransactions[s.testAddress4].FeeCredit)
+		s.Require().Equal(info[s.smartAccountAddress].ValueSent,
+			info[s.testAddress1].ValueForwarded.
+				Add(info[s.testAddress1].ValueUsed))
+		initialBalance = s.checkBalance(info, initialBalance)
 	})
-	data = s.AbiPack(s.abiTest, "testForwarding", args)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
-		feePack, types.Value0, nil)
-	info = s.AnalyzeReceipt(receipt, s.namesMap)
-	s.Require().False(info.AllSuccess())
-	s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1))
-	s.checkBalance(info, initialBalance)
+
+	// specify refundTo
+	s.Run("w -> t1 -> {t2[percent, refundTo=t3], t3[rem, refundTo=t2]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			RefundTo:    s.testAddress3,
+			FeeCredit:   big.NewInt(70),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress3,
+			RefundTo:    s.testAddress2,
+			FeeCredit:   big.NewInt(123),
+			ForwardKind: types.ForwardKindRemaining,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(2)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			feePack, types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1, s.testAddress2, s.testAddress3))
+		s.Require().False(info[s.testAddress1].ValueForwarded.IsZero())
+		s.Require().False(info[s.testAddress2].RefundSent.IsZero())
+		s.Require().Equal(info[s.testAddress2].RefundSent, info[s.testAddress3].RefundReceived)
+		s.Require().Equal(info[s.testAddress2].RefundReceived, info[s.testAddress3].RefundSent)
+		initialBalance = s.checkBalance(info, initialBalance)
+	})
+
+	// forward from external transaction
+	s.Run("t1 -> {t2[rem]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   big.NewInt(0),
+			ForwardKind: types.ForwardKindRemaining,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendExternalTransaction(data, s.testAddress1)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().True(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.testAddress1, s.testAddress2))
+		initialBalance = s.checkBalance(info, initialBalance)
+	})
+
+	// fail - forward too much from external transaction, should correctly refund to account
+	s.Run("t1 -> {t2[rem]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   big.NewInt(101),
+			ForwardKind: types.ForwardKindPercentage,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendExternalTransactionNoCheck(data, s.testAddress1)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().False(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.testAddress1))
+		initialBalance = s.checkBalance(info, initialBalance)
+	})
+
+	// fail - val is greater than available feeCredit
+	s.Run("w -> t1 -> {t2[val]}", func() {
+		args = args[:0]
+		args = append(args, AsyncCallArgs{
+			Addr:        s.testAddress2,
+			FeeCredit:   big.NewInt(math.MaxInt64),
+			ForwardKind: types.ForwardKindValue,
+			CallData:    s.AbiPack(s.abiTest, "stub", big.NewInt(1)),
+		})
+		data = s.AbiPack(s.abiTest, "testForwarding", args)
+		receipt = s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress, s.testAddress1, execution.MainPrivateKey, data,
+			feePack, types.Value0, nil)
+		info = s.AnalyzeReceipt(receipt, s.namesMap)
+		s.Require().False(info.AllSuccess())
+		s.Require().True(info.ContainsOnly(s.smartAccountAddress, s.testAddress1))
+		s.checkBalance(info, initialBalance)
+	})
 }
 
 // TestGasForwardingInSendTransaction checks that gas forwarding works correctly in sendTransaction.

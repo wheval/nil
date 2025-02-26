@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	ssz "github.com/NilFoundation/fastssz"
+	"github.com/NilFoundation/nil/nil/common"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
 type SszNodeKind = uint8
@@ -28,6 +30,14 @@ type Node interface {
 	Path() *Path
 	SetData(data []byte) error
 	Data() []byte
+}
+
+func calcNodeKey(data []byte) []byte {
+	key := poseidon.Sum(data)
+	if len(key) != 32 {
+		key = common.BytesToHash(key).Bytes()
+	}
+	return key
 }
 
 type NodeBase struct {
