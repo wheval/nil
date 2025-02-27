@@ -133,10 +133,10 @@ func (devnet devnet) generateZeroState(nShards uint32, servers []server) (*execu
 	}
 	mainKeyPath := devnet.spec.NildCredentialsDir + "/keys.yaml"
 	mainPrivateKey, err := execution.LoadMainKeys(mainKeyPath)
-	mainPublicKey := crypto.CompressPubkey(&mainPrivateKey.PublicKey)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
+	var mainPublicKey []byte
 	if err != nil {
 		var mainPrivateKey *ecdsa.PrivateKey
 
@@ -147,6 +147,8 @@ func (devnet devnet) generateZeroState(nShards uint32, servers []server) (*execu
 		if err := execution.DumpMainKeys(mainKeyPath, mainPrivateKey); err != nil {
 			return nil, err
 		}
+	} else {
+		mainPublicKey = crypto.CompressPubkey(&mainPrivateKey.PublicKey)
 	}
 	zeroState, err := execution.CreateDefaultZeroStateConfig(mainPublicKey)
 	if err != nil {
