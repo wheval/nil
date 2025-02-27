@@ -28,7 +28,7 @@ func (m *MockTxnPool) Reset() {
 	m.LastReason = 0
 }
 
-func (m *MockTxnPool) Peek(_ context.Context, n int) ([]*types.TxnWithHash, error) {
+func (m *MockTxnPool) Peek(n int) ([]*types.TxnWithHash, error) {
 	if n > len(m.Txns) {
 		return m.MetaTxns, nil
 	}
@@ -41,7 +41,7 @@ func (m *MockTxnPool) Discard(_ context.Context, txns []common.Hash, reason txnp
 	return nil
 }
 
-func (m *MockTxnPool) OnCommitted(context.Context, []*types.Transaction) error {
+func (m *MockTxnPool) OnCommitted(context.Context, types.Value, []*types.Transaction) error {
 	return nil
 }
 

@@ -23,8 +23,7 @@ import (
 
 const (
 	defaultMaxInternalTxns               = 1000
-	defaultMaxInternalGasInBlock         = 100_000_000
-	defaultMaxGasInBlock                 = 2 * defaultMaxInternalGasInBlock
+	defaultMaxGasInBlock                 = types.DefaultMaxGasInBlock
 	maxTxnsFromPool                      = 1000
 	defaultMaxForwardTransactionsInBlock = 200
 )
@@ -48,12 +47,6 @@ type proposer struct {
 func newProposer(params *Params, topology ShardTopology, pool TxnPool, logger zerolog.Logger) *proposer {
 	if params.MaxGasInBlock == 0 {
 		params.MaxGasInBlock = defaultMaxGasInBlock
-	}
-	if params.MaxInternalGasInBlock == 0 {
-		params.MaxInternalGasInBlock = defaultMaxInternalGasInBlock
-	}
-	if params.MaxInternalGasInBlock > params.MaxGasInBlock {
-		params.MaxInternalGasInBlock = params.MaxGasInBlock
 	}
 	if params.MaxInternalTransactionsInBlock == 0 {
 		params.MaxInternalTransactionsInBlock = defaultMaxInternalTxns
@@ -92,13 +85,10 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 	p.executionState, err = execution.NewExecutionState(tx, p.params.ShardId, execution.StateParams{
 		Block:          block,
 		ConfigAccessor: configAccessor,
+		FeeCalculator:  p.params.FeeCalculator,
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	if err = p.executionState.UpdateBaseFee(block); err != nil {
-		return nil, fmt.Errorf("failed to update gas price: %w", err)
 	}
 
 	p.logger.Trace().Msg("Collating...")
@@ -230,7 +220,7 @@ func CreateL1BlockUpdateTransaction(header *l1types.Header) (*types.Transaction,
 		TransactionDigest: types.TransactionDigest{
 			Flags:                types.NewTransactionFlags(types.TransactionFlagInternal),
 			To:                   types.L1BlockInfoAddress,
-			FeeCredit:            types.GasToValue(types.DefaultGasLimit.Uint64()),
+			FeeCredit:            types.GasToValue(types.DefaultMaxGasInBlock.Uint64()),
 			MaxFeePerGas:         types.MaxFeePerGasDefault,
 			MaxPriorityFeePerGas: types.Value0,
 			Data:                 calldata,
@@ -263,7 +253,7 @@ func (p *proposer) handleTransaction(txn *types.Transaction, txnHash common.Hash
 }
 
 func (p *proposer) handleTransactionsFromPool(tx db.RoTx) error {
-	poolTxns, err := p.pool.Peek(p.ctx, maxTxnsFromPool)
+	poolTxns, err := p.pool.Peek(maxTxnsFromPool)
 	if err != nil {
 		return err
 	}
@@ -353,7 +343,7 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 	})
 
 	checkLimits := func() bool {
-		return p.executionState.GasUsed < p.params.MaxInternalGasInBlock &&
+		return p.executionState.GasUsed < p.params.MaxGasInBlock &&
 			len(p.proposal.InternalTxnRefs) < p.params.MaxInternalTransactionsInBlock &&
 			len(p.proposal.ForwardTxnRefs) < p.params.MaxForwardTransactionsInBlock
 	}

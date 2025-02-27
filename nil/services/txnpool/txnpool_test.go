@@ -2,6 +2,7 @@ package txnpool
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"testing"
 	"time"
@@ -22,11 +23,32 @@ type SuiteTxnPool struct {
 	pool *TxnPool
 }
 
-func newTransaction(seqno types.Seqno, fee uint64) *types.Transaction {
-	address := types.ShardAndHexToAddress(0, "deadbeef")
+var defaultAddress = types.ShardAndHexToAddress(0, "11")
+
+const defaultMaxFee = 500
+
+var defaultBaseFee = types.NewValueFromUint64(100)
+
+func newTransaction(address types.Address, seqno types.Seqno, priorityFee uint64) *types.Transaction {
 	return &types.Transaction{
-		TransactionDigest: types.TransactionDigest{To: address, Seqno: seqno},
-		Value:             types.NewValueFromUint64(fee),
+		TransactionDigest: types.TransactionDigest{
+			To:                   address,
+			Seqno:                seqno,
+			MaxPriorityFeePerGas: types.NewValueFromUint64(priorityFee),
+			MaxFeePerGas:         types.NewValueFromUint64(defaultMaxFee),
+		},
+	}
+}
+
+func newTransaction2(address types.Address, seqno types.Seqno, priorityFee, maxFee, value uint64) *types.Transaction {
+	return &types.Transaction{
+		TransactionDigest: types.TransactionDigest{
+			To:                   address,
+			Seqno:                seqno,
+			MaxPriorityFeePerGas: types.NewValueFromUint64(priorityFee),
+			MaxFeePerGas:         types.NewValueFromUint64(maxFee),
+		},
+		Value: types.NewValueFromUint64(value),
 	}
 }
 
@@ -45,7 +67,7 @@ func (s *SuiteTxnPool) TearDownTest() {
 func (s *SuiteTxnPool) addTransactionsToPoolSuccessfully(pool Pool, txn ...*types.Transaction) {
 	s.T().Helper()
 
-	count := pool.TransactionCount()
+	count := s.getTransactionCount(pool)
 
 	reasons, err := pool.Add(s.ctx, txn...)
 	s.Require().NoError(err)
@@ -54,7 +76,23 @@ func (s *SuiteTxnPool) addTransactionsToPoolSuccessfully(pool Pool, txn ...*type
 		s.Equal(NotSet, reason)
 	}
 
-	s.Equal(count+len(txn), pool.TransactionCount())
+	s.Equal(count+len(txn), s.getTransactionCount(pool))
+}
+
+func (s *SuiteTxnPool) addTransactions(txn ...*types.Transaction) {
+	s.T().Helper()
+
+	reasons, err := s.pool.Add(s.ctx, txn...)
+	s.Require().NoError(err)
+	s.Require().Len(reasons, len(txn))
+}
+
+func (s *SuiteTxnPool) getTransactions() []*types.TxnWithHash {
+	s.T().Helper()
+
+	res, err := s.pool.Peek(100000)
+	s.Require().NoError(err)
+	return res
 }
 
 func (s *SuiteTxnPool) addTransactionsSuccessfully(txn ...*types.Transaction) {
@@ -66,22 +104,22 @@ func (s *SuiteTxnPool) addTransactionsSuccessfully(txn ...*types.Transaction) {
 func (s *SuiteTxnPool) addTransactionWithDiscardReason(txn *types.Transaction, reason DiscardReason) {
 	s.T().Helper()
 
-	count := s.pool.TransactionCount()
+	count := s.getTransactionCount(s.pool)
 
 	reasons, err := s.pool.Add(s.ctx, txn)
 	s.Require().NoError(err)
 	s.Equal([]DiscardReason{reason}, reasons)
 
-	s.Equal(count, s.pool.TransactionCount())
+	s.Equal(count, s.getTransactionCount(s.pool))
 }
 
 func (s *SuiteTxnPool) TestAdd() {
-	wrongShardTxn := newTransaction(0, 123)
+	wrongShardTxn := newTransaction(defaultAddress, 0, 123)
 	wrongShardTxn.To = types.ShardAndHexToAddress(1, "deadbeef")
 	_, err := s.pool.Add(s.ctx, wrongShardTxn)
 	s.Require().Error(err)
 
-	txn1 := newTransaction(0, 123)
+	txn1 := newTransaction(defaultAddress, 0, 123)
 
 	// Send the transaction for the first time - OK
 	s.addTransactionsSuccessfully(txn1)
@@ -96,7 +134,7 @@ func (s *SuiteTxnPool) TestAdd() {
 	reasons, err := s.pool.Add(s.ctx, txn2)
 	s.Require().NoError(err)
 	s.Require().Equal([]DiscardReason{NotSet}, reasons)
-	s.Equal(1, s.pool.TransactionCount())
+	s.Equal(1, s.getTransactionCount(s.pool))
 
 	// Send a different transaction with the same seqno - NotReplaced
 	txn3 := common.CopyPtr(txn1)
@@ -108,16 +146,14 @@ func (s *SuiteTxnPool) TestAdd() {
 	s.addTransactionWithDiscardReason(txn3, NotReplaced)
 
 	// Add a transaction with higher seqno to the same receiver
-	s.addTransactionsSuccessfully(
-		newTransaction(1, 124))
+	s.addTransactionsSuccessfully(newTransaction(defaultAddress, 1, 124))
 
 	// Add a transaction with lower seqno to the same receiver - SeqnoTooLow
 	s.addTransactionWithDiscardReason(
-		newTransaction(0, 124), SeqnoTooLow)
+		newTransaction(defaultAddress, 0, 124), SeqnoTooLow)
 
 	// Add a transaction with higher seqno to a new receiver
-	otherAddressTxn := newTransaction(1, 124)
-	otherAddressTxn.To = types.ShardAndHexToAddress(0, "deadbeef01")
+	otherAddressTxn := newTransaction(types.ShardAndHexToAddress(0, "deadbeef01"), 1, 124)
 	s.addTransactionsSuccessfully(otherAddressTxn)
 }
 
@@ -125,10 +161,10 @@ func (s *SuiteTxnPool) TestAddOverflow() {
 	s.pool.cfg.Size = 1
 
 	s.addTransactionsSuccessfully(
-		newTransaction(0, 123))
+		newTransaction(defaultAddress, 0, 123))
 
 	s.addTransactionWithDiscardReason(
-		newTransaction(1, 123), PoolOverflow)
+		newTransaction(defaultAddress, 1, 123), PoolOverflow)
 }
 
 func (s *SuiteTxnPool) TestStarted() {
@@ -136,7 +172,7 @@ func (s *SuiteTxnPool) TestStarted() {
 }
 
 func (s *SuiteTxnPool) TestIdHashKnownGet() {
-	txn := newTransaction(0, 123)
+	txn := newTransaction(defaultAddress, 0, 123)
 	s.addTransactionsSuccessfully(txn)
 
 	has, err := s.pool.IdHashKnown(txn.Hash())
@@ -157,7 +193,7 @@ func (s *SuiteTxnPool) TestIdHashKnownGet() {
 }
 
 func (s *SuiteTxnPool) TestSeqnoFromAddress() {
-	txn := newTransaction(0, 123)
+	txn := newTransaction(defaultAddress, 0, 123)
 
 	_, inPool := s.pool.SeqnoToAddress(txn.To)
 	s.Require().False(inPool)
@@ -183,26 +219,24 @@ func (s *SuiteTxnPool) TestSeqnoFromAddress() {
 func (s *SuiteTxnPool) TestPeek() {
 	address2 := types.ShardAndHexToAddress(0, "deadbeef02")
 
-	txn21 := newTransaction(0, 123)
-	txn21.To = address2
-	txn22 := newTransaction(1, 123)
-	txn22.To = address2
+	txn21 := newTransaction(address2, 0, 123)
+	txn22 := newTransaction(address2, 1, 123)
 
 	s.addTransactionsSuccessfully(
-		newTransaction(0, 123),
-		newTransaction(1, 123),
+		newTransaction(defaultAddress, 0, 123),
+		newTransaction(defaultAddress, 1, 123),
 		txn21,
 		txn22)
 
-	txns, err := s.pool.Peek(s.ctx, 1)
+	txns, err := s.pool.Peek(1)
 	s.Require().NoError(err)
 	s.Len(txns, 1)
 
-	txns, err = s.pool.Peek(s.ctx, 4)
+	txns, err = s.pool.Peek(4)
 	s.Require().NoError(err)
 	s.Len(txns, 4)
 
-	txns, err = s.pool.Peek(s.ctx, 10)
+	txns, err = s.pool.Peek(10)
 	s.Require().NoError(err)
 	s.Len(txns, 4)
 }
@@ -210,26 +244,54 @@ func (s *SuiteTxnPool) TestPeek() {
 func (s *SuiteTxnPool) TestOnNewBlock() {
 	address2 := types.ShardAndHexToAddress(0, "deadbeef02")
 
-	txn11 := newTransaction(0, 123)
-	txn12 := newTransaction(1, 123)
+	txn11 := newTransaction(defaultAddress, 0, 123)
+	txn12 := newTransaction(defaultAddress, 1, 123)
 
-	txn21 := newTransaction(0, 123)
-	txn21.To = address2
-	txn22 := newTransaction(1, 123)
-	txn22.To = address2
+	txn21 := newTransaction(address2, 0, 123)
+	txn22 := newTransaction(address2, 1, 123)
 
 	s.addTransactionsSuccessfully(txn11, txn12, txn21, txn22)
 
 	// TODO: Ideally we need to do that via execution state
-	err := s.pool.OnCommitted(s.ctx, []*types.Transaction{txn11, txn12, txn21})
+	err := s.pool.OnCommitted(s.ctx, defaultBaseFee, []*types.Transaction{txn11, txn12, txn21})
 	s.Require().NoError(err)
 
 	// After commit Peek should return only one transaction
-	transactions, err := s.pool.Peek(s.ctx, 10)
+	transactions, err := s.pool.Peek(10)
 	s.Require().NoError(err)
 	s.Require().Len(transactions, 1)
 	s.Equal(types.NewTxnWithHash(txn22), transactions[0])
-	s.Equal(1, s.pool.TransactionCount())
+	s.Equal(1, s.getTransactionCount(s.pool))
+}
+
+func (s *SuiteTxnPool) TestBaseFeeChanged() {
+	address2 := types.ShardAndHexToAddress(0, "22")
+
+	err := s.pool.OnCommitted(s.ctx, types.NewValueFromUint64(100), nil)
+	s.Require().NoError(err)
+
+	txn11 := newTransaction2(defaultAddress, 0, 5, 110, 0)  // 5
+	txn12 := newTransaction2(defaultAddress, 1, 50, 125, 1) // 25
+
+	txn21 := newTransaction2(address2, 0, 20, 95, 2)  // -5
+	txn22 := newTransaction2(address2, 1, 30, 135, 3) // 30
+
+	s.addTransactions(txn11, txn12, txn21, txn22)
+	s.checkTransactionsOrder(3, 0, 1)
+
+	err = s.pool.OnCommitted(s.ctx, types.NewValueFromUint64(120), nil)
+	s.Require().NoError(err)
+	// Now:
+	// txn11: -10
+	// txn12: 5
+	// txn21: -25
+	// txn22: 15
+	s.checkTransactionsOrder(3, 1)
+
+	// Transactions with smaller seqno(txn11, txn21) should be removed either
+	err = s.pool.OnCommitted(s.ctx, types.NewValueFromUint64(80), []*types.Transaction{txn12, txn22})
+	s.Require().NoError(err)
+	s.checkTransactionsOrder()
 }
 
 func (s *SuiteTxnPool) TestNetwork() {
@@ -248,7 +310,7 @@ func (s *SuiteTxnPool) TestNetwork() {
 
 	network.ConnectManagers(s.T(), nms[0], nms[1])
 
-	txn := newTransaction(0, 123)
+	txn := newTransaction(defaultAddress, 0, 123)
 	s.addTransactionsToPoolSuccessfully(pool1, txn)
 
 	s.Eventually(func() bool {
@@ -256,6 +318,37 @@ func (s *SuiteTxnPool) TestNetwork() {
 		s.Require().NoError(err)
 		return has
 	}, 20*time.Second, 200*time.Millisecond)
+}
+
+func (s *SuiteTxnPool) checkTransactionsOrder(vals ...int) {
+	s.T().Helper()
+
+	txns := s.getTransactions()
+
+	s.Require().Equal(len(vals), len(txns))
+
+	correct := true
+	for i, txn := range txns {
+		if int(txn.Value.Uint64()) != vals[i] {
+			correct = false
+			break
+		}
+	}
+	if !correct {
+		gotOrder := ""
+		for _, txn := range txns {
+			gotOrder += fmt.Sprintf("%d ", txn.Value.Uint64())
+		}
+		s.T().Errorf("Expected order: %v, got: [%v]", vals, gotOrder)
+	}
+}
+
+func (s *SuiteTxnPool) getTransactionCount(pool Pool) int {
+	s.T().Helper()
+
+	txns, err := pool.Peek(1000000)
+	s.Require().NoError(err)
+	return len(txns)
 }
 
 func TestSuiteTxnpool(t *testing.T) {

@@ -9,16 +9,29 @@ import (
 
 var lock sync.Mutex
 
-func (es *ExecutionState) UpdateBaseFee(prevBlock *types.Block) error {
-	es.BaseFee = calculateBaseFee(prevBlock.BaseFee, prevBlock.GasUsed)
-	if es.BaseFee.Cmp(prevBlock.BaseFee) != 0 {
-		logger.Debug().
-			Stringer("Old", prevBlock.BaseFee).
-			Stringer("New", es.BaseFee).
-			Msg("Gas price updated")
-	}
+type FeeCalculator interface {
+	CalculateBaseFee(prevBlock *types.Block) types.Value
+}
 
-	return nil
+type ConstFeeCalculator struct {
+	Value types.Value
+}
+
+func (c *ConstFeeCalculator) CalculateBaseFee(prevBlock *types.Block) types.Value {
+	return c.Value
+}
+
+type MainFeeCalculator struct{}
+
+func GetEffectivePriorityFee(baseFee types.Value, txn *types.Transaction) (types.Value, bool) {
+	effectivePriorityFee, overflow := txn.MaxFeePerGas.SubOverflow(baseFee)
+	if overflow {
+		return types.Value0, false
+	}
+	if effectivePriorityFee.Cmp(txn.MaxPriorityFeePerGas) > 0 {
+		effectivePriorityFee = txn.MaxPriorityFeePerGas
+	}
+	return effectivePriorityFee, true
 }
 
 func GasTarget(gasLimit types.Gas) types.Gas {
@@ -36,7 +49,7 @@ var (
 	centerSigmoid1 = decimal.New(2500, -4).Mul(gasLimitPercentage)
 	// Center of second sigmoid (75% of gas limit)
 	centerSigmoid2 = decimal.New(7500, -4).Mul(gasLimitPercentage)
-	blockGasLimit  = decimal.NewFromInt(int64(types.DefaultGasLimit.Uint64()))
+	blockGasLimit  = decimal.NewFromInt(int64(types.DefaultMaxGasInBlock.Uint64()))
 	maxSigmaDiff   decimal.Decimal
 	eNumber        = decimal.New(27182818284, -10)
 )
@@ -53,7 +66,10 @@ func init() {
 	}
 }
 
-func calculateBaseFee(baseFeePrevious types.Value, gasUsedPrevious types.Gas) types.Value {
+func (m *MainFeeCalculator) CalculateBaseFee(prevBlock *types.Block) types.Value {
+	gasUsedPrevious := prevBlock.GasUsed
+	baseFeePrevious := prevBlock.BaseFee
+
 	// Convert to percentage
 	gasUsedPercentage := toPercentage(decimal.NewFromInt(int64(gasUsedPrevious.Uint64())), blockGasLimit)
 
@@ -67,11 +83,19 @@ func calculateBaseFee(baseFeePrevious types.Value, gasUsedPrevious types.Gas) ty
 	baseFeePreviousFixed := decimal.NewFromBigInt(baseFeePrevious.Int().ToBig(), 0)
 	newFee := baseFeePreviousFixed.Mul(adjustmentFactor.Mul(normalized).Add(decimal.New(1, 0)))
 
+	resultBaseFee := types.DefaultGasPrice
 	if newFee.Cmp(decimal.NewFromBigInt(types.DefaultGasPrice.ToBig(), 0)) > 0 {
-		return types.NewValueFromBigMust(newFee.BigInt())
+		resultBaseFee = types.NewValueFromBigMust(newFee.BigInt())
 	}
 
-	return types.DefaultGasPrice
+	if resultBaseFee.Cmp(prevBlock.BaseFee) != 0 {
+		logger.Debug().
+			Stringer("Old", prevBlock.BaseFee).
+			Stringer("New", resultBaseFee).
+			Msg("Gas price updated")
+	}
+
+	return resultBaseFee
 }
 
 func toPercentage(gasUsedPrevious, gasLimitAbsolute decimal.Decimal) decimal.Decimal {

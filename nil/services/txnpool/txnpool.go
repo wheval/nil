@@ -2,6 +2,7 @@ package txnpool
 
 import (
 	"bytes"
+	"container/heap"
 	"context"
 	"fmt"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
+	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/rs/zerolog"
@@ -17,30 +19,20 @@ import (
 type Pool interface {
 	Add(ctx context.Context, txns ...*types.Transaction) ([]DiscardReason, error)
 	Discard(ctx context.Context, txns []common.Hash, reason DiscardReason) error
-	OnCommitted(ctx context.Context, committed []*types.Transaction) error
+	OnCommitted(ctx context.Context, baseFee types.Value, committed []*types.Transaction) error
 	// IdHashKnown check whether transaction with given Id hash is known to the pool
 	IdHashKnown(hash common.Hash) (bool, error)
 	Started() bool
 
-	Peek(ctx context.Context, n int) ([]*types.TxnWithHash, error)
+	Peek(n int) ([]*types.TxnWithHash, error)
 	SeqnoToAddress(addr types.Address) (seqno types.Seqno, inPool bool)
-	TransactionCount() int
 	Get(hash common.Hash) (*types.Transaction, error)
-}
-
-type metaTxn struct {
-	*types.TxnWithHash
-}
-
-func newMetaTxn(txn *types.Transaction) *metaTxn {
-	return &metaTxn{
-		TxnWithHash: types.NewTxnWithHash(txn),
-	}
 }
 
 type TxnPool struct {
 	started bool
 	cfg     Config
+	baseFee types.Value
 
 	networkManager *network.Manager
 
@@ -65,7 +57,7 @@ func New(ctx context.Context, cfg Config, networkManager *network.Manager) (*Txn
 
 		byHash: map[string]*metaTxn{},
 		all:    NewBySenderAndSeqno(logger),
-		queue:  NewTransactionQueue(),
+		queue:  &TxnQueue{},
 		logger: logger,
 	}
 
@@ -97,7 +89,7 @@ func (p *TxnPool) listen(ctx context.Context, sub *network.Subscription) {
 			continue
 		}
 
-		mm := newMetaTxn(txn)
+		mm := newMetaTxn(txn, p.baseFee)
 		reasons, err := p.add(mm)
 		if err != nil {
 			p.logger.Error().Err(err).
@@ -117,7 +109,7 @@ func (p *TxnPool) listen(ctx context.Context, sub *network.Subscription) {
 func (p *TxnPool) Add(ctx context.Context, txns ...*types.Transaction) ([]DiscardReason, error) {
 	mms := make([]*metaTxn, len(txns))
 	for i, txn := range txns {
-		mms[i] = newMetaTxn(txn)
+		mms[i] = newMetaTxn(txn, p.baseFee)
 	}
 
 	reasons, err := p.add(mms...)
@@ -260,11 +252,11 @@ func (p *TxnPool) addLocked(txn *metaTxn) DiscardReason {
 			return NotReplaced
 		}
 
-		p.queue.Remove(found.TxnWithHash)
+		p.queue.Remove(found)
 		p.discardLocked(found, ReplacedByHigherTip)
 	}
 
-	if uint64(p.queue.Size()) >= p.cfg.Size {
+	if uint64(p.queue.Len()) >= p.cfg.Size {
 		return PoolOverflow
 	}
 
@@ -274,16 +266,49 @@ func (p *TxnPool) addLocked(txn *metaTxn) DiscardReason {
 	replaced := p.all.replaceOrInsert(txn)
 	check.PanicIfNot(replaced == nil)
 
-	p.queue.Push(txn)
+	if needToAdd := txn.valid; needToAdd {
+		for _, t := range p.queue.txns {
+			if t.To == txn.To {
+				if t.Seqno > txn.Seqno {
+					p.queue.Remove(t)
+				} else {
+					needToAdd = false
+				}
+				break
+			}
+		}
+		if needToAdd {
+			heap.Push(p.queue, txn)
+		}
+	}
+
 	return NotSet
 }
 
 // dropping transaction from all sub-structures and from db
 // Important: don't call it while iterating by "all"
-func (p *TxnPool) discardLocked(mm *metaTxn, reason DiscardReason) {
-	hashStr := string(mm.Hash().Bytes())
+func (p *TxnPool) discardLocked(txn *metaTxn, reason DiscardReason) {
+	hashStr := string(txn.Hash().Bytes())
 	delete(p.byHash, hashStr)
-	p.all.delete(mm, reason)
+	p.all.delete(txn, reason)
+	if txn.IsInQueue() {
+		p.queue.Remove(txn)
+		if t := p.nextSenderTxnLocked(txn.To, txn.Seqno); t != nil {
+			heap.Push(p.queue, t)
+		}
+	}
+}
+
+func (p *TxnPool) nextSenderTxnLocked(senderID types.Address, seqno types.Seqno) *metaTxn {
+	var res *metaTxn
+	p.all.ascend(senderID, func(txn *metaTxn) bool {
+		if txn.Seqno <= seqno || !txn.IsValid() {
+			return true
+		}
+		res = txn
+		return false
+	})
+	return res
 }
 
 func (p *TxnPool) Discard(_ context.Context, hashes []common.Hash, reason DiscardReason) error {
@@ -296,18 +321,42 @@ func (p *TxnPool) Discard(_ context.Context, hashes []common.Hash, reason Discar
 			continue
 		}
 
-		p.queue.Remove(mm.TxnWithHash)
+		p.queue.Remove(mm)
 		p.discardLocked(mm, reason)
 	}
 
 	return nil
 }
 
-func (p *TxnPool) OnCommitted(_ context.Context, committed []*types.Transaction) (err error) {
+func (p *TxnPool) OnCommitted(_ context.Context, baseFee types.Value, committed []*types.Transaction) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	return p.removeCommitted(p.all, committed)
+	if err := p.removeCommitted(p.all, committed); err != nil {
+		return fmt.Errorf("failed to remove committed transactions: %w", err)
+	}
+	if p.baseFee != baseFee {
+		p.baseFee = baseFee
+		p.UpdateTransactions()
+	}
+
+	return nil
+}
+
+func (p *TxnPool) UpdateTransactions() {
+	p.all.ascendAll(func(txn *metaTxn) bool {
+		txn.effectivePriorityFee, txn.valid = execution.GetEffectivePriorityFee(p.baseFee, txn.Transaction)
+		return true
+	})
+	p.all.ascendAll(func(txn *metaTxn) bool {
+		if !txn.valid && txn.bestIndex >= 0 {
+			p.queue.Remove(txn)
+			if t := p.nextSenderTxnLocked(txn.To, txn.Seqno); t != nil {
+				heap.Push(p.queue, t)
+			}
+		}
+		return true
+	})
 }
 
 // removeCommitted - apply new highest block (or batch of blocks)
@@ -350,7 +399,6 @@ func (p *TxnPool) removeCommitted(bySeqno *ByReceiverAndSeqno, txns []*types.Tra
 				Msg("Remove committed.")
 
 			toDel = append(toDel, txn)
-			p.queue.Remove(txn.TxnWithHash)
 			return true
 		})
 
@@ -371,20 +419,21 @@ func (p *TxnPool) removeCommitted(bySeqno *ByReceiverAndSeqno, txns []*types.Tra
 	return nil
 }
 
-func (p *TxnPool) Peek(ctx context.Context, n int) ([]*types.TxnWithHash, error) {
+func (p *TxnPool) Peek(n int) ([]*types.TxnWithHash, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	queued := p.queue.Peek(n)
-	res := make([]*types.TxnWithHash, len(queued))
-	for i, txn := range queued {
-		res[i] = txn.TxnWithHash
+	q := p.queue.Clone()
+	res := make([]*types.TxnWithHash, 0, q.Len())
+
+	for q.Len() > 0 && len(res) < n {
+		txn, ok := heap.Pop(q).(*metaTxn)
+		check.PanicIfNot(ok)
+		res = append(res, txn.TxnWithHash)
+		if txn = p.nextSenderTxnLocked(txn.To, txn.Seqno); txn != nil {
+			heap.Push(q, txn)
+		}
 	}
-	return res, nil
-}
 
-func (p *TxnPool) TransactionCount() int {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	return p.queue.Size()
+	return res, nil
 }

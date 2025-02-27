@@ -107,6 +107,8 @@ type ExecutionState struct {
 
 	// isReadOnly is true if the state is in read-only mode. This mode is used for eth_call and eth_estimateGas.
 	isReadOnly bool
+
+	FeeCalculator FeeCalculator
 }
 
 type ExecutionResult struct {
@@ -233,6 +235,7 @@ func NewEVMBlockContext(es *ExecutionState) (*vm.BlockContext, error) {
 type StateParams struct {
 	Block          *types.Block
 	ConfigAccessor config.ConfigAccessor
+	FeeCalculator  FeeCalculator
 }
 
 func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*ExecutionState, error) {
@@ -247,10 +250,15 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 		return nil, errors.New("invalid tx type")
 	}
 
+	feeCalculator := params.FeeCalculator
+	if feeCalculator == nil {
+		feeCalculator = &MainFeeCalculator{}
+	}
+
 	var baseFeePerGas types.Value
 	var prevBlockHash common.Hash
 	if params.Block != nil {
-		baseFeePerGas = calculateBaseFee(params.Block.BaseFee, params.Block.GasUsed)
+		baseFeePerGas = feeCalculator.CalculateBaseFee(params.Block)
 		prevBlockHash = params.Block.Hash(shardId)
 	}
 
@@ -275,6 +283,8 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 		GasPrice: types.NewZeroValue(),
 
 		isReadOnly: isReadOnly,
+
+		FeeCalculator: feeCalculator,
 	}
 
 	return res, res.initTries()

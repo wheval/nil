@@ -35,6 +35,7 @@ const (
 	NotReplaced         DiscardReason = 20 // There was an existing transaction with the same sender and seqno, not enough price bump to replace
 	DuplicateHash       DiscardReason = 21 // There was an existing transaction with the same hash
 	Unverified          DiscardReason = 22 // Transaction verification failed
+	TooSmallMaxFee      DiscardReason = 23 // Transaction max fee is too small
 )
 
 func (r DiscardReason) String() string {
@@ -63,6 +64,8 @@ func (r DiscardReason) String() string {
 		return "duplicate hash"
 	case Unverified:
 		return "verification failed"
+	case TooSmallMaxFee:
+		return "max fee too small"
 	default:
 		panic(fmt.Sprintf("discard reason: %d", r))
 	}

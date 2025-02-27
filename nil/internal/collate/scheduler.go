@@ -16,9 +16,9 @@ import (
 )
 
 type TxnPool interface {
-	Peek(ctx context.Context, n int) ([]*types.TxnWithHash, error)
+	Peek(n int) ([]*types.TxnWithHash, error)
 	Discard(ctx context.Context, txns []common.Hash, reason txnpool.DiscardReason) error
-	OnCommitted(ctx context.Context, committed []*types.Transaction) error
+	OnCommitted(ctx context.Context, baseFee types.Value, committed []*types.Transaction) error
 }
 
 type Consensus interface {
@@ -28,7 +28,6 @@ type Consensus interface {
 type Params struct {
 	execution.BlockGeneratorParams
 
-	MaxInternalGasInBlock          types.Gas
 	MaxGasInBlock                  types.Gas
 	MaxInternalTransactionsInBlock int
 	MaxForwardTransactionsInBlock  int
