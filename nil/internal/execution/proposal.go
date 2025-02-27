@@ -93,13 +93,6 @@ func (pb *ParentBlock) ToSerializable() *ParentBlockSSZ {
 	}
 }
 
-func (p *Proposal) GetMainShardHash(shardId types.ShardId) *common.Hash {
-	if shardId.IsMainShard() {
-		return &p.PrevBlockHash
-	}
-	return &p.MainChainHash
-}
-
 func SplitTransactions(transactions []*types.Transaction, f func(t *types.Transaction) bool) (a, b []*types.Transaction) {
 	if pos := slices.IndexFunc(transactions, f); pos != -1 {
 		return transactions[:pos], transactions[pos:]

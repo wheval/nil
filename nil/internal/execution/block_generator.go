@@ -126,11 +126,9 @@ func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) []types
 	shards := make([]types.Uint256, len(shardHashes)+1)
 	for i := range shards {
 		shardId := types.ShardId(i)
-		var shardHash common.Hash
+		shardHash := shardHashes[shardId]
 		if shardId.IsMainShard() {
 			shardHash = mainBlock.PrevBlock
-		} else {
-			shardHash = shardHashes[shardId]
 		}
 
 		block, err := db.ReadBlock(p.rwTx, shardId, shardHash)

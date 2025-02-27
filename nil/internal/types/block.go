@@ -94,6 +94,13 @@ func (b *Block) Hash(shardId ShardId) common.Hash {
 	return ToShardedHash(common.MustPoseidonSSZ(&b.BlockData), shardId)
 }
 
+func (b *Block) GetMainShardHash(shardId ShardId) common.Hash {
+	if shardId.IsMainShard() {
+		return b.PrevBlock
+	}
+	return b.MainChainHash
+}
+
 func (b *RawBlockWithExtractedData) DecodeSSZ() (*BlockWithExtractedData, error) {
 	block := &Block{}
 	if err := block.UnmarshalSSZ(b.Block); err != nil {

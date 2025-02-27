@@ -164,15 +164,12 @@ func NewConfigAccessorFromBlock(ctx context.Context, database db.DB, block *type
 func NewConfigAccessorFromBlockWithTx(tx db.RoTx, block *types.Block, shardId types.ShardId) (ConfigAccessor, error) {
 	var mainShardHash *common.Hash
 	if block != nil {
-		mainShardHash = &block.MainChainHash
-		// For the main shard MainChainHash is empty. So we use the hash of the previous block.
-		if shardId.IsMainShard() {
-			mainShardHash = &block.PrevBlock
-			// The first block uses configuration from itself.
-			if mainShardHash.Empty() {
-				h := block.Hash(types.MainShardId)
-				mainShardHash = &h
-			}
+		h := block.GetMainShardHash(shardId)
+		mainShardHash = &h
+		// It's the first block of main shard. Use configuration from itself.
+		if mainShardHash.Empty() {
+			h := block.Hash(types.MainShardId)
+			mainShardHash = &h
 		}
 	}
 

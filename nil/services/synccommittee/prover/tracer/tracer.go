@@ -171,14 +171,7 @@ func GenerateTrace(ctx context.Context, rpcClient api.RpcClient, cfg *TraceConfi
 }
 
 func (rt *RemoteTracerImpl) getConfigForBlock(ctx context.Context, block *types.Block, shardId types.ShardId) (*jsonrpc.ChainConfig, error) {
-	var blockWithConfig common.Hash
-	if shardId.IsMainShard() {
-		// fetch config from prev main chain block
-		blockWithConfig = block.PrevBlock
-	} else {
-		// fetch config from corresponding main chain hash
-		blockWithConfig = block.MainChainHash
-	}
+	blockWithConfig := block.GetMainShardHash(shardId)
 	dbgBlock, err := rt.client.GetDebugBlock(ctx, shardId, blockWithConfig, true)
 	if err != nil {
 		return nil, err
