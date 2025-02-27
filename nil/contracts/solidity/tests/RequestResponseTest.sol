@@ -219,9 +219,9 @@ contract RequestResponseTest is NilTokenBase {
 
     function responseNestedRequest(
         bool success,
-        bytes memory returnData,
-        bytes memory context
-    ) public {
+        bytes memory,
+        bytes memory
+    ) public pure {
         require(success, "Request failed");
     }
 
@@ -245,7 +245,7 @@ contract RequestResponseTest is NilTokenBase {
 
     function responseSendRequestFromCallback(
         bool success,
-        bytes memory returnData,
+        bytes memory,
         bytes memory context
     ) public {
         require(success, "Request failed");
@@ -256,7 +256,7 @@ contract RequestResponseTest is NilTokenBase {
 
         sendNext -= 1;
 
-        bytes memory context = abi.encodeWithSelector(this.responseSendRequestFromCallback.selector, sendNext, counter);
+        context = abi.encodeWithSelector(this.responseSendRequestFromCallback.selector, sendNext, counter);
         bytes memory callData = abi.encodeWithSignature("add(int32)", sendNext);
         Nil.sendRequest(
             counter,
@@ -287,8 +287,8 @@ contract RequestResponseTest is NilTokenBase {
     function responseSendRequestWithNestedAwaitCall(
         bool success,
         bytes memory returnData,
-        bytes memory context
-    ) public {
+        bytes memory
+    ) public pure {
         require(success, "Request failed");
         int32 res = abi.decode(returnData, (int32));
         require(res == 2, "Fibonacci(3) should be 2");
