@@ -178,7 +178,7 @@ func (s *Validator) insertProposalUnlocked(ctx context.Context, proposal *execut
 		return fmt.Errorf("failed to generate block: %w", err)
 	}
 
-	if err := s.pool.OnCommitted(ctx, proposal.ExternalTxns); err != nil {
+	if err := s.pool.OnCommitted(ctx, res.Block.BaseFee, proposal.ExternalTxns); err != nil {
 		s.logger.Warn().Err(err).
 			Msgf("Failed to remove %d committed transactions from pool", len(proposal.ExternalTxns))
 	}

@@ -80,7 +80,7 @@ func (s *ProposerTestSuite) TestBlockGas() {
 	})
 
 	s.Run("MaxGasInBlockFor1Txn", func() {
-		params.MaxGasInBlock = 5000
+		params.MaxGasInBlock = 12000
 		p := newTestProposer(params, pool)
 
 		proposal := s.generateProposal(p)
