@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/NilFoundation/nil/nil/common"
@@ -178,12 +179,7 @@ func (s *Validator) insertProposalUnlocked(ctx context.Context, proposal *execut
 		return fmt.Errorf("failed to generate block: %w", err)
 	}
 
-	if err := s.pool.OnCommitted(ctx, res.Block.BaseFee, proposal.ExternalTxns); err != nil {
-		s.logger.Warn().Err(err).
-			Msgf("Failed to remove %d committed transactions from pool", len(proposal.ExternalTxns))
-	}
-
-	s.setLastBlockUnlocked(res.Block, res.BlockHash)
+	s.onBlockCommitUnlocked(ctx, res, p)
 
 	return PublishBlock(ctx, s.networkManager, s.params.ShardId, &types.BlockWithExtractedData{
 		Block:           res.Block,
@@ -192,6 +188,19 @@ func (s *Validator) insertProposalUnlocked(ctx context.Context, proposal *execut
 		ChildBlocks:     proposal.ShardHashes,
 		Config:          res.ConfigParams,
 	})
+}
+
+func (s *Validator) onBlockCommitUnlocked(
+	ctx context.Context, res *execution.BlockGenerationResult, proposal *execution.Proposal,
+) {
+	s.setLastBlockUnlocked(res.Block, res.BlockHash)
+
+	if !reflect.ValueOf(s.pool).IsNil() {
+		if err := s.pool.OnCommitted(ctx, res.Block.BaseFee, proposal.ExternalTxns); err != nil {
+			s.logger.Warn().Err(err).
+				Msgf("Failed to remove %d committed transactions from pool", len(proposal.ExternalTxns))
+		}
+	}
 }
 
 func (s *Validator) logBlockDiffError(expected, got *types.Block, expHash, gotHash common.Hash) error {
@@ -349,7 +358,7 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 		return fmt.Errorf("failed to finalize block: %w", err)
 	}
 
-	s.setLastBlockUnlocked(resBlock.Block, blockHash)
+	s.onBlockCommitUnlocked(ctx, resBlock, proposal)
 
 	return nil
 }
