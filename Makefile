@@ -67,9 +67,12 @@ lint: generated
 	gofumpt -l -w .
 	gci write . --skip-generated --skip-vendor
 	golangci-lint run
-	@for dir in $(CHECK_LOCKS_DIRECTORIES); do \
-		echo "  >> Checking locks correctness in $$dir"; \
-		GOFLAGS="-tags=test" go run gvisor.dev/gvisor/tools/checklocks/cmd/checklocks "$$dir" || exit 1; \
+
+checklocks: generated
+	@export GOFLAGS="$$GOFLAGS -tags=test"; \
+	for dir in $(CHECK_LOCKS_DIRECTORIES); do \
+		echo ">> Checking locks correctness in $$dir"; \
+		go run gvisor.dev/gvisor/tools/checklocks/cmd/checklocks "$$dir" || exit 1; \
 	done
 
 rpcspec:
