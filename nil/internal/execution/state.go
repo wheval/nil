@@ -1592,6 +1592,7 @@ func (es *ExecutionState) CallVerifyExternal(transaction *types.Transaction, acc
 	res := NewExecutionResult()
 	spentGas := gasCreditLimit.Sub(types.Gas(leftOverGas))
 	res.SetUsed(spentGas, es.GasPrice)
+	es.GasUsed += res.GasUsed
 	check.PanicIfErr(account.SubBalance(res.CoinsUsed(), tracing.BalanceDecreaseVerifyExternal))
 	return res
 }
