@@ -16,7 +16,7 @@ func TestSignature_MarshalText(t *testing.T) {
 	result, err := sig.MarshalText()
 	require.NoError(t, err)
 
-	expected := hexutil.Bytes(sig).String() // Converts to hex string with prefix "0x"
+	expected := sig.String() // Converts to hex string with prefix "0x"
 	assert.Equal(t, []byte(expected), result)
 }
 
