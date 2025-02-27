@@ -34,6 +34,9 @@ jobs:
       - name: golangci-lint
         run: nix develop -c golangci-lint run
 
+      - name: Run checklocks
+        run: nix develop -c make checklocks
+
       - name: build
         run: nix build -L
 
