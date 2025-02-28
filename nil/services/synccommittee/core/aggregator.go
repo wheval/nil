@@ -15,6 +15,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/core/batches"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/blob"
 	v1 "github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/encode/v1"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/core/reset"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
@@ -33,6 +34,7 @@ type AggregatorTaskStorage interface {
 
 type AggregatorBlockStorage interface {
 	TryGetLatestFetched(ctx context.Context) (*types.MainBlockRef, error)
+	TryGetProvedStateRoot(ctx context.Context) (*common.Hash, error)
 	SetBlockBatch(ctx context.Context, batch *types.BlockBatch) error
 }
 
@@ -42,6 +44,7 @@ type aggregator struct {
 	blockStorage   AggregatorBlockStorage
 	taskStorage    AggregatorTaskStorage
 	batchCommitter batches.BatchCommitter
+	resetter       reset.StateResetter
 	timer          common.Timer
 	metrics        AggregatorMetrics
 	workerAction   *concurrent.Suspendable
@@ -51,6 +54,7 @@ func NewAggregator(
 	rpcClient client.Client,
 	blockStorage AggregatorBlockStorage,
 	taskStorage AggregatorTaskStorage,
+	resetter reset.StateResetter,
 	timer common.Timer,
 	logger zerolog.Logger,
 	metrics AggregatorMetrics,
@@ -67,8 +71,9 @@ func NewAggregator(
 			logger,
 			batches.DefaultCommitOptions(),
 		),
-		timer:   timer,
-		metrics: metrics,
+		resetter: resetter,
+		timer:    timer,
+		metrics:  metrics,
 	}
 
 	agg.workerAction = concurrent.NewSuspendable(agg.runIteration, pollingDelay)
@@ -101,6 +106,8 @@ func (agg *aggregator) Pause(ctx context.Context) error {
 	}
 	if paused {
 		agg.logger.Info().Msg("blocks fetching paused")
+	} else {
+		agg.logger.Warn().Msg("blocks fetching already paused")
 	}
 	return nil
 }
@@ -112,18 +119,14 @@ func (agg *aggregator) Resume(ctx context.Context) error {
 	}
 	if resumed {
 		agg.logger.Info().Msg("blocks fetching resumed")
+	} else {
+		agg.logger.Warn().Msg("blocks fetching already running")
 	}
 	return nil
 }
 
 func (agg *aggregator) runIteration(ctx context.Context) {
 	err := agg.processNewBlocks(ctx)
-
-	if errors.Is(err, types.ErrBatchNotReady) {
-		agg.logger.Warn().Err(err).Msg("received unready block batch, skipping")
-		return
-	}
-
 	if err != nil {
 		agg.logger.Error().Err(err).Msg("error during processing new blocks")
 		agg.metrics.RecordError(ctx, agg.Name())
@@ -138,12 +141,26 @@ func (agg *aggregator) processNewBlocks(ctx context.Context) error {
 		return err
 	}
 
-	if err := agg.processShardBlocks(ctx, *latestBlock); err != nil {
-		// todo: launch block re-fetching in case of ErrBlockMismatch
-		return fmt.Errorf("error processing blocks: %w", err)
-	}
+	err = agg.processShardBlocks(ctx, *latestBlock)
 
-	return nil
+	switch {
+	case errors.Is(err, types.ErrBatchNotReady):
+		agg.logger.Warn().Err(err).Msg("received unready block batch, skipping")
+		return nil
+
+	case errors.Is(err, types.ErrBlockMismatch):
+		agg.logger.Warn().Err(err).Msg("block mismatch detected, resetting state")
+		if err := agg.resetter.ResetProgressNotProved(ctx); err != nil {
+			return fmt.Errorf("error resetting state: %w", err)
+		}
+		return nil
+
+	case err != nil && !errors.Is(err, context.Canceled):
+		return fmt.Errorf("error processing blocks: %w", err)
+
+	default:
+		return nil
+	}
 }
 
 // fetchLatestBlocks retrieves the latest block for main shard
@@ -158,12 +175,12 @@ func (agg *aggregator) fetchLatestBlockRef(ctx context.Context) (*types.MainBloc
 // processShardBlocks handles the processing of new blocks for the main shard.
 // It fetches new blocks, updates the storage, and records relevant metrics.
 func (agg *aggregator) processShardBlocks(ctx context.Context, actualLatest types.MainBlockRef) error {
-	latestFetched, err := agg.blockStorage.TryGetLatestFetched(ctx)
+	latestHandledMainRef, err := agg.getLatestHandledBlockRef(ctx)
 	if err != nil {
-		return fmt.Errorf("error reading latest fetched block for the main shard: %w", err)
+		return fmt.Errorf("error reading latest handled block: %w", err)
 	}
 
-	fetchingRange, err := types.GetBlocksFetchingRange(latestFetched, actualLatest)
+	fetchingRange, err := types.GetBlocksFetchingRange(latestHandledMainRef, actualLatest)
 	if err != nil {
 		return err
 	}
@@ -180,6 +197,40 @@ func (agg *aggregator) processShardBlocks(ctx context.Context, actualLatest type
 	}
 
 	return nil
+}
+
+// getLatestHandledBlockRef retrieves the latest handled block reference, prioritizing the latest fetched block if available.
+// If `latestFetched` value is not defined, method uses `latestProvedStateRoot`.
+func (agg *aggregator) getLatestHandledBlockRef(ctx context.Context) (*types.MainBlockRef, error) {
+	latestFetched, err := agg.blockStorage.TryGetLatestFetched(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error reading latest fetched block for the main shard: %w", err)
+	}
+	if latestFetched != nil {
+		return latestFetched, nil
+	}
+
+	agg.logger.Debug().Msg("No blocks fetched yet, latest proved state root value will be used")
+
+	latestProvedRoot, err := agg.blockStorage.TryGetProvedStateRoot(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error reading latest proved state root: %w", err)
+	}
+	if latestProvedRoot == nil {
+		agg.logger.Debug().Msg("Latest proved state root is not defined")
+		return nil, nil
+	}
+
+	rpcBlock, err := agg.rpcClient.GetBlock(ctx, coreTypes.MainShardId, *latestProvedRoot, false)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching main block by with hash=%s: %w", *latestProvedRoot, err)
+	}
+	if rpcBlock == nil {
+		agg.logger.Warn().Msgf("Main block with hash=%s not found", *latestProvedRoot)
+		return nil, nil
+	}
+
+	return types.NewBlockRef(rpcBlock)
 }
 
 // fetchAndProcessBlocks retrieves a range of blocks for a main shard, stores them, creates proof tasks

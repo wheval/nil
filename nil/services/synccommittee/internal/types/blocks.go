@@ -39,24 +39,28 @@ type BlocksRange struct {
 	End   types.BlockNumber
 }
 
-func GetBlocksFetchingRange(latestFetched *MainBlockRef, actualLatest MainBlockRef) (*BlocksRange, error) {
+// GetBlocksFetchingRange determines the range of blocks to fetch between the latest handled block and the actual latest block.
+// latestHandled can be equal to:
+// a) The latest block fetched from the cluster, or
+// b) The latest proved state root, if `latestFetched` is nil.
+func GetBlocksFetchingRange(latestHandled *MainBlockRef, actualLatest MainBlockRef) (*BlocksRange, error) {
 	switch {
-	case latestFetched == nil:
+	case latestHandled == nil:
 		return &BlocksRange{actualLatest.Number, actualLatest.Number}, nil
 
-	case latestFetched.Number < actualLatest.Number:
-		return &BlocksRange{latestFetched.Number + 1, actualLatest.Number}, nil
+	case latestHandled.Number < actualLatest.Number:
+		return &BlocksRange{latestHandled.Number + 1, actualLatest.Number}, nil
 
-	case latestFetched.Number == actualLatest.Number && latestFetched.Hash != actualLatest.Hash:
+	case latestHandled.Number == actualLatest.Number && latestHandled.Hash != actualLatest.Hash:
 		return nil, fmt.Errorf(
 			"%w: latest blocks have same number %d, but hashes are different: %s != %s",
-			ErrBlockMismatch, actualLatest.Number, latestFetched.Hash, actualLatest.Hash,
+			ErrBlockMismatch, actualLatest.Number, latestHandled.Hash, actualLatest.Hash,
 		)
 
-	case latestFetched.Number > actualLatest.Number:
+	case latestHandled.Number > actualLatest.Number:
 		return nil, fmt.Errorf(
 			"%w: latest fetched block is higher than actual latest block: %d > %d",
-			ErrBlockMismatch, latestFetched.Number, actualLatest.Number,
+			ErrBlockMismatch, latestHandled.Number, actualLatest.Number,
 		)
 
 	default:

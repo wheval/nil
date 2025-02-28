@@ -50,6 +50,14 @@ type blockEntry struct {
 	FetchedAt time.Time        `json:"fetchedAt"`
 }
 
+func newBlockEntry(block *jsonrpc.RPCBlock, batchId scTypes.BatchId, fetchedAt time.Time) *blockEntry {
+	return &blockEntry{
+		Block:     *block,
+		BatchId:   batchId,
+		FetchedAt: fetchedAt,
+	}
+}
+
 type BlockStorageMetrics interface {
 	RecordMainBlockProved(ctx context.Context)
 }
@@ -165,12 +173,15 @@ func (bs *BlockStorage) setBlockBatchImpl(ctx context.Context, batch *scTypes.Bl
 	}
 	defer tx.Rollback()
 
-	if err := bs.putBlockTx(tx, batch.Id, batch.MainShardBlock); err != nil {
+	currentTime := bs.timer.NowTime()
+	mainEntry := newBlockEntry(batch.MainShardBlock, batch.Id, currentTime)
+	if err := bs.putBlockTx(tx, mainEntry); err != nil {
 		return err
 	}
 
 	for _, childBlock := range batch.ChildBlocks {
-		if err := bs.putBlockTx(tx, batch.Id, childBlock); err != nil {
+		childEntry := newBlockEntry(childBlock, batch.Id, currentTime)
+		if err := bs.putBlockTx(tx, childEntry); err != nil {
 			return err
 		}
 	}
@@ -184,26 +195,6 @@ func (bs *BlockStorage) setBlockBatchImpl(ctx context.Context, batch *scTypes.Bl
 	}
 
 	return bs.commit(tx)
-}
-
-func (bs *BlockStorage) putBlockTx(tx db.RwTx, batchId scTypes.BatchId, block *jsonrpc.RPCBlock) error {
-	currentTime := bs.timer.NowTime()
-	entry := blockEntry{Block: *block, BatchId: batchId, FetchedAt: currentTime}
-	value, err := marshallEntry(&entry)
-	if err != nil {
-		return err
-	}
-
-	blockId := scTypes.IdFromBlock(block)
-	if err := tx.Put(blocksTable, blockId.Bytes(), value); err != nil {
-		return fmt.Errorf("failed to put block %s: %w", blockId.String(), err)
-	}
-	parentId := scTypes.ParentBlockId(block)
-	if err := tx.Put(blockParentIdxTable, parentId.Bytes(), blockId.Bytes()); err != nil {
-		return fmt.Errorf("failed to put parent idx entry, parentId=%s: %w", parentId, err)
-	}
-
-	return nil
 }
 
 func (bs *BlockStorage) updateLatestFetched(tx db.RwTx, block *jsonrpc.RPCBlock) error {
@@ -327,16 +318,16 @@ func (bs *BlockStorage) TryGetNextProposalData(ctx context.Context) (*scTypes.Pr
 	}
 
 	var mainShardEntry *blockEntry
-	err = bs.iterateOverEntries(tx, func(entry *blockEntry) (bool, error) {
+	for entry, err := range bs.storedBlocksIter(tx) {
+		if err != nil {
+			return nil, err
+		}
 		if isValidProposalCandidate(entry, *parentHash) {
 			mainShardEntry = entry
-			return false, nil
+			break
 		}
-		return true, nil
-	})
-	if err != nil {
-		return nil, err
 	}
+
 	if mainShardEntry == nil {
 		bs.logger.Debug().Stringer("parentHash", parentHash).Msg("no proved main shard block found")
 		return nil, nil
@@ -498,19 +489,19 @@ func (bs *BlockStorage) putLatestFetchedBlockTx(tx db.RwTx, shardId types.ShardI
 	return nil
 }
 
-// ResetProgress resets the block storage state starting from the given main block hash:
+// ResetProgressPartial resets the block storage state starting from the given main block hash:
 //
 //  1. Sets the latest fetched block reference to the parent of the block with hash == firstMainHashToPurge.
 //     If the specified block is the first block in the chain, the new latest fetched value will be nil.
 //
 //  2. Deletes all main and corresponding exec shard blocks starting from the block with hash == firstMainHashToPurge.
-func (bs *BlockStorage) ResetProgress(ctx context.Context, firstMainHashToPurge common.Hash) error {
+func (bs *BlockStorage) ResetProgressPartial(ctx context.Context, firstMainHashToPurge common.Hash) error {
 	return bs.retryRunner.Do(ctx, func(ctx context.Context) error {
-		return bs.resetProgressImpl(ctx, firstMainHashToPurge)
+		return bs.resetProgressPartialImpl(ctx, firstMainHashToPurge)
 	})
 }
 
-func (bs *BlockStorage) resetProgressImpl(ctx context.Context, firstMainHashToPurge common.Hash) error {
+func (bs *BlockStorage) resetProgressPartialImpl(ctx context.Context, firstMainHashToPurge common.Hash) error {
 	tx, err := bs.database.CreateRwTx(ctx)
 	if err != nil {
 		return err
@@ -589,6 +580,44 @@ func (bs *BlockStorage) getChainSequence(tx db.RoTx, startingId scTypes.BlockId)
 	}
 }
 
+// ResetProgressNotProved resets the block storage state:
+//
+//  1. Sets the latest fetched block reference to nil.
+//
+//  2. Deletes all main not yet proved blocks from the storage.
+func (bs *BlockStorage) ResetProgressNotProved(ctx context.Context) error {
+	return bs.retryRunner.Do(ctx, func(ctx context.Context) error {
+		return bs.resetProgressNotProvenImpl(ctx)
+	})
+}
+
+func (bs *BlockStorage) resetProgressNotProvenImpl(ctx context.Context) error {
+	tx, err := bs.database.CreateRwTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := bs.putLatestFetchedBlockTx(tx, types.MainShardId, nil); err != nil {
+		return fmt.Errorf("failed to reset latest fetched block: %w", err)
+	}
+
+	for entry, err := range bs.storedBlocksIter(tx) {
+		if err != nil {
+			return err
+		}
+		if entry.Block.ShardId != types.MainShardId || entry.IsProved {
+			continue
+		}
+
+		if err := bs.deleteMainBlockWithChildren(tx, entry); err != nil {
+			return err
+		}
+	}
+
+	return bs.commit(tx)
+}
+
 func makeShardKey(shardId types.ShardId) []byte {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(shardId))
@@ -644,6 +673,24 @@ func (bs *BlockStorage) deleteMainBlockWithChildren(tx db.RwTx, mainShardEntry *
 	return nil
 }
 
+func (bs *BlockStorage) putBlockTx(tx db.RwTx, entry *blockEntry) error {
+	value, err := marshallEntry(entry)
+	if err != nil {
+		return err
+	}
+
+	blockId := scTypes.IdFromBlock(&entry.Block)
+	if err := tx.Put(blocksTable, blockId.Bytes(), value); err != nil {
+		return fmt.Errorf("failed to put block %s: %w", blockId.String(), err)
+	}
+	parentId := scTypes.ParentBlockId(&entry.Block)
+	if err := tx.Put(blockParentIdxTable, parentId.Bytes(), blockId.Bytes()); err != nil {
+		return fmt.Errorf("failed to put parent idx entry, parentId=%s: %w", parentId, err)
+	}
+
+	return nil
+}
+
 func (bs *BlockStorage) deleteBlock(tx db.RwTx, entry *blockEntry) error {
 	parentId := scTypes.ParentBlockId(&entry.Block)
 	err := tx.Delete(blockParentIdxTable, parentId.Bytes())
@@ -659,32 +706,32 @@ func (bs *BlockStorage) deleteBlock(tx db.RwTx, entry *blockEntry) error {
 	return nil
 }
 
-func (*BlockStorage) iterateOverEntries(tx db.RoTx, action func(entry *blockEntry) (shouldContinue bool, err error)) error {
-	txIter, err := tx.Range(blocksTable, nil, nil)
-	if err != nil {
-		return err
-	}
-	defer txIter.Close()
+func (*BlockStorage) storedBlocksIter(tx db.RoTx) iter.Seq2[*blockEntry, error] {
+	return func(yield func(*blockEntry, error) bool) {
+		txIter, err := tx.Range(blocksTable, nil, nil)
+		if err != nil {
+			yield(nil, err)
+			return
+		}
+		defer txIter.Close()
 
-	for txIter.HasNext() {
-		key, val, err := txIter.Next()
-		if err != nil {
-			return err
-		}
-		entry, err := unmarshallEntry(key, val)
-		if err != nil {
-			return err
-		}
-		shouldContinue, err := action(entry)
-		if err != nil {
-			return err
-		}
-		if !shouldContinue {
-			return nil
+		for txIter.HasNext() {
+			key, val, err := txIter.Next()
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+			entry, err := unmarshallEntry(key, val)
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+
+			if !yield(entry, nil) {
+				return
+			}
 		}
 	}
-
-	return nil
 }
 
 func marshallEntry(entry *blockEntry) ([]byte, error) {

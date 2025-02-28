@@ -89,10 +89,14 @@ func (s *Suspendable) onStateChange(ticker *time.Ticker, currentState *workerSta
 	req.response <- true
 }
 
+// Pause halts the periodic execution of the action, transitioning the worker to a paused state.
+// Returns true if the state was changed, false if already paused or an error occurred.
 func (s *Suspendable) Pause(ctx context.Context) (paused bool, err error) {
 	return s.pushAndWait(ctx, workerStatePaused)
 }
 
+// Resume resumes periodic action execution, transitioning the worker to a running state,
+// Returns true if the state was changed, false if already running or an error occurred.
 func (s *Suspendable) Resume(ctx context.Context) (resumed bool, err error) {
 	return s.pushAndWait(ctx, workerStateRunning)
 }
