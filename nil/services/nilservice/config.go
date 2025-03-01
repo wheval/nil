@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/collate"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/crypto/bls"
@@ -17,8 +16,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/cometa"
 	"github.com/NilFoundation/nil/nil/services/rollup"
 )
-
-var Logger = logging.NewLogger("config")
 
 type RunMode int
 
@@ -48,6 +45,7 @@ type Config struct {
 
 	// Admin
 	AdminSocketPath string `yaml:"adminSocket,omitempty"`
+	AllowDbDrop     bool   `yaml:"allowDbDrop,omitempty"`
 
 	// RPC events log
 	LogClientRpcEvents bool `yaml:"logClientRpcEvents,omitempty"`

@@ -38,7 +38,7 @@ func main() {
 
 	profiling.Start(cfg.PprofPort)
 
-	database, err := openDb(cfg.DB.Path, cfg.DB.AllowDrop, logger)
+	database, err := openDb(cfg.DB.Path, cfg.AllowDbDrop, logger)
 	check.PanicIfErr(err)
 
 	if len(cfg.ReadThrough.SourceAddr) != 0 {
@@ -109,7 +109,7 @@ func addTelemetryFlags(fset *pflag.FlagSet, cfg *nildconfig.Config) {
 }
 
 func addAllowDbClearFlag(fset *pflag.FlagSet, cfg *nildconfig.Config) {
-	fset.BoolVar(&cfg.DB.AllowDrop, "allow-db-clear", cfg.DB.AllowDrop, "allow to clear database in case of outdated version")
+	fset.BoolVar(&cfg.AllowDbDrop, "allow-db-clear", cfg.AllowDbDrop, "allow to clear database in case of outdated version")
 }
 
 func addRpcNodeFlags(fset *pflag.FlagSet, cfg *nildconfig.Config) {
@@ -227,6 +227,12 @@ func parseArgs() *nildconfig.Config {
 
 	logging.SetupGlobalLogger(*logLevel)
 	check.PanicIfErr(logging.SetLibp2pLogLevel(*libp2pLogLevel))
+
+	// todo: remove it when we remove the old flag
+	// Support old flag for backward compatibility
+	if cfg.DB.AllowDrop {
+		cfg.Config.AllowDbDrop = cfg.DB.AllowDrop
+	}
 
 	if cfg.Replay.BlockIdLast == 0 {
 		cfg.Replay.BlockIdLast = cfg.Replay.BlockIdFirst

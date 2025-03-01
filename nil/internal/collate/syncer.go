@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
@@ -109,22 +110,96 @@ func (s *Syncer) notify(blockId types.BlockNumber) {
 	}
 }
 
-func (s *Syncer) FetchSnapshot(ctx context.Context) error {
-	if snapIsRequired, err := s.shardIsEmpty(ctx); err != nil {
-		return err
-	} else if snapIsRequired {
-		for _, peer := range s.config.BootstrapPeers {
-			if err = fetchSnapshot(ctx, s.networkManager, &peer, s.db, s.logger); err == nil {
-				return nil
-			}
-		}
+func (s *Syncer) readLocalVersion(ctx context.Context) (common.Hash, error) {
+	rotx, err := s.db.CreateRoTx(ctx)
+	if err != nil {
+		return common.EmptyHash, err
 	}
-	return nil
+	defer rotx.Rollback()
+
+	res, err := db.ReadBlockHashByNumber(rotx, types.MainShardId, 0)
+	if errors.Is(err, db.ErrKeyNotFound) {
+		return common.EmptyHash, nil
+	}
+	return res, err
 }
 
-func (s *Syncer) SetBootstrapHandler(ctx context.Context) {
-	// Enable handler for snapshot relaying
+func (s *Syncer) fetchRemoteVersion(ctx context.Context) (common.Hash, error) {
+	var err error
+	for _, peer := range s.config.BootstrapPeers {
+		var res common.Hash
+		res, err = fetchGenesisBlockHash(ctx, s.networkManager, peer)
+		if err == nil {
+			return res, nil
+		}
+	}
+	return common.EmptyHash, fmt.Errorf("failed to fetch version from all peers; last error: %w", err)
+}
+
+func (s *Syncer) fetchSnapshot(ctx context.Context) error {
+	if len(s.config.BootstrapPeers) == 0 {
+		s.logger.Warn().Msg("No bootstrap peers to fetch snapshot from")
+		return nil
+	}
+
+	var err error
+	for _, peer := range s.config.BootstrapPeers {
+		err = fetchSnapshot(ctx, s.networkManager, peer, s.db, s.logger)
+		if err == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("failed to fetch snapshot from all peers; last error: %w", err)
+}
+
+func (s *Syncer) Init(ctx context.Context, allowDbDrop bool) error {
+	if s.networkManager == nil {
+		return nil
+	}
+
+	version, err := s.readLocalVersion(ctx)
+	if err != nil {
+		return err
+	}
+	if version.Empty() {
+		s.logger.Info().Msg("Local version is empty. Fetching snapshot...")
+		return s.fetchSnapshot(ctx)
+	}
+
+	remoteVersion, err := s.fetchRemoteVersion(ctx)
+	if err != nil {
+		// todo: when all shards can handle the new protocol, we should return an error here
+		s.logger.Warn().Err(err).Msgf("Failed to fetch remote version. For now we assume that local version %s is up to date", version)
+		return nil
+	}
+	if version == remoteVersion {
+		s.logger.Info().Msgf("Local version %s is up to date. Finished initialization", version)
+		return nil
+	}
+
+	if !allowDbDrop {
+		return fmt.Errorf("local version is outdated; local: %s, remote: %s", version, remoteVersion)
+	}
+
+	s.logger.Info().Msg("Local version is outdated. Dropping db...")
+	if err := s.db.DropAll(); err != nil {
+		return fmt.Errorf("failed to drop db: %w", err)
+	}
+	s.logger.Info().Msg("DB dropped. Fetching snapshot...")
+	return s.fetchSnapshot(ctx)
+}
+
+func (s *Syncer) SetHandlers(ctx context.Context) error {
+	if s.networkManager == nil {
+		return nil
+	}
+
+	if err := SetVersionHandler(ctx, s.networkManager, s.db); err != nil {
+		return fmt.Errorf("failed to set version handler: %w", err)
+	}
+
 	SetBootstrapHandler(ctx, s.networkManager, s.db)
+	return nil
 }
 
 func (s *Syncer) Run(ctx context.Context) error {
@@ -133,17 +208,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 		return nil
 	}
 
-	block, hash, err := s.validator.GetLastBlock(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to read last block number: %w", err)
-	}
-
-	s.logger.Debug().
-		Stringer(logging.FieldBlockHash, hash).
-		Uint64(logging.FieldBlockNumber, uint64(block.Id)).
-		Msg("Initialized syncer at starting block")
-
-	s.logger.Info().Msg("Starting sync")
+	s.logger.Info().Msg("Starting sync...")
 
 	s.fetchBlocks(ctx)
 	s.waitForSync.Done()
@@ -154,7 +219,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 
 	sub, err := s.networkManager.PubSub().Subscribe(s.topic)
 	if err != nil {
-		return fmt.Errorf("Failed to subscribe to %s: %w", s.topic, err)
+		return fmt.Errorf("failed to subscribe to %s: %w", s.topic, err)
 	}
 	defer sub.Close()
 
@@ -205,13 +270,6 @@ func (s *Syncer) processTopicTransaction(ctx context.Context, data []byte) (bool
 		default:
 			return false, err
 		}
-	}
-
-	if uint64(block.Id)%uint64(blockReportInterval) == 0 {
-		s.logger.Info().
-			Uint64(logging.FieldBlockNumber, uint64(block.Id)).
-			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
-			Msg("Saved block")
 	}
 
 	return true, nil
@@ -285,6 +343,13 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 		return err
 	}
 	s.notify(block.Id)
+
+	if uint64(block.Id)%uint64(blockReportInterval) == 0 {
+		s.logger.Info().
+			Uint64(logging.FieldBlockNumber, uint64(block.Id)).
+			Stringer(logging.FieldBlockHash, block.Hash(s.config.ShardId)).
+			Msg("Saved block")
+	}
 
 	s.logger.Trace().
 		Stringer(logging.FieldBlockNumber, block.Block.Id).

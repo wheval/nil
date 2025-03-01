@@ -325,6 +325,7 @@ func (devnet *devnet) writeServerConfig(instanceId int, srv server, only string)
 	spec := devnet.spec
 	cfg.NShards = spec.NShards
 	inst := srv.nodeSpec
+	cfg.AllowDbDrop = spec.NilWipeOnUpdate
 	cfg.MyShards = inst.Shards
 	cfg.SplitShards = inst.SplitShards
 	cfg.BootstrapPeers = getPeers(devnet.validators, inst.BootstrapPeersIdx)
@@ -332,7 +333,6 @@ func (devnet *devnet) writeServerConfig(instanceId int, srv server, only string)
 	cfg.LogClientRpcEvents = srv.logClientEvents
 	cfg.DB = db.NewDefaultBadgerDBOptions()
 	cfg.DB.Path = srv.workDir + "/database"
-	cfg.DB.AllowDrop = spec.NilWipeOnUpdate
 	cfg.Network.DHTEnabled = true
 	cfg.Network.DHTBootstrapPeers = getPeers(devnet.validators, inst.DHTBootstrapPeersIdx)
 

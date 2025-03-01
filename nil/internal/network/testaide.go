@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,12 +38,6 @@ func NewTestManagerWithBaseConfig(t *testing.T, ctx context.Context, conf *Confi
 	m, err := NewManager(ctx, conf)
 	require.NoError(t, err)
 	return m
-}
-
-func NewTestManager(t *testing.T, ctx context.Context) *Manager {
-	t.Helper()
-
-	return NewTestManagerWithBaseConfig(t, ctx, &Config{})
 }
 
 func NewTestManagers(t *testing.T, ctx context.Context, initialTcpPort int, n int) []*Manager {
@@ -86,6 +81,14 @@ func WaitForPeer(t *testing.T, m *Manager, id PeerID) {
 	}, 10*time.Second, 100*time.Millisecond)
 }
 
+// topLevelTestName returns the top-level test name for a given test.
+// It is used to generate unique (among parallel tests) prefixes for topic and protocol names.
+func topLevelTestName(t *testing.T) string {
+	t.Helper()
+
+	return strings.Split(t.Name(), "/")[0]
+}
+
 func GenerateConfig(t *testing.T, port int) (*Config, AddrInfo) {
 	t.Helper()
 
@@ -102,7 +105,7 @@ func GenerateConfig(t *testing.T, port int) (*Config, AddrInfo) {
 		PrivateKey: key,
 		TcpPort:    port,
 		DHTEnabled: true,
-		Prefix:     t.Name(),
+		Prefix:     topLevelTestName(t),
 	}, AddrInfo(*address)
 }
 

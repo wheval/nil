@@ -25,7 +25,9 @@ type BadgerDBOptions struct {
 	Path         string        `yaml:"path"`
 	DiscardRatio float64       `yaml:"gcDiscardRatio,omitempty"`
 	GcFrequency  time.Duration `yaml:"gcFrequency,omitempty"`
-	AllowDrop    bool          `yaml:"allowDrop,omitempty"`
+
+	// deprecated
+	AllowDrop bool `yaml:"allowDrop,omitempty"`
 }
 
 func NewDefaultBadgerDBOptions() *BadgerDBOptions {
@@ -62,10 +64,6 @@ var (
 
 func MakeKey(table TableName, key []byte) []byte {
 	return append([]byte(table+":"), key...)
-}
-
-func IsKeyFromTable(table TableName, fullKey []byte) bool {
-	return bytes.HasPrefix(fullKey, []byte(table+":"))
 }
 
 func NewBadgerDb(pathToDb string) (*badgerDB, error) {
@@ -134,7 +132,7 @@ func (db *badgerDB) CreateRwTx(ctx context.Context) (RwTx, error) {
 }
 
 func (db *badgerDB) Stream(
-	ctx context.Context, keyFilter func([]byte) bool, writer io.Writer,
+	_ context.Context, keyFilter func([]byte) bool, writer io.Writer,
 ) error {
 	stream := db.db.NewStream()
 	stream.NumGo = 4
