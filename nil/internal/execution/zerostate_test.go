@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/compiler"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"gopkg.in/yaml.v3"
 )
 
 type SuiteZeroState struct {
@@ -63,6 +64,20 @@ func (suite *SuiteZeroState) getBalance(address types.Address) types.Value {
 	account, ok := suite.state.Accounts[address]
 	suite.Require().True(ok)
 	return account.Balance
+}
+
+func (suite *SuiteZeroState) TestYamlSerialization() {
+	orig, err := CreateDefaultZeroStateConfig(MainPublicKey)
+	suite.Require().NoError(err)
+
+	yamlData, err := yaml.Marshal(orig)
+	suite.Require().NoError(err)
+
+	deserialized := &ZeroStateConfig{}
+	err = yaml.Unmarshal(yamlData, deserialized)
+	suite.Require().NoError(err)
+
+	suite.Require().Equal(orig, deserialized)
 }
 
 func (suite *SuiteZeroState) TestWithdrawFromFaucet() {

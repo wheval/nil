@@ -51,7 +51,11 @@ func CreateDefaultZeroStateConfig(mainPublicKey []byte) (*ZeroStateConfig, error
 	}
 	zeroStateConfig := &ZeroStateConfig{
 		Contracts: []*ContractDescr{
-			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: types.MainSmartAccountAddress, Value: smartAccountValue, CtorArgs: []any{mainPublicKey}},
+			{
+				Name: "MainSmartAccount", Contract: "SmartAccount",
+				Address: types.MainSmartAccountAddress, Value: smartAccountValue,
+				CtorArgs: []any{hexutil.Encode(mainPublicKey)},
+			},
 			{Name: "Faucet", Contract: "Faucet", Address: types.FaucetAddress, Value: faucetValue},
 			{Name: "EthFaucet", Contract: "FaucetToken", Address: types.EthFaucetAddress, Value: tokenValue},
 			{Name: "UsdtFaucet", Contract: "FaucetToken", Address: types.UsdtFaucetAddress, Value: tokenValue},
