@@ -9,6 +9,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/core/reset"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rollupcontract"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rpc"
@@ -40,10 +41,14 @@ func New(cfg *Config, database db.DB, ethClient rollupcontract.EthClient) (*Sync
 	blockStorage := storage.NewBlockStorage(database, timer, metricsHandler, logger)
 	taskStorage := storage.NewTaskStorage(database, timer, metricsHandler, logger)
 
+	// todo: add reset logic to TaskStorage (implement StateResetter interface) and pass it here in https://github.com/NilFoundation/nil/pull/419
+	stateResetter := reset.NewStateResetter(logger, blockStorage)
+
 	agg := NewAggregator(
 		client,
 		blockStorage,
 		taskStorage,
+		stateResetter,
 		timer,
 		logger,
 		metricsHandler,
@@ -52,7 +57,7 @@ func New(cfg *Config, database db.DB, ethClient rollupcontract.EthClient) (*Sync
 
 	ctx := context.Background()
 
-	proposer, err := NewProposer(
+	prop, err := NewProposer(
 		ctx,
 		cfg.ProposerParams,
 		blockStorage,
@@ -64,9 +69,13 @@ func New(cfg *Config, database db.DB, ethClient rollupcontract.EthClient) (*Sync
 		return nil, fmt.Errorf("failed to create proposer: %w", err)
 	}
 
+	syncCommittee := &SyncCommittee{}
+
+	resetLauncher := reset.NewResetLauncher(agg, stateResetter, syncCommittee, logger)
+
 	taskScheduler := scheduler.New(
 		taskStorage,
-		newTaskStateChangeHandler(blockStorage, logger),
+		newTaskStateChangeHandler(blockStorage, resetLauncher, logger),
 		metricsHandler,
 		logger,
 	)
@@ -77,12 +86,10 @@ func New(cfg *Config, database db.DB, ethClient rollupcontract.EthClient) (*Sync
 		logger,
 	)
 
-	s := &SyncCommittee{
-		Service: srv.NewService(
-			logger,
-			proposer, agg, taskScheduler, taskListener,
-		),
-	}
+	syncCommittee.Service = srv.NewService(
+		logger,
+		prop, agg, taskScheduler, taskListener,
+	)
 
-	return s, nil
+	return syncCommittee, nil
 }

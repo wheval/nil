@@ -12,6 +12,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/core/reset"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/testaide"
@@ -52,10 +53,13 @@ func (s *AggregatorTestSuite) SetupSuite() {
 	s.taskStorage = storage.NewTaskStorage(s.db, timer, metricsHandler, logger)
 	s.rpcClientMock = &client.ClientMock{}
 
+	stateResetter := reset.NewStateResetter(logger, s.blockStorage)
+
 	s.aggregator = NewAggregator(
 		s.rpcClientMock,
 		s.blockStorage,
 		s.taskStorage,
+		stateResetter,
 		timer,
 		logger,
 		metricsHandler,
@@ -112,7 +116,7 @@ func (s *AggregatorTestSuite) Test_Fetched_Not_Ready_Batch() {
 	}
 
 	err := s.aggregator.processNewBlocks(s.ctx)
-	s.Require().ErrorIs(err, scTypes.ErrBatchNotReady)
+	s.Require().NoError(err)
 
 	// latest fetched block was not updated
 	mainRef, err := s.blockStorage.TryGetLatestFetched(s.ctx)
@@ -123,13 +127,25 @@ func (s *AggregatorTestSuite) Test_Fetched_Not_Ready_Batch() {
 }
 
 func (s *AggregatorTestSuite) Test_Main_Parent_Hash_Mismatch() {
-	batches := testaide.NewBatchesSequence(2)
-	err := s.blockStorage.SetBlockBatch(s.ctx, batches[0])
+	batches := testaide.NewBatchesSequence(3)
+
+	// Set first 2 batches as proved
+	for _, provedBatch := range batches[:2] {
+		err := s.blockStorage.SetBlockBatch(s.ctx, provedBatch)
+		s.Require().NoError(err)
+		err = s.blockStorage.SetBlockAsProved(s.ctx, scTypes.IdFromBlock(provedBatch.MainShardBlock))
+		s.Require().NoError(err)
+	}
+
+	// Set first batch as proposed, latestProvedStateRoot value is updated
+	err := s.blockStorage.SetBlockAsProposed(s.ctx, scTypes.IdFromBlock(batches[0].MainShardBlock))
 	s.Require().NoError(err)
+	latestProved, err := s.blockStorage.TryGetProvedStateRoot(s.ctx)
+	s.Require().NoError(err)
+	s.Require().NotNil(latestProved)
 
-	nextMainBlock := batches[1].MainShardBlock
+	nextMainBlock := batches[2].MainShardBlock
 	nextMainBlock.ParentHash = testaide.RandomHash()
-
 	s.rpcClientMock.GetBlockFunc = blockGenerator(nextMainBlock)
 
 	s.rpcClientMock.GetBlocksRangeFunc = func(_ context.Context, _ types.ShardId, from types.BlockNumber, to types.BlockNumber, _ bool, _ int) ([]*jsonrpc.RPCBlock, error) {
@@ -137,13 +153,12 @@ func (s *AggregatorTestSuite) Test_Main_Parent_Hash_Mismatch() {
 	}
 
 	err = s.aggregator.processNewBlocks(s.ctx)
-	s.Require().ErrorIs(err, scTypes.ErrBlockMismatch)
+	s.Require().NoError(err)
 
-	// latest fetched block was not updated
+	// latest fetched block was reset
 	mainRef, err := s.blockStorage.TryGetLatestFetched(s.ctx)
 	s.Require().NoError(err)
-	s.Require().True(mainRef.Equals(batches[0].MainShardBlock))
-
+	s.Require().Nil(mainRef)
 	s.requireNoNewTasks()
 }
 

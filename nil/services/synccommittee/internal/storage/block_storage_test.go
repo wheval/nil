@@ -373,7 +373,7 @@ func (s *BlockStorageTestSuite) TestTryGetNextProposalData_Concurrently() {
 
 const resetTestBatchesCount = 10
 
-func (s *BlockStorageTestSuite) Test_ResetProgress_Block_Does_Not_Exists() {
+func (s *BlockStorageTestSuite) Test_ResetProgressPartial_Block_Does_Not_Exists() {
 	batches := testaide.NewBatchesSequence(resetTestBatchesCount)
 
 	for _, batch := range batches {
@@ -385,15 +385,11 @@ func (s *BlockStorageTestSuite) Test_ResetProgress_Block_Does_Not_Exists() {
 	s.Require().NoError(err)
 
 	nonExistentBlockHash := testaide.RandomHash()
-	err = s.bs.ResetProgress(s.ctx, nonExistentBlockHash)
+	err = s.bs.ResetProgressPartial(s.ctx, nonExistentBlockHash)
 	s.Require().ErrorIs(err, scTypes.ErrBlockNotFound)
 
 	for _, batch := range batches {
-		for _, block := range batch.AllBlocks() {
-			fromStorage, err := s.bs.TryGetBlock(s.ctx, scTypes.IdFromBlock(block))
-			s.Require().NoError(err)
-			s.NotNil(fromStorage)
-		}
+		s.requireBatch(batch, false)
 	}
 
 	latestFetchedAfterReset, err := s.bs.TryGetLatestFetched(s.ctx)
@@ -401,7 +397,7 @@ func (s *BlockStorageTestSuite) Test_ResetProgress_Block_Does_Not_Exists() {
 	s.Require().Equal(latestFetchedBeforeReset, latestFetchedAfterReset)
 }
 
-func (s *BlockStorageTestSuite) Test_ResetProgress() {
+func (s *BlockStorageTestSuite) Test_ResetProgressPartial() {
 	testCases := []struct {
 		name          string
 		passedHashIdx int
@@ -417,12 +413,12 @@ func (s *BlockStorageTestSuite) Test_ResetProgress() {
 				testCase.passedHashIdx >= 0 && testCase.passedHashIdx < resetTestBatchesCount,
 				"passedHashIdx should be in range [0, %d)", resetTestBatchesCount,
 			)
-			s.testResetProgress(testCase.passedHashIdx)
+			s.testResetProgressPartial(testCase.passedHashIdx)
 		})
 	}
 }
 
-func (s *BlockStorageTestSuite) testResetProgress(passedHashIdx int) {
+func (s *BlockStorageTestSuite) testResetProgressPartial(passedHashIdx int) {
 	s.T().Helper()
 
 	batches := testaide.NewBatchesSequence(resetTestBatchesCount)
@@ -433,21 +429,12 @@ func (s *BlockStorageTestSuite) testResetProgress(passedHashIdx int) {
 	}
 
 	firstMainHashToPurge := batches[passedHashIdx].MainShardBlock.Hash
-	err := s.bs.ResetProgress(s.ctx, firstMainHashToPurge)
+	err := s.bs.ResetProgressPartial(s.ctx, firstMainHashToPurge)
 	s.Require().NoError(err)
 
 	for i, batch := range batches {
 		shouldBePurged := i >= passedHashIdx
-
-		for _, block := range batch.AllBlocks() {
-			fromStorage, err := s.bs.TryGetBlock(s.ctx, scTypes.IdFromBlock(block))
-			s.Require().NoError(err)
-			if shouldBePurged {
-				s.Nil(fromStorage)
-			} else {
-				s.NotNil(fromStorage)
-			}
-		}
+		s.requireBatch(batch, shouldBePurged)
 	}
 
 	var expectedLatestFetched *scTypes.MainBlockRef
@@ -460,4 +447,48 @@ func (s *BlockStorageTestSuite) testResetProgress(passedHashIdx int) {
 	actualLatestFetched, err := s.bs.TryGetLatestFetched(s.ctx)
 	s.Require().NoError(err)
 	s.Require().Equal(expectedLatestFetched, actualLatestFetched)
+}
+
+func (s *BlockStorageTestSuite) Test_ResetProgressNonProved() {
+	batches := testaide.NewBatchesSequence(resetTestBatchesCount)
+
+	for _, batch := range batches {
+		err := s.bs.SetBlockBatch(s.ctx, batch)
+		s.Require().NoError(err)
+	}
+
+	const provedBatchesCount = 3
+	provedBatches := batches[:provedBatchesCount]
+	for _, batch := range provedBatches {
+		err := s.bs.SetBlockAsProved(s.ctx, scTypes.IdFromBlock(batch.MainShardBlock))
+		s.Require().NoError(err)
+	}
+
+	err := s.bs.ResetProgressNotProved(s.ctx)
+	s.Require().NoError(err)
+
+	latestFetched, err := s.bs.TryGetLatestFetched(s.ctx)
+	s.Require().NoError(err)
+	s.Require().Nil(latestFetched)
+
+	for _, provedBatch := range provedBatches {
+		s.requireBatch(provedBatch, false)
+	}
+
+	for _, notProvenBatch := range batches[provedBatchesCount:] {
+		s.requireBatch(notProvenBatch, true)
+	}
+}
+
+func (s *BlockStorageTestSuite) requireBatch(batch *scTypes.BlockBatch, shouldBePurged bool) {
+	s.T().Helper()
+	for _, block := range batch.AllBlocks() {
+		fromStorage, err := s.bs.TryGetBlock(s.ctx, scTypes.IdFromBlock(block))
+		s.Require().NoError(err)
+		if shouldBePurged {
+			s.Nil(fromStorage)
+		} else {
+			s.NotNil(fromStorage)
+		}
+	}
 }
