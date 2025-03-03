@@ -1,7 +1,6 @@
 package txnpool
 
 import (
-	"bytes"
 	"container/heap"
 	"context"
 	"fmt"
@@ -15,6 +14,11 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/rs/zerolog"
 )
+
+// FeeBumpPercentage is the percentage of the priorityFee that a transaction must exceed to replace another transaction.
+// For example, if the priorityFee of a transaction is 100 and FeeBumpPercentage is 5, then the transaction must have a
+// priorityFee of at least 105 to replace the existing transaction.
+const FeeBumpPercentage = 5
 
 type Pool interface {
 	Add(ctx context.Context, txns ...*types.Transaction) ([]DiscardReason, error)
@@ -229,18 +233,8 @@ func (p *TxnPool) getLocked(hash common.Hash) *metaTxn {
 }
 
 func shouldReplace(existing, candidate *metaTxn) bool {
-	if candidate.FeeCredit.Cmp(existing.FeeCredit) <= 0 {
-		return false
-	}
-
-	// Discard the previous transaction if it is the same but at a lower fee
-	existingFee := existing.FeeCredit
-	existing.FeeCredit = candidate.FeeCredit
-	defer func() {
-		existing.FeeCredit = existingFee
-	}()
-
-	return bytes.Equal(existing.Transaction.Hash().Bytes(), candidate.Hash().Bytes())
+	adjustedFee := existing.effectivePriorityFee.Mul64(100 + FeeBumpPercentage).Div64(100)
+	return candidate.effectivePriorityFee.Cmp(adjustedFee) >= 0
 }
 
 func (p *TxnPool) addLocked(txn *metaTxn) DiscardReason {
@@ -251,8 +245,6 @@ func (p *TxnPool) addLocked(txn *metaTxn) DiscardReason {
 		if !shouldReplace(found, txn) {
 			return NotReplaced
 		}
-
-		p.queue.Remove(found)
 		p.discardLocked(found, ReplacedByHigherTip)
 	}
 
