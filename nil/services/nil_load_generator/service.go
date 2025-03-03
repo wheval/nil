@@ -17,6 +17,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/cliservice"
 	"github.com/NilFoundation/nil/nil/services/faucet"
 	uniswap "github.com/NilFoundation/nil/nil/services/nil_load_generator/contracts"
+	"github.com/NilFoundation/nil/nil/services/nil_load_generator/metrics"
 	"github.com/NilFoundation/nil/nil/services/rpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/httpcfg"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
@@ -69,7 +70,8 @@ func calculateOutputAmount(amountIn, reserveIn, reserveOut *big.Int) *big.Int {
 }
 
 func randomPermutation(shardIdList []types.ShardId, amount uint64) ([]types.ShardId, error) {
-	arr := shardIdList
+	arr := make([]types.ShardId, len(shardIdList))
+	copy(arr, shardIdList)
 	for i := len(arr) - 1; i > 0; i-- {
 		jBig, err := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
 		if err != nil {
@@ -285,38 +287,50 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 	signalCtx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 	ctx = signalCtx
+	handler, err := metrics.NewMetricsHandler("nil_load_generator")
 
 	go func() {
 		if err := startRpcServer(ctx, cfg.OwnEndpoint); err != nil {
+			handler.RecordError(ctx)
 			logger.Error().Err(err).Msg("Failed to start RPC server")
 			panic(err)
 		}
 	}()
+
+	if err != nil {
+		handler.RecordError(ctx)
+		return err
+	}
 
 	faucet := faucet.NewClient(cfg.FaucetEndpoint)
 	client = rpc_client.NewClient(cfg.Endpoint, logger)
 	logging.SetupGlobalLogger(cfg.LogLevel)
 
 	if err := rpcSwapLimit.Set(cfg.RpcSwapLimit); err != nil {
+		handler.RecordError(ctx)
 		return err
 	}
 
 	mainPrivateKey, err := execution.LoadMainKeys(cfg.MainKeysPath)
 	if err != nil {
+		handler.RecordError(ctx)
 		return err
 	}
 
 	service := cliservice.NewService(ctx, client, mainPrivateKey, faucet)
 	shardIdList, err := client.GetShardIdList(ctx)
 	if err != nil {
+		handler.RecordError(ctx)
 		return err
 	}
 	if err := setDefaultVars(cfg, len(shardIdList)); err != nil {
+		handler.RecordError(ctx)
 		return err
 	}
 	logger.Info().Msg("Creating smart accounts...")
 	smartAccounts, err = initializeSmartAccountsAndServices(ctx, cfg.UniswapAccounts, shardIdList, client, service, faucet)
 	if err != nil {
+		handler.RecordError(ctx)
 		return err
 	}
 	logger.Info().Msg("Smart accounts created successfully.")
@@ -325,6 +339,7 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 	if err := parallelizeAcrossN(len(shardIdList), func(i int) error {
 		return deployPairs(ctx, i, shardIdList, logger)
 	}); err != nil {
+		handler.RecordError(ctx)
 		logger.Error().Err(err).Msg("Deployment and initialization error")
 		return err
 	}
@@ -340,6 +355,7 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 				checkBalanceCounterDownInt = int(cfg.CheckBalance)
 				logger.Info().Msg("Checking balance and minting tokens.")
 				if err := uniswap.TopUpBalance(thresholdAmount, append(services, uniswapServices...), append(smartAccounts, uniswapSmartAccounts...)); err != nil {
+					handler.RecordError(ctx)
 					return err
 				}
 			}
@@ -347,6 +363,7 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 			if err := parallelizeAcrossN(len(shardIdList), func(i int) error {
 				return mint(ctx, i, shardIdList, logger)
 			}); err != nil {
+				handler.RecordError(ctx)
 				logger.Error().Err(err).Msg("Minting error")
 				return err
 			}
@@ -354,11 +371,14 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 			for range cfg.SwapPerIteration {
 				pairsToCall, smartAccountsToCall, err := selectPairAndAccount(shardIdList)
 				if err != nil {
+					handler.RecordError(ctx)
 					return err
 				}
 				if err := parallelizeAcrossN(len(pairsToCall), func(i int) error {
+					handler.RecordFromToCall(ctx, int64(smartAccountsToCall[i]-1), int64(pairsToCall[i]-1))
 					return swap(ctx, smartAccountsToCall[i]-1, pairsToCall[i]-1, logger)
 				}); err != nil {
+					handler.RecordError(ctx)
 					logger.Error().Err(err).Msg("Swap error")
 				}
 			}
@@ -366,6 +386,7 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 			if err := parallelizeAcrossN(len(shardIdList), func(i int) error {
 				return burn(ctx, i, shardIdList, logger)
 			}); err != nil {
+				handler.RecordError(ctx)
 				logger.Error().Err(err).Msg("Burn error")
 				return err
 			}
