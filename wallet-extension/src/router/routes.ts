@@ -16,5 +16,10 @@ export const WalletRoutes = {
     ERROR: "/error",
     MANAGE_TOKENS: "/manage-tokens",
     ADD_CUSTOM_TOKEN: "/add-custom-token",
+    CONNECTIONS: "/connections",
+  },
+  REQUESTS: {
+    CONNECT: "/connect",
+    SENDSIGN: "/send-sign",
   },
 };

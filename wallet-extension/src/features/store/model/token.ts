@@ -2,33 +2,34 @@ import type { SmartAccountV1 } from "@nilfoundation/niljs";
 import { createEffect, createEvent, createStore, sample } from "effector";
 import { type Token, getTokens, saveToken, setTokens } from "../../../background/storage/tokens.ts";
 import { fetchBalance, fetchSmartAccountTokens } from "../../blockchain";
+import { TokenNames } from "../../components/token";
 import { btcAddress, ethAddress, usdtAddress } from "../../utils/token.ts";
 import { setGlobalError } from "./error.ts";
 import { $smartAccount } from "./smartAccount.ts";
 
 //Init
-const initialTokens: Token[] = [
+export const initialTokens: Token[] = [
   {
     address: "",
-    name: "Nil",
+    name: TokenNames.NIL,
     show: true,
     topupable: true,
   },
   {
     address: ethAddress,
-    name: "ETH",
+    name: TokenNames.ETH,
     show: true,
     topupable: true,
   },
   {
     address: usdtAddress,
-    name: "USDT",
+    name: TokenNames.USDT,
     show: true,
     topupable: true,
   },
   {
     address: btcAddress,
-    name: "BTC",
+    name: TokenNames.BTC,
     show: true,
     topupable: true,
   },
@@ -45,7 +46,6 @@ export const initializeTokens = createEvent<string>();
 export const hideToken = createEvent<string>();
 export const showToken = createEvent<string>();
 export const addToken = createEvent<{ name: string; address: string }>();
-export const setInitialTokens = createEvent<void>();
 
 // Utils
 export const getTokenSymbolByAddress = (address: string): string => {
@@ -100,7 +100,13 @@ export const changeTokensFx = createEffect<{ address: string; show: boolean }, v
 
 export const fetchTokensFx = createEffect<string, Token[], Error>(async (_) => {
   try {
-    return await getTokens();
+    const tokens = await getTokens();
+    if (tokens.length === 0) {
+      await setTokens(initialTokens);
+      return initialTokens;
+    }
+
+    return tokens;
   } catch (error) {
     console.error("Failed to fetch tokens:", error);
     throw error;
@@ -147,7 +153,7 @@ $tokens.on(addToken, (state, { name, address }) => [
   ...state,
   { name, address, show: true, topupable: false },
 ]);
-$tokens.on(setInitialTokens, (_, __) => [...initialTokens]);
+
 $tokens.on(hideToken, (state, address) =>
   state.map((token) => (token.address === address ? { ...token, show: false } : token)),
 );

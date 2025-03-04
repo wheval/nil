@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import {
   areBlockchainFieldsSet,
   initializeFromStorageAndSetup,
 } from "../background/storage/state.ts";
 import { initializeTokens } from "../features/store/model/token.ts";
 import { ErrorPage, Loading, SetEndpoint, TestnetInfo } from "../pages/get-started";
+import { Connect, SignSend } from "../pages/requests";
 import {
+  Connection,
   Endpoint,
   Home,
   Receive,
@@ -59,6 +61,15 @@ export const WalletRouter = () => {
     <Route key="wallet-error" path={WalletRoutes.WALLET.ERROR}>
       <Route index element={<WalletError />} />
     </Route>,
+    <Route key="requests-connect" path={WalletRoutes.REQUESTS.CONNECT}>
+      <Route index element={<Connect />} />
+    </Route>,
+    <Route key="requests-signSend" path={WalletRoutes.REQUESTS.SENDSIGN}>
+      <Route index element={<SignSend />} />
+    </Route>,
+    <Route key="wallet-connect" path={WalletRoutes.WALLET.CONNECTIONS}>
+      <Route index element={<Connection />} />
+    </Route>,
     <Route key="manage-tokens" path={WalletRoutes.WALLET.MANAGE_TOKENS}>
       <Route index element={<ManageTokens />} />
     </Route>,
@@ -96,7 +107,7 @@ export const WalletRouter = () => {
   }
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       {!isFieldsSet ? (
         <Routes>
           {/* Get Started Routes + Wallet Routes */}
@@ -114,6 +125,6 @@ export const WalletRouter = () => {
           <Route path="*" element={<Navigate to={WalletRoutes.WALLET.BASE} />} />
         </Routes>
       )}
-    </BrowserRouter>
+    </HashRouter>
   );
 };
