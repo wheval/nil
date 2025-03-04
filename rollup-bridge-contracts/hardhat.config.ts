@@ -15,7 +15,7 @@ const config: HardhatUserConfig = {
   },
   // defaultNetwork: "nil",
   solidity: {
-    version: "0.8.27",
+    version: "0.8.26",
     settings: {
       viaIR: true,
       optimizer: {
