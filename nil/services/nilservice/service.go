@@ -601,13 +601,16 @@ func createShards(
 				return nil, err
 			}
 
-			consensus := ibft.NewConsensus(&ibft.ConsensusParams{
+			consensus, err := ibft.NewConsensus(&ibft.ConsensusParams{
 				ShardId:    shardId,
 				Db:         database,
 				Validator:  validators[i],
 				NetManager: networkManager,
 				PrivateKey: pKey,
 			})
+			if err != nil {
+				return nil, err
+			}
 			collator := collate.NewScheduler(validators[i], database, consensus, networkManager)
 
 			funcs = append(funcs, func(ctx context.Context) error {
