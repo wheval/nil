@@ -9,8 +9,12 @@ import (
 
 	"github.com/NilFoundation/nil/nil/go-ibft/messages"
 	"github.com/NilFoundation/nil/nil/go-ibft/messages/proto"
-	"github.com/hashicorp/go-metrics"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
+
+var meter = otel.Meter("go-ibft")
 
 // Logger represents the logger behaviour
 type Logger interface {
@@ -101,6 +105,34 @@ type IBFT struct {
 
 	// validatorManager keeps quorumSize and voting power information
 	validatorManager *ValidatorManager
+
+	// metricAttrs is the attributes to be used for metrics
+	metricAttrs []attribute.KeyValue
+
+	// roundHistogram is the histogram for round duration
+	roundHistogram metric.Float64Histogram
+
+	// sequenceHistogram is the histogram for sequence duration
+	sequenceHistogram metric.Float64Histogram
+}
+
+// NewIBFTWithMetrics creates a new instance of the IBFT consensus protocol with enabled metrics
+func NewIBFTWithMetrics(
+	log Logger,
+	backend Backend,
+	transport Transport,
+	attrs ...attribute.KeyValue,
+) (*IBFT, error) {
+	var err error
+	ibft := NewIBFT(log, backend, transport)
+	if ibft.roundHistogram, err = meter.Float64Histogram("round.duration", metric.WithDescription("Round duration")); err != nil {
+		return nil, err
+	}
+	if ibft.sequenceHistogram, err = meter.Float64Histogram("sequence.duration", metric.WithDescription("Sequence duration")); err != nil {
+		return nil, err
+	}
+	ibft.metricAttrs = attrs
+	return ibft, nil
 }
 
 // NewIBFT creates a new instance of the IBFT consensus protocol
@@ -132,9 +164,12 @@ func NewIBFT(
 	}
 }
 
-// SetMeasurementTime function set duration to gauge
-func SetMeasurementTime(prefix string, startTime time.Time) {
-	metrics.SetGauge([]string{"go-ibft", prefix, "duration"}, float32(time.Since(startTime).Seconds()))
+// setMeasurementTime function set duration to gauge
+func (i *IBFT) setMeasurementTime(ctx context.Context, hist metric.Float64Histogram, startTime time.Time) {
+	if hist == nil {
+		return
+	}
+	hist.Record(ctx, float64(time.Since(startTime).Seconds()), metric.WithAttributes(i.metricAttrs...))
 }
 
 // startRoundTimer starts the exponential round timer, based on the
@@ -151,7 +186,7 @@ func (i *IBFT) startRoundTimer(ctx context.Context, round uint64) {
 
 	select {
 	case <-ctx.Done():
-		SetMeasurementTime("round", startTime)
+		i.setMeasurementTime(ctx, i.roundHistogram, startTime)
 		// Stop signal received, stop the timer
 		timer.Stop()
 	case <-timer.C:
@@ -315,7 +350,7 @@ func (i *IBFT) RunSequence(ctx context.Context, h uint64) {
 
 	i.log.Info("sequence started", "height", h)
 	defer i.log.Info("sequence done", "height", h)
-	defer SetMeasurementTime("sequence", startTime)
+	defer i.setMeasurementTime(ctx, i.sequenceHistogram, startTime)
 
 	for {
 		view := i.state.getView()
