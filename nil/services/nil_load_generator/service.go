@@ -12,7 +12,6 @@ import (
 	rpc_client "github.com/NilFoundation/nil/nil/client/rpc"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
-	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/cliservice"
 	"github.com/NilFoundation/nil/nil/services/faucet"
@@ -39,7 +38,6 @@ type Config struct {
 	SwapAmount       string
 	UniswapAccounts  uint32
 	ThresholdAmount  string
-	MainKeysPath     string
 }
 
 var (
@@ -311,13 +309,7 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 		return err
 	}
 
-	mainPrivateKey, err := execution.LoadMainKeys(cfg.MainKeysPath)
-	if err != nil {
-		handler.RecordError(ctx)
-		return err
-	}
-
-	service := cliservice.NewService(ctx, client, mainPrivateKey, faucet)
+	service := cliservice.NewService(ctx, client, nil, faucet)
 	shardIdList, err := client.GetShardIdList(ctx)
 	if err != nil {
 		handler.RecordError(ctx)
