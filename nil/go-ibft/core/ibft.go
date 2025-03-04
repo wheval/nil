@@ -9,7 +9,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/go-ibft/messages"
 	"github.com/NilFoundation/nil/nil/go-ibft/messages/proto"
-	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-metrics"
 )
 
 // Logger represents the logger behaviour
