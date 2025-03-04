@@ -79,12 +79,14 @@ func (s *SuiteTxnPool) addTransactionsToPoolSuccessfully(pool Pool, txn ...*type
 	s.Equal(count+len(txn), s.getTransactionCount(pool))
 }
 
-func (s *SuiteTxnPool) addTransactions(txn ...*types.Transaction) {
+func (s *SuiteTxnPool) addTransactions(txn ...*types.Transaction) []DiscardReason {
 	s.T().Helper()
 
 	reasons, err := s.pool.Add(s.ctx, txn...)
 	s.Require().NoError(err)
 	s.Require().Len(reasons, len(txn))
+
+	return reasons
 }
 
 func (s *SuiteTxnPool) getTransactions() []*types.TxnWithHash {
@@ -130,20 +132,11 @@ func (s *SuiteTxnPool) TestAdd() {
 	// Send the same transaction with higher fee - OK
 	// Doesn't use the same helper because here transaction count doesn't change
 	txn2 := common.CopyPtr(txn1)
-	txn2.FeeCredit = txn2.FeeCredit.Add64(1)
+	txn2.MaxPriorityFeePerGas = txn2.MaxPriorityFeePerGas.Add64(100)
 	reasons, err := s.pool.Add(s.ctx, txn2)
 	s.Require().NoError(err)
 	s.Require().Equal([]DiscardReason{NotSet}, reasons)
 	s.Equal(1, s.getTransactionCount(s.pool))
-
-	// Send a different transaction with the same seqno - NotReplaced
-	txn3 := common.CopyPtr(txn1)
-	// Force the transaction to be different
-	txn3.Data = append(txn3.Data, 0x01)
-	s.Require().NotEqual(txn1.Hash(), txn3.Hash())
-	// Add a higher fee (otherwise, no replacement can be expected anyway)
-	txn3.FeeCredit = txn3.FeeCredit.Add64(1)
-	s.addTransactionWithDiscardReason(txn3, NotReplaced)
 
 	// Add a transaction with higher seqno to the same receiver
 	s.addTransactionsSuccessfully(newTransaction(defaultAddress, 1, 124))
@@ -292,6 +285,32 @@ func (s *SuiteTxnPool) TestBaseFeeChanged() {
 	err = s.pool.OnCommitted(s.ctx, types.NewValueFromUint64(80), []*types.Transaction{txn12, txn22})
 	s.Require().NoError(err)
 	s.checkTransactionsOrder()
+}
+
+func (s *SuiteTxnPool) TestReplacement() {
+	err := s.pool.OnCommitted(s.ctx, types.NewValueFromUint64(1000), nil)
+	s.Require().NoError(err)
+
+	txn1 := newTransaction2(defaultAddress, 0, 100, 1100, 0)
+	s.addTransactions(txn1)
+	s.checkTransactionsOrder(0)
+
+	// Not replaced: new priorityFee is less than FeeBumpPercentage
+	txn1 = newTransaction2(defaultAddress, 0, 100+FeeBumpPercentage-1, 1200, 1)
+	reasons := s.addTransactions(txn1)
+	s.checkTransactionsOrder(0)
+	s.Require().Equal([]DiscardReason{NotReplaced}, reasons)
+
+	// Replaced: new priorityFee is equal to FeeBumpPercentage
+	txn1 = newTransaction2(defaultAddress, 0, 100+FeeBumpPercentage, 1200, 2)
+	s.addTransactions(txn1)
+	s.checkTransactionsOrder(2)
+
+	// Not replaced: maxFeePerGas is small
+	txn1 = newTransaction2(defaultAddress, 0, 150, 1100, 3)
+	reasons = s.addTransactions(txn1)
+	s.checkTransactionsOrder(2)
+	s.Require().Equal([]DiscardReason{NotReplaced}, reasons)
 }
 
 func (s *SuiteTxnPool) TestNetwork() {
