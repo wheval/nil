@@ -33,12 +33,16 @@ func (s *BlockStorageTestSuite) SetupSuite() {
 	var err error
 	s.db, err = db.NewBadgerDbInMemory()
 	s.Require().NoError(err)
-	logger := logging.NewLogger("block_storage_test")
+	config := DefaultBlockStorageConfig()
+	s.bs = s.newTestBlockStorage(config)
+}
+
+func (s *BlockStorageTestSuite) newTestBlockStorage(config BlockStorageConfig) *BlockStorage {
+	s.T().Helper()
+	timer := common.NewTimer()
 	metricsHandler, err := metrics.NewSyncCommitteeMetrics()
 	s.Require().NoError(err)
-
-	timer := common.NewTimer()
-	s.bs = NewBlockStorage(s.db, timer, metricsHandler, logger)
+	return NewBlockStorage(s.db, config, timer, metricsHandler, logging.NewLogger("block_storage_test"))
 }
 
 func (s *BlockStorageTestSuite) SetupTest() {
@@ -86,6 +90,49 @@ func (s *BlockStorageTestSuite) TestSetBlockBatchSequentially_GetConcurrently() 
 	}
 
 	waitGroup.Wait()
+}
+
+func (s *BlockStorageTestSuite) Test_SetBlockBatch_Capacity_Exceeded() {
+	singleBatchSize := testaide.ShardsCount + 1
+	allowedBatchesCount := int(DefaultBlockStorageConfig().CapacityLimit) / singleBatchSize
+	batches := testaide.NewBatchesSequence(allowedBatchesCount)
+
+	for _, batch := range batches {
+		err := s.bs.SetBlockBatch(s.ctx, batch)
+		s.Require().NoError(err)
+	}
+
+	lastStoredBatch := batches[len(batches)-1]
+
+	nextBatch := testaide.NewBlockBatch(testaide.ShardsCount)
+	nextBatch.MainShardBlock.Number = lastStoredBatch.MainShardBlock.Number + 1
+	nextBatch.MainShardBlock.ParentHash = lastStoredBatch.MainShardBlock.Hash
+
+	err := s.bs.SetBlockBatch(s.ctx, nextBatch)
+	s.Require().ErrorIs(err, ErrCapacityLimitReached)
+}
+
+func (s *BlockStorageTestSuite) Test_SetBlockBatch_Free_Capacity_On_SetBlockAsProposed() {
+	batches := testaide.NewBatchesSequence(2)
+
+	capacityLimit := batches[0].BlocksCount()
+	config := NewBlockStorageConfig(capacityLimit)
+	storage := s.newTestBlockStorage(config)
+
+	err := storage.SetBlockBatch(s.ctx, batches[0])
+	s.Require().NoError(err)
+
+	err = storage.SetBlockBatch(s.ctx, batches[1])
+	s.Require().ErrorIs(err, ErrCapacityLimitReached)
+
+	provedMainBlockId := scTypes.IdFromBlock(batches[0].MainShardBlock)
+	err = storage.SetBlockAsProved(s.ctx, provedMainBlockId)
+	s.Require().NoError(err)
+	err = storage.SetBlockAsProposed(s.ctx, provedMainBlockId)
+	s.Require().NoError(err)
+
+	err = storage.SetBlockBatch(s.ctx, batches[1])
+	s.Require().NoError(err)
 }
 
 func (s *BlockStorageTestSuite) TestGetLastFetchedBlock() {

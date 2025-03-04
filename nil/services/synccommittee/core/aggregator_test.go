@@ -49,7 +49,7 @@ func (s *AggregatorTestSuite) SetupSuite() {
 	s.db, err = db.NewBadgerDbInMemory()
 	s.Require().NoError(err)
 	timer := common.NewTimer()
-	s.blockStorage = storage.NewBlockStorage(s.db, timer, metricsHandler, logger)
+	s.blockStorage = storage.NewBlockStorage(s.db, storage.DefaultBlockStorageConfig(), timer, metricsHandler, logger)
 	s.taskStorage = storage.NewTaskStorage(s.db, timer, metricsHandler, logger)
 	s.rpcClientMock = &client.ClientMock{}
 

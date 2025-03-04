@@ -49,7 +49,7 @@ func (s *BlockTasksIntegrationTestSuite) SetupSuite() {
 
 	s.timer = testaide.NewTestTimer()
 	s.taskStorage = storage.NewTaskStorage(s.db, s.timer, metricsHandler, logger)
-	s.blockStorage = storage.NewBlockStorage(s.db, s.timer, metricsHandler, logger)
+	s.blockStorage = storage.NewBlockStorage(s.db, storage.DefaultBlockStorageConfig(), s.timer, metricsHandler, logger)
 
 	s.scheduler = scheduler.New(
 		s.taskStorage,
