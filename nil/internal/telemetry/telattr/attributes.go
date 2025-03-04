@@ -27,3 +27,7 @@ func ProtocolId(id protocol.ID) attribute.KeyValue {
 func Topic(topic string) attribute.KeyValue {
 	return attribute.String(logging.FieldTopic, topic)
 }
+
+func Type(t string) attribute.KeyValue {
+	return attribute.String(logging.FieldType, t)
+}

@@ -50,6 +50,7 @@ type backendIBFT struct {
 	transport       transport
 	signer          *Signer
 	validatorsCache *validatorsMap
+	mh              *MetricsHandler
 }
 
 var _ core.Backend = &backendIBFT{}
@@ -63,6 +64,9 @@ func (i *backendIBFT) unmarshalProposal(raw []byte) (*execution.ProposalSSZ, err
 }
 
 func (i *backendIBFT) BuildProposal(view *protoIBFT.View) []byte {
+	i.mh.StartBuildProposalMeasurement(i.transportCtx, view.Round)
+	defer i.mh.EndBuildProposalMeasurement(i.transportCtx)
+
 	proposal, err := i.validator.BuildProposal(i.ctx)
 	if err != nil {
 		i.logger.Error().Err(err).Msg("failed to build proposal")
@@ -142,6 +146,9 @@ func (i *backendIBFT) buildSignature(committedSeals []*messages.CommittedSeal, h
 }
 
 func (i *backendIBFT) InsertProposal(proposal *protoIBFT.Proposal, committedSeals []*messages.CommittedSeal) {
+	i.mh.StartBuildProposalMeasurement(i.transportCtx, proposal.Round)
+	defer i.mh.EndBuildProposalMeasurement(i.transportCtx)
+
 	proposalBlock, err := i.unmarshalProposal(proposal.RawProposal)
 	if err != nil {
 		i.logger.Error().Err(err).Msg("failed to unmarshal proposal")
@@ -186,10 +193,17 @@ func (i *backendIBFT) isActiveValidator() bool {
 	return true
 }
 
-func NewConsensus(cfg *ConsensusParams) *backendIBFT {
+func NewConsensus(cfg *ConsensusParams) (*backendIBFT, error) {
 	logger := logging.NewLogger("consensus").With().Stringer(logging.FieldShardId, cfg.ShardId).Logger()
 	l := &ibftLogger{
 		logger: logger.With().CallerWithSkipFrameCount(3).Logger(),
+	}
+
+	const mhName = "github.com/NilFoundation/nil/nil/internal/consensus"
+	mh, err := NewMetricsHandler(mhName, cfg.ShardId)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to create metrics handler")
+		return nil, err
 	}
 
 	backend := &backendIBFT{
@@ -199,9 +213,10 @@ func NewConsensus(cfg *ConsensusParams) *backendIBFT {
 		nm:              cfg.NetManager,
 		signer:          NewSigner(cfg.PrivateKey),
 		validatorsCache: newValidatorsMap(cfg.Db, cfg.ShardId),
+		mh:              mh,
 	}
 	backend.consensus = core.NewIBFT(l, backend, backend)
-	return backend
+	return backend, nil
 }
 
 func (i *backendIBFT) Init(ctx context.Context) error {
@@ -223,14 +238,19 @@ func (i *backendIBFT) GetVotingPowers(height uint64) (map[string]*big.Int, error
 		return nil, err
 	}
 
-	result := make(map[string]*big.Int, len(validators))
+	count := len(validators)
+	result := make(map[string]*big.Int, count)
 	for _, v := range validators {
 		result[string(v.PublicKey[:])] = big.NewInt(1)
 	}
+	i.mh.SetValidatorsCount(i.transportCtx, count)
 	return result, nil
 }
 
 func (i *backendIBFT) RunSequence(ctx context.Context, height uint64) error {
+	i.mh.StartSequenceMeasurement(ctx, height)
+	defer i.mh.EndSequenceMeasurement(ctx)
+
 	i.ctx = ctx
 	i.consensus.RunSequence(ctx, height)
 	return nil
