@@ -14,7 +14,10 @@ import (
 	"github.com/holiman/uint256"
 )
 
-const ShardsCount = 4
+const (
+	ShardsCount = 4
+	BatchSize   = ShardsCount + 1
+)
 
 func RandomHash() common.Hash {
 	randomBytes := make([]byte, 32)

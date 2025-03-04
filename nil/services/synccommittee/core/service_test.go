@@ -53,8 +53,13 @@ func (s *SyncCommitteeTestSuite) SetupSuite() {
 
 	syncCommitteeMetrics, err := metrics.NewSyncCommitteeMetrics()
 	s.Require().NoError(err)
-	s.blockStorage = storage.NewBlockStorage(s.scDb, common.NewTimer(), syncCommitteeMetrics, logging.NewLogger("sync_committee_srv_test"))
-	s.Require().NoError(err)
+	s.blockStorage = storage.NewBlockStorage(
+		s.scDb,
+		storage.DefaultBlockStorageConfig(),
+		common.NewTimer(),
+		syncCommitteeMetrics,
+		logging.NewLogger("sync_committee_srv_test"),
+	)
 }
 
 func (s *SyncCommitteeTestSuite) TearDownSuite() {

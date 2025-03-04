@@ -102,6 +102,10 @@ func validateBatch(mainShardBlock *jsonrpc.RPCBlock, childBlocks []*jsonrpc.RPCB
 	return nil
 }
 
+func (b *BlockBatch) BlocksCount() uint32 {
+	return uint32(len(b.ChildBlocks) + 1)
+}
+
 func (b *BlockBatch) AllBlocks() []*jsonrpc.RPCBlock {
 	blocks := make([]*jsonrpc.RPCBlock, 0, len(b.ChildBlocks)+1)
 	blocks = append(blocks, b.MainShardBlock)

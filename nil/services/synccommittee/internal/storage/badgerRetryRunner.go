@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog"
 )
 
@@ -18,7 +19,9 @@ func badgerRetryRunner(
 	retryPolicy := common.ComposeRetryPolicies(
 		append(
 			[]common.RetryPolicyFunc{
-				common.DoNotRetryIf(ErrSerializationFailed),
+				common.DoNotRetryIf(
+					ErrSerializationFailed, ErrCapacityLimitReached, badger.ErrTxnTooBig,
+				),
 				common.LimitRetries(badgerDefaultRetryLimit),
 			},
 			additionalPolicies...,

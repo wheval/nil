@@ -38,7 +38,7 @@ func New(cfg *Config, database db.DB, ethClient rollupcontract.EthClient) (*Sync
 	client := nilrpc.NewClient(cfg.RpcEndpoint, logger)
 
 	timer := common.NewTimer()
-	blockStorage := storage.NewBlockStorage(database, timer, metricsHandler, logger)
+	blockStorage := storage.NewBlockStorage(database, storage.DefaultBlockStorageConfig(), timer, metricsHandler, logger)
 	taskStorage := storage.NewTaskStorage(database, timer, metricsHandler, logger)
 
 	// todo: add reset logic to TaskStorage (implement StateResetter interface) and pass it here in https://github.com/NilFoundation/nil/pull/419
@@ -52,7 +52,7 @@ func New(cfg *Config, database db.DB, ethClient rollupcontract.EthClient) (*Sync
 		timer,
 		logger,
 		metricsHandler,
-		cfg.PollingDelay,
+		cfg.AggregatorConfig,
 	)
 
 	ctx := context.Background()

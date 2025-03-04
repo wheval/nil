@@ -39,6 +39,10 @@ const (
 	// nextToProposeTable stores parent's hash of the next block to propose (single value).
 	// Key: mainShardKey, Value: common.Hash.
 	nextToProposeTable db.TableName = "next_to_propose_parent_hash"
+
+	// storedBlocksCountTable stores the count of blocks that have been persisted in the database.
+	// Key: mainShardKey, Value: uint32.
+	storedBlocksCountTable db.TableName = "stored_blocks_count"
 )
 
 var mainShardKey = makeShardKey(types.MainShardId)
@@ -62,14 +66,30 @@ type BlockStorageMetrics interface {
 	RecordMainBlockProved(ctx context.Context)
 }
 
+type BlockStorageConfig struct {
+	CapacityLimit uint32
+}
+
+func NewBlockStorageConfig(capacityLimit uint32) BlockStorageConfig {
+	return BlockStorageConfig{
+		CapacityLimit: capacityLimit,
+	}
+}
+
+func DefaultBlockStorageConfig() BlockStorageConfig {
+	return NewBlockStorageConfig(200)
+}
+
 type BlockStorage struct {
 	commonStorage
+	config  BlockStorageConfig
 	timer   common.Timer
 	metrics BlockStorageMetrics
 }
 
 func NewBlockStorage(
 	database db.DB,
+	config BlockStorageConfig,
 	timer common.Timer,
 	metrics BlockStorageMetrics,
 	logger zerolog.Logger,
@@ -80,6 +100,7 @@ func NewBlockStorage(
 			logger,
 			common.DoNotRetryIf(scTypes.ErrBlockMismatch, scTypes.ErrBlockNotFound),
 		),
+		config:  config,
 		timer:   timer,
 		metrics: metrics,
 	}
@@ -172,6 +193,10 @@ func (bs *BlockStorage) setBlockBatchImpl(ctx context.Context, batch *scTypes.Bl
 		return err
 	}
 	defer tx.Rollback()
+
+	if err := bs.addStoredCountTx(tx, int32(batch.BlocksCount())); err != nil {
+		return err
+	}
 
 	currentTime := bs.timer.NowTime()
 	mainEntry := newBlockEntry(batch.MainShardBlock, batch.Id, currentTime)
@@ -656,6 +681,11 @@ func (bs *BlockStorage) deleteMainBlockWithChildren(tx db.RwTx, mainShardEntry *
 		return err
 	}
 
+	blocksCount := int32(len(childIds) + 1)
+	if err := bs.addStoredCountTx(tx, -blocksCount); err != nil {
+		return err
+	}
+
 	for _, childId := range childIds {
 		childEntry, err := bs.getBlockEntry(tx, childId, true)
 		if err != nil {
@@ -732,6 +762,56 @@ func (*BlockStorage) storedBlocksIter(tx db.RoTx) iter.Seq2[*blockEntry, error] 
 			}
 		}
 	}
+}
+
+func (bs *BlockStorage) addStoredCountTx(tx db.RwTx, delta int32) error {
+	currentBlocksCount, err := bs.getBlocksCountTx(tx)
+	if err != nil {
+		return err
+	}
+
+	signed := int32(currentBlocksCount) + delta
+	if signed < 0 {
+		return fmt.Errorf(
+			"blocks count cannot be negative: delta=%d, current blocks count=%d", delta, currentBlocksCount,
+		)
+	}
+
+	newBlocksCount := uint32(signed)
+	if newBlocksCount > bs.config.CapacityLimit {
+		return fmt.Errorf(
+			"%w: delta is %d, current storage size is %d, capacity limit is %d",
+			ErrCapacityLimitReached, delta, currentBlocksCount, bs.config.CapacityLimit,
+		)
+	}
+
+	return bs.putBlocksCountTx(tx, newBlocksCount)
+}
+
+func (bs *BlockStorage) getBlocksCountTx(tx db.RoTx) (uint32, error) {
+	bytes, err := tx.Get(storedBlocksCountTable, mainShardKey)
+	switch {
+	case err == nil:
+		break
+	case errors.Is(err, db.ErrKeyNotFound):
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("failed to get blocks count: %w", err)
+	}
+
+	count := binary.LittleEndian.Uint32(bytes)
+	return count, nil
+}
+
+func (bs *BlockStorage) putBlocksCountTx(tx db.RwTx, newValue uint32) error {
+	bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bytes, newValue)
+
+	err := tx.Put(storedBlocksCountTable, mainShardKey, bytes)
+	if err != nil {
+		return fmt.Errorf("failed to put blocks count: %w (newValue is %d)", err, newValue)
+	}
+	return nil
 }
 
 func marshallEntry(entry *blockEntry) ([]byte, error) {

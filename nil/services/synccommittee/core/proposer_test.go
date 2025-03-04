@@ -27,7 +27,7 @@ type ProposerTestSuite struct {
 	ctx          context.Context
 	cancellation context.CancelFunc
 
-	params           *ProposerParams
+	params           ProposerParams
 	db               db.DB
 	timer            common.Timer
 	storage          *storage.BlockStorage
@@ -114,7 +114,7 @@ func (s *ProposerTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	s.timer = testaide.NewTestTimer()
-	s.storage = storage.NewBlockStorage(s.db, s.timer, metricsHandler, logger)
+	s.storage = storage.NewBlockStorage(s.db, storage.DefaultBlockStorageConfig(), s.timer, metricsHandler, logger)
 	s.params = NewDefaultProposerParams()
 	s.testData = testaide.NewProposalData(3, s.timer.NowTime())
 	s.callContractMock = newCallContractMock()

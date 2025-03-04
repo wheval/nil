@@ -52,7 +52,7 @@ func execute() error {
 func addFlags(cmd *cobra.Command, cfg *cmdConfig) {
 	cmd.Flags().StringVar(&cfg.RpcEndpoint, "endpoint", cfg.RpcEndpoint, "rpc endpoint")
 	cmd.Flags().StringVar(&cfg.TaskListenerRpcEndpoint, "own-endpoint", cfg.TaskListenerRpcEndpoint, "own rpc server endpoint")
-	cmd.Flags().DurationVar(&cfg.PollingDelay, "polling-delay", cfg.PollingDelay, "delay between new block polling")
+	cmd.Flags().DurationVar(&cfg.AggregatorConfig.RpcPollingInterval, "polling-delay", cfg.AggregatorConfig.RpcPollingInterval, "delay between new block polling")
 	cmd.Flags().StringVar(&cfg.DbPath, "db-path", "sync_committee.db", "path to database")
 	cmd.Flags().StringVar(&cfg.ProposerParams.Endpoint, "l1-endpoint", cfg.ProposerParams.Endpoint, "L1 endpoint")
 	cmd.Flags().StringVar(&cfg.ProposerParams.PrivateKey, "l1-private-key", cfg.ProposerParams.PrivateKey, "L1 account private key")
