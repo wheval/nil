@@ -93,8 +93,7 @@ func (s *BlockStorageTestSuite) TestSetBlockBatchSequentially_GetConcurrently() 
 }
 
 func (s *BlockStorageTestSuite) Test_SetBlockBatch_Capacity_Exceeded() {
-	singleBatchSize := testaide.ShardsCount + 1
-	allowedBatchesCount := int(DefaultBlockStorageConfig().CapacityLimit) / singleBatchSize
+	allowedBatchesCount := int(DefaultBlockStorageConfig().CapacityLimit) / testaide.BatchSize
 	batches := testaide.NewBatchesSequence(allowedBatchesCount)
 
 	for _, batch := range batches {
@@ -524,6 +523,31 @@ func (s *BlockStorageTestSuite) Test_ResetProgressNonProved() {
 
 	for _, notProvenBatch := range batches[provedBatchesCount:] {
 		s.requireBatch(notProvenBatch, true)
+	}
+}
+
+func (s *BlockStorageTestSuite) Test_ResetProgressNonProved_10K_Blocks_To_Purge() {
+	capacityLimit := uint32(10_000)
+	config := NewBlockStorageConfig(capacityLimit)
+	storage := s.newTestBlockStorage(config)
+
+	batchesCount := int(capacityLimit) / testaide.BatchSize
+	batches := testaide.NewBatchesSequence(batchesCount)
+
+	for _, batch := range batches {
+		err := storage.SetBlockBatch(s.ctx, batch)
+		s.Require().NoError(err)
+	}
+
+	err := storage.ResetProgressNotProved(s.ctx)
+	s.Require().NoError(err)
+
+	latestFetched, err := storage.TryGetLatestFetched(s.ctx)
+	s.Require().NoError(err)
+	s.Require().Nil(latestFetched)
+
+	for _, batch := range batches {
+		s.requireBatch(batch, true)
 	}
 }
 

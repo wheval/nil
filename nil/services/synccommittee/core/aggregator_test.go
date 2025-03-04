@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/NilFoundation/nil/nil/client"
 	"github.com/NilFoundation/nil/nil/common"
@@ -26,6 +25,7 @@ type AggregatorTestSuite struct {
 	ctx          context.Context
 	cancellation context.CancelFunc
 
+	metrics      *metrics.SyncCommitteeMetricsHandler
 	db           db.DB
 	blockStorage *storage.BlockStorage
 	taskStorage  *storage.TaskStorage
@@ -45,26 +45,43 @@ func (s *AggregatorTestSuite) SetupSuite() {
 	logger := logging.NewLogger("aggregator_test")
 	metricsHandler, err := metrics.NewSyncCommitteeMetrics()
 	s.Require().NoError(err)
+	s.metrics = metricsHandler
 
 	s.db, err = db.NewBadgerDbInMemory()
 	s.Require().NoError(err)
 	timer := common.NewTimer()
-	s.blockStorage = storage.NewBlockStorage(s.db, storage.DefaultBlockStorageConfig(), timer, metricsHandler, logger)
-	s.taskStorage = storage.NewTaskStorage(s.db, timer, metricsHandler, logger)
+	s.blockStorage = s.newTestBlockStorage(storage.DefaultBlockStorageConfig())
+	s.taskStorage = storage.NewTaskStorage(s.db, timer, s.metrics, logger)
 	s.rpcClientMock = &client.ClientMock{}
 
-	stateResetter := reset.NewStateResetter(logger, s.blockStorage)
+	s.aggregator = s.newTestAggregator(s.blockStorage)
+}
 
-	s.aggregator = NewAggregator(
+func (s *AggregatorTestSuite) newTestAggregator(
+	blockStorage AggregatorBlockStorage,
+) *aggregator {
+	s.T().Helper()
+
+	logger := logging.NewLogger("aggregator_test")
+	stateResetter := reset.NewStateResetter(logger, s.blockStorage)
+	timer := common.NewTimer()
+
+	return NewAggregator(
 		s.rpcClientMock,
-		s.blockStorage,
+		blockStorage,
 		s.taskStorage,
 		stateResetter,
 		timer,
 		logger,
-		metricsHandler,
-		time.Second,
+		s.metrics,
+		NewDefaultAggregatorConfig(),
 	)
+}
+
+func (s *AggregatorTestSuite) newTestBlockStorage(config storage.BlockStorageConfig) *storage.BlockStorage {
+	s.T().Helper()
+	timer := common.NewTimer()
+	return storage.NewBlockStorage(s.db, config, timer, s.metrics, logging.NewLogger("aggregator_test"))
 }
 
 func (s *AggregatorTestSuite) SetupTest() {
@@ -102,18 +119,10 @@ func (s *AggregatorTestSuite) Test_No_New_Block_To_Fetch() {
 }
 
 func (s *AggregatorTestSuite) Test_Fetched_Not_Ready_Batch() {
-	mainBlock := testaide.NewMainShardBlock()
-	mainBlock.ChildBlocks[1] = common.EmptyHash
+	nextMainBlock := testaide.NewMainShardBlock()
+	nextMainBlock.ChildBlocks[1] = common.EmptyHash
 
-	s.rpcClientMock.GetBlockFunc = blockGenerator(mainBlock)
-
-	s.rpcClientMock.GetBlocksRangeFunc = func(_ context.Context, _ types.ShardId, from types.BlockNumber, to types.BlockNumber, _ bool, _ int) ([]*jsonrpc.RPCBlock, error) {
-		if from == mainBlock.Number && to == mainBlock.Number+1 {
-			return []*jsonrpc.RPCBlock{mainBlock}, nil
-		}
-
-		return nil, errors.New("unexpected call of GetBlocksRange")
-	}
+	s.setBlockGeneratorTo(nextMainBlock)
 
 	err := s.aggregator.processNewBlocks(s.ctx)
 	s.Require().NoError(err)
@@ -190,6 +199,54 @@ func (s *AggregatorTestSuite) Test_Fetch_Next_Valid() {
 	s.Require().NoError(err)
 	nextMainBlock := batches[1].MainShardBlock
 
+	s.setBlockGeneratorTo(nextMainBlock)
+
+	err = s.aggregator.processNewBlocks(s.ctx)
+	s.Require().NoError(err)
+	s.requireMainBlockHandled(nextMainBlock)
+}
+
+func (s *AggregatorTestSuite) Test_Block_Storage_Capacity_Exceeded() {
+	// only one test batch can fit in the storage
+	storageConfig := storage.NewBlockStorageConfig(testaide.BatchSize)
+	blockStorage := s.newTestBlockStorage(storageConfig)
+
+	batches := testaide.NewBatchesSequence(2)
+	nextMainBlock := batches[0].MainShardBlock
+
+	s.setBlockGeneratorTo(nextMainBlock)
+
+	agg := s.newTestAggregator(blockStorage)
+
+	err := agg.processNewBlocks(s.ctx)
+	s.Require().NoError(err)
+	s.requireMainBlockHandled(nextMainBlock)
+
+	latestFetchedBeforeNext, err := blockStorage.TryGetLatestFetched(s.ctx)
+	s.Require().NoError(err)
+
+	// nextBatch should not be handled by Aggregator due to storage capacity limit
+	nextBatch := batches[1]
+	s.setBlockGeneratorTo(nextBatch.MainShardBlock)
+	err = agg.processNewBlocks(s.ctx)
+	s.Require().NoError(err)
+
+	latestFetchedAfterNext, err := blockStorage.TryGetLatestFetched(s.ctx)
+	s.Require().NoError(err)
+	s.Equal(latestFetchedBeforeNext, latestFetchedAfterNext)
+
+	for _, block := range nextBatch.AllBlocks() {
+		storedBlock, err := s.blockStorage.TryGetBlock(s.ctx, scTypes.IdFromBlock(block))
+		s.Require().NoError(err)
+		s.Require().Nil(storedBlock)
+	}
+
+	s.requireNoNewTasks()
+}
+
+func (s *AggregatorTestSuite) setBlockGeneratorTo(nextMainBlock *jsonrpc.RPCBlock) {
+	s.T().Helper()
+
 	s.rpcClientMock.GetBlockFunc = blockGenerator(nextMainBlock)
 
 	s.rpcClientMock.GetBlocksRangeFunc = func(_ context.Context, _ types.ShardId, from types.BlockNumber, to types.BlockNumber, _ bool, _ int) ([]*jsonrpc.RPCBlock, error) {
@@ -199,10 +256,6 @@ func (s *AggregatorTestSuite) Test_Fetch_Next_Valid() {
 
 		return nil, errors.New("unexpected call of GetBlocksRange")
 	}
-
-	err = s.aggregator.processNewBlocks(s.ctx)
-	s.Require().NoError(err)
-	s.requireMainBlockHandled(nextMainBlock)
 }
 
 func blockGenerator(mainBlock *jsonrpc.RPCBlock) func(context.Context, types.ShardId, any, bool) (*jsonrpc.RPCBlock, error) {
@@ -232,7 +285,7 @@ func (s *AggregatorTestSuite) requireNoNewTasks() {
 	s.T().Helper()
 	task, err := s.taskStorage.RequestTaskToExecute(s.ctx, testaide.RandomExecutorId())
 	s.Require().NoError(err)
-	s.Require().Nil(task)
+	s.Require().Nil(task, "expected no new tasks available for execution, but got one")
 }
 
 func (s *AggregatorTestSuite) requireMainBlockHandled(mainBlock *jsonrpc.RPCBlock) {

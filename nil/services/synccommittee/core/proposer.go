@@ -39,7 +39,7 @@ type proposer struct {
 	ethClient   rollupcontract.EthClient
 
 	rollupContractWrapper *rollupcontract.Wrapper
-	params                *ProposerParams
+	params                ProposerParams
 
 	metrics ProposerMetrics
 	logger  zerolog.Logger
@@ -53,8 +53,8 @@ type ProposerParams struct {
 	EthClientTimeout  time.Duration
 }
 
-func NewDefaultProposerParams() *ProposerParams {
-	return &ProposerParams{
+func NewDefaultProposerParams() ProposerParams {
+	return ProposerParams{
 		Endpoint:          "http://rpc2.sepolia.org",
 		PrivateKey:        "0000000000000000000000000000000000000000000000000000000000000001",
 		ContractAddress:   "0x796baf7E572948CD0cbC374f345963bA433b47a2",
@@ -65,7 +65,7 @@ func NewDefaultProposerParams() *ProposerParams {
 
 func NewProposer(
 	ctx context.Context,
-	params *ProposerParams,
+	params ProposerParams,
 	storage ProposerStorage,
 	ethClient rollupcontract.EthClient,
 	metrics ProposerMetrics,

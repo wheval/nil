@@ -18,6 +18,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/core/reset"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/rs/zerolog"
 )
@@ -36,6 +37,20 @@ type AggregatorBlockStorage interface {
 	TryGetLatestFetched(ctx context.Context) (*types.MainBlockRef, error)
 	TryGetProvedStateRoot(ctx context.Context) (*common.Hash, error)
 	SetBlockBatch(ctx context.Context, batch *types.BlockBatch) error
+}
+
+type AggregatorConfig struct {
+	RpcPollingInterval time.Duration
+}
+
+func NewAggregatorConfig(rpcPollingInterval time.Duration) AggregatorConfig {
+	return AggregatorConfig{
+		RpcPollingInterval: rpcPollingInterval,
+	}
+}
+
+func NewDefaultAggregatorConfig() AggregatorConfig {
+	return NewAggregatorConfig(time.Second)
 }
 
 type aggregator struct {
@@ -58,7 +73,7 @@ func NewAggregator(
 	timer common.Timer,
 	logger zerolog.Logger,
 	metrics AggregatorMetrics,
-	pollingDelay time.Duration,
+	config AggregatorConfig,
 ) *aggregator {
 	agg := &aggregator{
 		rpcClient:    rpcClient,
@@ -76,7 +91,7 @@ func NewAggregator(
 		metrics:  metrics,
 	}
 
-	agg.workerAction = concurrent.NewSuspendable(agg.runIteration, pollingDelay)
+	agg.workerAction = concurrent.NewSuspendable(agg.runIteration, config.RpcPollingInterval)
 	agg.logger = srv.WorkerLogger(logger, agg)
 	return agg
 }
@@ -153,6 +168,10 @@ func (agg *aggregator) processNewBlocks(ctx context.Context) error {
 		if err := agg.resetter.ResetProgressNotProved(ctx); err != nil {
 			return fmt.Errorf("error resetting state: %w", err)
 		}
+		return nil
+
+	case errors.Is(err, storage.ErrCapacityLimitReached):
+		agg.logger.Info().Err(err).Msg("storage capacity limit reached, skipping")
 		return nil
 
 	case err != nil && !errors.Is(err, context.Canceled):
@@ -290,6 +309,10 @@ func (agg *aggregator) handleBlockBatch(ctx context.Context, batch *types.BlockB
 		return err
 	}
 
+	if err := agg.blockStorage.SetBlockBatch(ctx, batch); err != nil {
+		return fmt.Errorf("error storing block batch, mainHash=%s: %w", batch.MainShardBlock.Hash, err)
+	}
+
 	prunedBatch := types.NewPrunedBatch(batch)
 	if err := agg.batchCommitter.Commit(ctx, prunedBatch); err != nil {
 		return err
@@ -297,10 +320,6 @@ func (agg *aggregator) handleBlockBatch(ctx context.Context, batch *types.BlockB
 
 	if err := agg.createProofTasks(ctx, batch); err != nil {
 		return fmt.Errorf("error creating proof tasks, mainHash=%s: %w", batch.MainShardBlock.Hash, err)
-	}
-
-	if err := agg.blockStorage.SetBlockBatch(ctx, batch); err != nil {
-		return fmt.Errorf("error storing block batch, mainHash=%s: %w", batch.MainShardBlock.Hash, err)
 	}
 
 	agg.metrics.RecordMainBlockFetched(ctx)

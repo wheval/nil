@@ -27,7 +27,7 @@ type ProposerTestSuite struct {
 	ctx          context.Context
 	cancellation context.CancelFunc
 
-	params           *ProposerParams
+	params           ProposerParams
 	db               db.DB
 	timer            common.Timer
 	storage          *storage.BlockStorage

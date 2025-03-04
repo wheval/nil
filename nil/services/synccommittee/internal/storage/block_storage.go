@@ -780,7 +780,7 @@ func (bs *BlockStorage) addStoredCountTx(tx db.RwTx, delta int32) error {
 	newBlocksCount := uint32(signed)
 	if newBlocksCount > bs.config.CapacityLimit {
 		return fmt.Errorf(
-			"%w: batch size is %d, current storage size is %d, capacity limit is %d",
+			"%w: delta is %d, current storage size is %d, capacity limit is %d",
 			ErrCapacityLimitReached, delta, currentBlocksCount, bs.config.CapacityLimit,
 		)
 	}

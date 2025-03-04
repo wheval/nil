@@ -52,7 +52,7 @@ func New(cfg *Config, database db.DB, ethClient rollupcontract.EthClient) (*Sync
 		timer,
 		logger,
 		metricsHandler,
-		cfg.PollingDelay,
+		cfg.AggregatorConfig,
 	)
 
 	ctx := context.Background()
