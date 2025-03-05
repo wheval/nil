@@ -49,7 +49,6 @@ require (
 	github.com/NilFoundation/fastssz v0.1.5-0.20250218121538-03800b866858
 	github.com/dgraph-io/badger/v4 v4.5.1
 	github.com/ethereum/go-ethereum v1.14.13
-	github.com/hashicorp/go-metrics v0.5.4
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/icza/bitio v1.1.0
 	github.com/ipfs/go-log/v2 v2.5.1
@@ -119,7 +118,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.10 // indirect
-	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect

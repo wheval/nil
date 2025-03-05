@@ -14,7 +14,6 @@ type MetricsHandler struct {
 
 	buildProposalMeasurer  *telemetry.Measurer
 	insertProposalMeasurer *telemetry.Measurer
-	sequenceMeasurer       *telemetry.Measurer
 
 	height           telemetry.Histogram
 	round            telemetry.Histogram
@@ -39,17 +38,9 @@ func NewMetricsHandler(name string, shardId types.ShardId) (*MetricsHandler, err
 		return nil, err
 	}
 
-	sequenceMeasurer, err := telemetry.NewMeasurer(
-		meter, "sequence", telattr.ShardId(shardId),
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	handler := &MetricsHandler{
 		buildProposalMeasurer:  buildProposalMeasurer,
 		insertProposalMeasurer: insertProposalMeasurer,
-		sequenceMeasurer:       sequenceMeasurer,
 		option:                 telattr.With(telattr.ShardId(shardId)),
 	}
 
@@ -104,14 +95,9 @@ func (mh *MetricsHandler) EndInsertProposalMeasurement(ctx context.Context, heig
 	mh.insertProposalMeasurer.Measure(ctx)
 }
 
-func (mh *MetricsHandler) StartSequenceMeasurement(ctx context.Context, height uint64) {
+func (mh *MetricsHandler) StartSequence(ctx context.Context, height uint64) {
 	mh.height.Record(ctx, int64(height), mh.option)
 	mh.round.Record(ctx, 0, mh.option)
-	mh.sequenceMeasurer.Restart()
-}
-
-func (mh *MetricsHandler) EndSequenceMeasurement(ctx context.Context) {
-	mh.sequenceMeasurer.Measure(ctx)
 }
 
 func (mh *MetricsHandler) SetValidatorsCount(ctx context.Context, count int) {

@@ -15,6 +15,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
+	"github.com/NilFoundation/nil/nil/internal/telemetry/telattr"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/rs/zerolog"
 )
@@ -215,7 +216,9 @@ func NewConsensus(cfg *ConsensusParams) (*backendIBFT, error) {
 		validatorsCache: newValidatorsMap(cfg.Db, cfg.ShardId),
 		mh:              mh,
 	}
-	backend.consensus = core.NewIBFT(l, backend, backend)
+	if backend.consensus, err = core.NewIBFTWithMetrics(l, backend, backend, telattr.ShardId(cfg.ShardId)); err != nil {
+		return nil, err
+	}
 	return backend, nil
 }
 
@@ -248,8 +251,7 @@ func (i *backendIBFT) GetVotingPowers(height uint64) (map[string]*big.Int, error
 }
 
 func (i *backendIBFT) RunSequence(ctx context.Context, height uint64) error {
-	i.mh.StartSequenceMeasurement(ctx, height)
-	defer i.mh.EndSequenceMeasurement(ctx)
+	i.mh.StartSequence(ctx, height)
 
 	i.ctx = ctx
 	i.consensus.RunSequence(ctx, height)
