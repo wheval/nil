@@ -372,6 +372,7 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 				}); err != nil {
 					handler.RecordError(ctx)
 					logger.Error().Err(err).Msg("Swap error")
+					return err
 				}
 			}
 
