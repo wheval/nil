@@ -46,6 +46,19 @@ export const getTokenIcon = (name: string) => {
   }
 };
 
+// Return if token is mock or custom
+export const isMockToken = (name: string): boolean => {
+  switch (name) {
+    case TokenNames.NIL:
+    case TokenNames.USDT:
+    case TokenNames.BTC:
+    case TokenNames.ETH:
+      return true;
+    default:
+      return false;
+  }
+};
+
 export function getTokens(
   tokens: { name: string; address: string; show: boolean }[],
   onlyActive: boolean,
