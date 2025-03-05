@@ -420,15 +420,8 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 							Stringer(logging.FieldTransactionHash, txnHash).
 							Msg("Invalid internal transaction")
 					} else {
-						snapshot := p.executionState.Snapshot()
 						if err := p.handleTransaction(txn, txnHash, execution.NewTransactionPayer(txn, p.executionState)); err != nil {
 							return err
-						}
-
-						if !checkLimits() {
-							p.executionState.RevertToSnapshot(snapshot)
-							p.executionState.DropInTransaction()
-							break
 						}
 					}
 
@@ -436,7 +429,12 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 					if err != nil {
 						return err
 					}
+
+					// Handle at least one transaction.
 					p.proposal.InternalTxnRefs = append(p.proposal.InternalTxnRefs, ref)
+					if !checkLimits() {
+						break
+					}
 				} else if p.params.ShardId != neighborId {
 					if p.topology.ShouldPropagateTxn(neighborId, p.params.ShardId, txn.To.ShardId()) {
 						if !checkLimits() {

@@ -94,6 +94,28 @@ func (s *SuiteRegression) TestEmptyError() {
 	s.Require().False(receipt.Success)
 }
 
+func (s *SuiteRegression) TestProposerOutOfGas() {
+	contractCode, abi := s.LoadContract(common.GetAbsolutePath("../contracts/GasBurner.sol"), "GasBurner")
+	deployPayload := s.PrepareDefaultDeployPayload(abi, contractCode)
+
+	addr, receipt := s.DeployContractViaMainSmartAccount(3, deployPayload, types.Value0)
+	s.Require().True(receipt.OutReceipts[0].Success)
+
+	calldata, err := abi.Pack("burnGas")
+	s.Require().NoError(err)
+
+	txHash, err := s.Client.SendTransactionViaSmartAccount(s.T().Context(),
+		types.MainSmartAccountAddress, calldata, types.NewFeePackFromGas(100_000_000_000), types.Value0,
+		[]types.TokenBalance{}, addr, execution.MainPrivateKey)
+	s.Require().NoError(err)
+
+	receipt = s.WaitIncludedInMain(txHash)
+	s.Require().True(receipt.Success)
+	s.Require().Equal("Success", receipt.Status)
+	s.Require().Len(receipt.OutReceipts, 1)
+	s.Require().Equal("OutOfGasDynamic", receipt.OutReceipts[0].Status)
+}
+
 func TestRegression(t *testing.T) {
 	t.Parallel()
 

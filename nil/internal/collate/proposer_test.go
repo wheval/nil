@@ -181,7 +181,7 @@ func (s *ProposerTestSuite) TestCollator() {
 
 		proposal := generateBlock()
 		s.Empty(proposal.ExternalTxns)
-		s.Empty(proposal.InternalTxns)
+		s.Len(proposal.InternalTxns, 2)
 		s.Empty(proposal.ForwardTxns)
 		s.Equal([]common.Hash{m1.Hash(), m2.Hash()}, pool.LastDiscarded)
 		s.Equal(txnpool.DuplicateHash, pool.LastReason)
