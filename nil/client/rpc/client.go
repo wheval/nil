@@ -303,7 +303,14 @@ func (c *Client) performRequests(ctx context.Context, requests []*Request) ([]js
 
 		var rpcResponse []map[string]json.RawMessage
 		if err := json.Unmarshal(body, &rpcResponse); err != nil {
-			c.logger.Debug().Str("response", string(body)).Msg("failed to unmarshal response")
+			var rpcErrorResp map[string]json.RawMessage
+			if json.Unmarshal(body, &rpcErrorResp) == nil {
+				if errorMsg, ok := rpcErrorResp["error"]; ok {
+					return fmt.Errorf("%w: %s", ErrRPCError, errorMsg)
+				}
+			}
+
+			c.logger.Debug().Err(err).Str("response", string(body)).Msg("failed to unmarshal response")
 			return fmt.Errorf("%w: %w", ErrFailedToUnmarshalResponse, err)
 		}
 		c.logger.Trace().RawJSON("response", body).Send()

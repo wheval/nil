@@ -22,6 +22,7 @@ import (
 const (
 	MetadataApi             = "rpc"
 	defaultBatchConcurrency = 1 // trnasactions from batch maust be processed in order
+	defaultBatchLimit       = 100
 )
 
 type ContextKey string
@@ -46,9 +47,16 @@ type Server struct {
 // NewServer creates a new server instance with no registered handlers.
 func NewServer(traceRequests, debugSingleRequest bool, logger zerolog.Logger, rpcSlowLogThreshold time.Duration, keepHeaders []string) *Server {
 	server := &Server{
-		services: serviceRegistry{logger: logger}, codecs: mapset.NewSet(), run: 1, batchConcurrency: defaultBatchConcurrency,
-		traceRequests: traceRequests, debugSingleRequest: debugSingleRequest, logger: logger, rpcSlowLogThreshold: rpcSlowLogThreshold,
-		keepHeaders: keepHeaders,
+		services:            serviceRegistry{logger: logger},
+		run:                 1,
+		codecs:              mapset.NewSet(),
+		batchConcurrency:    defaultBatchConcurrency,
+		traceRequests:       traceRequests,
+		debugSingleRequest:  debugSingleRequest,
+		batchLimit:          defaultBatchLimit,
+		keepHeaders:         keepHeaders,
+		logger:              logger,
+		rpcSlowLogThreshold: rpcSlowLogThreshold,
 	}
 
 	// Register the default service providing meta-information about the RPC service such
@@ -131,7 +139,7 @@ func (s *Server) ServeSingleRequest(ctx context.Context, r *http.Request, w http
 	}
 	if batch {
 		if s.batchLimit > 0 && len(reqs) > s.batchLimit {
-			_ = codec.WriteJSON(ctx, errorMessage(fmt.Errorf("batch limit %d exceeded (can increase by --rpc.batch.limit). Requested batch of size: %d", s.batchLimit, len(reqs))))
+			_ = codec.WriteJSON(ctx, errorMessage(fmt.Errorf("batch limit %d exceeded. Requested batch of size: %d", s.batchLimit, len(reqs))))
 		} else {
 			h.handleBatch(reqs)
 		}
