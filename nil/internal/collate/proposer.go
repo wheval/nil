@@ -106,7 +106,7 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 		return nil, fmt.Errorf("failed to handle transactions from neighbors: %w", err)
 	}
 
-	if err := p.handleTransactionsFromPool(tx); err != nil {
+	if err := p.handleTransactionsFromPool(); err != nil {
 		return nil, fmt.Errorf("failed to handle transactions from pool: %w", err)
 	}
 
@@ -252,29 +252,16 @@ func (p *proposer) handleTransaction(txn *types.Transaction, txnHash common.Hash
 	return nil
 }
 
-func (p *proposer) handleTransactionsFromPool(tx db.RoTx) error {
+func (p *proposer) handleTransactionsFromPool() error {
 	poolTxns, err := p.pool.Peek(maxTxnsFromPool)
 	if err != nil {
 		return err
 	}
 
-	sa := execution.NewStateAccessor()
-
-	var duplicates, unverified []common.Hash
+	var unverified []common.Hash
 	handle := func(mt *types.TxnWithHash) (bool, error) {
 		txnHash := mt.Hash()
 		txn := mt.Transaction
-
-		if txnData, err := sa.Access(tx, p.params.ShardId).GetInTransaction().ByHash(txnHash); err != nil &&
-			!errors.Is(err, db.ErrKeyNotFound) {
-			return false, err
-		} else if err == nil && txnData.Transaction() != nil {
-			p.logger.Trace().Stringer(logging.FieldTransactionHash, txnHash).
-				Msg("Transaction is already in the blockchain. Dropping...")
-
-			duplicates = append(duplicates, txnHash)
-			return false, nil
-		}
 
 		if res := execution.ValidateExternalTransaction(p.executionState, txn); res.FatalError != nil {
 			return false, res.FatalError
@@ -308,15 +295,6 @@ func (p *proposer) handleTransactionsFromPool(tx db.RoTx) error {
 			}
 
 			p.proposal.ExternalTxns = append(p.proposal.ExternalTxns, txn.Transaction)
-		}
-	}
-
-	if len(duplicates) > 0 {
-		p.logger.Debug().Msgf("Removing %d duplicate transactions from the pool", len(duplicates))
-
-		if err := p.pool.Discard(p.ctx, duplicates, txnpool.DuplicateHash); err != nil {
-			p.logger.Error().Err(err).
-				Msgf("Failed to remove %d duplicate transactions from the pool", len(duplicates))
 		}
 	}
 
@@ -407,7 +385,7 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 				}, nil
 			}
 
-			for ; neighbor.TransactionIndex < block.OutTransactionsNum; neighbor.TransactionIndex++ {
+			for ; neighbor.TransactionIndex < block.OutTransactionsNum && checkLimits(); neighbor.TransactionIndex++ {
 				txn, err := outTxnTrie.Fetch(neighbor.TransactionIndex)
 				if err != nil {
 					return err
@@ -429,18 +407,9 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 					if err != nil {
 						return err
 					}
-
-					// Handle at least one transaction.
 					p.proposal.InternalTxnRefs = append(p.proposal.InternalTxnRefs, ref)
-					if !checkLimits() {
-						break
-					}
 				} else if p.params.ShardId != neighborId {
 					if p.topology.ShouldPropagateTxn(neighborId, p.params.ShardId, txn.To.ShardId()) {
-						if !checkLimits() {
-							break
-						}
-
 						ref, err := saveProof()
 						if err != nil {
 							return err
