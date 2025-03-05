@@ -5,6 +5,7 @@ export {
   convertWeiToEth,
   getTokenIcon,
   getTokens,
+  isMockToken,
 } from "./token.ts";
 
 export {

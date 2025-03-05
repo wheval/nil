@@ -1,5 +1,5 @@
 import type { Hex } from "@nilfoundation/niljs";
-import { Button, COLORS, HeadingMedium, ParagraphSmall } from "@nilfoundation/ui-kit";
+import { Button, COLORS, CopyButton, HeadingMedium, ParagraphSmall } from "@nilfoundation/ui-kit";
 import { useStore } from "effector-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,7 +12,13 @@ import {
   $tokens,
   getBalanceForToken,
 } from "../../../store/model/token.ts";
-import { convertWeiToEth, formatAddress, getTokenIcon, getTokens } from "../../../utils";
+import {
+  convertWeiToEth,
+  formatAddress,
+  getTokenIcon,
+  getTokens,
+  isMockToken,
+} from "../../../utils";
 import { Box, Icon } from "../../shared";
 
 export const TokenTab = () => {
@@ -20,6 +26,7 @@ export const TokenTab = () => {
   const balanceToken = useStore($balanceToken);
   const allTokens = useStore($tokens);
   const [clicked, setClicked] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const { t } = useTranslation("translation");
   const navigate = useNavigate();
   const availableTokens = getTokens(allTokens, true);
@@ -46,7 +53,7 @@ export const TokenTab = () => {
     return {
       icon: getTokenIcon(token.label),
       title: token.label,
-      subtitle: token.label !== "" ? "Mock token" : formatAddress(token.address as Hex),
+      subtitle: isMockToken(token.label) ? "Mock token" : formatAddress(token.address as Hex),
       subtitleColor: "gray",
       rightText: `${amount.toString()} ${token.label}`,
       rightTextColor: COLORS.gray50,
@@ -86,7 +93,12 @@ export const TokenTab = () => {
             flexDirection: "row",
             width: "100%",
             padding: "5px",
+            cursor: "pointer",
+            backgroundColor: hoveredIndex === index ? COLORS.gray800 : "transparent",
+            transition: "background-color 0.3s",
           }}
+          onMouseEnter={() => setHoveredIndex(index)}
+          onMouseLeave={() => setHoveredIndex(null)}
         >
           <Box
             $align="center"
@@ -117,8 +129,8 @@ export const TokenTab = () => {
                 onClick={() => {
                   if (token.title === "") {
                     handleCopy(token.address);
-                    setClicked(true); // Update state when clicked
-                    setTimeout(() => setClicked(false), 2000); // Reset after 2 seconds
+                    setClicked(true);
+                    setTimeout(() => setClicked(false), 2000);
                   }
                 }}
                 $style={{
@@ -131,7 +143,16 @@ export const TokenTab = () => {
                   },
                 }}
               >
-                {clicked && token.title === "" ? "Copied" : token.subtitle}
+                {hoveredIndex === index && token.address ? (
+                  <>
+                    {formatAddress(token.address as Hex)}
+                    <CopyButton textToCopy={token.address} />
+                  </>
+                ) : clicked && token.title === "" ? (
+                  "Copied"
+                ) : (
+                  token.subtitle
+                )}
               </ParagraphSmall>
             </Box>
           </Box>
