@@ -59,14 +59,12 @@ export async function createSmartAccount(
         }),
   });
 
-  if (config.faucetDeposit) {
-    await topUpSmartAccount(smartAccount.address);
+  await topUpSmartAccount(smartAccount.address);
 
-    const deployed = await smartAccount.checkDeploymentStatus();
-    if (!deployed) {
-      console.log("Deploying smart account", smartAccount.address);
-      await smartAccount.selfDeploy();
-    }
+  const deployed = await smartAccount.checkDeploymentStatus();
+  if (!deployed) {
+    console.log("Deploying smart account", smartAccount.address);
+    await smartAccount.selfDeploy();
   }
 
   return smartAccount;
