@@ -953,6 +953,13 @@ func (s *SuiteRpc) TestBatch() {
 
 	s.Require().Nil(result[2])
 	s.Require().Nil(result[3])
+
+	for range 1000 {
+		_, err = batch.GetDebugBlock(types.BaseShardId, "latest", false)
+		s.Require().NoError(err)
+	}
+	_, err = s.Client.BatchCall(s.Context, batch)
+	s.Require().ErrorContains(err, "batch limit 100 exceeded")
 }
 
 func (s *SuiteRpc) TestAddressCalculation() {
