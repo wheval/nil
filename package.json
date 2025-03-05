@@ -12,7 +12,8 @@
     "uniswap",
     "clijs",
     "wallet-extension",
-    "docs_ai_backend"
+    "docs_ai_backend",
+    "rollup-bridge-contracts"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -25,7 +26,9 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@biomejs/biome": "1.9.4"
+    "@biomejs/biome": "1.9.4",
+    "fs-extra": "^11.3.0",
+    "hardhat": "^2.22.19"
   },
   "optionalDependencies": {
     "@biomejs/cli-linux-x64": "1.9.4",
