@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
@@ -28,7 +29,8 @@ var (
 )
 
 type Validator struct {
-	params *Params
+	params             *Params
+	mainShardValidator *Validator
 
 	txFabric       db.DB
 	pool           TxnPool
@@ -46,14 +48,17 @@ type Validator struct {
 	logger zerolog.Logger
 }
 
-func NewValidator(params *Params, txFabric db.DB, pool TxnPool, nm *network.Manager) *Validator {
+func NewValidator(
+	params *Params, mainShardValidator *Validator, txFabric db.DB, pool TxnPool, nm *network.Manager,
+) *Validator {
 	return &Validator{
-		params:         params,
-		txFabric:       txFabric,
-		pool:           pool,
-		networkManager: nm,
-		blockVerifier:  signer.NewBlockVerifier(params.ShardId, txFabric),
-		subs:           make(map[uint64]chan types.BlockNumber),
+		params:             params,
+		mainShardValidator: mainShardValidator,
+		txFabric:           txFabric,
+		pool:               pool,
+		networkManager:     nm,
+		blockVerifier:      signer.NewBlockVerifier(params.ShardId, txFabric),
+		subs:               make(map[uint64]chan types.BlockNumber),
 		logger: logging.NewLogger("validator").With().
 			Stringer(logging.FieldShardId, params.ShardId).
 			Logger(),
@@ -317,6 +322,20 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 		}
 	}
 
+	prevBlock, _, err := s.getLastBlockUnlocked(ctx)
+	if err != nil {
+		return err
+	}
+
+	if !s.params.ShardId.IsMainShard() {
+		// To verify/execute block properly we need to be sure that we have an access to config.
+		// Config for block N is stored inside main shard block for block N-1.
+		// So we need to wait until config is available.
+		if err := s.mainShardValidator.WaitForBlock(ctx, prevBlock.MainChainHash); err != nil {
+			return fmt.Errorf("failed to wait for main shard block: %w", err)
+		}
+	}
+
 	if !s.params.DisableConsensus {
 		if err := s.blockVerifier.VerifyBlock(ctx, block.Block); err != nil {
 			s.logger.Error().
@@ -334,11 +353,6 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 		if errors.Is(err, errHashMismatch) {
 			return returnErrorOrPanic(err)
 		}
-		return err
-	}
-
-	prevBlock, _, err := s.getLastBlockUnlocked(ctx)
-	if err != nil {
 		return err
 	}
 
@@ -400,5 +414,61 @@ func (s *Validator) notify(blockId types.BlockNumber) {
 
 	for _, ch := range s.subs {
 		ch <- blockId
+	}
+}
+
+func (s *Validator) checkBlock(ctx context.Context, expectedHash common.Hash) (bool, error) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.checkBlockUnlocked(ctx, expectedHash)
+}
+
+func (s *Validator) checkBlockUnlocked(ctx context.Context, expectedHash common.Hash) (bool, error) {
+	_, hash, err := s.getLastBlockUnlocked(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	// Fast path
+	if hash == expectedHash {
+		return true, nil
+	}
+
+	// Slow path with block lookup from DB
+	block, err := s.getBlock(ctx, expectedHash)
+	if errors.Is(err, db.ErrKeyNotFound) {
+		return false, nil
+	}
+	return block != nil, err
+}
+
+func (s *Validator) WaitForBlock(ctx context.Context, expectedHash common.Hash) error {
+	s.mutex.RLock()
+	ok, err := s.checkBlockUnlocked(ctx, expectedHash)
+	if err != nil || ok {
+		s.mutex.RUnlock()
+		return err
+	}
+
+	subId, subChan := s.Subscribe()
+	defer s.Unsubscribe(subId)
+	s.mutex.RUnlock()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-subChan:
+			ok, err := s.checkBlock(ctx, expectedHash)
+			if err != nil || ok {
+				return err
+			}
+		case <-time.After(s.params.Timeout):
+			ok, err := s.checkBlock(ctx, expectedHash)
+			if err != nil || ok {
+				return err
+			}
+			return fmt.Errorf("timeout waiting for block %x", expectedHash)
+		}
 	}
 }

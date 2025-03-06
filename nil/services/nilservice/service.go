@@ -573,7 +573,7 @@ func createValidators(ctx context.Context, cfg *Config, database db.DB, networkM
 			}
 		}
 
-		list[i] = collate.NewValidator(params, database, txpool, networkManager)
+		list[i] = collate.NewValidator(params, list[0], database, txpool, networkManager)
 	}
 	return list, nil
 }
