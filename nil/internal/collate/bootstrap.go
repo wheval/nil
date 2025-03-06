@@ -2,15 +2,21 @@ package collate
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/network"
+	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/rs/zerolog"
 )
 
+const topicVersion = "/nil/version"
+
 func topicBootstrapShard() network.ProtocolID {
-	return network.ProtocolID("nil/snap")
+	return "/nil/snap"
 }
 
 func createShardBootstrapHandler(ctx context.Context, database db.DB, logger zerolog.Logger) func(s network.Stream) {
@@ -34,12 +40,8 @@ func createShardBootstrapHandler(ctx context.Context, database db.DB, logger zer
 	}
 }
 
-// Set handler that streams DB data via libp2p.
+// SetBootstrapHandler sets a handler that streams DB data via libp2p.
 func SetBootstrapHandler(ctx context.Context, nm *network.Manager, db db.DB) {
-	if nm == nil {
-		return
-	}
-
 	logger := logging.NewLogger("bootstrap").With().Logger()
 
 	nm.SetStreamHandler(
@@ -49,6 +51,32 @@ func SetBootstrapHandler(ctx context.Context, nm *network.Manager, db db.DB) {
 	)
 
 	logger.Info().Msg("Enable bootstrap endpoint")
+}
+
+func SetVersionHandler(ctx context.Context, nm *network.Manager, fabric db.DB) error {
+	tx, err := fabric.CreateRoTx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// The genesis block must have been initialized before this method is called.
+	version, err := db.ReadBlockHashByNumber(tx, types.MainShardId, 0)
+	if err != nil {
+		return fmt.Errorf("failed to read genesis block hash: %w", err)
+	}
+	check.PanicIfNot(!version.Empty())
+
+	resp, err := version.MarshalSSZ()
+	if err != nil {
+		return fmt.Errorf("failed to marshal genesis block hash: %w", err)
+	}
+
+	nm.SetRequestHandler(ctx, topicVersion, func(ctx context.Context, _ []byte) ([]byte, error) {
+		return resp, nil
+	})
+
+	return nil
 }
 
 func fetchShardSnap(ctx context.Context, nm *network.Manager, peerId network.PeerID, db db.DB, logger zerolog.Logger) error {
@@ -70,20 +98,30 @@ func fetchShardSnap(ctx context.Context, nm *network.Manager, peerId network.Pee
 }
 
 // Fetch DB snapshot via libp2p.
-func fetchSnapshot(ctx context.Context, nm *network.Manager, peerAddr *network.AddrInfo, db db.DB, logger zerolog.Logger) error {
-	if nm == nil {
-		return nil
-	}
-
-	if peerAddr == nil {
-		logger.Info().Msg("Peer address is empty. Snapshot won't be fetched")
-		return nil
-	}
-
-	peerId, err := nm.Connect(ctx, *peerAddr)
+func fetchSnapshot(ctx context.Context, nm *network.Manager, peerAddr network.AddrInfo, db db.DB, logger zerolog.Logger) error {
+	peerId, err := nm.Connect(ctx, peerAddr)
 	if err != nil {
 		logger.Error().Err(err).Msgf("Failed to connect to %s to fetch snapshot", peerAddr)
 		return err
 	}
 	return fetchShardSnap(ctx, nm, peerId, db, logger)
+}
+
+func fetchGenesisBlockHash(ctx context.Context, nm *network.Manager, peerAddr network.AddrInfo) (common.Hash, error) {
+	peerId, err := nm.Connect(ctx, peerAddr)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("failed to connect to %s: %w", peerAddr, err)
+	}
+
+	resp, err := nm.SendRequestAndGetResponse(ctx, peerId, topicVersion, nil)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("failed to fetch genesis block hash: %w", err)
+	}
+
+	var res common.Hash
+	if err := res.UnmarshalSSZ(resp); err != nil {
+		return common.Hash{}, fmt.Errorf("failed to unmarshal genesis block hash: %w", err)
+	}
+
+	return res, nil
 }

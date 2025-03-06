@@ -61,9 +61,9 @@ func (m *Manager) NewStream(ctx context.Context, peerId PeerID, protocolId Proto
 }
 
 func (m *Manager) SetStreamHandler(ctx context.Context, protocolId ProtocolID, handler StreamHandler) {
+	protocolId = ProtocolID(m.withNetworkPrefix(string(protocolId)))
 	m.logger.Debug().Msgf("Setting stream handler for protocol %s", protocolId)
 
-	protocolId = ProtocolID(m.withNetworkPrefix(string(protocolId)))
 	m.host.SetStreamHandler(protocolId, func(stream Stream) {
 		defer stream.Close()
 
@@ -103,9 +103,7 @@ func (m *Manager) SendRequestAndGetResponse(ctx context.Context, peerId PeerID, 
 }
 
 func (m *Manager) SetRequestHandler(ctx context.Context, protocolId ProtocolID, handler RequestHandler) {
-	logger := m.logger.With().Str(logging.FieldProtocolID, string(protocolId)).Logger()
-
-	logger.Debug().Msg("Setting request handler...")
+	logger := m.logger.With().Str(logging.FieldProtocolID, m.withNetworkPrefix(string(protocolId))).Logger()
 
 	m.SetStreamHandler(ctx, protocolId, func(stream Stream) {
 		ctx, cancel := context.WithTimeout(ctx, responseTimeout)

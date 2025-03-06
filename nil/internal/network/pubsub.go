@@ -127,11 +127,6 @@ func (ps *PubSub) Publish(ctx context.Context, topic string, data []byte) error 
 
 // Subscribe subscribes to the given topic. The subscription must be closed after use.
 func (ps *PubSub) Subscribe(topic string) (*Subscription, error) {
-	logger := ps.logger.With().
-		Str(logging.FieldComponent, "sub").
-		Str(logging.FieldTopic, topic).
-		Logger()
-
 	t, err := ps.getTopic(topic)
 	if err != nil {
 		return nil, err
@@ -151,6 +146,10 @@ func (ps *PubSub) Subscribe(topic string) (*Subscription, error) {
 		return nil, err
 	}
 
+	logger := ps.logger.With().
+		Str(logging.FieldComponent, "sub").
+		Str(logging.FieldTopic, t.String()).
+		Logger()
 	logger.Debug().Msg("Subscribed to topic")
 	return &Subscription{
 		impl:         impl,

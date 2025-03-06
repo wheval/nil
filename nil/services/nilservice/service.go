@@ -98,11 +98,11 @@ func startRpcServer(ctx context.Context, cfg *Config, rawApi rawapi.NodeApi, db 
 	}
 
 	if cfg.IsFaucetApiEnabled() {
-		faucet, err := faucet.NewService(client)
+		f, err := faucet.NewService(client)
 		if err != nil {
 			return fmt.Errorf("failed to create faucet service: %w", err)
 		}
-		apiList = append(apiList, faucet.GetRpcApi())
+		apiList = append(apiList, f.GetRpcApi())
 	}
 
 	if cfg.RunMode == NormalRunMode {
@@ -119,11 +119,12 @@ func startRpcServer(ctx context.Context, cfg *Config, rawApi rawapi.NodeApi, db 
 }
 
 func startAdminServer(ctx context.Context, cfg *Config) error {
-	config := &admin.ServerConfig{
-		Enabled:        cfg.AdminSocketPath != "",
-		UnixSocketPath: cfg.AdminSocketPath,
-	}
-	return admin.StartAdminServer(ctx, config, logging.NewLogger("admin"))
+	return admin.StartAdminServer(ctx,
+		&admin.ServerConfig{
+			Enabled:        cfg.AdminSocketPath != "",
+			UnixSocketPath: cfg.AdminSocketPath,
+		},
+		logging.NewLogger("admin"))
 }
 
 const defaultCollatorTickPeriodMs = 2000
@@ -183,16 +184,16 @@ func setP2pRequestHandlers(ctx context.Context, rawApi *rawapi.NodeApiOverShardA
 
 func validateArchiveNodeConfig(cfg *Config, nm *network.Manager) error {
 	if nm == nil {
-		return errors.New("Failed to start archive node without network configuration")
+		return errors.New("failed to start archive node without network configuration")
 	}
 	if !slices.Contains(cfg.MyShards, uint(types.MainShardId)) {
-		return errors.New("On archive node, main shard must be included in MyShards")
+		return errors.New("on archive node, main shard must be included in MyShards")
 	}
 	return nil
 }
 
-func initSyncers(ctx context.Context, syncers []*collate.Syncer) error {
-	if err := syncers[0].FetchSnapshot(ctx); err != nil {
+func initSyncers(ctx context.Context, syncers []*collate.Syncer, allowDbDrop bool) error {
+	if err := syncers[0].Init(ctx, allowDbDrop); err != nil {
 		return err
 	}
 	for _, syncer := range syncers {
@@ -258,7 +259,7 @@ func createSyncers(
 	}
 	res.funcs = append(res.funcs, func(ctx context.Context) error {
 		defer res.wgInit.Done()
-		if err := initSyncers(ctx, res.syncers); err != nil {
+		if err := initSyncers(ctx, res.syncers, cfg.AllowDbDrop); err != nil {
 			logger.Error().Err(err).Msg("Failed to initialize syncers")
 			return err
 		}
@@ -268,8 +269,7 @@ func createSyncers(
 		for _, syncer := range res.syncers {
 			syncer.WaitComplete()
 		}
-		res.syncers[0].SetBootstrapHandler(ctx)
-		return nil
+		return res.syncers[0].SetHandlers(ctx)
 	})
 
 	return res, nil

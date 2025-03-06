@@ -48,7 +48,7 @@ type ShardedSuite struct {
 	ctxCancel     context.CancelFunc
 	Wg            sync.WaitGroup
 
-	dbInit func() db.DB
+	DbInit func() db.DB
 
 	Instances []Instance
 }
@@ -165,11 +165,11 @@ func (s *ShardedSuite) start(
 	s.T().Helper()
 	s.Context, s.ctxCancel = context.WithCancel(context.Background())
 
-	if s.dbInit == nil {
-		s.dbInit = func() db.DB {
-			db, err := db.NewBadgerDbInMemory()
+	if s.DbInit == nil {
+		s.DbInit = func() db.DB {
+			d, err := db.NewBadgerDbInMemory()
 			s.Require().NoError(err)
-			return db
+			return d
 		}
 	}
 
@@ -197,7 +197,7 @@ func (s *ShardedSuite) start(
 
 		url := rpc.GetSockPathIdx(s.T(), int(index))
 		s.Instances[index] = Instance{
-			Db:         s.dbInit(),
+			Db:         s.DbInit(),
 			RpcUrl:     url,
 			P2pAddress: p2pAddresses[index],
 			Client:     rpc_client.NewClient(url, zerolog.New(os.Stderr)),
@@ -264,6 +264,9 @@ func (s *ShardedSuite) GetNShards() uint32 {
 }
 
 type ArchiveNodeConfig struct {
+	Ctx                context.Context
+	Wg                 *sync.WaitGroup
+	AllowDbDrop        bool
 	Port               int
 	WithBootstrapPeers bool
 	DisableConsensus   bool
@@ -272,11 +275,21 @@ type ArchiveNodeConfig struct {
 func (s *ShardedSuite) StartArchiveNode(params *ArchiveNodeConfig) (client.Client, network.AddrInfo) {
 	s.T().Helper()
 
+	ctx := s.Context
+	if params.Ctx != nil {
+		ctx = params.Ctx
+	}
+	wg := &s.Wg
+	if params.Wg != nil {
+		wg = params.Wg
+	}
+
 	s.Require().NotEmpty(s.Instances)
 	netCfg, addr := network.GenerateConfig(s.T(), params.Port)
 	serviceName := fmt.Sprintf("archive-%d", params.Port)
 
 	cfg := &nilservice.Config{
+		AllowDbDrop:      params.AllowDbDrop,
 		NShards:          s.GetNShards(),
 		Network:          netCfg,
 		HttpUrl:          rpc.GetSockPathService(s.T(), serviceName),
@@ -295,14 +308,14 @@ func (s *ShardedSuite) StartArchiveNode(params *ArchiveNodeConfig) (client.Clien
 		cfg.BootstrapPeers = bootstrapPeers
 	}
 
-	node, err := nilservice.CreateNode(s.Context, serviceName, cfg, s.dbInit(), nil)
+	node, err := nilservice.CreateNode(ctx, serviceName, cfg, s.DbInit(), nil)
 	s.Require().NoError(err)
 	s.connectToInstances(node.NetworkManager)
 
-	s.Wg.Add(1)
+	wg.Add(1)
 	go func() {
-		defer s.Wg.Done()
-		defer node.Close(s.Context)
+		defer wg.Done()
+		defer node.Close(ctx)
 		s.NoError(node.Run())
 	}()
 
@@ -331,7 +344,7 @@ func (s *ShardedSuite) StartRPCNode(dhtBootstrapByValidators DhtBootstrapByValid
 	}
 	cfg.RpcNode.ArchiveNodeList = archiveNodes
 
-	node, err := nilservice.CreateNode(s.Context, serviceName, cfg, s.dbInit(), nil)
+	node, err := nilservice.CreateNode(s.Context, serviceName, cfg, s.DbInit(), nil)
 	s.Require().NoError(err)
 	if dhtBootstrapByValidators == WithDhtBootstrapByValidators {
 		s.connectToInstances(node.NetworkManager)
