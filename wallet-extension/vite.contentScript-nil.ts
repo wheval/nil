@@ -14,6 +14,8 @@ export default defineConfig({
         injected: resolve(root, 'contentScripts', 'nil.ts')
       },
       output: {
+        format: 'iife',
+        name: 'NilWalletInjected',
         entryFileNames: 'nil.js', // Generate single file for each input
       },
     },
