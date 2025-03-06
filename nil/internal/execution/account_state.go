@@ -163,7 +163,7 @@ func (as *AccountState) GetState(key common.Hash) (common.Hash, error) {
 
 	newVal, err := as.GetCommittedState(key)
 	if err != nil {
-		return common.Hash{}, err
+		return common.EmptyHash, err
 	}
 	as.State[key] = newVal
 	return newVal, nil

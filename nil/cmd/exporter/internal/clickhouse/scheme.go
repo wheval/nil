@@ -105,7 +105,7 @@ func tableExists(ctx context.Context, conn driver.Conn, tableName string) (bool,
 
 func readVersion(ctx context.Context, conn driver.Conn) (common.Hash, error) {
 	if exists, err := tableExists(ctx, conn, "blocks"); err != nil || !exists {
-		return common.Hash{}, err
+		return common.EmptyHash, err
 	}
 
 	var version common.Hash
@@ -115,9 +115,9 @@ func readVersion(ctx context.Context, conn driver.Conn) (common.Hash, error) {
 		WHERE shard_id = 0 AND id = 0
 	`).Scan(&version); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return common.Hash{}, nil
+			return common.EmptyHash, nil
 		}
-		return common.Hash{}, err
+		return common.EmptyHash, err
 	}
 
 	return version, nil

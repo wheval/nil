@@ -645,7 +645,7 @@ func (tsdb *TracerStateDB) SetState(addr types.Address, key common.Hash, val com
 func (tsdb *TracerStateDB) GetStorageRoot(addr types.Address) (common.Hash, error) {
 	acc, err := tsdb.mptTracer.GetAccount(addr)
 	if err != nil || acc == nil {
-		return common.Hash{}, err
+		return common.EmptyHash, err
 	}
 
 	return acc.AccountState.StorageTree.RootHash(), nil

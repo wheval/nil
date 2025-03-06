@@ -22,7 +22,7 @@ func getHashFn(es *ExecutionState, ref *types.Block) func(n uint64) (common.Hash
 		if lastBlockId <= n {
 			// This situation can happen if we're doing tracing and using
 			// block overrides.
-			return common.Hash{}, nil
+			return common.EmptyHash, nil
 		}
 		// If there's no hash cache yet, make one
 		if len(cache) == 0 {
@@ -40,7 +40,7 @@ func getHashFn(es *ExecutionState, ref *types.Block) func(n uint64) (common.Hash
 				break
 			}
 			if err != nil {
-				return common.Hash{}, err
+				return common.EmptyHash, err
 			}
 
 			cache = append(cache, data.Block().PrevBlock)
@@ -50,6 +50,6 @@ func getHashFn(es *ExecutionState, ref *types.Block) func(n uint64) (common.Hash
 				return lastKnownHash, nil
 			}
 		}
-		return common.Hash{}, nil
+		return common.EmptyHash, nil
 	}
 }

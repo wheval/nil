@@ -71,11 +71,11 @@ func (api *LocalShardApi) getBlockHashByReference(tx db.RoTx, blockReference raw
 		case rawapitypes.LatestBlock, rawapitypes.PendingBlock:
 			return db.ReadLastBlockHash(tx, api.ShardId)
 		}
-		return common.Hash{}, errors.New("unknown named block identifier")
+		return common.EmptyHash, errors.New("unknown named block identifier")
 	case rawapitypes.HashBlockReference:
 		return blockReference.Hash(), nil
 	}
-	return common.Hash{}, errors.New("unknown block reference type")
+	return common.EmptyHash, errors.New("unknown block reference type")
 }
 
 func (api *LocalShardApi) getBlockByHash(tx db.RoTx, hash common.Hash, withTransactions bool) (*types.RawBlockWithExtractedData, error) {
