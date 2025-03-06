@@ -339,6 +339,16 @@ func (s *SuiteTxnPool) TestNetwork() {
 	}, 20*time.Second, 200*time.Millisecond)
 }
 
+func (s *SuiteTxnPool) TestUnverifiedDuplicates() {
+	txn1 := newTransaction(defaultAddress, 0, 123)
+	txn2 := newTransaction(defaultAddress, 1, 123)
+
+	s.addTransactionsSuccessfully(txn1, txn2)
+
+	err := s.pool.Discard(s.ctx, []common.Hash{txn1.Hash(), txn2.Hash()}, DuplicateHash)
+	s.Require().NoError(err)
+}
+
 func (s *SuiteTxnPool) checkTransactionsOrder(vals ...int) {
 	s.T().Helper()
 

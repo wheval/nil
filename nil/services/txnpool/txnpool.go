@@ -415,6 +415,7 @@ func (p *TxnPool) Peek(n int) ([]*types.TxnWithHash, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
+	// Peek algorithm will alter the queue, so we need to clone it first.
 	q := p.queue.Clone()
 	res := make([]*types.TxnWithHash, 0, q.Len())
 
@@ -423,7 +424,7 @@ func (p *TxnPool) Peek(n int) ([]*types.TxnWithHash, error) {
 		check.PanicIfNot(ok)
 		res = append(res, txn.TxnWithHash)
 		if txn = p.nextSenderTxnLocked(txn.To, txn.Seqno); txn != nil {
-			heap.Push(q, txn)
+			heap.Push(q, txn.Clone())
 		}
 	}
 
