@@ -618,7 +618,7 @@ func createShards(
 				if err := consensus.Init(ctx); err != nil {
 					return err
 				}
-				if err := collator.Run(ctx, syncers.syncers[i], consensus); err != nil {
+				if err := collator.Run(ctx, consensus); err != nil {
 					logger.Error().
 						Err(err).
 						Stringer(logging.FieldShardId, shardId).

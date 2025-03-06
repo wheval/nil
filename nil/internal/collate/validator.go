@@ -39,6 +39,10 @@ type Validator struct {
 	lastBlock     *types.Block
 	lastBlockHash common.Hash
 
+	subsMutex sync.Mutex
+	subsId    uint64
+	subs      map[uint64]chan types.BlockNumber
+
 	logger zerolog.Logger
 }
 
@@ -49,6 +53,7 @@ func NewValidator(params *Params, txFabric db.DB, pool TxnPool, nm *network.Mana
 		pool:           pool,
 		networkManager: nm,
 		blockVerifier:  signer.NewBlockVerifier(params.ShardId, txFabric),
+		subs:           make(map[uint64]chan types.BlockNumber),
 		logger: logging.NewLogger("validator").With().
 			Stringer(logging.FieldShardId, params.ShardId).
 			Logger(),
@@ -201,6 +206,8 @@ func (s *Validator) onBlockCommitUnlocked(
 				Msgf("Failed to remove %d committed transactions from pool", len(proposal.ExternalTxns))
 		}
 	}
+
+	s.notify(res.Block.Id)
 }
 
 func (s *Validator) logBlockDiffError(expected, got *types.Block, expHash, gotHash common.Hash) error {
@@ -366,4 +373,32 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 func (s *Validator) setLastBlockUnlocked(block *types.Block, hash common.Hash) {
 	s.lastBlock = block
 	s.lastBlockHash = hash
+}
+
+func (s *Validator) Subscribe() (uint64, <-chan types.BlockNumber) {
+	s.subsMutex.Lock()
+	defer s.subsMutex.Unlock()
+
+	ch := make(chan types.BlockNumber, 1)
+	id := s.subsId
+	s.subs[id] = ch
+	s.subsId++
+	return id, ch
+}
+
+func (s *Validator) Unsubscribe(id uint64) {
+	s.subsMutex.Lock()
+	defer s.subsMutex.Unlock()
+
+	close(s.subs[id])
+	delete(s.subs, id)
+}
+
+func (s *Validator) notify(blockId types.BlockNumber) {
+	s.subsMutex.Lock()
+	defer s.subsMutex.Unlock()
+
+	for _, ch := range s.subs {
+		ch <- blockId
+	}
 }

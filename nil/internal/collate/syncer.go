@@ -46,9 +46,6 @@ type Syncer struct {
 
 	waitForSync *sync.WaitGroup
 
-	subsMutex sync.Mutex
-	subsId    uint64
-	subs      map[uint64]chan types.BlockNumber
 	validator *Validator
 }
 
@@ -65,7 +62,6 @@ func NewSyncer(cfg *SyncerConfig, validator *Validator, db db.DB, networkManager
 			Stringer(logging.FieldShardId, cfg.ShardId).
 			Logger(),
 		waitForSync: &waitForSync,
-		subs:        make(map[uint64]chan types.BlockNumber),
 		validator:   validator,
 	}, nil
 }
@@ -80,34 +76,6 @@ func (s *Syncer) shardIsEmpty(ctx context.Context) (bool, error) {
 
 func (s *Syncer) WaitComplete() {
 	s.waitForSync.Wait()
-}
-
-func (s *Syncer) Subscribe() (uint64, <-chan types.BlockNumber) {
-	s.subsMutex.Lock()
-	defer s.subsMutex.Unlock()
-
-	ch := make(chan types.BlockNumber, 1)
-	id := s.subsId
-	s.subs[id] = ch
-	s.subsId++
-	return id, ch
-}
-
-func (s *Syncer) Unsubscribe(id uint64) {
-	s.subsMutex.Lock()
-	defer s.subsMutex.Unlock()
-
-	close(s.subs[id])
-	delete(s.subs, id)
-}
-
-func (s *Syncer) notify(blockId types.BlockNumber) {
-	s.subsMutex.Lock()
-	defer s.subsMutex.Unlock()
-
-	for _, ch := range s.subs {
-		ch <- blockId
-	}
 }
 
 func (s *Syncer) readLocalVersion(ctx context.Context) (common.Hash, error) {
@@ -342,7 +310,6 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 	if err := s.validator.ReplayBlock(ctx, block); err != nil {
 		return err
 	}
-	s.notify(block.Id)
 
 	if uint64(block.Id)%uint64(blockReportInterval) == 0 {
 		s.logger.Info().
