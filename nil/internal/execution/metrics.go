@@ -107,9 +107,12 @@ func (mh *MetricsHandler) initMetrics(meter metric.Meter) error {
 	return nil
 }
 
-func (mh *MetricsHandler) StartProcessingMeasurement(ctx context.Context, gasPrice types.Value, blockId types.BlockNumber) {
-	mh.measurer.Restart()
+func (mh *MetricsHandler) RecordGasPrice(ctx context.Context, gasPrice types.Value) {
 	mh.gasPrice.Record(ctx, int64(gasPrice.Uint64()), mh.option)
+}
+
+func (mh *MetricsHandler) StartProcessingMeasurement(ctx context.Context, blockId types.BlockNumber) {
+	mh.measurer.Restart()
 	mh.blockId.Record(ctx, int64(blockId), mh.option)
 }
 
