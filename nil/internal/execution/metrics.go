@@ -14,9 +14,6 @@ type MetricsHandler struct {
 
 	measurer *telemetry.Measurer
 
-	// Histograms
-	coinsUsedHistogram telemetry.Histogram
-
 	// Counters
 	internalTxnCounter telemetry.Counter
 	externalTxnCounter telemetry.Counter
@@ -24,8 +21,9 @@ type MetricsHandler struct {
 	execTxnCounter     telemetry.Counter
 
 	// Gauges
-	gasPrice telemetry.Gauge
-	blockId  telemetry.Gauge
+	coinsUsed telemetry.Gauge
+	gasPrice  telemetry.Gauge
+	blockId   telemetry.Gauge
 }
 
 type BlockGeneratorCounters struct {
@@ -66,41 +64,34 @@ func NewMetricsHandler(name string, shardId types.ShardId) (*MetricsHandler, err
 func (mh *MetricsHandler) initMetrics(meter metric.Meter) error {
 	var err error
 
-	// Initialize histograms
-	mh.coinsUsedHistogram, err = meter.Int64Histogram("coins_used")
-	if err != nil {
-		return err
-	}
-
 	// Initialize counters
-	mh.internalTxnCounter, err = meter.Int64Counter("internal_transactions_processed")
-	if err != nil {
+
+	if mh.internalTxnCounter, err = meter.Int64Counter("internal_transactions_processed"); err != nil {
 		return err
 	}
 
-	mh.externalTxnCounter, err = meter.Int64Counter("external_transactions_processed")
-	if err != nil {
+	if mh.externalTxnCounter, err = meter.Int64Counter("external_transactions_processed"); err != nil {
 		return err
 	}
 
-	mh.deployTxnCounter, err = meter.Int64Counter("deploy_transactions_processed")
-	if err != nil {
+	if mh.deployTxnCounter, err = meter.Int64Counter("deploy_transactions_processed"); err != nil {
 		return err
 	}
 
-	mh.execTxnCounter, err = meter.Int64Counter("execution_transactions_processed")
-	if err != nil {
+	if mh.execTxnCounter, err = meter.Int64Counter("execution_transactions_processed"); err != nil {
 		return err
 	}
 
 	// Initialize gauges
-	mh.gasPrice, err = meter.Int64Gauge("gas_price")
-	if err != nil {
+	if mh.gasPrice, err = meter.Int64Gauge("gas_price"); err != nil {
 		return err
 	}
 
-	mh.blockId, err = meter.Int64Gauge("block_id")
-	if err != nil {
+	if mh.blockId, err = meter.Int64Gauge("block_id"); err != nil {
+		return err
+	}
+
+	if mh.coinsUsed, err = meter.Int64Gauge("coins_used"); err != nil {
 		return err
 	}
 
@@ -122,5 +113,5 @@ func (mh *MetricsHandler) EndProcessingMeasurement(ctx context.Context, counters
 	mh.externalTxnCounter.Add(ctx, counters.ExternalTransactions, mh.option)
 	mh.deployTxnCounter.Add(ctx, counters.DeployTransactions, mh.option)
 	mh.execTxnCounter.Add(ctx, counters.ExecTransactions, mh.option)
-	mh.coinsUsedHistogram.Record(ctx, int64(counters.CoinsUsed.Uint64()), mh.option)
+	mh.coinsUsed.Record(ctx, int64(counters.CoinsUsed.Uint64()), mh.option)
 }

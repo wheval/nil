@@ -15,9 +15,9 @@ type MetricsHandler struct {
 	buildProposalMeasurer  *telemetry.Measurer
 	insertProposalMeasurer *telemetry.Measurer
 
-	height           telemetry.Histogram
-	round            telemetry.Histogram
-	validatorsCount  telemetry.Histogram
+	height           telemetry.Gauge
+	round            telemetry.Gauge
+	validatorsCount  telemetry.Gauge
 	sentMessages     telemetry.Counter
 	receivedMessages telemetry.Counter
 }
@@ -54,15 +54,15 @@ func NewMetricsHandler(name string, shardId types.ShardId) (*MetricsHandler, err
 func (mh *MetricsHandler) initMetrics(meter metric.Meter) error {
 	var err error
 
-	if mh.validatorsCount, err = meter.Int64Histogram("validators_count"); err != nil {
+	if mh.validatorsCount, err = meter.Int64Gauge("validators_count"); err != nil {
 		return err
 	}
 
-	if mh.height, err = meter.Int64Histogram("height"); err != nil {
+	if mh.height, err = meter.Int64Gauge("height"); err != nil {
 		return err
 	}
 
-	if mh.round, err = meter.Int64Histogram("round"); err != nil {
+	if mh.round, err = meter.Int64Gauge("round"); err != nil {
 		return err
 	}
 
