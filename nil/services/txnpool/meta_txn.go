@@ -22,6 +22,15 @@ func newMetaTxn(txn *types.Transaction, baseFee types.Value) *metaTxn {
 	}
 }
 
+func (m *metaTxn) Clone() *metaTxn {
+	return &metaTxn{
+		TxnWithHash:          m.TxnWithHash,
+		effectivePriorityFee: m.effectivePriorityFee,
+		bestIndex:            m.bestIndex,
+		valid:                m.valid,
+	}
+}
+
 func (m *metaTxn) IsValid() bool {
 	return m.valid
 }

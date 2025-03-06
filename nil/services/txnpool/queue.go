@@ -28,9 +28,11 @@ func (p *TxnQueue) Less(i, j int) bool {
 }
 
 func (p *TxnQueue) Swap(i, j int) {
-	p.txns[i], p.txns[j] = p.txns[j], p.txns[i]
-	p.txns[i].bestIndex = i
-	p.txns[j].bestIndex = j
+	if i != j {
+		p.txns[i], p.txns[j] = p.txns[j], p.txns[i]
+		p.txns[i].bestIndex = i
+		p.txns[j].bestIndex = j
+	}
 }
 
 func (p *TxnQueue) Push(x any) {
@@ -46,11 +48,14 @@ func (p *TxnQueue) Pop() any {
 	item := old[n-1]
 	old[n-1] = nil // avoid memory leak
 	p.txns = old[0 : n-1]
+	item.bestIndex = -1
 	return item
 }
 
 func (p *TxnQueue) Remove(txn *metaTxn) {
 	if txn.bestIndex >= 0 {
+		check.PanicIfNotf(txn.bestIndex < len(p.txns),
+			"txn.bestIndex is out of range: txn.bestIndex=%d, len(p.txns)=%d", txn.bestIndex, len(p.txns))
 		heap.Remove(p, txn.bestIndex)
 		txn.bestIndex = -1
 	}
