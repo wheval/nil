@@ -286,13 +286,15 @@ func (g *BlockGenerator) BuildBlock(proposal *Proposal, gasPrices []types.Uint25
 }
 
 func (g *BlockGenerator) GenerateBlock(proposal *Proposal, params *types.ConsensusParams) (*BlockGenerationResult, error) {
-	g.mh.StartProcessingMeasurement(g.ctx, g.executionState.GasPrice, proposal.PrevBlockId+1)
+	g.mh.StartProcessingMeasurement(g.ctx, proposal.PrevBlockId+1)
 	defer func() { g.mh.EndProcessingMeasurement(g.ctx, g.counters) }()
 
 	gasPrices := g.CollectGasPrices(proposal.PrevBlockId)
 	if err := g.prepareExecutionState(proposal, gasPrices); err != nil {
 		return nil, err
 	}
+
+	g.mh.RecordGasPrice(g.ctx, g.executionState.GasPrice)
 
 	if err := db.WriteCollatorState(g.rwTx, g.params.ShardId, proposal.CollatorState); err != nil {
 		return nil, fmt.Errorf("failed to write collator state: %w", err)
