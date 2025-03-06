@@ -148,6 +148,7 @@ func (s *ProposerTestSuite) TestCollator() {
 
 	// Now process internal transactions by one to test queueing.
 	p.params.MaxInternalTransactionsInBlock = 1
+	pool.Reset()
 
 	s.Run("ProcessInternalTransaction1", func() {
 		generateBlock()
@@ -181,10 +182,10 @@ func (s *ProposerTestSuite) TestCollator() {
 
 		proposal := generateBlock()
 		s.Empty(proposal.ExternalTxns)
-		s.Len(proposal.InternalTxns, 2)
+		s.Empty(proposal.InternalTxns)
 		s.Empty(proposal.ForwardTxns)
 		s.Equal([]common.Hash{m1.Hash(), m2.Hash()}, pool.LastDiscarded)
-		s.Equal(txnpool.DuplicateHash, pool.LastReason)
+		s.Equal(txnpool.Unverified, pool.LastReason)
 	})
 
 	s.Run("Deploy", func() {
