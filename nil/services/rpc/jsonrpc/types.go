@@ -85,6 +85,7 @@ type RPCBlock struct {
 	BaseFee             types.Value         `json:"baseFee"`
 	L1Number            uint64              `json:"l1Number"`
 	LogsBloom           hexutil.Bytes       `json:"logsBloom,omitempty"`
+	GasUsed             types.Gas           `json:"gasUsed,omitempty"`
 }
 
 type DebugRPCBlock struct {
@@ -390,6 +391,7 @@ func NewRPCBlock(shardId types.ShardId, data *BlockWithEntities, fullTx bool) (*
 		BaseFee:             block.BaseFee,
 		LogsBloom:           bloom,
 		L1Number:            block.L1BlockNumber,
+		GasUsed:             block.GasUsed,
 	}, nil
 }
 
