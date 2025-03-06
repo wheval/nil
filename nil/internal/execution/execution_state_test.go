@@ -309,18 +309,14 @@ func TestSnapshot(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, data1, v)
 
-	if v := s.GetCommittedState(stateobjaddr, storageaddr); v != (common.Hash{}) {
-		t.Errorf("wrong committed storage value %v, want %v", v, common.Hash{})
-	}
+	require.Zero(t, s.GetCommittedState(stateobjaddr, storageaddr))
 
 	// revert up to the genesis state and ensure correct content
 	s.RevertToSnapshot(genesis)
 	v, err = s.GetState(stateobjaddr, storageaddr)
 	require.NoError(t, err)
 	assert.Empty(t, v)
-	if v := s.GetCommittedState(stateobjaddr, storageaddr); v != (common.Hash{}) {
-		t.Errorf("wrong committed storage value %v, want %v", v, common.Hash{})
-	}
+	require.Zero(t, s.GetCommittedState(stateobjaddr, storageaddr))
 }
 
 func TestSnapshotEmpty(t *testing.T) {

@@ -110,17 +110,17 @@ func fetchSnapshot(ctx context.Context, nm *network.Manager, peerAddr network.Ad
 func fetchGenesisBlockHash(ctx context.Context, nm *network.Manager, peerAddr network.AddrInfo) (common.Hash, error) {
 	peerId, err := nm.Connect(ctx, peerAddr)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("failed to connect to %s: %w", peerAddr, err)
+		return common.EmptyHash, fmt.Errorf("failed to connect to %s: %w", peerAddr, err)
 	}
 
 	resp, err := nm.SendRequestAndGetResponse(ctx, peerId, topicVersion, nil)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("failed to fetch genesis block hash: %w", err)
+		return common.EmptyHash, fmt.Errorf("failed to fetch genesis block hash: %w", err)
 	}
 
 	var res common.Hash
 	if err := res.UnmarshalSSZ(resp); err != nil {
-		return common.Hash{}, fmt.Errorf("failed to unmarshal genesis block hash: %w", err)
+		return common.EmptyHash, fmt.Errorf("failed to unmarshal genesis block hash: %w", err)
 	}
 
 	return res, nil

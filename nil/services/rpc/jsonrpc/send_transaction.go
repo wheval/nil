@@ -43,7 +43,7 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encoded hexutil.Byte
 
 	if reason != txnpool.NotSet {
 		log.Err(ErrTransactionDiscarded).Msgf("%s", reason)
-		return common.Hash{}, fmt.Errorf("%w: %s", ErrTransactionDiscarded, reason)
+		return common.EmptyHash, fmt.Errorf("%w: %s", ErrTransactionDiscarded, reason)
 	}
 
 	h := extTxn.Hash()

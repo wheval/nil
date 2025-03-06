@@ -315,7 +315,7 @@ func (m *FiltersManager) OnNewBlock(block *types.Block) {
 func (m *FiltersManager) getLastBlockHash() (common.Hash, error) {
 	tx, err := m.db.CreateRoTx(m.ctx)
 	if err != nil {
-		return common.Hash{}, err
+		return common.EmptyHash, err
 	}
 	defer tx.Rollback()
 
@@ -402,7 +402,7 @@ func (args *FilterQuery) UnmarshalJSON(data []byte) error {
 	}
 
 	// topics is an array consisting of strings and/or arrays of strings.
-	// JSON null values are converted to common.Hash{} and ignored by the filter manager.
+	// JSON null values are converted to common.EmptyHash and ignored by the filter manager.
 	if len(raw.Topics) > 0 {
 		args.Topics = make([][]common.Hash, len(raw.Topics))
 		for i, t := range raw.Topics {

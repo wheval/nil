@@ -403,7 +403,7 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext)
 //     should return the relative code hash and set it as the result.
 //
 //  2. Caller tries to get the code hash of a non-existent account, state should
-//     return common.Hash{} and zero will be set as the result.
+//     return common.EmptyHash and zero will be set as the result.
 //
 //  3. Caller tries to get the code hash for an account without contract code, state
 //     should return emptyCodeHash(0xc5d246...) as the result.

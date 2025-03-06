@@ -88,7 +88,7 @@ func (e *exporter) setup(ctx context.Context) ([]types.ShardId, error) {
 func (e *exporter) readVersionFromClient(ctx context.Context) (common.Hash, error) {
 	b, err := e.client.GetBlock(ctx, types.MainShardId, 0, false)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("failed to get genesis block from main shard: %w", err)
+		return common.EmptyHash, fmt.Errorf("failed to get genesis block from main shard: %w", err)
 	}
 	return b.Hash, nil
 }

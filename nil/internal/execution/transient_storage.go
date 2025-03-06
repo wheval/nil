@@ -50,7 +50,7 @@ func (t transientStorage) Set(addr types.Address, key, value common.Hash) {
 func (t transientStorage) Get(addr types.Address, key common.Hash) common.Hash {
 	val, ok := t[addr]
 	if !ok {
-		return common.Hash{}
+		return common.EmptyHash
 	}
 	return val[key]
 }

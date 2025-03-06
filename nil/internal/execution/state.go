@@ -421,7 +421,7 @@ func (es *ExecutionState) Exists(addr types.Address) (bool, error) {
 func (es *ExecutionState) GetCode(addr types.Address) ([]byte, common.Hash, error) {
 	acc, err := es.GetAccount(addr)
 	if err != nil || acc == nil {
-		return nil, common.Hash{}, err
+		return nil, common.EmptyHash, err
 	}
 	return acc.Code, acc.CodeHash, nil
 }
@@ -457,7 +457,7 @@ func (es *ExecutionState) RevertToSnapshot(revid int) {
 func (es *ExecutionState) GetStorageRoot(addr types.Address) (common.Hash, error) {
 	acc, err := es.GetAccount(addr)
 	if err != nil || acc == nil {
-		return common.Hash{}, err
+		return common.EmptyHash, err
 	}
 	return acc.StorageTree.RootHash(), nil
 }
