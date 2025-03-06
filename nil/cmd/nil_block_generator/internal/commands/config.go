@@ -13,6 +13,7 @@ const (
 	configFilePath = "config.json"
 	nilDBPath      = "test.db"
 	fileMode       = 0o666
+	directoryMode  = 0o744
 )
 
 type Contract struct {
@@ -167,7 +168,7 @@ func ShowCalls(writer io.StringWriter) error {
 }
 
 func GetSockPath() (string, error) {
-	err := os.Mkdir(socketDir, fileMode)
+	err := os.Mkdir(socketDir, directoryMode)
 	if err != nil {
 		return "", err
 	}
