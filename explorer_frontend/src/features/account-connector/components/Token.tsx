@@ -65,7 +65,7 @@ const Token: FC<TokenProps> = ({ name, balance, isMain = false }) => {
               alignItems: "center",
             })}
           >
-            {getTokenSymbolByAddress(name)}
+            {getTokenSymbolByAddress(name) !== "" ? getTokenSymbolByAddress(name) : name}
           </LabelXSmall>
         )}
       </div>
@@ -78,7 +78,9 @@ const Token: FC<TokenProps> = ({ name, balance, isMain = false }) => {
           display: "block",
         })}
       >
-        <OverflowEllipsis charsFromTheEnd={4}>{getTokenSymbolByAddress(name)}</OverflowEllipsis>
+        <OverflowEllipsis charsFromTheEnd={4}>
+          {getTokenSymbolByAddress(name) !== "" ? getTokenSymbolByAddress(name) : name}
+        </OverflowEllipsis>
       </LabelMedium>
       <LabelSmall
         className={css({
