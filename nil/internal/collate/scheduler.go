@@ -42,7 +42,6 @@ type Params struct {
 
 type Scheduler struct {
 	consensus      Consensus
-	syncer         *Syncer
 	txFabric       db.DB
 	validator      *Validator
 	networkManager *network.Manager
@@ -73,11 +72,8 @@ func (s *Scheduler) Validator() *Validator {
 	return s.validator
 }
 
-func (s *Scheduler) Run(ctx context.Context, syncer *Syncer, consensus Consensus) error {
-	syncer.WaitComplete()
-
+func (s *Scheduler) Run(ctx context.Context, consensus Consensus) error {
 	s.logger.Info().Msg("Starting collation...")
-	s.syncer = syncer
 
 	// Enable handler for blocks relaying
 	SetRequestHandler(ctx, s.networkManager, s.params.ShardId, s.txFabric, s.logger)
@@ -115,8 +111,8 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 			return err
 		}
 
-		subId, syncCh := s.syncer.Subscribe()
-		defer s.syncer.Unsubscribe(subId)
+		subId, syncCh := s.validator.Subscribe()
+		defer s.validator.Unsubscribe(subId)
 
 		ctx, cancelFn := context.WithCancel(ctx)
 		defer cancelFn()

@@ -573,7 +573,7 @@ func createValidators(ctx context.Context, cfg *Config, database db.DB, networkM
 			}
 		}
 
-		list[i] = collate.NewValidator(params, database, txpool, networkManager)
+		list[i] = collate.NewValidator(params, list[0], database, txpool, networkManager)
 	}
 	return list, nil
 }
@@ -618,7 +618,7 @@ func createShards(
 				if err := consensus.Init(ctx); err != nil {
 					return err
 				}
-				if err := collator.Run(ctx, syncers.syncers[i], consensus); err != nil {
+				if err := collator.Run(ctx, consensus); err != nil {
 					logger.Error().
 						Err(err).
 						Stringer(logging.FieldShardId, shardId).
