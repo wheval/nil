@@ -53,7 +53,7 @@ const getMethodType = (func: AbiFunction): MethodType => {
     return "Payable";
   }
 
-  if (func.stateMutability === "view") {
+  if (func.stateMutability === "view" || func.stateMutability === "pure") {
     return "Read";
   }
 

@@ -411,7 +411,18 @@ sample({
             continue;
           }
           const name = input.name;
-          args.push(callParams[name] || "");
+
+          if (input.type === "bool") {
+            args.push(
+              callParams[name] === "true"
+                ? true
+                : callParams[name] === "false"
+                  ? false
+                  : Boolean(callParams[name]),
+            );
+          } else {
+            args.push(callParams[name] || "");
+          }
         }
       }
     }
