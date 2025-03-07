@@ -156,7 +156,9 @@ func getRawApi(cfg *Config, networkManager *network.Manager, database db.DB, txn
 		if slices.Contains(myShards, uint(shardId)) {
 			shardApis[shardId] = rawapi.NewLocalShardApi(shardId, database, txnPools[shardId])
 			if assert.Enable {
-				shardApis[shardId], err = rawapi.NewLocalRawApiAccessor(shardId, shardApis[shardId].(*rawapi.LocalShardApi))
+				api, ok := shardApis[shardId].(*rawapi.LocalShardApi)
+				check.PanicIfNot(ok)
+				shardApis[shardId], err = rawapi.NewLocalRawApiAccessor(shardId, api)
 			}
 		} else {
 			shardApis[shardId], err = rawapi.NewNetworkRawApiAccessor(shardId, networkManager)

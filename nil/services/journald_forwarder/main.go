@@ -14,6 +14,7 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/rs/zerolog"
 	logs "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	v1 "go.opentelemetry.io/proto/otlp/common/v1"
@@ -159,7 +160,9 @@ func storeData(ctx context.Context, logger zerolog.Logger, connect driver.Conn, 
 		columns = append(columns, key)
 		columnsDef[key] = determineType(fmt.Sprintf("%v", value))
 		if columnsDef[key] == "DateTime" {
-			parsedTime, err := time.Parse(time.RFC3339, value.(string))
+			valueStr, ok := value.(string)
+			check.PanicIfNot(ok)
+			parsedTime, err := time.Parse(time.RFC3339, valueStr)
 			if err != nil {
 				logger.Error().Err(err).Msg("Error parsing time")
 				return
