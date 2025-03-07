@@ -290,11 +290,7 @@ func (s *SuiteCliService) TestToken() {
 	s.Require().NoError(err)
 	tok, err = s.cli.GetTokens(smartAccount)
 	s.Require().NoError(err)
-	s.Require().Len(tok, 1)
-
-	val, ok = tok[tokenId]
-	s.Require().True(ok)
-	s.Require().Equal(uint64(0), val.Uint64())
+	s.Require().Empty(tok)
 }
 
 type SuiteCliExec struct {
