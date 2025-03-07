@@ -1,5 +1,6 @@
 import { Token } from "./Token";
 import btc from "./assets/btc.svg";
+import custom from "./assets/custom.svg";
 import eth from "./assets/eth.svg";
 import nil from "./assets/nil.svg";
 import usdt from "./assets/usdt.svg";
@@ -15,7 +16,7 @@ export const getTokenIcon = (name: string) => {
     case Token.BTC:
       return btc;
     default:
-      return null;
+      return custom;
   }
 };
 
@@ -34,7 +35,11 @@ export const getTokenSymbolByAddress = (address: string) => {
   if (address === btcAddress) {
     return Token.BTC;
   }
-  return address;
+  if (address === Token.NIL) {
+    return Token.NIL;
+  }
+
+  return "";
 };
 
 export const getTokenAddressBySymbol = (symbol: string) => {
