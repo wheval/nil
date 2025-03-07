@@ -147,8 +147,8 @@ func (i *backendIBFT) buildSignature(committedSeals []*messages.CommittedSeal, h
 }
 
 func (i *backendIBFT) InsertProposal(proposal *protoIBFT.Proposal, committedSeals []*messages.CommittedSeal) {
-	i.mh.StartBuildProposalMeasurement(i.transportCtx, proposal.Round)
-	defer i.mh.EndBuildProposalMeasurement(i.transportCtx)
+	i.mh.StartInsertProposalMeasurement(i.transportCtx, proposal.Round)
+	defer i.mh.EndInsertProposalMeasurement(i.transportCtx)
 
 	proposalBlock, err := i.unmarshalProposal(proposal.RawProposal)
 	if err != nil {

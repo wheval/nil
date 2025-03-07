@@ -91,7 +91,7 @@ func (mh *MetricsHandler) StartInsertProposalMeasurement(ctx context.Context, ro
 	mh.insertProposalMeasurer.Restart()
 }
 
-func (mh *MetricsHandler) EndInsertProposalMeasurement(ctx context.Context, height, round uint64) {
+func (mh *MetricsHandler) EndInsertProposalMeasurement(ctx context.Context) {
 	mh.insertProposalMeasurer.Measure(ctx)
 }
 
