@@ -1,4 +1,4 @@
-pragma solidity 0.8.27;
+pragma solidity 0.8.26;
 
 /// @title INilVerifier
 /// @notice An interface that lets NilRollup to verify the validityProof.
