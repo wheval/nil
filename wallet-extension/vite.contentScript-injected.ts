@@ -19,7 +19,7 @@ export default defineConfig({
     },
     sourcemap: true, // Generate source maps for better debugging
     target: 'esnext', // Use modern JS features compatible with latest browsers
-    minify: false, // Disable minification for better readability
+    minify: true,
     emptyOutDir: true, // Clean the output directory before build
   },
   plugins: [viteSingleFile()], // Bundle everything into a single file
