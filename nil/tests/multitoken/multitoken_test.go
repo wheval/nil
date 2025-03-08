@@ -469,6 +469,27 @@ func (s *SuiteMultiTokenRpc) TestTokenViaCall() {
 	s.Require().Positive(res.CoinsUsed.Uint64())
 }
 
+func (s *SuiteMultiTokenRpc) TestRemoveEmptyToken() {
+	tokenSmartAccount1 := CreateTokenId(&s.smartAccountAddress1)
+
+	amount := types.NewValueFromUint64(1_000_000)
+
+	s.createTokenForTestContract(tokenSmartAccount1, amount, "smartAccount1")
+
+	receipt := s.SendTransactionViaSmartAccountNoCheck(s.smartAccountAddress1, s.testAddress1_0, execution.MainPrivateKey, nil,
+		types.NewFeePackFromGas(1_000_000), types.Value0,
+		[]types.TokenBalance{{Token: *tokenSmartAccount1.id, Balance: amount}})
+	s.Require().True(receipt.AllSuccess())
+
+	tokens, err := s.Client.GetTokens(s.Context, s.smartAccountAddress1, "latest")
+	s.Require().NoError(err)
+	s.Require().Empty(tokens)
+
+	tokens, err = s.Client.GetTokens(s.Context, s.testAddress1_0, "latest")
+	s.Require().NoError(err)
+	s.Require().Equal(amount, tokens[*tokenSmartAccount1.id])
+}
+
 func (s *SuiteMultiTokenRpc) TestBounce() {
 	var (
 		data    []byte
@@ -491,10 +512,10 @@ func (s *SuiteMultiTokenRpc) TestBounce() {
 	s.Require().Len(receipt.OutReceipts, 1)
 	s.Require().False(receipt.OutReceipts[0].Success)
 
-	// Check that nothing credited tp destination account
+	// Check that nothing credited to a destination account
 	tokens, err = s.Client.GetTokens(s.Context, s.testAddress1_0, "latest")
 	s.Require().NoError(err)
-	s.Require().Equal(types.Value0, tokens[*tokenSmartAccount1.id])
+	s.Require().Empty(tokens)
 
 	// Check that token wasn't changed
 	tokens, err = s.Client.GetTokens(s.Context, s.smartAccountAddress1, "latest")

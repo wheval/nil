@@ -334,6 +334,18 @@ func (as *AccountState) Commit() (*types.SmartContract, error) {
 		}
 	}
 
+	// Remove tokens with zero value
+	for k, v := range as.Tokens {
+		if v.IsZero() {
+			// We ignore `db.ErrKeyNotFound` error because there is a possibility that the token was created during
+			// execution of the current transaction, and it is not in the trie.
+			if err := as.TokenTree.Delete(k); err != nil && !errors.Is(err, db.ErrKeyNotFound) {
+				return nil, err
+			}
+			delete(as.Tokens, k)
+		}
+	}
+
 	if err := UpdateFromMap(as.TokenTree, as.Tokens, func(val types.Value) *types.Value { return &val }); err != nil {
 		return nil, err
 	}
