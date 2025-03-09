@@ -462,7 +462,7 @@ func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, i
 
 			var cl client.Client
 			if cfg.Cometa != nil || cfg.IsFaucetApiEnabled() {
-				cl, err = client.NewEthClient(ctx, database, types.ShardId(cfg.NShards), txnPools, logger)
+				cl, err = client.NewEthClient(ctx, database, rawApi, logger)
 				if err != nil {
 					return fmt.Errorf("failed to create node client: %w", err)
 				}
