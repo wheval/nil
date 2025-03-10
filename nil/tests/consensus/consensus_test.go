@@ -87,9 +87,7 @@ func (s *SuiteConsensus) TestConsensus() {
 
 	for _, block := range blocks {
 		for _, instance := range s.Instances {
-			instanceBlock, err := instance.Client.GetBlock(s.Context, block.ShardId, uint64(block.Number), false)
-			s.Require().NoError(err)
-			s.Require().NotNilf(instanceBlock, "block %d from shard %d not found", block.Number, block.ShardId)
+			instanceBlock := tests.WaitBlock(s.T(), s.Context, instance.Client, block.ShardId, uint64(block.Number))
 			s.Equal(block.Hash, instanceBlock.Hash)
 		}
 	}

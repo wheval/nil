@@ -113,13 +113,16 @@ func PrepareDefaultDeployPayload(t *testing.T, abi abi.ABI, code []byte, args ..
 	return types.BuildDeployPayload(code, common.EmptyHash)
 }
 
-func WaitBlock(t *testing.T, ctx context.Context, client client.Client, shardId types.ShardId, blockNum uint64) {
+func WaitBlock(t *testing.T, ctx context.Context, client client.Client, shardId types.ShardId, blockNum uint64) *jsonrpc.RPCBlock {
 	t.Helper()
 
+	var block *jsonrpc.RPCBlock
+	var err error
 	require.Eventually(t, func() bool {
-		block, err := client.GetBlock(ctx, shardId, transport.BlockNumber(blockNum), false)
+		block, err = client.GetBlock(ctx, shardId, transport.BlockNumber(blockNum), false)
 		return err == nil && block != nil
 	}, BlockWaitTimeout, BlockPollInterval)
+	return block
 }
 
 func WaitZerostate(t *testing.T, ctx context.Context, client client.Client, shardId types.ShardId) {

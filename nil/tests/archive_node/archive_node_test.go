@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -89,11 +88,7 @@ func (s *SuiteArchiveNode) TestRestarts() {
 		}
 
 		for shardId := range s.GetNShards() {
-			s.Require().Eventually(func() bool {
-				b, err := s.DefaultClient.GetDebugBlock(s.Context, types.ShardId(shardId), 1, true)
-				s.Require().NoError(err)
-				return b != nil
-			}, 5*time.Second, 100*time.Millisecond)
+			tests.WaitBlock(s.T(), s.Context, s.DefaultClient, types.ShardId(shardId), 1)
 		}
 	}
 
