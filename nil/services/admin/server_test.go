@@ -10,8 +10,19 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func createAdminSocketClient(socketPath string) *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", socketPath)
+			},
+		},
+	}
+}
 
 func TestAdminServer(t *testing.T) {
 	t.Parallel()
@@ -21,17 +32,11 @@ func TestAdminServer(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	go func() {
-		_ = StartAdminServer(ctx, cfg, logging.NewLogger("admin"))
+		err := StartAdminServer(ctx, cfg, logging.NewLogger("admin"))
+		assert.NoError(t, err)
 	}()
 
-	client := http.Client{
-		Transport: &http.Transport{
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", socketPath)
-			},
-		},
-	}
-
+	client := createAdminSocketClient(socketPath)
 	require.Eventually(t, func() bool {
 		response, err := client.Post("http://unix/ping", "application/json", bytes.NewReader(nil))
 		response.Body.Close()
