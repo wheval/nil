@@ -154,7 +154,7 @@ func (c *Config) IsShardActive(shardId types.ShardId) bool {
 }
 
 func (c *Config) IsFaucetApiEnabled() bool {
-	return c.RunMode == NormalRunMode && !c.SplitShards
+	return (c.RunMode == NormalRunMode || c.RunMode == RpcRunMode) && !c.SplitShards
 }
 
 func (c *Config) ShouldStartCometa() bool {

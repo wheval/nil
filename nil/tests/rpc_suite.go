@@ -26,6 +26,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
+	"github.com/NilFoundation/nil/nil/services/rpc/rawapi"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 	"github.com/rs/zerolog"
 )
@@ -111,7 +112,14 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 
 	if cfg.RunMode == nilservice.CollatorsOnlyRunMode {
 		service := <-serviceInterop
-		c, err := client.NewEthClient(s.Context, s.Db, types.ShardId(s.ShardsNum), service.TxnPools, zerolog.New(os.Stderr))
+		localShardApis := make(map[types.ShardId]rawapi.ShardApi)
+		for shardId := range types.ShardId(s.ShardsNum) {
+			var err error
+			localShardApis[shardId], err = rawapi.NewLocalRawApiAccessor(shardId, rawapi.NewLocalShardApi(shardId, s.Db, service.TxnPools[shardId]))
+			s.Require().NoError(err)
+		}
+		localApi := rawapi.NewNodeApiOverShardApis(localShardApis)
+		c, err := client.NewEthClient(s.Context, s.Db, localApi, zerolog.New(os.Stderr))
 		s.Require().NoError(err)
 		s.Client = c
 	} else {

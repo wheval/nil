@@ -14,7 +14,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
-	"github.com/NilFoundation/nil/nil/services/txnpool"
 	"github.com/rs/zerolog"
 )
 
@@ -27,17 +26,7 @@ type DirectClient struct {
 
 var _ Client = (*DirectClient)(nil)
 
-func NewEthClient(ctx context.Context, db db.ReadOnlyDB, nShards types.ShardId, txnPools map[types.ShardId]txnpool.Pool, logger zerolog.Logger) (*DirectClient, error) {
-	var err error
-	localShardApis := make(map[types.ShardId]rawapi.ShardApi)
-	for shardId := range nShards {
-		localShardApis[shardId], err = rawapi.NewLocalRawApiAccessor(shardId, rawapi.NewLocalShardApi(shardId, db, txnPools[shardId]))
-		if err != nil {
-			return nil, err
-		}
-	}
-	localApi := rawapi.NewNodeApiOverShardApis(localShardApis)
-
+func NewEthClient(ctx context.Context, db db.ReadOnlyDB, localApi *rawapi.NodeApiOverShardApis, logger zerolog.Logger) (*DirectClient, error) {
 	ethApi := jsonrpc.NewEthAPI(ctx, localApi, db, true, false)
 	debugApi := jsonrpc.NewDebugAPI(localApi, logger)
 	dbApi := jsonrpc.NewDbAPI(db, logger)
