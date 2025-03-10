@@ -2,9 +2,12 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"syscall"
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common/logging"
@@ -44,6 +47,24 @@ func StartAdminServer(ctx context.Context, cfg *ServerConfig, logger zerolog.Log
 
 func (s *adminServer) serve(ctx context.Context) error {
 	srv := http.Server{Handler: s.mux, ReadHeaderTimeout: defaultTimeout}
+
+	// Drop dangling unix socket if server previously was not stopped correctly.
+	if _, err := os.Stat(s.cfg.UnixSocketPath); err == nil {
+		conn, err := net.Dial("unix", s.cfg.UnixSocketPath)
+		if err != nil {
+			var netErr *net.OpError
+			if errors.As(err, &netErr) && errors.Is(netErr, syscall.ECONNREFUSED) {
+				s.logger.Info().Msgf("Remove unused socket file: %s", s.cfg.UnixSocketPath)
+				os.Remove(s.cfg.UnixSocketPath)
+			} else {
+				return fmt.Errorf("error connecting to socket: %w", err)
+			}
+		} else {
+			// Close if socket is already open.
+			// Error "already in use" will be returned by net.Listen.
+			conn.Close()
+		}
+	}
 
 	listener, err := net.Listen("unix", s.cfg.UnixSocketPath)
 	if err != nil {
