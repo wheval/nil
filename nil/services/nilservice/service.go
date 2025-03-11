@@ -184,12 +184,9 @@ func setP2pRequestHandlers(ctx context.Context, rawApi *rawapi.NodeApiOverShardA
 	return nil
 }
 
-func validateArchiveNodeConfig(cfg *Config, nm *network.Manager) error {
+func validateArchiveNodeConfig(_ *Config, nm *network.Manager) error {
 	if nm == nil {
 		return errors.New("failed to start archive node without network configuration")
-	}
-	if !slices.Contains(cfg.MyShards, uint(types.MainShardId)) {
-		return errors.New("on archive node, main shard must be included in MyShards")
 	}
 	return nil
 }

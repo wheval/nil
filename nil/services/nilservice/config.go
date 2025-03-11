@@ -172,6 +172,15 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	if c.MyShards != nil && !c.DisableConsensus {
+		if !slices.Contains(c.MyShards, uint(types.MainShardId)) {
+			return errors.New("main shard must be included in MyShards")
+		}
+		if len(c.MyShards) == 1 {
+			return errors.New("standalone main shard doesn't make sense with enabled consensus")
+		}
+	}
+
 	return nil
 }
 
