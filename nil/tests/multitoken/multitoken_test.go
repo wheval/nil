@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
@@ -197,6 +198,27 @@ func (s *SuiteMultiTokenRpc) TestMultiToken() { //nolint
 			receipt = s.SendExternalTransactionNoCheck(data, s.testAddress1_0)
 			s.Require().False(receipt.Success)
 		})
+	})
+
+	s.Run("TestDeployWithToken", func() {
+		tokens := []types.TokenBalance{{Token: *token1.id, Balance: types.NewValueFromUint64(10)}}
+		contractCode, _ := s.LoadContract(common.GetAbsolutePath("../contracts/GasBurner.sol"), "GasBurner")
+
+		data, err := s.abiTest.Pack("testAsyncDeployWithTokens",
+			types.NewValueFromUint64(uint64(types.BaseShardId)),
+			types.NewFeePackFromGas(500_000).FeeCredit,
+			types.Value0,
+			[]byte(contractCode),
+			types.Value0,
+			tokens,
+		)
+		s.Require().NoError(err)
+
+		hash, err := s.Client.SendExternalTransaction(s.Context, data, s.testAddress1_0, nil, types.NewFeePackFromGas(100_000))
+		s.Require().NoError(err)
+		receipt := s.WaitForReceipt(hash)
+		s.Require().False(receipt.Success)
+		s.Require().Equal("AsyncDeployMustNotHaveToken", receipt.Status)
 	})
 
 	var amount types.Value

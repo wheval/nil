@@ -69,6 +69,12 @@ linters-settings:
     excludes:
       - G115
 
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+      - shadow
+
 issues:
   exclude-dirs:
     - clickhouse

@@ -441,7 +441,7 @@ func (c *asyncCall) Run(state StateDB, input []byte, value *uint256.Int, caller 
 	var kind types.TransactionKind
 	if deploy {
 		if len(tokens) != 0 {
-			return nil, types.NewVmVerboseError(types.ErrorAsyncDeployMustNotHaveToken, err.Error())
+			return nil, types.NewVmError(types.ErrorAsyncDeployMustNotHaveToken)
 		}
 		kind = types.DeployTransactionKind
 	} else {

@@ -51,6 +51,29 @@ contract TokensTest is NilTokenBase {
         );
     }
 
+    function testAsyncDeployWithTokens(
+        uint shardId,
+        uint feeCredit,
+        uint value,
+        bytes memory code,
+        uint256 salt,
+        Nil.Token[] memory tokens
+    ) public onlyExternal returns (address) {
+        address contractAddress = Nil.createAddress(shardId, code, salt);
+        // 0xfd == Nil.ASYNC_CALL
+        __Precompile__(address(0xfd)).precompileAsyncCall{value: value}(
+            true,
+            Nil.FORWARD_REMAINING,
+            contractAddress,
+            address(0),
+            address(this),
+            feeCredit,
+            tokens,
+            bytes.concat(code, bytes32(salt))
+        );
+        return contractAddress;
+    }
+
     function testTransactionTokens(Nil.Token[] memory tokens) public payable {
         Nil.Token[] memory transactionTokens = Nil.txnTokens();
         require(
