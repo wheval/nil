@@ -114,6 +114,15 @@ type IBFT struct {
 
 	// sequenceHistogram is the histogram for sequence duration
 	sequenceHistogram metric.Float64Histogram
+
+	// prepareHistogram is the histogram for "prepare" stage duration
+	prepareHistogram metric.Float64Histogram
+
+	// newRoundHistogram is the histogram for "new round" stage duration
+	newRoundHistogram metric.Float64Histogram
+
+	// commitHistogram is the histogram for "commit" stage duration
+	commitHistogram metric.Float64Histogram
 }
 
 // NewIBFTWithMetrics creates a new instance of the IBFT consensus protocol with enabled metrics
@@ -129,6 +138,15 @@ func NewIBFTWithMetrics(
 		return nil, err
 	}
 	if ibft.sequenceHistogram, err = meter.Float64Histogram("sequence.duration", metric.WithDescription("Sequence duration")); err != nil {
+		return nil, err
+	}
+	if ibft.prepareHistogram, err = meter.Float64Histogram("prepare.duration", metric.WithDescription("Prepare stage duration")); err != nil {
+		return nil, err
+	}
+	if ibft.newRoundHistogram, err = meter.Float64Histogram("new_round.duration", metric.WithDescription("New round stage duration")); err != nil {
+		return nil, err
+	}
+	if ibft.commitHistogram, err = meter.Float64Histogram("commit.duration", metric.WithDescription("Commit stage duration")); err != nil {
 		return nil, err
 	}
 	ibft.metricAttrs = attrs
@@ -600,8 +618,10 @@ func (i *IBFT) runStates(ctx context.Context) {
 
 // runNewRound runs the New Round IBFT state
 func (i *IBFT) runNewRound(ctx context.Context) error {
+	startTime := time.Now()
 	i.log.Debug("enter: new round state")
 	defer i.log.Debug("exit: new round state")
+	defer i.setMeasurementTime(ctx, i.newRoundHistogram, startTime)
 
 	var (
 		// Grab the current view
@@ -837,8 +857,10 @@ func (i *IBFT) handlePrePrepare(view *proto.View) *proto.IbftMessage {
 
 // runPrepare runs the Prepare IBFT state
 func (i *IBFT) runPrepare(ctx context.Context) error {
+	startTime := time.Now()
 	i.log.Debug("enter: prepare state")
 	defer i.log.Debug("exit: prepare state")
+	defer i.setMeasurementTime(ctx, i.prepareHistogram, startTime)
 
 	var (
 		// Grab the current view
@@ -913,8 +935,10 @@ func (i *IBFT) handlePrepare(view *proto.View) bool {
 
 // runCommit runs the Commit IBFT state
 func (i *IBFT) runCommit(ctx context.Context) error {
+	startTime := time.Now()
 	i.log.Debug("enter: commit state")
 	defer i.log.Debug("exit: commit state")
+	defer i.setMeasurementTime(ctx, i.commitHistogram, startTime)
 
 	var (
 		// Grab the current view
