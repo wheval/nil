@@ -305,23 +305,11 @@ func (s *AggregatorTestSuite) requireMainBlockHandled(mainBlock *jsonrpc.RPCBloc
 		s.requireBlockStored(childId)
 	}
 
-	var parentTaskId scTypes.TaskId
-
-	// one ProofBlock task per exec block was created
-	for range childIds {
-		taskToExecute, err := s.taskStorage.RequestTaskToExecute(s.ctx, testaide.RandomExecutorId())
-		s.Require().NoError(err)
-		s.Require().NotNil(taskToExecute)
-		s.Require().Equal(scTypes.ProofBlock, taskToExecute.TaskType)
-		s.Require().NotNil(taskToExecute.ParentTaskId)
-		parentTaskId = *taskToExecute.ParentTaskId
-	}
-
-	// root AggregateProofs was created
-	parentTask, err := s.taskStorage.TryGetTaskEntry(s.ctx, parentTaskId)
+	// one ProofBatch task created
+	taskToExecute, err := s.taskStorage.RequestTaskToExecute(s.ctx, testaide.RandomExecutorId())
 	s.Require().NoError(err)
-	s.Require().NotNil(parentTask)
-	s.Require().Equal(scTypes.AggregateProofs, parentTask.Task.TaskType)
+	s.Require().NotNil(taskToExecute)
+	s.Require().Equal(scTypes.ProofBatch, taskToExecute.TaskType)
 }
 
 func (s *AggregatorTestSuite) requireBlockStored(blockId scTypes.BlockId) {
