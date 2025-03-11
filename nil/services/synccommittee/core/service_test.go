@@ -9,7 +9,6 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
-	"github.com/NilFoundation/nil/nil/internal/collate"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	rpctest "github.com/NilFoundation/nil/nil/services/rpc"
@@ -39,8 +38,8 @@ func (s *SyncCommitteeTestSuite) SetupSuite() {
 	nilserviceCfg := &nilservice.Config{
 		NShards:              s.nShards,
 		HttpUrl:              s.url,
-		Topology:             collate.TrivialShardTopologyId,
-		CollatorTickPeriodMs: 100,
+		CollatorTickPeriodMs: 200,
+		DisableConsensus:     true,
 	}
 
 	s.Start(nilserviceCfg)
