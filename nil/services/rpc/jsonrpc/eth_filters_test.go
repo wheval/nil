@@ -245,9 +245,12 @@ func (s *SuiteEthFilters) TestBlocks() {
 	}, ManagerWaitTimeout, ManagerPollInterval)
 
 	// Expect two blocks for id2
-	blocks, err = s.api.GetFilterChanges(s.ctx, id2)
-	s.Require().NoError(err)
-	s.Require().Len(blocks, 2)
+	s.Require().Eventually(func() bool {
+		blocks, err = s.api.GetFilterChanges(s.ctx, id2)
+		s.Require().NoError(err)
+		return len(blocks) == 2
+	}, ManagerWaitTimeout, ManagerPollInterval)
+
 	block, ok = blocks[0].(*types.Block)
 	s.Require().True(ok)
 	s.Require().Equal(block.Id, block6.Id)
