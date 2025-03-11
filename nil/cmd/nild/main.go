@@ -67,11 +67,6 @@ func loadConfig() (*nildconfig.Config, error) {
 		return nil, err
 	}
 
-	// todo: remove this after migration to new config
-	if cfg.NetworkKeysPath != "" {
-		cfg.Network.KeysPath = cfg.NetworkKeysPath
-	}
-
 	return cfg, nil
 }
 
@@ -180,12 +175,6 @@ func parseArgs() *nildconfig.Config {
 
 	logging.SetupGlobalLogger(logLevel)
 	check.PanicIfErr(logging.SetLibp2pLogLevel(libp2pLogLevel))
-
-	// todo: remove it when we remove the old flag
-	// Support old flag for backward compatibility
-	if cfg.DB.AllowDrop {
-		cfg.Config.AllowDbDrop = cfg.DB.AllowDrop
-	}
 
 	if cfg.Replay.BlockIdLast == 0 {
 		cfg.Replay.BlockIdLast = cfg.Replay.BlockIdFirst
