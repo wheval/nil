@@ -60,6 +60,9 @@ func (s *SuiteRpc) SetupTest() {
 	s.Start(&nilservice.Config{
 		NShards: 5,
 		HttpUrl: rpc.GetSockPath(s.T()),
+
+		// NOTE: caching won't work with parallel tests in this module, because global cache will be shared
+		EnableConfigCache: true,
 	})
 }
 

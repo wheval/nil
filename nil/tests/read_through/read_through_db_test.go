@@ -30,6 +30,7 @@ type SuiteReadThroughDb struct {
 func (s *SuiteReadThroughDb) SetupTest() {
 	s.server.SetT(s.T())
 	s.cache.SetT(s.T())
+
 	s.num = 0
 
 	s.cfg = &nilservice.Config{
