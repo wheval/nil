@@ -22,10 +22,14 @@ func NewDefaultConfig() *Config {
 }
 
 func Init(ctx context.Context, config *Config) error {
-	if err := internal.InitMetrics(ctx, config); err != nil {
-		return err
+	if config == nil {
+		// no telemetry
+		return nil
 	}
-	return nil
+
+	internal.StartPrometheusServer(config.PrometheusPort)
+
+	return internal.InitMetrics(ctx, config)
 }
 
 func Shutdown(ctx context.Context) {

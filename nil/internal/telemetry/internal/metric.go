@@ -13,8 +13,7 @@ import (
 const metricExportInterval = 10 * time.Second
 
 func InitMetrics(ctx context.Context, config *Config) error {
-	if config == nil || !config.ExportMetrics {
-		// no metrics
+	if !config.ExportMetrics {
 		return nil
 	}
 
