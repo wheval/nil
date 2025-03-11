@@ -10,10 +10,14 @@ type PeerID = peer.ID
 type Config struct {
 	PrivateKey PrivateKey `yaml:"-"`
 
+	KeysPath string `yaml:"keysPath,omitempty"`
+
 	Prefix      string `yaml:"prefix,omitempty"`
 	IPV4Address string `yaml:"ipv4,omitempty"`
 	TcpPort     int    `yaml:"tcpPort,omitempty"`
 	QuicPort    int    `yaml:"quicPort,omitempty"`
+
+	Relay bool `yaml:"relay,omitempty"`
 
 	DHTEnabled        bool          `yaml:"dhtEnabled,omitempty"`
 	DHTBootstrapPeers AddrInfoSlice `yaml:"dhtBootstrapPeers,omitempty"`
@@ -22,8 +26,9 @@ type Config struct {
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		DHTMode: dht.ModeAutoServer,
-		Prefix:  "/nil",
+		KeysPath: "network-keys.yaml",
+		DHTMode:  dht.ModeAutoServer,
+		Prefix:   "/nil",
 	}
 }
 
