@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p"
 	libp2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
@@ -70,8 +71,22 @@ func newHost(ctx context.Context, conf *Config) (Host, error) {
 		)
 	}
 
-	if conf.Relay {
+	if conf.ServeRelay {
 		options = append(options, libp2p.EnableRelayService())
+	}
+
+	if len(conf.Relays) > 0 {
+		options = append(options, libp2p.EnableAutoRelayWithStaticRelays(ToLibP2pAddrInfoSlice(conf.Relays)))
+	}
+
+	// In tests, we might wish to force a specific reachability
+	switch conf.Reachability {
+	case network.ReachabilityUnknown:
+		// default
+	case network.ReachabilityPublic:
+		options = append(options, libp2p.ForceReachabilityPublic())
+	case network.ReachabilityPrivate:
+		options = append(options, libp2p.ForceReachabilityPrivate())
 	}
 
 	return libp2p.New(options...)

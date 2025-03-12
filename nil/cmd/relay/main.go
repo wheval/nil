@@ -28,7 +28,7 @@ func parseArgs() *config {
 		Network:   network.NewDefaultConfig(),
 		Telemetry: telemetry.NewDefaultConfig(),
 	}
-	cfg.Network.Relay = true
+	cfg.Network.ServeRelay = true
 
 	check.PanicIfErr(cobrax.LoadConfigFromFile(cobrax.GetConfigNameFromArgs(), cfg))
 

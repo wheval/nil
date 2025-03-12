@@ -17,9 +17,13 @@ import (
 )
 
 func CalcAddress(m *Manager) AddrInfo {
-	addr, err := peer.AddrInfoFromString(m.host.Addrs()[0].String() + "/p2p/" + m.host.ID().String())
+	addr, err := peer.AddrInfoFromString(hostAddress(m))
 	check.PanicIfErr(err)
 	return AddrInfo(*addr)
+}
+
+func hostAddress(m *Manager) string {
+	return m.host.Addrs()[0].String() + "/p2p/" + m.host.ID().String()
 }
 
 func NewTestManagerWithBaseConfig(t *testing.T, ctx context.Context, conf *Config) *Manager {
