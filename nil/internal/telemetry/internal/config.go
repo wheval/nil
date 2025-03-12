@@ -5,4 +5,6 @@ type Config struct {
 
 	ExportMetrics bool   `yaml:"exportMetrics,omitempty"`
 	GrpcEndpoint  string `yaml:"grpcEndpoint,omitempty"`
+
+	PrometheusPort int `yaml:"prometheusPort,omitempty"`
 }

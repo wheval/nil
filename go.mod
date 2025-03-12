@@ -53,6 +53,7 @@ require (
 	github.com/icza/bitio v1.1.0
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/klauspost/compress v1.18.0
+	github.com/prometheus/client_golang v1.21.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/viper v1.19.0
 	go.dedis.ch/kyber/v3 v3.1.0
@@ -198,7 +199,6 @@ require (
 	github.com/pion/turn/v4 v4.0.0 // indirect
 	github.com/pion/webrtc/v4 v4.0.12 // indirect
 	github.com/polydawn/refmt v0.89.0 // indirect
-	github.com/prometheus/client_golang v1.21.0 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
