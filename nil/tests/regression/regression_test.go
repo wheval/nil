@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common"
@@ -120,6 +121,40 @@ func (s *SuiteRegression) TestNonStringError() {
 	receipt := s.SendExternalTransactionNoCheck(calldata, s.testAddress)
 	s.Require().False(receipt.Success)
 	s.Require().Contains(receipt.ErrorMessage, "ExecutionReverted: Not a UTF-8 string: 0xc328")
+}
+
+func (s *SuiteRegression) TestAddressCalculation() {
+	code, err := contracts.GetCode(contracts.NameTest)
+	s.Require().NoError(err)
+	abi, err := contracts.GetAbi(contracts.NameTest)
+	s.Require().NoError(err)
+
+	data := s.GetRandomBytes(65)
+	refHash := common.PoseidonHash(data)
+	salt := s.GetRandomBytes(32)
+	shardId := types.ShardId(2)
+	address := types.CreateAddress(shardId, types.BuildDeployPayload(code, common.BytesToHash(salt)))
+	address2 := types.CreateAddressForCreate2(address, code, common.BytesToHash(salt))
+	codeHash := common.PoseidonHash(code).Bytes()
+
+	// Test `Nil.getPoseidonHash()` library method
+	calldata, err := abi.Pack("getPoseidonHash", data)
+	s.Require().NoError(err)
+	resHash := s.CallGetter(s.testAddress, calldata, "latest", nil)
+	s.Require().Equal(refHash[:], resHash)
+
+	// Test `Nil.createAddress()` library method
+	calldata, err = abi.Pack("createAddress", big.NewInt(int64(shardId)), []byte(code), big.NewInt(0).SetBytes(salt))
+	s.Require().NoError(err)
+	resAddress := s.CallGetter(s.testAddress, calldata, "latest", nil)
+	s.Require().Equal(address, types.BytesToAddress(resAddress))
+
+	// Test `Nil.createAddress2()` library method
+	calldata, err = abi.Pack("createAddress2", big.NewInt(int64(shardId)), address, big.NewInt(0).SetBytes(salt),
+		big.NewInt(0).SetBytes(codeHash))
+	s.Require().NoError(err)
+	resAddress = s.CallGetter(s.testAddress, calldata, "latest", nil)
+	s.Require().Equal(address2, types.BytesToAddress(resAddress))
 }
 
 func TestRegression(t *testing.T) {
