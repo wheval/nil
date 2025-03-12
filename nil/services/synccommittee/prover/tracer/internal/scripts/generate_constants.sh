@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This script generates Go file with a single constant passed as agruments
+# This script generates Go file with a single constant passed as arguments
 
 if [[ $# -ne 3 ]]; then
     echo "usage: $0 constant_name constant_value output_file"

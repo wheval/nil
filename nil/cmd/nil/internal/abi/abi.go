@@ -22,7 +22,7 @@ func GetCommand() *cobra.Command {
 
 	encodeCmd := &cobra.Command{
 		Use:          "encode [method] [args...]",
-		Short:        "Enconde a contract call",
+		Short:        "Encode a contract call",
 		Args:         cobra.MinimumNArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

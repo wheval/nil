@@ -459,7 +459,7 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 		}
 	}
 
-	p.logger.Trace().Msgf("Collected %d incoming transactions from neigbors with %d gas and %d forward transactions",
+	p.logger.Trace().Msgf("Collected %d incoming transactions from neighbors with %d gas and %d forward transactions",
 		len(p.proposal.InternalTxnRefs), p.executionState.GasUsed, len(p.proposal.ForwardTxnRefs))
 
 	p.proposal.ParentBlocks = make([]*execution.ParentBlockSSZ, len(parents))

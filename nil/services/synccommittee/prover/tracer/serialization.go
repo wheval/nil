@@ -16,7 +16,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Set of pb messages splitted by circuits
+// Set of pb messages split by circuits
 type PbTracesSet struct {
 	bytecode *pb.BytecodeTraces
 	rw       *pb.RWTraces

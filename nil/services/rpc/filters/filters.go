@@ -150,7 +150,7 @@ func (m *FiltersManager) RemoveBlocksListener(id SubscriptionID) bool {
 }
 
 // PollBlocks polls the blockchain for new committed blocks, if found - parse it's receipts and send logs to the matched
-// filters. TODO: Remove polling, probably blockhain should raise events about new blocks by itself.
+// filters. TODO: Remove polling, probably blockchain should raise events about new blocks by itself.
 func (m *FiltersManager) PollBlocks(delay time.Duration) {
 	defer m.wg.Done()
 	for {

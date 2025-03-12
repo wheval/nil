@@ -48,7 +48,7 @@ export const TxDetials: FC<TxDetialsProps> = ({ txHash }) => {
             color: COLORS.gray400,
           })}
         >
-          Error occured while fetching the transaction details
+          Error occurred while fetching the transaction details
         </div>
       )}
       {tx && (
