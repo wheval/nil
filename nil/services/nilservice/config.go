@@ -55,9 +55,6 @@ type Config struct {
 	ValidatorKeysPath    string                     `yaml:"validatorKeysPath,omitempty"`
 	ValidatorKeysManager *keys.ValidatorKeysManager `yaml:"-"`
 
-	// deprecated
-	NetworkKeysPath string `yaml:"networkKeysPath,omitempty"`
-
 	// HttpUrl is calculated from RPCPort
 	HttpUrl string `yaml:"-"`
 
