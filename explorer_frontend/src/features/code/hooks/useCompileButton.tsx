@@ -65,7 +65,7 @@ const getBtnContent = (css: (style: StyleObject) => string) => {
 export const useCompileButton = () => {
   const [css] = useStyletron();
 
-  const hotKey = os === "windows" ? "Ctrl+Enter" : os === "mac" ? "Meta+Enter" : "Ctrl+Enter";
+  const hotKey = os === "mac" ? "Meta+Enter" : "Ctrl+Enter";
   const btnContent = useMemo(() => getBtnContent(css), [css]);
 
   useHotkeys(

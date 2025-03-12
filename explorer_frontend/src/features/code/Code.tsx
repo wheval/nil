@@ -13,7 +13,8 @@ import {
 } from "./model";
 import "./init";
 import { type Diagnostic, linter } from "@codemirror/lint";
-import type { EditorView } from "@codemirror/view";
+import { Prec } from "@codemirror/state";
+import { type EditorView, keymap } from "@codemirror/view";
 import { useStyletron } from "baseui";
 import { expandProperty } from "inline-style-expand-shorthand";
 import { type ReactNode, memo, useMemo } from "react";
@@ -45,6 +46,20 @@ export const Code = ({ extraMobileButton, extraToolbarButton }: CodeProps) => {
   const [css] = useStyletron();
   const compilerVersionButton =
     extraToolbarButton === undefined ? <CompilerVersionButton disabled={isDownloading} /> : null;
+  const btnTextContent = useCompileButton();
+
+  const preventNewlineOnCmdEnter = useMemo(
+    () =>
+      Prec.highest(
+        keymap.of([
+          {
+            key: "Mod-Enter",
+            run: () => true,
+          },
+        ]),
+      ),
+    [],
+  );
 
   const codemirrorExtensions = useMemo(() => {
     const solidityLinter = (view: EditorView) => {
@@ -69,11 +84,10 @@ export const Code = ({ extraMobileButton, extraToolbarButton }: CodeProps) => {
       return [...displayErrors, ...displayWarnings];
     };
 
-    return [linter(solidityLinter)];
-  }, [errors, warnings]);
+    return [preventNewlineOnCmdEnter, linter(solidityLinter)];
+  }, [errors, warnings, preventNewlineOnCmdEnter]);
 
   const noCode = code.trim().length === 0;
-  const btnContent = useCompileButton();
   return (
     <Card
       overrides={{
@@ -152,7 +166,7 @@ export const Code = ({ extraMobileButton, extraToolbarButton }: CodeProps) => {
               }}
               data-testid="compile-button"
             >
-              {btnContent}
+              {btnTextContent}
             </Button>
           )}
           {!isMobile && extraToolbarButton && extraToolbarButton}
@@ -229,7 +243,7 @@ export const Code = ({ extraMobileButton, extraToolbarButton }: CodeProps) => {
               }}
               data-testid="compile-button"
             >
-              {btnContent}
+              {btnTextContent}
             </Button>
             <Button
               overrides={{
