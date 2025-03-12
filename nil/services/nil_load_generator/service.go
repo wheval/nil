@@ -219,7 +219,7 @@ func swap(ctx context.Context, whoWantSwap, whatPairHeWant types.ShardId, logger
 		return err
 	}
 	expectedOutputAmount := calculateOutputAmount(swapAmount.ToBig(), reserve0, reserve1)
-	logger.Info().Msgf("User: %v, Pair: %v, AmountSend: %d,  AmountGet: %d, TokenFrom: %s, TokenTo %s", whoWantSwap, whatPairHeWant, swapAmount, expectedOutputAmount, token1, token2)
+	logger.Info().Msgf("User: %v, Pair: %v, AmountSend: %s,  AmountGet: %s, TokenFrom: %s, TokenTo %s", whoWantSwap, whatPairHeWant, swapAmount, expectedOutputAmount, token1, token2)
 
 	if _, err = pairs[whatPairHeWant].Swap(ctx, services[whoWantSwap], client, smartAccounts[whoWantSwap], smartAccounts[whoWantSwap].Addr, big.NewInt(0), expectedOutputAmount, types.Value{Uint256: &swapAmount}, *types.TokenIdForAddress(token1)); err != nil {
 		return err
