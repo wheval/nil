@@ -22,15 +22,17 @@ import { getMobileStyles } from "../../styleHelpers";
 import { useMobile } from "../shared";
 import { SolidityCodeField } from "../shared/components/SolidityCodeField";
 import { CodeToolbar } from "./code-toolbar/CodeToolbar";
+import { CompilerVersionButton } from "./code-toolbar/CompilerVersionButton";
 import { useCompileButton } from "./hooks/useCompileButton";
 
 interface CodeProps {
-  extraMobileButtons?: ReactNode;
+  extraMobileButton?: ReactNode;
+  extraToolbarButton?: ReactNode;
 }
 
 const MemoizedCodeToolbar = memo(CodeToolbar);
 
-export const Code = ({ extraMobileButtons }: CodeProps) => {
+export const Code = ({ extraMobileButton, extraToolbarButton }: CodeProps) => {
   const [isMobile] = useMobile();
   const [code, isDownloading, errors, fetchingCodeSnippet, compiling, warnings] = useUnit([
     $code,
@@ -41,6 +43,8 @@ export const Code = ({ extraMobileButtons }: CodeProps) => {
     $warnings,
   ]);
   const [css] = useStyletron();
+  const compilerVersionButton =
+    extraToolbarButton === undefined ? <CompilerVersionButton disabled={isDownloading} /> : null;
 
   const codemirrorExtensions = useMemo(() => {
     const solidityLinter = (view: EditorView) => {
@@ -70,7 +74,6 @@ export const Code = ({ extraMobileButtons }: CodeProps) => {
 
   const noCode = code.trim().length === 0;
   const btnContent = useCompileButton();
-
   return (
     <Card
       overrides={{
@@ -127,7 +130,10 @@ export const Code = ({ extraMobileButtons }: CodeProps) => {
             height: "auto",
           })}
         >
-          <MemoizedCodeToolbar disabled={isDownloading} />
+          <MemoizedCodeToolbar
+            disabled={isDownloading}
+            compilerVersionButton={compilerVersionButton}
+          />
           {!isMobile && (
             <Button
               kind={BUTTON_KIND.primary}
@@ -149,6 +155,7 @@ export const Code = ({ extraMobileButtons }: CodeProps) => {
               {btnContent}
             </Button>
           )}
+          {!isMobile && extraToolbarButton && extraToolbarButton}
         </div>
         {fetchingCodeSnippet ? (
           <div
@@ -256,7 +263,8 @@ export const Code = ({ extraMobileButtons }: CodeProps) => {
             >
               Contracts
             </Button>
-            {isMobile && extraMobileButtons && extraMobileButtons}
+            {isMobile && extraMobileButton && extraMobileButton}
+            {isMobile && extraToolbarButton && extraToolbarButton}
           </div>
         )}
       </div>
