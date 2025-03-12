@@ -47,6 +47,12 @@ contract Test is NilBase {
         Nil.log("Value set to", arr);
     }
 
+    function burnGas() public payable {
+        uint256[] memory data = new uint256[](2 ** 24);
+        require(false, "Intentional failure");
+        internalValue = uint32(data.length);
+    }
+
     function noReturn() public payable {}
 
     function nonPayable() public pure {}

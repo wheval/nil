@@ -202,7 +202,7 @@ func (s *SuiteMultiTokenRpc) TestMultiToken() { //nolint
 
 	s.Run("TestDeployWithToken", func() {
 		tokens := []types.TokenBalance{{Token: *token1.id, Balance: types.NewValueFromUint64(10)}}
-		contractCode, _ := s.LoadContract(common.GetAbsolutePath("../contracts/GasBurner.sol"), "GasBurner")
+		contractCode, _ := s.LoadContract(common.GetAbsolutePath("../contracts/increment.sol"), "Incrementer")
 
 		data, err := s.abiTest.Pack("testAsyncDeployWithTokens",
 			types.NewValueFromUint64(uint64(types.BaseShardId)),
