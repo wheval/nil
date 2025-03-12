@@ -27,7 +27,7 @@ export type DataCallArgs = BaseCallArgs & {
 };
 
 /**
- * The args for peforming a call with the specified ABI and function name.
+ * The args for performing a call with the specified ABI and function name.
  *
  * @export
  * @typedef {AbiCallArgs}

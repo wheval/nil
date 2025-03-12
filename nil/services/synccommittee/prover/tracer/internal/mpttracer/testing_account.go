@@ -57,7 +57,7 @@ func (tcr *TestContractReader) GetRwTx() db.RwTx {
 	return tcr.RwTx
 }
 
-// AppendToJournal is no-op here, just to satisfy iterface for account state
+// AppendToJournal is no-op here, just to satisfy interface for account state
 func (tcr *TestContractReader) AppendToJournal(je execution.JournalEntry) {
 }
 

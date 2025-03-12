@@ -20,7 +20,7 @@ type (
 
 // @component RPCInTransaction rpcInTransaction object "The transaction whose information is requested."
 // @componentprop BlockHash blockHash string true "The hash of the block containing the transaction."
-// @componentprop BlockNumber blockNumber integer true "The number of the block containin the transaction."
+// @componentprop BlockNumber blockNumber integer true "The number of the block containing the transaction."
 // @componentprop ChainId chainId integer true "The number of the chain containing the transaction."
 // @componentprop From from string true "The address from where the transaction was sent."
 // @componentprop FeeCredit feeCredit string true "The fee credit for the transaction."
@@ -213,7 +213,7 @@ func EncodeRawBlockWithExtractedData(block *types.RawBlockWithExtractedData) (*D
 
 // @component RPCReceipt rpcReceipt object "The receipt whose structure is requested."
 // @componentprop BlockHash blockHash string true "The hash of the block containing the transaction whose receipt is requested."
-// @componentprop BlockNumber blockNumber integer true "The number of the block containin the transaction whose receipt is requested."
+// @componentprop BlockNumber blockNumber integer true "The number of the block containing the transaction whose receipt is requested."
 // @componentprop Bloom bloom string true "The receipt bloom filter."
 // @componentprop ContractAddress contractAddress string true "The address of the contract that has originated the transaction whose receipt is requested."
 // @componentprop GasUsed gasUsed string true "The amount of gas spent on the transaction whose receipt is requested."

@@ -40,7 +40,7 @@ func (cmd *aggregateChallengesCmd) BeforeCommandExecuted(ctx context.Context, ta
 		}
 		num, err := strconv.Atoi(strings.TrimSpace(string(bytes)))
 		if err != nil {
-			return fmt.Errorf("Couldn't conver theta file content to integer: %w", err)
+			return fmt.Errorf("Couldn't convert theta file content to integer: %w", err)
 		}
 		thetas[i] = num
 	}

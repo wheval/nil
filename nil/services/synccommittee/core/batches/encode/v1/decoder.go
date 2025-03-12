@@ -29,7 +29,7 @@ func NewDecoder(logger zerolog.Logger) *decoder {
 
 // decodes data data from binary format into human readable
 // intermediate form (transaction in proto format encoded to protojson)
-// in case of need to access decoded data programatically (from sync_committee or other cluster parts)
+// in case of need to access decoded data programmatically (from sync_committee or other cluster parts)
 // this decoder might be extended with returning something like types.BlockBatch functionality
 func (d *decoder) DecodeIntermediate(from io.Reader, to io.Writer) error {
 	if err := encode.CheckBatchVersion(from, version); err != nil {
