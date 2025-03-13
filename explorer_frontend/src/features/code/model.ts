@@ -1,7 +1,7 @@
 import { createDomain } from "effector";
 import { fetchCodeSnippet, setCodeSnippet } from "../../api/code";
-import type { App } from "../../types";
 import { tutorialWithStageRoute } from "../routing/routes/tutorialRoute";
+import type { App } from "./types";
 
 export const codeDomain = createDomain("code");
 export const isTutorialPage = tutorialWithStageRoute.$isOpened;
