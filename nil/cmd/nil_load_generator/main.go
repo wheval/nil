@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
@@ -32,6 +33,7 @@ func main() {
 	rootCmd.Flags().StringVar(&cfg.RpcSwapLimit, "rpc-swap-limit", "1000000", "rpc swap limit")
 	rootCmd.Flags().Uint32Var(&cfg.UniswapAccounts, "rpc-uniswap-accounts", 5, "number of uniswap accounts")
 	rootCmd.Flags().StringVar(&cfg.LogLevel, "log-level", "info", "log level: trace|debug|info|warn|error|fatal|panic")
+	rootCmd.Flags().DurationVar(&cfg.WaitClusterStartup, "wait-cluster-startup", 5*time.Minute, "time to wait for cluster startup")
 
 	check.PanicIfErr(rootCmd.Execute())
 

@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	rpc_client "github.com/NilFoundation/nil/nil/client/rpc"
 	"github.com/NilFoundation/nil/nil/common/logging"
@@ -25,19 +26,20 @@ import (
 )
 
 type Config struct {
-	Endpoint         string
-	OwnEndpoint      string
-	FaucetEndpoint   string
-	CheckBalance     uint32
-	SwapPerIteration uint32
-	Metrics          bool
-	LogLevel         string
-	RpcSwapLimit     string
-	MintTokenAmount0 string
-	MintTokenAmount1 string
-	SwapAmount       string
-	UniswapAccounts  uint32
-	ThresholdAmount  string
+	Endpoint           string
+	OwnEndpoint        string
+	FaucetEndpoint     string
+	CheckBalance       uint32
+	SwapPerIteration   uint32
+	Metrics            bool
+	LogLevel           string
+	RpcSwapLimit       string
+	MintTokenAmount0   string
+	MintTokenAmount1   string
+	SwapAmount         string
+	UniswapAccounts    uint32
+	ThresholdAmount    string
+	WaitClusterStartup time.Duration
 }
 
 var (
@@ -262,15 +264,21 @@ func deployPairs(ctx context.Context, i int, shardIdList []types.ShardId, logger
 		return fmt.Errorf("failed to deploy factory on shard %v: %w", shardIdList[i], err)
 	}
 
-	logger.Info().Msgf("Creating pair on shard %v", shardIdList[i])
-	if err := factories[i].CreatePair(ctx, services[i], client, smartAccounts[i], token1, token2); err != nil {
-		return fmt.Errorf("failed to create pair on shard %v: %w", shardIdList[i], err)
-	}
-
-	logger.Info().Msgf("Initializing pair on shard %v", shardIdList[i])
 	pairAddress, err := factories[i].GetPair(services[i], token1, token2)
 	if err != nil {
 		return fmt.Errorf("failed to get pair on shard %v: %w", shardIdList[i], err)
+	}
+	if pairAddress == types.EmptyAddress {
+		logger.Info().Msgf("Creating pair on shard %v", shardIdList[i])
+		if err := factories[i].CreatePair(ctx, services[i], client, smartAccounts[i], token1, token2); err != nil {
+			return fmt.Errorf("failed to create pair on shard %v: %w", shardIdList[i], err)
+		}
+
+		logger.Info().Msgf("Initializing pair on shard %v", shardIdList[i])
+		pairAddress, err = factories[i].GetPair(services[i], token1, token2)
+		if err != nil {
+			return fmt.Errorf("failed to get pair on shard %v: %w", shardIdList[i], err)
+		}
 	}
 
 	pairs[i] = uniswap.NewPair(contracts["UniswapV2Pair"], pairAddress)
@@ -279,6 +287,39 @@ func deployPairs(ctx context.Context, i int, shardIdList []types.ShardId, logger
 	}
 
 	return nil
+}
+
+func waitClusterStart(ctx context.Context, timeout time.Duration, tick time.Duration, client *rpc_client.Client) ([]types.ShardId, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(tick)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-ticker.C:
+			var err error
+			shardIdList, err := client.GetShardIdList(ctx)
+			if err != nil {
+				continue
+			}
+			allBlockTicking := true
+			for _, shardId := range append(shardIdList, types.MainShardId) {
+				block, err := client.GetBlock(ctx, shardId, "latest", false)
+				if err != nil || block.Number == 0 {
+					allBlockTicking = false
+					break
+				}
+			}
+			if !allBlockTicking {
+				continue
+			}
+			return shardIdList, nil
+		}
+	}
 }
 
 func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
@@ -310,7 +351,8 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 	}
 
 	service := cliservice.NewService(ctx, client, nil, faucet)
-	shardIdList, err := client.GetShardIdList(ctx)
+
+	shardIdList, err := waitClusterStart(ctx, cfg.WaitClusterStartup, 5*time.Second, client)
 	if err != nil {
 		handler.RecordError(ctx)
 		return err
