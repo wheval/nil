@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common/logging"
-	"github.com/NilFoundation/nil/nil/internal/collate"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -51,8 +50,8 @@ func (s *TracerNildTestSuite) SetupSuite() {
 	nilserviceCfg := &nilservice.Config{
 		NShards:              3,
 		HttpUrl:              rpctest.GetSockPath(s.T()),
-		Topology:             collate.TrivialShardTopologyId,
-		CollatorTickPeriodMs: 100,
+		CollatorTickPeriodMs: 400,
+		DisableConsensus:     true,
 	}
 
 	s.Start(nilserviceCfg)
@@ -112,7 +111,7 @@ func (s *TracerNildTestSuite) TestCounterContract() {
 	})
 
 	s.Run("Add", func() {
-		// Add to countuer (state change)
+		// Add to counter (state change)
 		txHash, err := s.Client.SendTransactionViaSmartAccount(
 			s.Context,
 			types.MainSmartAccountAddress,
