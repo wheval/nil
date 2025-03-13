@@ -36,7 +36,7 @@ type Proposal struct {
 	PatchLevel      uint32              `json:"patchLevel"`
 	RollbackCounter uint32              `json:"rollbackCounter"`
 	CollatorState   types.CollatorState `json:"collatorState"`
-	MainChainHash   common.Hash         `json:"mainChainHash"`
+	MainShardHash   common.Hash         `json:"mainShardHash"`
 	ShardHashes     []common.Hash       `json:"shardHashes"`
 
 	InternalTxns []*types.Transaction `json:"internalTxns"`
@@ -52,7 +52,7 @@ type ProposalSSZ struct {
 	RollbackCounter uint32
 
 	CollatorState types.CollatorState
-	MainChainHash common.Hash
+	MainShardHash common.Hash
 	ShardHashes   []common.Hash `ssz-max:"4096"`
 
 	ParentBlocks []*ParentBlockSSZ `ssz-max:"1024"`
@@ -165,7 +165,7 @@ func ConvertProposal(proposal *ProposalSSZ) (*Proposal, error) {
 		PatchLevel:      proposal.PatchLevel,
 		RollbackCounter: proposal.RollbackCounter,
 		CollatorState:   proposal.CollatorState,
-		MainChainHash:   proposal.MainChainHash,
+		MainShardHash:   proposal.MainShardHash,
 		ShardHashes:     proposal.ShardHashes,
 
 		// todo: special txns should be validated

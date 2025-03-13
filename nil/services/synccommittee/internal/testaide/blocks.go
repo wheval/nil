@@ -126,7 +126,7 @@ func NewExecutionShardBlock() *jsonrpc.RPCBlock {
 		Number:        RandomBlockNum(),
 		ShardId:       RandomShardId(),
 		Hash:          RandomHash(),
-		MainChainHash: RandomHash(),
+		MainShardHash: RandomHash(),
 		ParentHash:    RandomHash(),
 		Transactions:  newRpcInTransactions(ShardsCount),
 	}

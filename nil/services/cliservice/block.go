@@ -128,7 +128,7 @@ Block #{{ .block.Id }} [{{ .color.bold }}{{ .block.Hash .shardId }}{{ .color.res
     - {{ inc $index }}: {{ $element }}
   {{- end }}
 {{- end}}
-  MainChainHash: {{ .block.MainChainHash }}
+  MainShardHash: {{ .block.MainShardHash }}
 {{ if len .block.InTransactions -}}
 ▼ InTransactions [{{ .block.InTransactionsRoot }}]:
   {{- range $index, $element := .block.InTransactions -}}

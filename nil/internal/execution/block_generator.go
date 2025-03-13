@@ -104,7 +104,7 @@ func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) []types
 		return nil
 	}
 
-	// Basically we load configuration from block.MainChainHash.
+	// Basically we load configuration from block.MainShardHash.
 	// But for main shard this value should be block.PrevBlock.
 	// The first block uses configuration from itself.
 	configBlockId := prevBlockId
@@ -173,7 +173,7 @@ func (g *BlockGenerator) GenerateZeroState(config *ZeroStateConfig) (*types.Bloc
 		if err != nil {
 			return nil, fmt.Errorf("failed to read main block hash: %w", err)
 		}
-		g.executionState.MainChainHash = mainBlockHash
+		g.executionState.MainShardHash = mainBlockHash
 	}
 
 	if err := g.executionState.GenerateZeroState(config); err != nil {
@@ -221,7 +221,7 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, gasPrices []t
 		return fmt.Errorf("failed to update gas prices: %w", err)
 	}
 
-	g.executionState.MainChainHash = proposal.MainChainHash
+	g.executionState.MainShardHash = proposal.MainShardHash
 	g.executionState.PatchLevel = proposal.PatchLevel
 	g.executionState.RollbackCounter = proposal.RollbackCounter
 
@@ -241,9 +241,9 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, gasPrices []t
 		g.executionState.AppendForwardTransaction(txn)
 	}
 
-	g.executionState.ChildChainBlocks = make(map[types.ShardId]common.Hash, len(proposal.ShardHashes))
+	g.executionState.ChildShardBlocks = make(map[types.ShardId]common.Hash, len(proposal.ShardHashes))
 	for i, shardHash := range proposal.ShardHashes {
-		g.executionState.ChildChainBlocks[types.ShardId(i+1)] = shardHash
+		g.executionState.ChildShardBlocks[types.ShardId(i+1)] = shardHash
 	}
 	return nil
 }

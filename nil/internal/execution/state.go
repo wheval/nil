@@ -64,9 +64,9 @@ type ExecutionState struct {
 	OutTransactionTree *TransactionTrie
 	ReceiptTree        *ReceiptTrie
 	PrevBlock          common.Hash
-	MainChainHash      common.Hash
+	MainShardHash      common.Hash
 	ShardId            types.ShardId
-	ChildChainBlocks   map[types.ShardId]common.Hash
+	ChildShardBlocks   map[types.ShardId]common.Hash
 	GasPrice           types.Value // Current gas price including priority fee
 	BaseFee            types.Value
 
@@ -289,7 +289,7 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 		tx:               resTx,
 		PrevBlock:        prevBlockHash,
 		ShardId:          shardId,
-		ChildChainBlocks: map[types.ShardId]common.Hash{},
+		ChildShardBlocks: map[types.ShardId]common.Hash{},
 		Accounts:         map[types.Address]*AccountState{},
 		OutTransactions:  map[common.Hash][]*types.OutboundTransaction{},
 		Logs:             map[common.Hash][]*types.Log{},
@@ -1322,9 +1322,9 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 	}
 
 	treeShardsRootHash := common.EmptyHash
-	if len(es.ChildChainBlocks) > 0 {
+	if len(es.ChildShardBlocks) > 0 {
 		treeShards := NewDbShardBlocksTrie(es.tx, es.ShardId, blockId)
-		if err := UpdateFromMap(treeShards, es.ChildChainBlocks, func(v common.Hash) *common.Hash { return &v }); err != nil {
+		if err := UpdateFromMap(treeShards, es.ChildShardBlocks, func(v common.Hash) *common.Hash { return &v }); err != nil {
 			return nil, err
 		}
 		treeShardsRootHash = treeShards.RootHash()
@@ -1432,7 +1432,7 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 			OutTransactionsNum:  types.TransactionIndex(len(outTxnKeys)),
 			ReceiptsRoot:        es.ReceiptTree.RootHash(),
 			ChildBlocksRootHash: treeShardsRootHash,
-			MainChainHash:       es.MainChainHash,
+			MainShardHash:       es.MainShardHash,
 			BaseFee:             es.BaseFee,
 			GasUsed:             es.GasUsed,
 			L1BlockNumber:       l1BlockNumber,
@@ -1799,9 +1799,9 @@ func (es *ExecutionState) MarshalJSON() ([]byte, error) {
 		ReceiptTreeRoot        common.Hash                                  `json:"receiptTreeRoot"`
 		PrevBlock              *types.Block                                 `json:"prevBlock"`
 		PrevBlockHash          common.Hash                                  `json:"prevBlockHash"`
-		MainChainHash          common.Hash                                  `json:"mainChainHash"`
+		MainShardHash          common.Hash                                  `json:"mainShardHash"`
 		ShardId                types.ShardId                                `json:"shardId"`
-		ChildChainBlocks       map[types.ShardId]common.Hash                `json:"childChainBlocks"`
+		ChildShardBlocks       map[types.ShardId]common.Hash                `json:"childShardBlocks"`
 		GasPrice               types.Value                                  `json:"gasPrice"`
 		InTransactions         []*types.Transaction                         `json:"inTransactions"`
 		InTransactionHashes    []common.Hash                                `json:"inTransactionHashes"`
@@ -1815,9 +1815,9 @@ func (es *ExecutionState) MarshalJSON() ([]byte, error) {
 		ReceiptTreeRoot:        es.ReceiptTree.RootHash(),
 		PrevBlock:              prevBlock,
 		PrevBlockHash:          es.PrevBlock,
-		MainChainHash:          es.MainChainHash,
+		MainShardHash:          es.MainShardHash,
 		ShardId:                es.ShardId,
-		ChildChainBlocks:       es.ChildChainBlocks,
+		ChildShardBlocks:       es.ChildShardBlocks,
 		GasPrice:               es.GasPrice,
 		InTransactions:         es.InTransactions,
 		InTransactionHashes:    es.InTransactionHashes,

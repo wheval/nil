@@ -141,8 +141,8 @@ func (s *ReplayScheduler) buildProposalFromPrevBlock(
 		return nil, nil, err
 	}
 
-	proposal.MainChainHash = prevBlock.MainChainHash
-	s.logger.Trace().Msgf("Last block is %s, last MC block is %s", proposal.PrevBlockHash, proposal.MainChainHash)
+	proposal.MainShardHash = prevBlock.MainShardHash
+	s.logger.Trace().Msgf("Last block is %s, last MC block is %s", proposal.PrevBlockHash, proposal.MainShardHash)
 
 	// we could also consider option with fairly collecting these transactions
 	// from neighbor shards and running proposer

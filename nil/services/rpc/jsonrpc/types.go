@@ -82,7 +82,7 @@ type RPCBlock struct {
 	Transactions        []*RPCInTransaction `json:"transactions,omitempty"`
 	TransactionHashes   []common.Hash       `json:"transactionHashes,omitempty"`
 	ChildBlocks         []common.Hash       `json:"childBlocks"`
-	MainChainHash       common.Hash         `json:"mainChainHash"`
+	MainShardHash       common.Hash         `json:"mainShardHash"`
 	DbTimestamp         uint64              `json:"dbTimestamp"`
 	BaseFee             types.Value         `json:"baseFee"`
 	L1Number            uint64              `json:"l1Number"`
@@ -390,7 +390,7 @@ func NewRPCBlock(shardId types.ShardId, data *BlockWithEntities, fullTx bool) (*
 		Transactions:        transactionsRes,
 		TransactionHashes:   transactionHashesRes,
 		ChildBlocks:         childBlocks,
-		MainChainHash:       block.MainChainHash,
+		MainShardHash:       block.MainShardHash,
 		DbTimestamp:         dbTimestamp,
 		BaseFee:             block.BaseFee,
 		LogsBloom:           bloom,

@@ -48,7 +48,7 @@ func NewResetLauncher(
 
 func (l *stateResetLauncher) LaunchPartialResetWithSuspension(ctx context.Context, firstMainHashToPurge common.Hash) error {
 	l.logger.Info().
-		Stringer(logging.FieldBlockMainChainHash, firstMainHashToPurge).
+		Stringer(logging.FieldBlockMainShardHash, firstMainHashToPurge).
 		Msg("Launching state reset process")
 
 	if err := l.blockFetcher.Pause(ctx); err != nil {
@@ -61,7 +61,7 @@ func (l *stateResetLauncher) LaunchPartialResetWithSuspension(ctx context.Contex
 	}
 
 	l.logger.Info().
-		Stringer(logging.FieldBlockMainChainHash, firstMainHashToPurge).
+		Stringer(logging.FieldBlockMainShardHash, firstMainHashToPurge).
 		Msgf("State reset completed, block fetching will be resumed after %s", fetchResumeDelay)
 
 	detachedCtx := context.WithoutCancel(ctx)
@@ -74,7 +74,7 @@ func (l *stateResetLauncher) LaunchPartialResetWithSuspension(ctx context.Contex
 func (l *stateResetLauncher) onResetError(
 	ctx context.Context, resetErr error, failedMainBlockHash common.Hash,
 ) {
-	l.logger.Error().Err(resetErr).Stringer(logging.FieldBlockMainChainHash, failedMainBlockHash).Send()
+	l.logger.Error().Err(resetErr).Stringer(logging.FieldBlockMainShardHash, failedMainBlockHash).Send()
 	l.resumeBlockFetching(ctx)
 }
 

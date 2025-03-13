@@ -163,7 +163,7 @@ func (p *proposer) fetchLastBlockHashes(tx db.RoTx) error {
 		if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
 			return err
 		}
-		p.proposal.MainChainHash = lastBlockHash
+		p.proposal.MainShardHash = lastBlockHash
 	}
 
 	return nil

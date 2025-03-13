@@ -34,7 +34,7 @@ const (
 	FieldAccountSeqno   = "accountSeqno"
 
 	FieldBlockHash          = "blockHash"
-	FieldBlockMainChainHash = "blockMainChainHash"
+	FieldBlockMainShardHash = "blockMainShardHash"
 	FieldBlockNumber        = "blockNumber"
 	FieldBatchId            = "batchId"
 

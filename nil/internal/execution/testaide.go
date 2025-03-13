@@ -58,10 +58,10 @@ func GenerateZeroState(t *testing.T, shardId types.ShardId, txFabric db.DB) *typ
 
 func GenerateBlockFromTransactions(t *testing.T, ctx context.Context,
 	shardId types.ShardId, blockId types.BlockNumber, prevBlock common.Hash,
-	txFabric db.DB, childChainBlocks map[types.ShardId]common.Hash, txns ...*types.Transaction,
+	txFabric db.DB, childShardBlocks map[types.ShardId]common.Hash, txns ...*types.Transaction,
 ) common.Hash {
 	t.Helper()
-	return generateBlockFromTransactions(t, ctx, true, shardId, blockId, prevBlock, txFabric, childChainBlocks, txns...)
+	return generateBlockFromTransactions(t, ctx, true, shardId, blockId, prevBlock, txFabric, childShardBlocks, txns...)
 }
 
 func GenerateBlockFromTransactionsWithoutExecution(t *testing.T, ctx context.Context,
@@ -74,7 +74,7 @@ func GenerateBlockFromTransactionsWithoutExecution(t *testing.T, ctx context.Con
 
 func generateBlockFromTransactions(t *testing.T, ctx context.Context, execute bool,
 	shardId types.ShardId, blockId types.BlockNumber, prevBlockHash common.Hash,
-	txFabric db.DB, childChainBlocks map[types.ShardId]common.Hash, txns ...*types.Transaction,
+	txFabric db.DB, childShardBlocks map[types.ShardId]common.Hash, txns ...*types.Transaction,
 ) common.Hash {
 	t.Helper()
 
@@ -116,7 +116,7 @@ func generateBlockFromTransactions(t *testing.T, ctx context.Context, execute bo
 		es.AddReceipt(execResult)
 	}
 
-	es.ChildChainBlocks = childChainBlocks
+	es.ChildShardBlocks = childShardBlocks
 
 	blockRes, err := es.Commit(blockId, nil)
 	require.NoError(t, err)

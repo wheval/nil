@@ -192,7 +192,7 @@ func (api *LocalShardApi) Call(
 	if err != nil {
 		return nil, err
 	}
-	es.MainChainHash = mainBlockHash
+	es.MainShardHash = mainBlockHash
 
 	if overrides != nil {
 		if err := overrides.Override(es); err != nil {

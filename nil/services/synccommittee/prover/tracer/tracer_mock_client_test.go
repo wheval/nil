@@ -119,7 +119,7 @@ func (s *TracerMockClientTestSuite) makeClient() client.Client {
 	cl.GetBlockFunc = func(_ context.Context, shardId types.ShardId, blockId any, fullTx bool) (*jsonrpc.RPCBlock, error) {
 		magicBytes := []byte{1, 2, 3, 4, 5}
 		return &jsonrpc.RPCBlock{
-			MainChainHash: common.BytesToHash(magicBytes),
+			MainShardHash: common.BytesToHash(magicBytes),
 		}, nil
 	}
 
