@@ -305,7 +305,7 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 	proposal := &execution.Proposal{
 		PrevBlockId:   block.Block.Id - 1,
 		PrevBlockHash: block.Block.PrevBlock,
-		MainChainHash: block.Block.MainChainHash,
+		MainShardHash: block.Block.MainShardHash,
 		ShardHashes:   block.ChildBlocks,
 	}
 	proposal.InternalTxns, proposal.ExternalTxns = execution.SplitInTransactions(block.InTransactions)
@@ -331,7 +331,7 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 		// To verify/execute block properly we need to be sure that we have an access to config.
 		// Config for block N is stored inside main shard block for block N-1.
 		// So we need to wait until config is available.
-		if err := s.mainShardValidator.WaitForBlock(ctx, prevBlock.MainChainHash); err != nil {
+		if err := s.mainShardValidator.WaitForBlock(ctx, prevBlock.MainShardHash); err != nil {
 			return fmt.Errorf("failed to wait for main shard block: %w", err)
 		}
 	}

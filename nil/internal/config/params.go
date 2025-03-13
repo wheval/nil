@@ -170,7 +170,7 @@ func NewConfigAccessorFromBlockWithTx(tx db.RoTx, block *types.Block, shardId ty
 			// TODO(@isergeyam): create some subscription mechanism that will handle this correctly.
 			log.Warn().
 				Stringer(logging.FieldBlockNumber, block.Id).
-				Stringer(logging.FieldBlockMainChainHash, mainShardHash).
+				Stringer(logging.FieldBlockMainShardHash, mainShardHash).
 				Msg("Main chain block not found, using the latest accessible config")
 			return NewConfigAccessorTx(tx, nil)
 		}

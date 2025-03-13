@@ -26,7 +26,7 @@ func writeTestBlock(t *testing.T, tx db.RwTx, shardId types.ShardId, blockNumber
 			ReceiptsRoot:        writeReceipts(t, tx, shardId, receipts).RootHash(),
 			OutTransactionsNum:  types.TransactionIndex(len(outTransactions)),
 			ChildBlocksRootHash: common.EmptyHash,
-			MainChainHash:       common.EmptyHash,
+			MainShardHash:       common.EmptyHash,
 		},
 	}
 	hash := block.Hash(types.BaseShardId)

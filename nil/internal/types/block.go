@@ -44,7 +44,7 @@ type BlockData struct {
 	OutTransactionsNum  TransactionIndex `json:"outTransactionsNum" ch:"out_transaction_num"`
 	ReceiptsRoot        common.Hash      `json:"receiptsRoot" ch:"receipts_root"`
 	ChildBlocksRootHash common.Hash      `json:"childBlocksRootHash" ch:"child_blocks_root_hash"`
-	MainChainHash       common.Hash      `json:"mainChainHash" ch:"main_chain_hash"`
+	MainShardHash       common.Hash      `json:"mainShardHash" ch:"main_chain_hash"`
 	ConfigRoot          common.Hash      `json:"configRoot" ch:"config_root"`
 	Timestamp           uint64           `json:"timestamp" ch:"timestamp"`
 	BaseFee             Value            `json:"gasPrice" ch:"gas_price"`
@@ -106,7 +106,7 @@ func (b *Block) GetMainShardHash(shardId ShardId) common.Hash {
 	if shardId.IsMainShard() {
 		return b.PrevBlock
 	}
-	return b.MainChainHash
+	return b.MainShardHash
 }
 
 func (b *RawBlockWithExtractedData) DecodeSSZ() (*BlockWithExtractedData, error) {

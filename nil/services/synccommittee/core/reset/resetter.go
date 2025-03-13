@@ -31,7 +31,7 @@ type compositeStateResetter struct {
 
 func (r *compositeStateResetter) ResetProgressPartial(ctx context.Context, firstMainHashToPurge common.Hash) error {
 	r.logger.Info().
-		Stringer(logging.FieldBlockMainChainHash, firstMainHashToPurge).
+		Stringer(logging.FieldBlockMainShardHash, firstMainHashToPurge).
 		Msg("Started partial progress reset")
 
 	for _, resetter := range r.resetters {
@@ -41,7 +41,7 @@ func (r *compositeStateResetter) ResetProgressPartial(ctx context.Context, first
 	}
 
 	r.logger.Info().
-		Stringer(logging.FieldBlockMainChainHash, firstMainHashToPurge).
+		Stringer(logging.FieldBlockMainShardHash, firstMainHashToPurge).
 		Msg("Finished partial progress reset")
 
 	return nil
