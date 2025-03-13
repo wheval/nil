@@ -2,9 +2,11 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,7 +19,8 @@ import (
 var ErrClosed = errors.New("datastore closed")
 
 type Datastore struct {
-	DB *badger.DB
+	DB        *badger.DB
+	tableName TableName
 
 	closeLk   sync.RWMutex
 	closed    bool
@@ -102,19 +105,31 @@ var (
 	_ ds.Batching            = (*Datastore)(nil)
 )
 
+func NewDatastoreFromDB(kv DB, tableName TableName, options *Options) *Datastore {
+	if kv == nil {
+		return nil
+	}
+	db, ok := kv.(*badgerDB)
+	if !ok {
+		return nil // Possible only for tests
+	}
+	return NewDatastore(db.db, tableName, options)
+}
+
 // NewDatastore creates a new badger datastore.
-func NewDatastore(kv *badger.DB, options *Options) (*Datastore, error) {
+func NewDatastore(kv *badger.DB, tableName TableName, options *Options) *Datastore {
 	if options == nil {
 		options = &DefaultOptions
 	}
 
 	return &Datastore{
 		DB:             kv,
+		tableName:      tableName,
 		closing:        make(chan struct{}),
 		gcDiscardRatio: options.GcDiscardRatio,
 		syncWrites:     kv.Opts().SyncWrites,
 		ttl:            options.TTL,
-	}, nil
+	}
 }
 
 // NewTransaction starts a new transaction. The resulting transaction object
@@ -134,6 +149,10 @@ func (d *Datastore) NewTransaction(ctx context.Context, readOnly bool) (ds.Txn, 
 // Implicit transactions are created by Datastore methods performing single operations.
 func (d *Datastore) newImplicitTransaction(readOnly bool) *txn {
 	return &txn{d, d.DB.NewTransaction(!readOnly), true}
+}
+
+func (d *Datastore) makeKey(key ds.Key) []byte {
+	return MakeKey(d.tableName, key.Bytes())
 }
 
 func (d *Datastore) Put(ctx context.Context, key ds.Key, value []byte) error {
@@ -378,11 +397,11 @@ func (b *batch) Put(ctx context.Context, key ds.Key, value []byte) error {
 }
 
 func (b *batch) put(key ds.Key, value []byte) error {
-	return b.writeBatch.Set(key.Bytes(), value)
+	return b.writeBatch.Set(b.ds.makeKey(key), value)
 }
 
 func (b *batch) putWithTTL(key ds.Key, value []byte, ttl time.Duration) error {
-	return b.writeBatch.SetEntry(badger.NewEntry(key.Bytes(), value).WithTTL(ttl))
+	return b.writeBatch.SetEntry(badger.NewEntry(b.ds.makeKey(key), value).WithTTL(ttl))
 }
 
 func (b *batch) Delete(ctx context.Context, key ds.Key) error {
@@ -396,7 +415,7 @@ func (b *batch) Delete(ctx context.Context, key ds.Key) error {
 }
 
 func (b *batch) delete(key ds.Key) error {
-	return b.writeBatch.Delete(key.Bytes())
+	return b.writeBatch.Delete(b.ds.makeKey(key))
 }
 
 func (b *batch) Commit(ctx context.Context) error {
@@ -456,7 +475,7 @@ func (t *txn) Put(ctx context.Context, key ds.Key, value []byte) error {
 }
 
 func (t *txn) put(key ds.Key, value []byte) error {
-	return t.txn.Set(key.Bytes(), value)
+	return t.txn.Set(t.ds.makeKey(key), value)
 }
 
 func (t *txn) Sync(ctx context.Context, prefix ds.Key) error {
@@ -479,7 +498,7 @@ func (t *txn) PutWithTTL(ctx context.Context, key ds.Key, value []byte, ttl time
 }
 
 func (t *txn) putWithTTL(key ds.Key, value []byte, ttl time.Duration) error {
-	return t.txn.SetEntry(badger.NewEntry(key.Bytes(), value).WithTTL(ttl))
+	return t.txn.SetEntry(badger.NewEntry(t.ds.makeKey(key), value).WithTTL(ttl))
 }
 
 func (t *txn) GetExpiration(ctx context.Context, key ds.Key) (time.Time, error) {
@@ -493,7 +512,7 @@ func (t *txn) GetExpiration(ctx context.Context, key ds.Key) (time.Time, error) 
 }
 
 func (t *txn) getExpiration(key ds.Key) (time.Time, error) {
-	item, err := t.txn.Get(key.Bytes())
+	item, err := t.txn.Get(t.ds.makeKey(key))
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		return time.Time{}, ds.ErrNotFound
 	} else if err != nil {
@@ -513,7 +532,7 @@ func (t *txn) SetTTL(ctx context.Context, key ds.Key, ttl time.Duration) error {
 }
 
 func (t *txn) setTTL(key ds.Key, ttl time.Duration) error {
-	item, err := t.txn.Get(key.Bytes())
+	item, err := t.txn.Get(t.ds.makeKey(key))
 	if err != nil {
 		return err
 	}
@@ -533,7 +552,7 @@ func (t *txn) Get(ctx context.Context, key ds.Key) ([]byte, error) {
 }
 
 func (t *txn) get(key ds.Key) ([]byte, error) {
-	item, err := t.txn.Get(key.Bytes())
+	item, err := t.txn.Get(t.ds.makeKey(key))
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		err = ds.ErrNotFound
 	}
@@ -555,7 +574,7 @@ func (t *txn) Has(ctx context.Context, key ds.Key) (bool, error) {
 }
 
 func (t *txn) has(key ds.Key) (bool, error) {
-	_, err := t.txn.Get(key.Bytes())
+	_, err := t.txn.Get(t.ds.makeKey(key))
 	switch {
 	case errors.Is(err, badger.ErrKeyNotFound):
 		return false, nil
@@ -577,7 +596,7 @@ func (t *txn) GetSize(ctx context.Context, key ds.Key) (int, error) {
 }
 
 func (t *txn) getSize(key ds.Key) (int, error) {
-	item, err := t.txn.Get(key.Bytes())
+	item, err := t.txn.Get(t.ds.makeKey(key))
 	switch {
 	case err == nil:
 		return int(item.ValueSize()), nil
@@ -599,7 +618,7 @@ func (t *txn) Delete(ctx context.Context, key ds.Key) error {
 }
 
 func (t *txn) delete(key ds.Key) error {
-	return t.txn.Delete(key.Bytes())
+	return t.txn.Delete(t.ds.makeKey(key))
 }
 
 func (t *txn) Query(ctx context.Context, q dsq.Query) (dsq.Results, error) {
@@ -620,6 +639,9 @@ func (t *txn) query(q dsq.Query) (dsq.Results, error) {
 	if prefix != "/" {
 		opt.Prefix = []byte(prefix + "/")
 	}
+
+	tablePrefix := MakeTablePrefix(t.ds.tableName)
+	opt.Prefix = MakeKey(t.ds.tableName, opt.Prefix)
 
 	// Handle ordering
 	if len(q.Orders) > 0 {
@@ -689,7 +711,12 @@ func (t *txn) query(q dsq.Query) (dsq.Results, error) {
 		defer it.Close()
 
 		// All iterators must be started by rewinding.
-		it.Rewind()
+		if opt.Reverse {
+			// See for details https://github.com/hypermodeinc/badger/issues/347
+			it.Seek(append(bytes.Clone(opt.Prefix), 0xff))
+		} else {
+			it.Rewind()
+		}
 
 		// skip to the offset
 		for skipped := 0; skipped < q.Offset && it.Valid(); it.Next() {
@@ -707,8 +734,9 @@ func (t *txn) query(q dsq.Query) (dsq.Results, error) {
 
 			matches := true
 			check := func(value []byte) error {
+				key := strings.TrimPrefix(string(item.Key()), tablePrefix)
 				e := dsq.Entry{
-					Key:   string(item.Key()),
+					Key:   key,
 					Value: value,
 					Size:  int(item.ValueSize()), // this function is basically free
 				}
@@ -746,7 +774,8 @@ func (t *txn) query(q dsq.Query) (dsq.Results, error) {
 
 		for sent := 0; (q.Limit <= 0 || sent < q.Limit) && it.Valid(); it.Next() {
 			item := it.Item()
-			e := dsq.Entry{Key: string(item.Key())}
+			key := strings.TrimPrefix(string(item.Key()), tablePrefix)
+			e := dsq.Entry{Key: key}
 
 			// Maybe get the value
 			var result dsq.Result

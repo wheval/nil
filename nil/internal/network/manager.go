@@ -7,6 +7,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
+	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/network/internal"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -52,7 +53,7 @@ func connectToDhtBootstrapPeers(ctx context.Context, conf *Config, h Host, logge
 	connectToPeers(ctx, conf.DHTBootstrapPeers, h, logger)
 }
 
-func newManagerFromHost(ctx context.Context, conf *Config, h host.Host) (*Manager, error) {
+func newManagerFromHost(ctx context.Context, conf *Config, h host.Host, database db.DB) (*Manager, error) {
 	logger := internal.Logger.With().
 		Stringer(logging.FieldP2PIdentity, h.ID()).
 		Logger()
@@ -61,7 +62,7 @@ func newManagerFromHost(ctx context.Context, conf *Config, h host.Host) (*Manage
 
 	connectToDhtBootstrapPeers(ctx, conf, h, logger)
 
-	dht, err := NewDHT(ctx, h, conf, logger)
+	dht, err := NewDHT(ctx, h, conf, database, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +87,7 @@ func (m *Manager) withNetworkPrefix(prefix string) string {
 	return m.prefix + prefix
 }
 
-func NewManager(ctx context.Context, conf *Config) (*Manager, error) {
+func NewManager(ctx context.Context, conf *Config, database db.DB) (*Manager, error) {
 	if !conf.Enabled() {
 		return nil, ErrNetworkDisabled
 	}
@@ -107,15 +108,15 @@ func NewManager(ctx context.Context, conf *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newManagerFromHost(ctx, conf, h)
+	return newManagerFromHost(ctx, conf, h, database)
 }
 
-func NewClientManager(ctx context.Context, conf *Config) (*Manager, error) {
+func NewClientManager(ctx context.Context, conf *Config, database db.DB) (*Manager, error) {
 	h, err := newClient(ctx, conf)
 	if err != nil {
 		return nil, err
 	}
-	return newManagerFromHost(ctx, conf, h)
+	return newManagerFromHost(ctx, conf, h, database)
 }
 
 func (m *Manager) PubSub() *PubSub {

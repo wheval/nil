@@ -59,8 +59,12 @@ var (
 	_ Iter = new(BadgerIter)
 )
 
+func MakeTablePrefix(table TableName) string {
+	return string(table) + ":"
+}
+
 func MakeKey(table TableName, key []byte) []byte {
-	return append([]byte(table+":"), key...)
+	return append([]byte(MakeTablePrefix(table)), key...)
 }
 
 func NewBadgerDb(pathToDb string) (*badgerDB, error) {

@@ -53,9 +53,7 @@ func newDS(t *testing.T, opts *Options) (*Datastore, func()) {
 	db, err := badger.Open(bOpts)
 	require.NoError(t, err)
 
-	d, err := NewDatastore(db, opts)
-	require.NoError(t, err)
-
+	d := NewDatastore(db, TableName(t.Name()), opts)
 	return d, func() {
 		d.Close()
 		os.RemoveAll(path)
@@ -371,9 +369,7 @@ func TestBatchingRequired(t *testing.T) {
 	db, err := badger.Open(bOpts)
 	require.NoError(t, err)
 
-	d, err := NewDatastore(db, nil)
-	require.NoError(t, err)
-
+	d := NewDatastore(db, TableName(t.Name()), nil)
 	defer func() {
 		d.Close()
 		os.RemoveAll(path)
@@ -621,8 +617,7 @@ func TestDiskUsage(t *testing.T) {
 	db, err := badger.Open(opts)
 	require.NoError(t, err)
 
-	d, err := NewDatastore(db, nil)
-	require.NoError(t, err)
+	d := NewDatastore(db, TableName(t.Name()), nil)
 
 	addTestCases(t, d, testcases)
 	d.Close()
@@ -630,8 +625,7 @@ func TestDiskUsage(t *testing.T) {
 	db, err = badger.Open(opts)
 	require.NoError(t, err)
 
-	d, err = NewDatastore(db, nil)
-	require.NoError(t, err)
+	d = NewDatastore(db, TableName(t.Name()), nil)
 
 	s, _ := d.DiskUsage(t.Context())
 	if s == 0 {
@@ -654,10 +648,7 @@ func TestTxnDiscard(t *testing.T) {
 	db, err := badger.Open(opts)
 	require.NoError(t, err)
 
-	d, err := NewDatastore(db, nil)
-	defer os.RemoveAll(path)
-	require.NoError(t, err)
-
+	d := NewDatastore(db, TableName(t.Name()), nil)
 	txn, err := d.NewTransaction(t.Context(), false)
 	require.NoError(t, err)
 	key := ds.NewKey("/test/thing")
@@ -688,8 +679,7 @@ func TestTxnCommit(t *testing.T) {
 	db, err := badger.Open(opts)
 	require.NoError(t, err)
 
-	d, err := NewDatastore(db, nil)
-	require.NoError(t, err)
+	d := NewDatastore(db, TableName(t.Name()), nil)
 
 	txn, err := d.NewTransaction(t.Context(), false)
 	require.NoError(t, err)
@@ -723,8 +713,7 @@ func TestTxnBatch(t *testing.T) {
 	db, err := badger.Open(opts)
 	require.NoError(t, err)
 
-	d, err := NewDatastore(db, nil)
-	require.NoError(t, err)
+	d := NewDatastore(db, TableName(t.Name()), nil)
 
 	txn, err := d.NewTransaction(t.Context(), false)
 	require.NoError(t, err)
@@ -778,8 +767,7 @@ func TestTTL(t *testing.T) {
 	db, err := badger.Open(opts)
 	require.NoError(t, err)
 
-	d, err := NewDatastore(db, nil)
-	require.NoError(t, err)
+	d := NewDatastore(db, TableName(t.Name()), nil)
 
 	txn, err := d.NewTransaction(t.Context(), false)
 	require.NoError(t, err)
@@ -925,9 +913,7 @@ func TestOptions(t *testing.T) {
 	db, err := badger.Open(bOpts)
 	require.NoError(t, err)
 
-	d, err := NewDatastore(db, &opts)
-	require.NoError(t, err)
-
+	d := NewDatastore(db, TableName(t.Name()), &opts)
 	if d.ttl != time.Minute {
 		t.Fatal("datastore ttl not set")
 	}
@@ -959,9 +945,7 @@ func TestClosedError(t *testing.T) {
 	db, err := badger.Open(bOpts)
 	require.NoError(t, err)
 
-	d, err := NewDatastore(db, &opts)
-	require.NoError(t, err)
-
+	d := NewDatastore(db, TableName(t.Name()), &opts)
 	dstx, err := d.NewTransaction(t.Context(), false)
 	require.NoError(t, err)
 

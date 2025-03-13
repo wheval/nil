@@ -64,7 +64,7 @@ func main() {
 	check.PanicIfErr(telemetry.Init(ctx, cfg.Telemetry))
 	defer telemetry.Shutdown(ctx)
 
-	nm, err := network.NewManager(ctx, cfg.Network)
+	nm, err := network.NewManager(ctx, cfg.Network, nil)
 	check.PanicIfErr(err)
 	defer nm.Close()
 

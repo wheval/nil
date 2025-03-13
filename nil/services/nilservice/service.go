@@ -388,7 +388,7 @@ func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, i
 	if cfg.Network != nil && cfg.RunMode != NormalRunMode {
 		cfg.Network.DHTMode = dht.ModeClient
 	}
-	networkManager, err := createNetworkManager(ctx, cfg)
+	networkManager, err := createNetworkManager(ctx, cfg, database)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to create network manager")
 		return nil, err
@@ -535,16 +535,16 @@ func Run(ctx context.Context, cfg *Config, database db.DB, interop chan<- Servic
 	return 0
 }
 
-func createNetworkManager(ctx context.Context, cfg *Config) (*network.Manager, error) {
+func createNetworkManager(ctx context.Context, cfg *Config, database db.DB) (*network.Manager, error) {
 	if cfg.RunMode == RpcRunMode {
-		return network.NewClientManager(ctx, cfg.Network)
+		return network.NewClientManager(ctx, cfg.Network, database)
 	}
 
 	if cfg.Network == nil || !cfg.Network.Enabled() {
 		return nil, nil
 	}
 
-	return network.NewManager(ctx, cfg.Network)
+	return network.NewManager(ctx, cfg.Network, database)
 }
 
 func initDefaultValidator(cfg *Config) error {
