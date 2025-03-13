@@ -73,6 +73,7 @@ func startRpcServer(ctx context.Context, cfg *Config, rawApi rawapi.NodeApi, db 
 	defer cancel()
 
 	debugImpl := jsonrpc.NewDebugAPI(rawApi, logger)
+	web3Impl := jsonrpc.NewWeb3API(rawApi)
 
 	apiList := []transport.API{
 		{
@@ -85,6 +86,12 @@ func startRpcServer(ctx context.Context, cfg *Config, rawApi rawapi.NodeApi, db 
 			Namespace: "debug",
 			Public:    true,
 			Service:   jsonrpc.DebugAPI(debugImpl),
+			Version:   "1.0",
+		},
+		{
+			Namespace: "web3",
+			Public:    true,
+			Service:   jsonrpc.Web3API(web3Impl),
 			Version:   "1.0",
 		},
 	}

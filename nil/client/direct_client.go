@@ -22,6 +22,7 @@ type DirectClient struct {
 	ethApi   jsonrpc.EthAPI
 	debugApi jsonrpc.DebugAPI
 	dbApi    jsonrpc.DbAPI
+	web3Api  jsonrpc.Web3API
 }
 
 var _ Client = (*DirectClient)(nil)
@@ -30,11 +31,13 @@ func NewEthClient(ctx context.Context, db db.ReadOnlyDB, localApi *rawapi.NodeAp
 	ethApi := jsonrpc.NewEthAPI(ctx, localApi, db, true, false)
 	debugApi := jsonrpc.NewDebugAPI(localApi, logger)
 	dbApi := jsonrpc.NewDbAPI(db, logger)
+	web3Api := jsonrpc.NewWeb3API(localApi)
 
 	return &DirectClient{
 		ethApi:   ethApi,
 		debugApi: debugApi,
 		dbApi:    dbApi,
+		web3Api:  web3Api,
 	}, nil
 }
 
@@ -305,4 +308,8 @@ func (c *DirectClient) PlainTextCall(_ context.Context, requestBody []byte) (jso
 
 func (c *DirectClient) GetDebugContract(ctx context.Context, contractAddr types.Address, blockId any) (*jsonrpc.DebugRPCContract, error) {
 	panic("Not supported")
+}
+
+func (c *DirectClient) ClientVersion(ctx context.Context) (string, error) {
+	return c.web3Api.ClientVersion(ctx)
 }
