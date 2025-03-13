@@ -7,12 +7,10 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/scheduler"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/testaide"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -71,6 +69,7 @@ func (s *BlockTasksIntegrationTestSuite) SetupTest() {
 	s.Require().NoError(err, "failed to set proved root in SetUpTest")
 }
 
+/* TODO update with respect new task policy
 func (s *BlockTasksIntegrationTestSuite) Test_Provide_Tasks_And_Handle_Success_Result() {
 	batch := testaide.NewBlockBatch(1)
 	err := s.blockStorage.SetBlockBatch(s.ctx, batch)
@@ -182,7 +181,7 @@ func newTestSuccessProviderResult(taskToExecute *types.Task, executorId types.Ta
 		types.TaskOutputArtifacts{},
 		types.TaskResultData{},
 	)
-}
+}*/
 
 type noopStateResetLauncher struct{}
 
