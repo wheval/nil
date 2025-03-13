@@ -265,3 +265,17 @@ func (api *NodeApiOverShardApis) SendTransaction(ctx context.Context, shardId ty
 	}
 	return result, nil
 }
+
+func (api *NodeApiOverShardApis) ClientVersion(ctx context.Context) (string, error) {
+	methodName := methodNameChecked("ClientVersion")
+	shardId := types.MainShardId
+	shardApi, ok := api.Apis[shardId]
+	if !ok {
+		return "", makeShardNotFoundError(methodName, shardId)
+	}
+	result, err := shardApi.ClientVersion(ctx)
+	if err != nil {
+		return "", makeCallError(methodName, shardId, err)
+	}
+	return result, nil
+}

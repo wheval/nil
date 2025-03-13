@@ -79,6 +79,7 @@ const (
 	Debug_getBlockByHash                 = "debug_getBlockByHash"
 	Debug_getBlockByNumber               = "debug_getBlockByNumber"
 	Debug_getContract                    = "debug_getContract"
+	Web3_clientVersion                   = "web3_clientVersion"
 )
 
 const (
@@ -558,12 +559,16 @@ func (c *Client) GetTransactionCount(ctx context.Context, address types.Address,
 	return types.Seqno(val), nil
 }
 
-func toUint64(raw json.RawMessage) (uint64, error) {
-	input := strings.TrimSpace(string(raw))
-	if len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"' {
-		input = input[1 : len(input)-1]
+func toString(raw json.RawMessage) string {
+	res := strings.TrimSpace(string(raw))
+	if len(res) >= 2 && res[0] == '"' && res[len(res)-1] == '"' {
+		res = res[1 : len(res)-1]
 	}
-	return strconv.ParseUint(input, 0, 64)
+	return res
+}
+
+func toUint64(raw json.RawMessage) (uint64, error) {
+	return strconv.ParseUint(toString(raw), 0, 64)
 }
 
 func (c *Client) GetBlockTransactionCount(ctx context.Context, shardId types.ShardId, blockId any) (uint64, error) {
@@ -682,6 +687,14 @@ func (c *Client) GetNumShards(ctx context.Context) (uint64, error) {
 	}
 
 	return toUint64(res)
+}
+
+func (c *Client) ClientVersion(ctx context.Context) (string, error) {
+	res, err := c.call(ctx, Web3_clientVersion)
+	if err != nil {
+		return "", err
+	}
+	return toString(res), nil
 }
 
 func (c *Client) DeployContract(

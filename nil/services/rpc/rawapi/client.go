@@ -179,6 +179,10 @@ func (api *ShardApiAccessor) SendTransaction(ctx context.Context, transaction []
 	return sendRequestAndGetResponseWithCallerMethodName[txnpool.DiscardReason](ctx, api, "SendTransaction", transaction)
 }
 
+func (api *ShardApiAccessor) ClientVersion(ctx context.Context) (string, error) {
+	return sendRequestAndGetResponseWithCallerMethodName[string](ctx, api, "ClientVersion")
+}
+
 func (api *ShardApiAccessor) setNodeApi(nodeApi NodeApi) {
 	api.onSetNodeApi(nodeApi)
 }

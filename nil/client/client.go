@@ -30,6 +30,7 @@ type BatchRequest interface {
 type Client interface {
 	RawClient
 	DbClient
+	Web3Client
 
 	CreateBatchRequest() BatchRequest
 	BatchCall(ctx context.Context, req BatchRequest) ([]any, error)

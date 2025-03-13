@@ -386,6 +386,26 @@ func (br *Uint64Response) UnpackProtoMessage() (uint64, error) {
 	}
 }
 
+// StringResponse converters
+func (br *StringResponse) PackProtoMessage(value string, err error) error {
+	br.Result = &StringResponse_Value{Value: value}
+	if err != nil {
+		br.Result = &StringResponse_Error{Error: new(Error).PackProtoMessage(err)}
+	}
+	return nil
+}
+
+func (br *StringResponse) UnpackProtoMessage() (string, error) {
+	switch br.Result.(type) {
+	case *StringResponse_Error:
+		return "", br.GetError().UnpackProtoMessage()
+	case *StringResponse_Value:
+		return br.GetValue(), nil
+	default:
+		return "", errors.New("unexpected response type")
+	}
+}
+
 func (br *BalanceResponse) PackProtoMessage(balance types.Value, err error) error {
 	if err != nil {
 		br.Result = &BalanceResponse_Error{Error: new(Error).PackProtoMessage(err)}
