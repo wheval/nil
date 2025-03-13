@@ -42,15 +42,16 @@ func (s *NilLoadGeneratorRpc) SetupTest() {
 		if err := nil_load_generator.Run(
 			s.Context,
 			nil_load_generator.Config{
-				OwnEndpoint:      nilLoadGeneratorSockPath,
-				Endpoint:         sockPath,
-				FaucetEndpoint:   faucetEndpoint,
-				SwapPerIteration: 1,
-				RpcSwapLimit:     "10000000",
-				MintTokenAmount0: "3000000",
-				MintTokenAmount1: "10000",
-				ThresholdAmount:  "3000000000",
-				SwapAmount:       "1000",
+				OwnEndpoint:        nilLoadGeneratorSockPath,
+				Endpoint:           sockPath,
+				FaucetEndpoint:     faucetEndpoint,
+				SwapPerIteration:   1,
+				RpcSwapLimit:       "10000000",
+				MintTokenAmount0:   "3000000",
+				MintTokenAmount1:   "10000",
+				ThresholdAmount:    "3000000000",
+				SwapAmount:         "1000",
+				WaitClusterStartup: 10 * time.Second,
 			},
 			logging.NewLogger("test_nil_load_generator")); err != nil {
 			s.runErrCh <- err

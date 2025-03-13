@@ -4,6 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"math/big"
+	"os/signal"
+	"sync/atomic"
+	"syscall"
+	"time"
+
 	rpc_client "github.com/NilFoundation/nil/nil/client/rpc"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
@@ -17,11 +23,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
-	"math/big"
-	"os/signal"
-	"sync/atomic"
-	"syscall"
-	"time"
 )
 
 type Config struct {
