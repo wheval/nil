@@ -51,6 +51,7 @@ require (
 	github.com/ethereum/go-ethereum v1.14.13
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/icza/bitio v1.1.0
+	github.com/ipfs/go-datastore v0.8.2
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/klauspost/compress v1.18.0
 	github.com/prometheus/client_golang v1.21.0
@@ -131,7 +132,7 @@ require (
 	github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 // indirect
 	github.com/ipfs/boxo v0.28.0 // indirect
 	github.com/ipfs/go-cid v0.5.0 // indirect
-	github.com/ipfs/go-datastore v0.8.1 // indirect
+	github.com/ipfs/go-detect-race v0.0.1 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipld/go-ipld-prime v0.21.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect

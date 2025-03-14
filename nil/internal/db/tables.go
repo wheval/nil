@@ -33,6 +33,8 @@ const (
 	errorByTransactionHashTable = TableName("ErrorByTransactionHash")
 	schemeVersionTable          = TableName("SchemeVersion")
 	LastBlockTable              = TableName("LastBlock")
+
+	DHTTable = TableName("DHT")
 )
 
 func ShardTableName(tableName ShardedTableName, shardId types.ShardId) TableName {

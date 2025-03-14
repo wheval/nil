@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/NilFoundation/nil/nil/internal/db"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peerstore"
@@ -24,7 +25,7 @@ const (
 	discoveryPid                = "/kad"
 )
 
-func NewDHT(ctx context.Context, h host.Host, conf *Config, logger zerolog.Logger) (*DHT, error) {
+func NewDHT(ctx context.Context, h host.Host, conf *Config, database db.DB, logger zerolog.Logger) (*DHT, error) {
 	if !conf.DHTEnabled {
 		return nil, nil
 	}
@@ -36,13 +37,22 @@ func NewDHT(ctx context.Context, h host.Host, conf *Config, logger zerolog.Logge
 	}
 
 	protocol := ProtocolID(conf.Prefix + discoveryPid)
+
+	dhtOpts := []dht.Option{
+		dht.Mode(conf.DHTMode),
+		dht.BootstrapPeers(ToLibP2pAddrInfoSlice(conf.DHTBootstrapPeers)...),
+		dht.RoutingTableRefreshPeriod(1 * time.Minute),
+		dht.V1ProtocolOverride(protocol),
+	}
+
+	if datastore := db.NewDatastoreFromDB(database, db.DHTTable, nil); datastore != nil {
+		dhtOpts = append(dhtOpts, dht.Datastore(datastore))
+	}
+
 	res, err := dht.New(
 		ctx,
 		h,
-		dht.Mode(conf.DHTMode),
-		dht.BootstrapPeers(ToLibP2pAddrInfoSlice(conf.DHTBootstrapPeers)...),
-		dht.RoutingTableRefreshPeriod(1*time.Minute),
-		dht.V1ProtocolOverride(protocol),
+		dhtOpts...,
 	)
 	if err != nil {
 		return nil, err

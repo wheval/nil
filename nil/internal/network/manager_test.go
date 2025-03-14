@@ -57,14 +57,14 @@ func (s *ManagerSuite) TestNewManager() {
 		emptyConfig := &Config{}
 		s.Require().False(emptyConfig.Enabled())
 
-		_, err := NewManager(s.context, emptyConfig)
+		_, err := NewManager(s.context, emptyConfig, nil)
 		s.Require().ErrorIs(err, ErrNetworkDisabled)
 	})
 
 	s.Run("NoPrivateKey", func() {
 		_, err := NewManager(s.context, &Config{
 			TcpPort: 1234,
-		})
+		}, nil)
 		s.Require().ErrorIs(err, ErrPrivateKeyMissing)
 	})
 }

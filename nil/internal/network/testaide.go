@@ -39,7 +39,7 @@ func NewTestManagerWithBaseConfig(t *testing.T, ctx context.Context, conf *Confi
 		conf.PrivateKey = privateKey
 	}
 
-	m, err := NewManager(ctx, conf)
+	m, err := NewManager(ctx, conf, nil)
 	require.NoError(t, err)
 	return m
 }
