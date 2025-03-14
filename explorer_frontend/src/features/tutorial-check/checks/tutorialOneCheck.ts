@@ -1,12 +1,14 @@
-import { HttpTransport, PublicClient, waitTillCompleted } from "@nilfoundation/niljs";
 import {
-  $tutorialChecksState,
-  TutorialChecksStatus,
-  setTutorialChecksState,
-} from "../../../pages/tutorials/model";
+  HttpTransport,
+  PublicClient,
+  generateSmartAccount,
+  waitTillCompleted,
+} from "@nilfoundation/niljs";
+import { TutorialChecksStatus, setTutorialChecksState } from "../../../pages/tutorials/model";
 import type { App } from "../../../types";
-import { $rpcUrl, $smartAccount } from "../../account-connector/model";
+import { $rpcUrl } from "../../account-connector/model";
 import { $contracts, deploySmartContractFx } from "../../contracts/models/base";
+import { setCompletedTutorial } from "../../tutorial/model";
 import { tutorialContractStepFailedEvent, tutorialContractStepPassedEvent } from "../model";
 
 async function runTutorialCheckOne() {
@@ -28,8 +30,6 @@ async function runTutorialCheckOne() {
     sourcecode: callerContract.sourcecode,
   };
 
-  console.log("appCaller", appCaller.sourcecode);
-
   const appReceiver: App = {
     name: "Receiver",
     bytecode: receiverContract.bytecode,
@@ -37,9 +37,11 @@ async function runTutorialCheckOne() {
     sourcecode: receiverContract.sourcecode,
   };
 
-  console.log("appReceiver", appReceiver.sourcecode);
-
-  const smartAccount = $smartAccount.getState()!;
+  const smartAccount = await generateSmartAccount({
+    shardId: 1,
+    rpcEndpoint: $rpcUrl.getState(),
+    faucetEndpoint: $rpcUrl.getState(),
+  });
 
   const resultCaller = await deploySmartContractFx({
     app: appCaller,
@@ -71,7 +73,7 @@ async function runTutorialCheckOne() {
 
   if (checkCaller) {
     setTutorialChecksState(TutorialChecksStatus.Failed);
-    console.log("current state", $tutorialChecksState.getState());
+    console.log(resCaller);
     tutorialContractStepFailedEvent("Failed to call Caller.sendValue()!");
     return;
   }
@@ -87,6 +89,8 @@ async function runTutorialCheckOne() {
   tutorialContractStepPassedEvent("Receiver got 300_000 tokens!");
   setTutorialChecksState(TutorialChecksStatus.Successful);
   tutorialContractStepPassedEvent("Tutorial has been completed successfully!");
+
+  setCompletedTutorial(1);
 }
 
 export default runTutorialCheckOne;

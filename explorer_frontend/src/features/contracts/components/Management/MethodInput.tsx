@@ -1,54 +1,25 @@
-import { COLORS, FormControl, Input, LabelMedium } from "@nilfoundation/ui-kit";
-import type { AbiParameter } from "abitype";
-import type { FormControlOverrides } from "baseui/form-control";
-import type { InputOverrides } from "baseui/input";
+import { FormControl, Input, LabelMedium } from "@nilfoundation/ui-kit";
+import type { AbiInternalType, AbiParameter } from "abitype";
+import { useStyletron } from "baseui";
 import type { FC } from "react";
-import { useStyletron } from "styletron-react";
-import type { CallParams } from "../../types";
-import { isAbiParameterTuple } from "../../utils";
 
 type MethodInputProps = {
   input: AbiParameter;
   methodName: string;
   paramName: string;
-  params?: CallParams[string];
-  paramsHandler: (params: {
-    functionName: string;
-    paramName: string;
-    value:
-      | string
-      | boolean
-      | {
-          type: string;
-          value: string;
-        }[];
-    type: string;
-  }) => void;
-  error?: string | null | Record<string, string | null>;
+  params?: Record<string, unknown>;
+  paramsHandler: (params: { functionName: string; paramName: string; value: unknown }) => void;
 };
 
-const formControlOverries: FormControlOverrides = {
-  Caption: {
-    style: ({ $error }) => ({
-      marginTop: "8px",
-      ...($error ? { color: COLORS.red200 } : {}),
-    }),
-  },
-};
-
-const inputOverrides: InputOverrides = {
-  Root: {
-    style: ({ $error }) => ({
-      ...($error
-        ? { boxShadow: `0px 0px 0px 2px ${COLORS.gray900}, 0px 0px 0px 4px ${COLORS.red200}` }
-        : {}),
-    }),
-  },
-  Input: {
-    style: ({ $error }) => ({
-      ...($error ? { color: COLORS.red200 } : {}),
-    }),
-  },
+const isAbiParameterTuple = (
+  input: AbiParameter,
+): input is {
+  type: "tuple" | `tuple[${string}]`;
+  name?: string | undefined;
+  internalType?: AbiInternalType | undefined;
+  components: readonly AbiParameter[];
+} => {
+  return input.type === "tuple";
 };
 
 const MethodInput: FC<MethodInputProps> = ({
@@ -57,10 +28,9 @@ const MethodInput: FC<MethodInputProps> = ({
   paramsHandler,
   methodName,
   paramName,
-  error,
 }: MethodInputProps) => {
   const { type, name } = input;
-  const [css] = useStyletron();
+  const [css, theme] = useStyletron();
 
   return (
     <div>
@@ -76,40 +46,33 @@ const MethodInput: FC<MethodInputProps> = ({
             })}
           >
             {input.components.map(({ name = "", type }, i) => {
-              const inputValue = params?.[paramName]
-                ? (params[paramName].value as {
-                    type: string;
-                    value: string;
-                  }[])
-                : [];
-              const componentValue = inputValue[i] ?? { type, value: "" };
-              const errs = error as Record<string, string | null> | null;
-              const err = errs ? errs[i.toString()] : null;
+              const componentValue = params ? (params[paramName] as AbiParameter) : "";
+              const inputValue = componentValue ? componentValue.name : "";
 
               return (
                 // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
                 <div key={i}>
-                  <FormControl
-                    label={name}
-                    caption={type}
-                    overrides={formControlOverries}
-                    error={err}
-                  >
+                  <FormControl label={name} caption={type}>
                     <Input
-                      value={componentValue.value}
+                      overrides={{
+                        Root: {
+                          style: {
+                            backgroundColor:
+                              theme.colors.inputButtonAndDropdownOverrideBackgroundColor,
+                            ":hover": {
+                              backgroundColor:
+                                theme.colors.inputButtonAndDropdownOverrideBackgroundHoverColor,
+                            },
+                          },
+                        },
+                      }}
+                      value={inputValue}
                       onChange={(e) => {
                         const value = e.target.value;
-                        const mergedValue = [...inputValue];
-                        mergedValue[i] = { type, value };
-                        paramsHandler({
-                          functionName: methodName,
-                          paramName,
-                          value: mergedValue,
-                          type: input.type,
-                        });
+                        const mergedValue = { ...componentValue, [name]: value };
+                        paramsHandler({ functionName: methodName, paramName, value: mergedValue });
                       }}
                       placeholder={type === "address" ? "0x..." : ""}
-                      overrides={inputOverrides}
                     />
                   </FormControl>
                 </div>
@@ -118,24 +81,26 @@ const MethodInput: FC<MethodInputProps> = ({
           </div>
         </>
       ) : (
-        <>
-          <FormControl
-            label={name}
-            caption={type}
-            error={error as string | null}
-            overrides={formControlOverries}
-          >
-            <Input
-              value={params?.[paramName] ? String(params[paramName].value) : ""}
-              onChange={(e) => {
-                const value = e.target.value;
-                paramsHandler({ functionName: methodName, paramName, value, type: input.type });
-              }}
-              placeholder={type === "address" ? "0x..." : ""}
-              overrides={inputOverrides}
-            />
-          </FormControl>
-        </>
+        <FormControl label={name} caption={type}>
+          <Input
+            overrides={{
+              Root: {
+                style: {
+                  backgroundColor: theme.colors.inputButtonAndDropdownOverrideBackgroundColor,
+                  ":hover": {
+                    backgroundColor:
+                      theme.colors.inputButtonAndDropdownOverrideBackgroundHoverColor,
+                  },
+                },
+              },
+            }}
+            value={params?.[paramName] ? String(params[paramName]) : ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              paramsHandler({ functionName: methodName, paramName, value });
+            }}
+          />
+        </FormControl>
       )}
     </div>
   );

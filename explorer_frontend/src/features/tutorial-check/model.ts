@@ -3,14 +3,14 @@ import type { App } from "../../types";
 import { spec } from "./spec";
 
 export type TutorialCheck = {
-  stage: number;
+  urlSlug: string;
   check: () => Promise<void>;
 };
 
 export const tutorialCheckDomain = createDomain("tutorial-check");
 
 export const $tutorialCheck = tutorialCheckDomain.createStore<TutorialCheck>({
-  stage: 0,
+  urlSlug: "",
   check: async () => {},
 });
 
@@ -26,7 +26,7 @@ export const tutorialContractStepFailedEvent = tutorialCheckDomain.createEvent<s
 
 export const fetchTutorialCheckEvent = tutorialCheckDomain.createEvent<TutorialCheck>();
 
-export const fetchTutorialCheckFx = tutorialCheckDomain.createEffect<number, TutorialCheck>();
+export const fetchTutorialCheckFx = tutorialCheckDomain.createEffect<string, TutorialCheck>();
 
 export const runTutorialCheck = tutorialCheckDomain.createEvent();
 
@@ -36,7 +36,10 @@ export const runTutorialCheckFx = tutorialCheckDomain.createEffect(
   },
 );
 
-fetchTutorialCheckFx.use(async (stage) => {
-  const tutorialCheck = spec.find((check) => check.stage === stage)!;
+fetchTutorialCheckFx.use(async (urlSlug) => {
+  const tutorialCheck = spec.find((check) => check.urlSlug === urlSlug);
+  if (!tutorialCheck) {
+    throw new Error("Tutorial check not found");
+  }
   return tutorialCheck;
 });

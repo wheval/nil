@@ -1,16 +1,17 @@
 import type { FC, ReactNode } from "react";
 import { useStyletron } from "styletron-react";
 import { BackRouterNavigationButton, useMobile } from "../../shared";
+import { CompilerVersionButton } from "./CompilerVersionButton.tsx";
 import { HyperlinkButton } from "./HyperlinkButton";
 import { OpenProjectButton } from "./OpenProjectButton.tsx";
 import { QuestionButton } from "./QuestionButton";
 
 type CodeToolbarProps = {
   disabled: boolean;
-  compilerVersionButton?: ReactNode;
+  extraToolbarButton?: ReactNode;
 };
 
-export const CodeToolbar: FC<CodeToolbarProps> = ({ disabled, compilerVersionButton }) => {
+export const CodeToolbar: FC<CodeToolbarProps> = ({ disabled, extraToolbarButton }) => {
   const [css] = useStyletron();
   const [isMobile] = useMobile();
 
@@ -37,8 +38,14 @@ export const CodeToolbar: FC<CodeToolbarProps> = ({ disabled, compilerVersionBut
       )}
       <QuestionButton />
       <HyperlinkButton disabled={disabled} />
-      <OpenProjectButton disabled={disabled} />
-      {compilerVersionButton}
+      {extraToolbarButton === undefined && (
+        <>
+          {" "}
+          <OpenProjectButton disabled={disabled} /> <CompilerVersionButton
+            disabled={disabled}
+          />{" "}
+        </>
+      )}
     </div>
   );
 };

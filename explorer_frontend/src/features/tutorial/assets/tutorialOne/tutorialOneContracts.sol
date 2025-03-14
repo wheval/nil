@@ -22,7 +22,7 @@ contract Caller {
 
     // Should send some default tokens to the Receiver contract
     // using Nil.asyncCall().
-    function sendValue(address dst) public {}
+    function sendValue(address dst) public payable {}
 }
 
 /**
