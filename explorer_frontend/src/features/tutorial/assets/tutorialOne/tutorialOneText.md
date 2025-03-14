@@ -35,7 +35,7 @@ To complete this tutorial:
 
 This tutorial is verified once the following checks are passed:
 
-* *Caller* and *Receiver* are deployed and compiled.
+* *Caller* and *Receiver* are compiled and deployed.
 * *sendValue()* is successfully called inside *Caller*.
 * *Receiver* receives tokens from *Caller*.
 

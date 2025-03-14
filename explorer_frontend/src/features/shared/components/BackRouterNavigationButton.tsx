@@ -1,5 +1,5 @@
 import { ArrowUpIcon, BUTTON_KIND, BUTTON_SIZE, ButtonIcon } from "@nilfoundation/ui-kit";
-import { mergeOverrides } from "baseui";
+import { mergeOverrides, useStyletron } from "baseui";
 import type { ButtonOverrides } from "baseui/button";
 import { useUnit } from "effector-react";
 import type { FC } from "react";
@@ -11,6 +11,7 @@ type BackButtonProps = {
 };
 
 export const BackRouterNavigationButton: FC<BackButtonProps> = ({ overrides, disabled }) => {
+  const [css, theme] = useStyletron();
   const history = useUnit(router.$history);
   const historyEmpty = window.history.length < 2;
   const mergedOverrides = mergeOverrides(
@@ -20,6 +21,11 @@ export const BackRouterNavigationButton: FC<BackButtonProps> = ({ overrides, dis
           transform: "rotate(-90deg)",
           width: "48px",
           height: "48px",
+
+          backgroundColor: theme.colors.inputButtonAndDropdownOverrideBackgroundColor,
+          ":hover": {
+            backgroundColor: theme.colors.inputButtonAndDropdownOverrideBackgroundHoverColor,
+          },
         },
       },
     },
