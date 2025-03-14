@@ -227,7 +227,7 @@ func (h *handler) handleCallMsg(ctx context.Context, msg *Message, stream *jsoni
 		}
 
 		if resp != nil && resp.Error != nil {
-			h.log(zerolog.InfoLevel, msg, "Served with error: "+resp.Error.Message, requestDuration)
+			h.log(zerolog.ErrorLevel, msg, "Served with error: "+resp.Error.Message, requestDuration)
 		}
 
 		if resp != nil && resp.Result != nil {
