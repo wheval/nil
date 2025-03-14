@@ -35,14 +35,17 @@ func collectFailedReceipts(dst []*jsonrpc.RPCReceipt, receipt *jsonrpc.RPCReceip
 	return dst
 }
 
-func (s *Service) handleReceipt(receipt *jsonrpc.RPCReceipt, err error) (*jsonrpc.RPCReceipt, error) {
+func (s *Service) handleReceipt(txhash common.Hash, receipt *jsonrpc.RPCReceipt, err error) (*jsonrpc.RPCReceipt, error) {
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Error during waiting for receipt")
+		s.logger.Error().
+			Err(err).
+			Stringer(logging.FieldTransactionHash, txhash).
+			Msg("Error during waiting for receipt")
 		return nil, err
 	}
 	if receipt == nil {
 		err := errors.New("successful receipt not received")
-		s.logger.Error().Err(err).Send()
+		s.logger.Error().Msg("Successful receipt not received")
 		return nil, err
 	}
 
@@ -59,7 +62,11 @@ func (s *Service) handleReceipt(receipt *jsonrpc.RPCReceipt, err error) (*jsonrp
 			s.logger.Info().Msg("Failed outgoing transactions:")
 			for _, r := range failed {
 				if !r.Success {
-					s.logger.Error().Str(logging.FieldError, r.ErrorMessage).Stringer(logging.FieldTransactionHash, r.TxnHash).Send()
+					s.logger.Error().
+						Str("status", r.Status).
+						Str(logging.FieldError, r.ErrorMessage).
+						Stringer(logging.FieldTransactionHash, r.TxnHash).
+						Msg("Failed transaction processing")
 				}
 			}
 		}
@@ -74,7 +81,7 @@ func (s *Service) handleReceipt(receipt *jsonrpc.RPCReceipt, err error) (*jsonrp
 		if debug == nil {
 			s.logger.Info().Msg("To view full receipts, run with debug log level or use `nil receipt`.")
 		} else {
-			debug.Str(logging.FieldFullTransaction, string(receiptDataJSON)).Send()
+			debug.RawJSON(logging.FieldFullTransaction, receiptDataJSON).Msg("Full transaction receipt")
 		}
 	}
 	return receipt, nil
@@ -91,7 +98,7 @@ func (s *Service) waitForReceiptCommon(txnHash common.Hash, check func(receipt *
 		}
 		return receipt, nil
 	})
-	return s.handleReceipt(receipt, err)
+	return s.handleReceipt(txnHash, receipt, err)
 }
 
 func (s *Service) WaitForReceipt(txnHash common.Hash) (*jsonrpc.RPCReceipt, error) {
