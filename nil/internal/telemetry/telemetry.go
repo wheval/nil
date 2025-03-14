@@ -16,8 +16,13 @@ type (
 )
 
 func NewDefaultConfig() *Config {
+	// https://opentelemetry.io/docs/languages/sdk-configuration/general/#otel_service_name
+	serviceName := os.Getenv("OTEL_SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = os.Args[0]
+	}
 	return &Config{
-		ServiceName: os.Args[0],
+		ServiceName: serviceName,
 	}
 }
 
