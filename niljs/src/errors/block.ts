@@ -3,9 +3,9 @@ import type { Hex } from "../types/Hex.js";
 import { BaseError, type IBaseErrorParameters } from "./BaseError.js";
 
 /**
- * The interface for the parameters of the {@link BlockNotFoundError} constructor.
+ * The interface for the parameters of the block errors constructor.
  */
-type BlockNotFoundErrorParameters = {
+type BlockErrorParameters = {
   blockNumberOrHash: Hex | BlockTag;
 } & IBaseErrorParameters;
 
@@ -14,17 +14,25 @@ type BlockNotFoundErrorParameters = {
  * This error is thrown when the requested block is not found.
  */
 class BlockNotFoundError extends BaseError {
-  /**
-   * Creates an instance of BlockNotFoundError.
-   *
-   * @constructor
-   * @param {BlockNotFoundErrorParameters} param0 The error params.
-   * @param {*} param0.blockNumberOrHash The block number or hash.
-   * @param {*} param0....rest The remaining error params, see {@link IBaseErrorParameters}.
-   */
-  constructor({ blockNumberOrHash, ...rest }: BlockNotFoundErrorParameters) {
-    super(`Block not found: ${blockNumberOrHash}`, { ...rest });
+  constructor({ blockNumberOrHash, ...rest }: BlockErrorParameters) {
+    super(`Block not found: ${blockNumberOrHash}`, {
+      name: "BlockNotFoundError",
+      ...rest,
+    });
   }
 }
 
-export { BlockNotFoundError };
+/**
+ * The error class for 'block transaction count not found' errors.
+ * This error is thrown when the requested block transaction count is not found.
+ */
+class BlockTransactionCountNotFoundError extends BaseError {
+  constructor({ blockNumberOrHash, ...rest }: BlockErrorParameters) {
+    super(`Block transaction count not found for block: ${blockNumberOrHash}`, {
+      name: "BlockTransactionCountNotFoundError",
+      ...rest,
+    });
+  }
+}
+
+export { BlockNotFoundError, BlockTransactionCountNotFoundError };

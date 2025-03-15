@@ -1,3 +1,4 @@
+import { docsBaseUrl } from "../docsBaseUrl.js";
 import { version } from "../version.js";
 
 /**
@@ -19,6 +20,14 @@ type IBaseErrorParameters = {
    * The path to the documentation of this error.
    */
   docsPath?: string;
+  /**
+   * Docs base path to override the default one.
+   */
+  docsBaseUrl?: string;
+  /**
+   * Error name to display
+   */
+  name?: string;
 };
 
 /**
@@ -51,6 +60,10 @@ class BaseError extends Error {
    * The version of the client.
    */
   public version?: string;
+  /**
+   * Docs base path.
+   */
+  public docsBaseUrl?: string;
 
   /**
    * Creates an instance of BaseError.
@@ -65,21 +78,28 @@ class BaseError extends Error {
    */
   constructor(
     message?: string,
-    { isOperational = true, cause, docsPath }: IBaseErrorParameters = {},
+    {
+      isOperational = true,
+      cause,
+      docsPath,
+      name,
+      docsBaseUrl: docsBaseUrlCustom,
+    }: IBaseErrorParameters = {}
   ) {
     super();
-    this.name = this.constructor.name;
+    this.name = name ?? this.constructor.name ?? "BaseError";
     this.isOperational = isOperational;
     this.cause = cause;
     this.docsPath = docsPath;
+    this.docsBaseUrl = docsBaseUrlCustom ?? docsBaseUrl;
     this.version = version;
 
     this.message = `${message ?? "An error occurred"}
       Name: ${this.name}`;
 
-    if (docsPath) {
+    if (this.docsPath) {
       this.message = `${this.message}
-      Docs: see \${this.docsPath}`;
+      Docs: see ${this.docsBaseUrl + this.docsPath}`;
     }
 
     if (version) {
