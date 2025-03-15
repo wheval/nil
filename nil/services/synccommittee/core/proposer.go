@@ -8,6 +8,8 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/concurrent"
+	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rollupcontract"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
@@ -27,6 +29,10 @@ type ProposerStorage interface {
 	SetBatchAsProposed(ctx context.Context, id scTypes.BatchId) error
 }
 
+type RpcBlockFetcher interface {
+	GetBlock(ctx context.Context, shardId types.ShardId, blockId any, fullTx bool) (*jsonrpc.RPCBlock, error)
+}
+
 type ProposerMetrics interface {
 	metrics.BasicMetrics
 	RecordProposerTxSent(ctx context.Context, proposalData *scTypes.ProposalData)
@@ -36,6 +42,7 @@ type proposer struct {
 	storage     ProposerStorage
 	retryRunner common.RetryRunner
 	ethClient   rollupcontract.EthClient
+	rpcClient   RpcBlockFetcher
 
 	rollupContractWrapper *rollupcontract.Wrapper
 	params                ProposerParams
@@ -69,6 +76,7 @@ func NewProposer(
 	params ProposerParams,
 	storage ProposerStorage,
 	ethClient rollupcontract.EthClient,
+	rpcClient RpcBlockFetcher,
 	metrics ProposerMetrics,
 	logger zerolog.Logger,
 ) (*proposer, error) {
@@ -83,6 +91,7 @@ func NewProposer(
 	p := &proposer{
 		storage:     storage,
 		ethClient:   ethClient,
+		rpcClient:   rpcClient,
 		params:      params,
 		retryRunner: retryRunner,
 		metrics:     metrics,
@@ -92,7 +101,7 @@ func NewProposer(
 
 	err := p.initRollupContractWrapper(ctx)
 	if err != nil {
-		logger.Error().Err(err).Msgf("rollup contract wrapper is not initialized")
+		p.logger.Warn().Err(err).Msgf("rollup contract wrapper is not initialized")
 	}
 
 	return p, nil
@@ -122,12 +131,8 @@ func (p *proposer) Run(ctx context.Context, started chan<- struct{}) error {
 	return nil
 }
 
-func (p *proposer) isL1Initialized() bool {
-	return (p.rollupContractWrapper != nil) || p.params.DisableL1
-}
-
 func (p *proposer) initRollupContractWrapper(ctx context.Context) error {
-	if p.isL1Initialized() {
+	if p.rollupContractWrapper != nil || p.params.DisableL1 {
 		return nil
 	}
 
@@ -140,55 +145,25 @@ func (p *proposer) initRollupContractWrapper(ctx context.Context) error {
 }
 
 func (p *proposer) initializeProvedStateRoot(ctx context.Context) error {
-	storedStateRoot, err := p.storage.TryGetProvedStateRoot(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get proved state root from the storage: %w", err)
-	}
-	var storedRootStr string
-	if storedStateRoot != nil {
-		storedRootStr = storedStateRoot.String()
-	} else {
-		storedRootStr = "nil"
-	}
-
 	latestStateRoot, err := p.getLatestProvedStateRoot(ctx)
-
-	switch {
-	case err != nil:
+	if err != nil {
+		return err
+	}
+	if latestStateRoot == common.EmptyHash {
 		p.logger.Warn().
 			Err(err).
-			Str("storedStateRoot", storedRootStr).
-			Msg("failed to get state root from L1, stored proved state root will be used")
-
-	case storedStateRoot == nil:
-		if latestStateRoot == common.EmptyHash {
-			p.logger.Info().
-				Msg("proved state root and value from L1 are not initialized")
-			return nil
-		} else {
-			p.logger.Info().
-				Stringer("latestStateRoot", latestStateRoot).
-				Msg("proved state root is not initialized, value from L1 will be used")
-			if err := p.updateStoredStateRoot(ctx, latestStateRoot); err != nil {
-				return err
-			}
-		}
-
-	case (*storedStateRoot != latestStateRoot && latestStateRoot != common.EmptyHash):
-		p.logger.Warn().
-			Str("storedStateRoot", storedRootStr).
 			Stringer("latestStateRoot", latestStateRoot).
-			Msg("stored proved state root value is invalid, local storage will be reset")
+			Msg("L1 state root is not initialized, genesis state root will be used")
 
-		p.logger.Warn().Msg("resetting TaskStorage and BlockStorage")
-		// todo: reset TaskStorage and BlockStorage before starting Aggregator, TaskScheduler and TaskListener
-
-		if err := p.updateStoredStateRoot(ctx, latestStateRoot); err != nil {
+		genesisBlock, err := p.rpcClient.GetBlock(ctx, types.MainShardId, "earliest", false)
+		if err != nil {
 			return err
 		}
+		latestStateRoot = genesisBlock.Hash
+	}
 
-	default:
-		p.logger.Info().Stringer("stateRoot", storedStateRoot).Msg("proved state root value is valid")
+	if err := p.updateStoredStateRoot(ctx, latestStateRoot); err != nil {
+		return err
 	}
 
 	p.logger.Info().
@@ -206,10 +181,15 @@ func (p *proposer) updateStoredStateRoot(ctx context.Context, stateRoot common.H
 }
 
 func (p *proposer) proposeNextBatch(ctx context.Context) error {
-	if !p.isL1Initialized() {
-		err := p.initializeProvedStateRoot(ctx)
+	if p.rollupContractWrapper == nil && !p.params.DisableL1 { // try to initialize contract
+		err := p.initRollupContractWrapper(ctx)
 		if err != nil {
-			return err
+			p.logger.Warn().Err(err).Msgf("rollup contract wrapper is not initialized")
+		} else {
+			err = p.initializeProvedStateRoot(ctx)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	data, err := p.storage.TryGetNextProposalData(ctx)
@@ -234,13 +214,10 @@ func (p *proposer) proposeNextBatch(ctx context.Context) error {
 }
 
 func (p *proposer) getLatestProvedStateRoot(ctx context.Context) (common.Hash, error) {
-	if p.params.DisableL1 {
+	if p.params.DisableL1 || p.rollupContractWrapper == nil {
 		return common.EmptyHash, nil
 	}
 
-	if err := p.initRollupContractWrapper(ctx); err != nil {
-		return common.EmptyHash, err
-	}
 	var finalizedBatchIndex string
 	err := p.retryRunner.Do(ctx, func(context.Context) error {
 		var err error

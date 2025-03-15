@@ -89,6 +89,8 @@ func (s *AggregatorTestSuite) SetupTest() {
 	err := s.db.DropAll()
 	s.Require().NoError(err, "failed to clear database in SetUpTest")
 	s.rpcClientMock.ResetCalls()
+	err = s.blockStorage.SetProvedStateRoot(s.ctx, common.IntToHash(1))
+	s.Require().NoError(err, "failed to set proved state root in SetUpTest")
 }
 
 func (s *AggregatorTestSuite) TearDownSuite() {
@@ -121,6 +123,7 @@ func (s *AggregatorTestSuite) Test_No_New_Block_To_Fetch() {
 
 func (s *AggregatorTestSuite) Test_Fetched_Not_Ready_Batch() {
 	nextMainBlock := testaide.NewMainShardBlock()
+	nextMainBlock.Number = 1
 	nextMainBlock.ChildBlocks[1] = common.EmptyHash
 
 	s.setBlockGeneratorTo(nextMainBlock)
@@ -178,6 +181,7 @@ func (s *AggregatorTestSuite) Test_Fetch_At_Zero_State() {
 	s.Require().Nil(mainRef)
 
 	mainBlock := testaide.NewMainShardBlock()
+	mainBlock.Number = 1
 
 	s.rpcClientMock.GetBlockFunc = blockGenerator(mainBlock)
 
@@ -212,8 +216,8 @@ func (s *AggregatorTestSuite) Test_Block_Storage_Capacity_Exceeded() {
 	storageConfig := storage.NewBlockStorageConfig(1)
 	blockStorage := s.newTestBlockStorage(storageConfig)
 
-	batches := testaide.NewBatchesSequence(2)
-	nextMainBlock := batches[0].MainShardBlock
+	batches := testaide.NewBatchesSequence(3)
+	nextMainBlock := batches[1].MainShardBlock
 
 	s.setBlockGeneratorTo(nextMainBlock)
 
@@ -227,7 +231,7 @@ func (s *AggregatorTestSuite) Test_Block_Storage_Capacity_Exceeded() {
 	s.Require().NoError(err)
 
 	// nextBatch should not be handled by Aggregator due to storage capacity limit
-	nextBatch := batches[1]
+	nextBatch := batches[2]
 	s.setBlockGeneratorTo(nextBatch.MainShardBlock)
 	err = agg.processNewBlocks(s.ctx)
 	s.Require().NoError(err)
@@ -262,6 +266,14 @@ func (s *AggregatorTestSuite) setBlockGeneratorTo(nextMainBlock *jsonrpc.RPCBloc
 func blockGenerator(mainBlock *jsonrpc.RPCBlock) func(context.Context, types.ShardId, any, bool) (*jsonrpc.RPCBlock, error) {
 	return func(_ context.Context, shardId types.ShardId, blockId any, fullTx bool) (*jsonrpc.RPCBlock, error) {
 		if shardId == types.MainShardId {
+			blockHash, ok := blockId.(common.Hash)
+			if ok {
+				if blockHash == common.IntToHash(1) {
+					genesisBlock := testaide.NewMainShardBlock()
+					genesisBlock.Number = 0
+					return genesisBlock, nil
+				}
+			}
 			return mainBlock, nil
 		}
 

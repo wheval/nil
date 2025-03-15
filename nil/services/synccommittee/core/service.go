@@ -62,6 +62,7 @@ func New(cfg *Config, database db.DB, ethClient rollupcontract.EthClient) (*Sync
 		cfg.ProposerParams,
 		blockStorage,
 		ethClient,
+		client,
 		metricsHandler,
 		logger,
 	)

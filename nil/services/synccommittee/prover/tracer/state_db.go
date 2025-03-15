@@ -736,7 +736,9 @@ func (tsdb *TracerStateDB) AddSlotToAccessList(addr types.Address, slot common.H
 }
 
 func (tsdb *TracerStateDB) RevertToSnapshot(int) {
-	panic("prover execution should not revert")
+	// TODO implement revert
+	tsdb.logger.Warn().
+		Msg("skip RevertToSnapshot, which is not inmplemented yet")
 }
 
 // Snapshot returns an identifier for the current revision of the state.
