@@ -11,6 +11,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/scheduler"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/testaide"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -185,6 +186,6 @@ func newTestSuccessProviderResult(taskToExecute *types.Task, executorId types.Ta
 
 type noopStateResetLauncher struct{}
 
-func (l *noopStateResetLauncher) LaunchPartialResetWithSuspension(_ context.Context, _ common.Hash) error {
+func (l *noopStateResetLauncher) LaunchPartialResetWithSuspension(_ context.Context, _ types.BatchId) error {
 	return nil
 }
