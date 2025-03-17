@@ -2,6 +2,7 @@ import {
   COLORS,
   ChartIcon,
   CodeIcon,
+  InfoIcon,
   type LinkComponentRenderFunction,
   MENU_SIZE,
   Menu,
@@ -11,6 +12,7 @@ import type { Items, MenuOverrides } from "baseui/menu";
 import { useUnit } from "effector-react";
 import { playgroundRoute } from "../../../routing";
 import { explorerRoute } from "../../../routing/routes/explorerRoute";
+import { tutorialWithUrlStringRoute } from "../../../routing/routes/tutorialRoute";
 import { BackRouterNavigationButton } from "../BackRouterNavigationButton";
 
 const menuOverrides: MenuOverrides = {
@@ -28,6 +30,7 @@ export const Navigation = () => {
   const [activeRoute] = useUnit(router.$activeRoutes);
   const isMainPage = activeRoute === explorerRoute;
   const isPlayground = activeRoute === playgroundRoute;
+  const isTutorial = activeRoute === tutorialWithUrlStringRoute;
 
   const items: Items = [
     {
@@ -46,6 +49,20 @@ export const Navigation = () => {
       isHighlighted: isPlayground,
       linkComponent: (({ children, className }) => (
         <Link to={playgroundRoute} className={className}>
+          {children}
+        </Link>
+      )) as LinkComponentRenderFunction,
+    },
+    {
+      label: "Tutorials",
+      startEnhancer: <InfoIcon $color={COLORS.gray100} />,
+      isHighlighted: isTutorial,
+      linkComponent: (({ children, className }) => (
+        <Link
+          to={tutorialWithUrlStringRoute}
+          params={{ urlSlug: "async-call" }}
+          className={className}
+        >
           {children}
         </Link>
       )) as LinkComponentRenderFunction,
