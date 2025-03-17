@@ -424,7 +424,10 @@ func (s *Validator) notify(blockId types.BlockNumber) {
 	defer s.subsMutex.Unlock()
 
 	for _, ch := range s.subs {
-		ch <- blockId
+		select {
+		case ch <- blockId:
+		default:
+		}
 	}
 }
 
