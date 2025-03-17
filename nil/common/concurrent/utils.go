@@ -43,7 +43,12 @@ func RunWithTimeout(ctx context.Context, timeout time.Duration, fs ...Func) erro
 
 // WaitFor repeatedly calls the given function until it returns true or an error.
 // In case function return some data not equal to nil, it returns true.
-func WaitFor[T any](ctx context.Context, timeout, tick time.Duration, f func(ctx context.Context) (*T, error)) (*T, error) {
+func WaitFor[T any](
+	ctx context.Context,
+	timeout,
+	tick time.Duration,
+	f func(ctx context.Context) (*T, error),
+) (*T, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 

@@ -35,7 +35,11 @@ func collectFailedReceipts(dst []*jsonrpc.RPCReceipt, receipt *jsonrpc.RPCReceip
 	return dst
 }
 
-func (s *Service) handleReceipt(txhash common.Hash, receipt *jsonrpc.RPCReceipt, err error) (*jsonrpc.RPCReceipt, error) {
+func (s *Service) handleReceipt(
+	txhash common.Hash,
+	receipt *jsonrpc.RPCReceipt,
+	err error,
+) (*jsonrpc.RPCReceipt, error) {
 	if err != nil {
 		s.logger.Error().
 			Err(err).
@@ -87,17 +91,24 @@ func (s *Service) handleReceipt(txhash common.Hash, receipt *jsonrpc.RPCReceipt,
 	return receipt, nil
 }
 
-func (s *Service) waitForReceiptCommon(txnHash common.Hash, check func(receipt *jsonrpc.RPCReceipt) bool) (*jsonrpc.RPCReceipt, error) {
-	receipt, err := concurrent.WaitFor(s.ctx, ReceiptWaitFor, ReceiptWaitTick, func(ctx context.Context) (*jsonrpc.RPCReceipt, error) {
-		receipt, err := s.client.GetInTransactionReceipt(ctx, txnHash)
-		if err != nil {
-			return nil, err
-		}
-		if !check(receipt) {
-			return nil, nil
-		}
-		return receipt, nil
-	})
+func (s *Service) waitForReceiptCommon(
+	txnHash common.Hash,
+	check func(receipt *jsonrpc.RPCReceipt) bool,
+) (*jsonrpc.RPCReceipt, error) {
+	receipt, err := concurrent.WaitFor(
+		s.ctx,
+		ReceiptWaitFor,
+		ReceiptWaitTick,
+		func(ctx context.Context) (*jsonrpc.RPCReceipt, error) {
+			receipt, err := s.client.GetInTransactionReceipt(ctx, txnHash)
+			if err != nil {
+				return nil, err
+			}
+			if !check(receipt) {
+				return nil, nil
+			}
+			return receipt, nil
+		})
 	return s.handleReceipt(txnHash, receipt, err)
 }
 
@@ -140,7 +151,8 @@ func (s *Service) TopUpViaFaucet(faucetAddress, contractAddressTo types.Address,
 		}
 
 		if r.AllSuccess() {
-			s.logger.Info().Msgf("Contract %s balance is topped up by %s on behalf of %s", contractAddressTo, amount, faucetAddress)
+			s.logger.Info().
+				Msgf("Contract %s balance is topped up by %s on behalf of %s", contractAddressTo, amount, faucetAddress)
 			return nil
 		}
 	}

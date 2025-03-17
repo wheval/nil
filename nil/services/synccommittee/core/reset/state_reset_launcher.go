@@ -46,7 +46,10 @@ func NewResetLauncher(
 	}
 }
 
-func (l *stateResetLauncher) LaunchPartialResetWithSuspension(ctx context.Context, failedBatchId scTypes.BatchId) error {
+func (l *stateResetLauncher) LaunchPartialResetWithSuspension(
+	ctx context.Context,
+	failedBatchId scTypes.BatchId,
+) error {
 	l.logger.Info().
 		Stringer(logging.FieldBatchId, failedBatchId).
 		Msg("Launching state reset process")

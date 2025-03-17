@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common"
-	// coreTypes "github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/testaide"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
@@ -80,7 +79,9 @@ func (s *BlockBatchTestSuite) TestNewBlockBatch() {
 			name:           "Block_Is_Not_From_The_Main_Shard",
 			mainShardBlock: testaide.NewExecutionShardBlock(),
 			childBlocks:    []*jsonrpc.RPCBlock{},
-			errPredicate:   func(err error) { s.Require().ErrorContains(err, "mainShardBlock is not from the main shard") },
+			errPredicate: func(err error) {
+				s.Require().ErrorContains(err, "mainShardBlock is not from the main shard")
+			},
 		},
 		{
 			name:           "Redundant_Child_Block",

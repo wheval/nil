@@ -54,7 +54,8 @@ func newTaskEntries(now time.Time) []*types.TaskEntry {
 		testaide.NewTaskEntry(now.Add(-4*time.Minute), running, someExecutor),
 		testaide.NewTaskEntry(now.Add(-8*time.Minute), running, someExecutor),
 		testaide.NewTaskEntryOfType(proofBlockType, now.Add(-2*time.Minute), failed, someExecutor),
-		testaide.NewTaskEntryOfType(proofBlockType, now.Add(-10*time.Minute), types.WaitingForInput, testaide.RandomExecutorId()),
+		testaide.NewTaskEntryOfType(
+			proofBlockType, now.Add(-10*time.Minute), types.WaitingForInput, testaide.RandomExecutorId()),
 		testaide.NewTaskEntry(now, types.WaitingForExecutor, testaide.RandomExecutorId()),
 	}
 }

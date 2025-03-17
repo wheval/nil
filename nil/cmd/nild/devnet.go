@@ -262,7 +262,16 @@ func (c *cluster) writeConfigs(servers []server, name string, only string) error
 	return nil
 }
 
-func (spec *clusterSpec) makeServers(nodeSpecs []nodeSpec, baseP2pPort, basePromPort, basePprofPort, baseHTTPPort int, service string, baseDir string, logClientEvents bool) ([]server, error) {
+func (spec *clusterSpec) makeServers(
+	nodeSpecs []nodeSpec,
+	baseP2pPort int,
+	basePromPort int,
+	basePprofPort int,
+	baseHTTPPort int,
+	service string,
+	baseDir string,
+	logClientEvents bool,
+) ([]server, error) {
 	servers := make([]server, len(nodeSpecs))
 	for i, nodeSpec := range nodeSpecs {
 		servers[i].service = service

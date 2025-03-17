@@ -125,7 +125,14 @@ func CreateNewSmartAccount(rpcEndpoint string, logger zerolog.Logger) (string, s
 	return smartAccount.Hex(), hexKey, nil
 }
 
-func DeployContract(rpcEndpoint, smartAccountAdr, path, hexKey string, args []string, logger zerolog.Logger) (string, error) {
+func DeployContract(
+	rpcEndpoint string,
+	smartAccountAdr string,
+	path string,
+	hexKey string,
+	args []string,
+	logger zerolog.Logger,
+) (string, error) {
 	binPath := path + ".bin"
 	abiPath := path + ".abi"
 	bytecode, err := cliservice_common.ReadBytecode(binPath, abiPath, args)
@@ -209,7 +216,8 @@ func CallContract(rpcEndpoint, smartAccountAdr, hexKey string, calls []Call, log
 		callParams[i].Address = address
 		callParams[i].Count = call.Count
 	}
-	transactionHash, err := rpc.RunContractBatch(ctx, client, smartAccountAddress, callParams, fee, amount, tokens, privateKey)
+	transactionHash, err := rpc.RunContractBatch(
+		ctx, client, smartAccountAddress, callParams, fee, amount, tokens, privateKey)
 	if err != nil {
 		return "", err
 	}

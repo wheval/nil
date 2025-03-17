@@ -150,7 +150,10 @@ func (api *LocalShardApi) Call(
 	var mainBlockHash common.Hash
 	var childBlocks []common.Hash
 	if mainBlockReferenceOrHashWithChildren.IsReference() {
-		mainBlockData, err := api.nodeApi.GetFullBlockData(ctx, types.MainShardId, mainBlockReferenceOrHashWithChildren.Reference())
+		mainBlockData, err := api.nodeApi.GetFullBlockData(
+			ctx,
+			types.MainShardId,
+			mainBlockReferenceOrHashWithChildren.Reference())
 		if err != nil {
 			return nil, err
 		}

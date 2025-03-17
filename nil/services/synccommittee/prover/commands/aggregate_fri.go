@@ -48,7 +48,9 @@ func (cmd *aggregateFRICmd) MakeCommandDefinition(task *types.Task) (*CommandDef
 
 	aggFRI := []string{"--proof", resFiles[types.AggregatedFRIProof]}
 	POW := []string{"--proof-of-work-file", resFiles[types.ProofOfWork]}
-	consistencyChallenges := []string{"--consistency-checks-challenges-file", resFiles[types.ConsistencyCheckChallenges]}
+	consistencyChallenges := []string{
+		"--consistency-checks-challenges-file", resFiles[types.ConsistencyCheckChallenges],
+	}
 	allArgs := slices.Concat(stage, assignmentTable, aggregatedChallenge, combinedQ, aggFRI, POW, consistencyChallenges)
 	execCmd := exec.Command(binary, allArgs...)
 	return &CommandDefinition{ExecCommands: []*exec.Cmd{execCmd}, ExpectedResult: resFiles}, execCmd.Err

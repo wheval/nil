@@ -66,7 +66,16 @@ func (cmd *partialProofCmd) MakeCommandDefinition(task *types.Task) (*CommandDef
 	commitmentStateArg := []string{"--updated-lpc-scheme-file", commitmentStateFile}
 	resultFiles[types.CommitmentState] = commitmentStateFile
 
-	allArgs := slices.Concat(stage, circuitName, assignmentDescArg, traceArg, partialProofArg, challengeArg, thetaPowerArg, commitmentStateArg, commonDataArg)
+	allArgs := slices.Concat(
+		stage,
+		circuitName,
+		assignmentDescArg,
+		traceArg,
+		partialProofArg,
+		challengeArg,
+		thetaPowerArg,
+		commitmentStateArg,
+		commonDataArg)
 	execCmd := exec.Command(proofProducerBinary, allArgs...)
 	if execCmd.Err != nil {
 		return nil, execCmd.Err
@@ -82,7 +91,11 @@ func (cmd *partialProofCmd) getTraceFileName(task *types.Task) string {
 	return filepath.Join(cmd.outDir, fmt.Sprintf("trace.%v", task.BatchId))
 }
 
-func (cmd *partialProofCmd) BeforeCommandExecuted(ctx context.Context, task *types.Task, results types.TaskOutputArtifacts) error {
+func (cmd *partialProofCmd) BeforeCommandExecuted(
+	ctx context.Context,
+	task *types.Task,
+	results types.TaskOutputArtifacts,
+) error {
 	traceFileName := cmd.getTraceFileName(task)
 	blockIds := make([]tracer.BlockId, len(task.BlockIds))
 	var shardIdsStr string
@@ -94,7 +107,9 @@ func (cmd *partialProofCmd) BeforeCommandExecuted(ctx context.Context, task *typ
 		blockIds[i].Id = blockRef
 		blockIdsStr += blockId.Hash.String() + " "
 	}
-	cmd.logger.Info().Msgf("Tracer arguments: trace --nil-endpoint %v %v %v %v", cmd.nilRpcEndpoint, traceFileName, shardIdsStr, blockIdsStr)
+	cmd.logger.Info().Msgf(
+		"Tracer arguments: trace --nil-endpoint %v %v %v %v",
+		cmd.nilRpcEndpoint, traceFileName, shardIdsStr, blockIdsStr)
 
 	tracerConfig := tracer.TraceConfig{
 		MarshalMode:  tracer.MarshalModeBinary,

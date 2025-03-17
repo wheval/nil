@@ -32,12 +32,17 @@ func main() {
 	rootCmd.Flags().StringVar(&cfg.SwapAmount, "swap-amount", "1000", "swap amount")
 	rootCmd.Flags().StringVar(&cfg.RpcSwapLimit, "rpc-swap-limit", "1000000", "rpc swap limit")
 	rootCmd.Flags().Uint32Var(&cfg.UniswapAccounts, "rpc-uniswap-accounts", 5, "number of uniswap accounts")
-	rootCmd.Flags().StringVar(&cfg.LogLevel, "log-level", "info", "log level: trace|debug|info|warn|error|fatal|panic")
-	rootCmd.Flags().DurationVar(&cfg.WaitClusterStartup, "wait-cluster-startup", 5*time.Minute, "time to wait for cluster startup")
+	rootCmd.Flags().StringVar(
+		&cfg.LogLevel, "log-level", "info", "log level: trace|debug|info|warn|error|fatal|panic")
+	rootCmd.Flags().DurationVar(
+		&cfg.WaitClusterStartup, "wait-cluster-startup", 5*time.Minute, "time to wait for cluster startup")
 
 	check.PanicIfErr(rootCmd.Execute())
 
-	if err := telemetry.Init(context.Background(), &telemetry.Config{ServiceName: componentName, ExportMetrics: cfg.Metrics}); err != nil {
+	if err := telemetry.Init(
+		context.Background(),
+		&telemetry.Config{ServiceName: componentName, ExportMetrics: cfg.Metrics},
+	); err != nil {
 		logger.Err(err).Send()
 		panic("Can't init telemetry")
 	}

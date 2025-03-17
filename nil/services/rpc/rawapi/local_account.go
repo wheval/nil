@@ -15,7 +15,11 @@ import (
 
 var errBlockNotFound = errors.New("block not found")
 
-func (api *LocalShardApi) GetBalance(ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (types.Value, error) {
+func (api *LocalShardApi) GetBalance(
+	ctx context.Context,
+	address types.Address,
+	blockReference rawapitypes.BlockReference,
+) (types.Value, error) {
 	shardId := address.ShardId()
 	if shardId != api.ShardId {
 		return types.Value{}, fmt.Errorf("address is not in the shard %d", api.ShardId)
@@ -37,7 +41,11 @@ func (api *LocalShardApi) GetBalance(ctx context.Context, address types.Address,
 	return acc.Balance, nil
 }
 
-func (api *LocalShardApi) GetCode(ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (types.Code, error) {
+func (api *LocalShardApi) GetCode(
+	ctx context.Context,
+	address types.Address,
+	blockReference rawapitypes.BlockReference,
+) (types.Code, error) {
 	shardId := address.ShardId()
 	if shardId != api.ShardId {
 		return types.Code{}, fmt.Errorf("address is not in the shard %d", api.ShardId)
@@ -67,7 +75,11 @@ func (api *LocalShardApi) GetCode(ctx context.Context, address types.Address, bl
 	return code, nil
 }
 
-func (api *LocalShardApi) GetTokens(ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (map[types.TokenId]types.Value, error) {
+func (api *LocalShardApi) GetTokens(
+	ctx context.Context,
+	address types.Address,
+	blockReference rawapitypes.BlockReference,
+) (map[types.TokenId]types.Value, error) {
 	shardId := address.ShardId()
 	if shardId != api.ShardId {
 		return nil, fmt.Errorf("address is not in the shard %d", api.ShardId)
@@ -94,12 +106,18 @@ func (api *LocalShardApi) GetTokens(ctx context.Context, address types.Address, 
 		return nil, err
 	}
 
-	return common.SliceToMap(entries, func(_ int, kv execution.Entry[types.TokenId, *types.Value]) (types.TokenId, types.Value) {
-		return kv.Key, *kv.Val
-	}), nil
+	return common.SliceToMap(
+		entries,
+		func(_ int, kv execution.Entry[types.TokenId, *types.Value]) (types.TokenId, types.Value) {
+			return kv.Key, *kv.Val
+		}), nil
 }
 
-func (api *LocalShardApi) GetContract(ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (*rawapitypes.SmartContract, error) {
+func (api *LocalShardApi) GetContract(
+	ctx context.Context,
+	address types.Address,
+	blockReference rawapitypes.BlockReference,
+) (*rawapitypes.SmartContract, error) {
 	tx, err := api.db.CreateRoTx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
@@ -174,7 +192,11 @@ func makeProofBuilder(root *mpt.Reader, key []byte) proofBuilder {
 	}
 }
 
-func (api *LocalShardApi) getRawSmartContract(tx db.RoTx, address types.Address, blockReference rawapitypes.BlockReference) ([]byte, proofBuilder, error) {
+func (api *LocalShardApi) getRawSmartContract(
+	tx db.RoTx,
+	address types.Address,
+	blockReference rawapitypes.BlockReference,
+) ([]byte, proofBuilder, error) {
 	rawBlock, err := api.getBlockByReference(tx, blockReference, false)
 	if err != nil {
 		return nil, nil, err
@@ -198,7 +220,11 @@ func (api *LocalShardApi) getRawSmartContract(tx db.RoTx, address types.Address,
 	return contractRaw, makeProofBuilder(root, addressBytes), nil
 }
 
-func (api *LocalShardApi) getSmartContract(tx db.RoTx, address types.Address, blockReference rawapitypes.BlockReference) (*types.SmartContract, error) {
+func (api *LocalShardApi) getSmartContract(
+	tx db.RoTx,
+	address types.Address,
+	blockReference rawapitypes.BlockReference,
+) (*types.SmartContract, error) {
 	contractRaw, _, err := api.getRawSmartContract(tx, address, blockReference)
 	if err != nil {
 		return nil, err
@@ -212,7 +238,11 @@ func (api *LocalShardApi) getSmartContract(tx db.RoTx, address types.Address, bl
 	return contract, nil
 }
 
-func (api *LocalShardApi) GetTransactionCount(ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (uint64, error) {
+func (api *LocalShardApi) GetTransactionCount(
+	ctx context.Context,
+	address types.Address,
+	blockReference rawapitypes.BlockReference,
+) (uint64, error) {
 	if blockReference.Type() == rawapitypes.NamedBlockIdentifierReference &&
 		blockReference.NamedBlockIdentifier() == rawapitypes.PendingBlock {
 		if api.txnpool != nil {

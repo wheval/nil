@@ -99,7 +99,10 @@ func (pb *ParentBlock) ToSerializable() *ParentBlockSSZ {
 	}
 }
 
-func SplitTransactions(transactions []*types.Transaction, f func(t *types.Transaction) bool) (a, b []*types.Transaction) {
+func SplitTransactions(
+	transactions []*types.Transaction,
+	f func(t *types.Transaction) bool,
+) (a, b []*types.Transaction) {
 	if pos := slices.IndexFunc(transactions, f); pos != -1 {
 		return transactions[:pos], transactions[pos:]
 	}
@@ -117,7 +120,10 @@ func SplitInTransactions(transactions []*types.Transaction) (internal, external 
 
 // SplitOutTransactions splits outgoing transactions in the block into forwarded and generated ones.
 // Forwarded transactions come before the generated ones.
-func SplitOutTransactions(transactions []*types.Transaction, shardId types.ShardId) (forwarded, generated []*types.Transaction) {
+func SplitOutTransactions(
+	transactions []*types.Transaction,
+	shardId types.ShardId,
+) (forwarded, generated []*types.Transaction) {
 	return SplitTransactions(transactions, func(t *types.Transaction) bool {
 		return t.From.ShardId() == shardId
 	})
@@ -133,7 +139,8 @@ func ConvertTxnRefs(refs []*InternalTxnReference, parentBlocks []*ParentBlock) (
 		pb := parentBlocks[ref.ParentBlockIndex]
 		txn, err := pb.TxnTrie.Fetch(ref.TxnIndex)
 		if err != nil {
-			return nil, fmt.Errorf("faulty transaction %d in block (%s, %s): %w", ref.TxnIndex, pb.ShardId, pb.Block.Id, err)
+			return nil, fmt.Errorf(
+				"faulty transaction %d in block (%s, %s): %w", ref.TxnIndex, pb.ShardId, pb.Block.Id, err)
 		}
 		res[i] = txn
 	}

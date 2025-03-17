@@ -169,7 +169,8 @@ func (t *TaskEntry) AddDependency(dependency *TaskEntry) {
 	t.PendingDependencies.Put(dependency.Task.Id)
 }
 
-// AddDependencyResult updates the task's dependency result and adjusts pending dependencies and task status accordingly.
+// AddDependencyResult updates the task's dependency result and adjusts pending dependencies
+// and task status accordingly.
 func (t *TaskEntry) AddDependencyResult(res TaskResultDetails) error {
 	if t.PendingDependencies == nil || !t.PendingDependencies[res.TaskId] {
 		return fmt.Errorf("task with id=%s has no pending dependency with id=%s", t.Task.Id, res.TaskId)
@@ -225,7 +226,8 @@ func (t *TaskEntry) Terminate(result *TaskResult, currentTime time.Time) error {
 	return nil
 }
 
-// ResetRunning resets a task's status from Running to WaitingForExecutor, clearing its start time and executor ownership.
+// ResetRunning resets a task's status from Running to WaitingForExecutor, clearing its start time
+// and executor ownership.
 func (t *TaskEntry) ResetRunning() error {
 	if t.Status != Running {
 		return errTaskInvalidStatus(t, "ResetRunning")

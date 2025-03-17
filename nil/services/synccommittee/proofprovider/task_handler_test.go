@@ -146,7 +146,11 @@ func (s *TaskHandlerTestSuite) TestHandleBatchProofTask() {
 }
 
 // Ensure that we have available task of certain type, or no tasks available
-func (s *TaskHandlerTestSuite) requestTask(executorId types.TaskExecutorId, available bool, expectedType types.TaskType) *types.Task {
+func (s *TaskHandlerTestSuite) requestTask(
+	executorId types.TaskExecutorId,
+	available bool,
+	expectedType types.TaskType,
+) *types.Task {
 	s.T().Helper()
 	t, err := s.taskStorage.RequestTaskToExecute(s.context, executorId)
 	s.Require().NoError(err)

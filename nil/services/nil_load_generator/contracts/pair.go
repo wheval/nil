@@ -25,12 +25,21 @@ func NewPair(contract Contract, addr types.Address) *Pair {
 	}
 }
 
-func (p *Pair) Initialize(ctx context.Context, service *cliservice.Service, client client.Client, smartAccount SmartAccount, token0, token1 types.Address) error {
+func (p *Pair) Initialize(
+	ctx context.Context,
+	service *cliservice.Service,
+	client client.Client,
+	smartAccount SmartAccount,
+	token0 types.Address,
+	token1 types.Address,
+) error {
 	calldata, err := p.Abi.Pack("initialize", token0, token1)
 	if err != nil {
 		return err
 	}
-	if _, err := SendTransactionAndCheck(ctx, client, service, smartAccount, p.Addr, calldata, []types.TokenBalance{}); err != nil {
+	if _, err := SendTransactionAndCheck(
+		ctx, client, service, smartAccount, p.Addr, calldata, []types.TokenBalance{},
+	); err != nil {
 		return err
 	}
 	return nil
@@ -73,7 +82,14 @@ func (p *Pair) GetTokenBalanceOf(service *cliservice.Service, addr types.Address
 	return totalSupply, nil
 }
 
-func (p *Pair) Mint(ctx context.Context, service *cliservice.Service, client client.Client, smartAccount SmartAccount, addressTo types.Address, tokens []types.TokenBalance) error {
+func (p *Pair) Mint(
+	ctx context.Context,
+	service *cliservice.Service,
+	client client.Client,
+	smartAccount SmartAccount,
+	addressTo types.Address,
+	tokens []types.TokenBalance,
+) error {
 	calldata, err := p.Abi.Pack("mint", addressTo)
 	if err != nil {
 		return err
@@ -84,7 +100,16 @@ func (p *Pair) Mint(ctx context.Context, service *cliservice.Service, client cli
 	return nil
 }
 
-func (p *Pair) Swap(ctx context.Context, service *cliservice.Service, client client.Client, smartAccount SmartAccount, smartAccountTo types.Address, amount1, amount2 *big.Int, swapAmount types.Value, tokenId types.TokenId) (common.Hash, error) {
+func (p *Pair) Swap(
+	ctx context.Context,
+	service *cliservice.Service,
+	client client.Client,
+	smartAccount SmartAccount,
+	smartAccountTo types.Address,
+	amount1, amount2 *big.Int,
+	swapAmount types.Value,
+	tokenId types.TokenId,
+) (common.Hash, error) {
 	calldata, err := p.Abi.Pack("swap", amount1, amount2, smartAccountTo)
 	if err != nil {
 		return common.EmptyHash, err
@@ -98,7 +123,15 @@ func (p *Pair) Swap(ctx context.Context, service *cliservice.Service, client cli
 	return hash, nil
 }
 
-func (p *Pair) Burn(ctx context.Context, service *cliservice.Service, client client.Client, smartAccount SmartAccount, smartAccountTo types.Address, lpAddress types.TokenId, burnAmount types.Value) error {
+func (p *Pair) Burn(
+	ctx context.Context,
+	service *cliservice.Service,
+	client client.Client,
+	smartAccount SmartAccount,
+	smartAccountTo types.Address,
+	lpAddress types.TokenId,
+	burnAmount types.Value,
+) error {
 	calldata, err := p.Abi.Pack("burn", smartAccountTo)
 	if err != nil {
 		return err

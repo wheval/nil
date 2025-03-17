@@ -54,7 +54,12 @@ type BlockGenerationResult struct {
 	ConfigParams map[string][]byte
 }
 
-func NewBlockGenerator(ctx context.Context, params BlockGeneratorParams, txFabric db.DB, block *types.Block) (*BlockGenerator, error) {
+func NewBlockGenerator(
+	ctx context.Context,
+	params BlockGeneratorParams,
+	txFabric db.DB,
+	block *types.Block,
+) (*BlockGenerator, error) {
 	rwTx, err := txFabric.CreateRwTx(ctx)
 	if err != nil {
 		return nil, err
@@ -287,7 +292,10 @@ func (g *BlockGenerator) BuildBlock(proposal *Proposal, gasPrices []types.Uint25
 	return g.executionState.BuildBlock(proposal.PrevBlockId + 1)
 }
 
-func (g *BlockGenerator) GenerateBlock(proposal *Proposal, params *types.ConsensusParams) (*BlockGenerationResult, error) {
+func (g *BlockGenerator) GenerateBlock(
+	proposal *Proposal,
+	params *types.ConsensusParams,
+) (*BlockGenerationResult, error) {
 	g.mh.StartProcessingMeasurement(g.ctx, proposal.PrevBlockId+1)
 	defer func() { g.mh.EndProcessingMeasurement(g.ctx, g.counters) }()
 
@@ -371,7 +379,10 @@ func (g *BlockGenerator) addReceipt(execResult *ExecutionResult) {
 	}
 }
 
-func (g *BlockGenerator) finalize(blockId types.BlockNumber, params *types.ConsensusParams) (*BlockGenerationResult, error) {
+func (g *BlockGenerator) finalize(
+	blockId types.BlockNumber,
+	params *types.ConsensusParams,
+) (*BlockGenerationResult, error) {
 	blockRes, err := g.executionState.BuildBlock(blockId)
 	if err != nil {
 		return nil, err

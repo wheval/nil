@@ -79,7 +79,12 @@ func getRandomSmartAccount() (uniswap.SmartAccount, *cliservice.Service, error) 
 	return uniswapSmartAccounts[index.Int64()], uniswapServices[index.Int64()], nil
 }
 
-func (c NilLoadGeneratorAPIImpl) CallSwap(tokenName1, tokenName2 string, amountSwap, expectedAmount types.Uint256) (common.Hash, error) {
+func (c NilLoadGeneratorAPIImpl) CallSwap(
+	tokenName1 string,
+	tokenName2 string,
+	amountSwap types.Uint256,
+	expectedAmount types.Uint256,
+) (common.Hash, error) {
 	res, ok := AvailablePairs[[2]string{tokenName1, tokenName2}]
 	if !ok {
 		return common.EmptyHash, errors.New("swap for this pair is not available")
@@ -121,7 +126,11 @@ func (c NilLoadGeneratorAPIImpl) CallSwap(tokenName1, tokenName2 string, amountS
 	)
 }
 
-func (c NilLoadGeneratorAPIImpl) CallQuote(tokenName1, tokenName2 string, swapAmount types.Uint256) (types.Uint256, error) {
+func (c NilLoadGeneratorAPIImpl) CallQuote(
+	tokenName1 string,
+	tokenName2 string,
+	swapAmount types.Uint256,
+) (types.Uint256, error) {
 	res, ok := AvailablePairs[[2]string{tokenName1, tokenName2}]
 	if !ok {
 		return types.Uint256{0}, errors.New("quote for this pair is not available")
@@ -172,7 +181,11 @@ func getSwapInfo(hash common.Hash, uniswapService *cliservice.Service) (UniswapT
 
 	tokenInfo := make([]UniswapTokenInfo, 0, len(tx.Token))
 	for _, token := range tx.Token {
-		tokenInfo = append(tokenInfo, UniswapTokenInfo{Addr: types.Address(token.Token), Name: types.GetTokenName(token.Token), Amount: token.Balance.String()})
+		tokenInfo = append(tokenInfo, UniswapTokenInfo{
+			Addr:   types.Address(token.Token),
+			Name:   types.GetTokenName(token.Token),
+			Amount: token.Balance.String(),
+		})
 	}
 	return UniswapTransactionInfo{
 		External: !tx.Flags.IsInternal(),

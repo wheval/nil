@@ -50,7 +50,10 @@ type testApi struct {
 	handler func() (sszx.SSZEncodedData, error)
 }
 
-func (t *testApi) TestMethod(ctx context.Context, blockReference rawapitypes.BlockReference) (sszx.SSZEncodedData, error) {
+func (t *testApi) TestMethod(
+	ctx context.Context,
+	blockReference rawapitypes.BlockReference,
+) (sszx.SSZEncodedData, error) {
 	return t.handler()
 }
 
@@ -74,7 +77,15 @@ func (s *ApiServerTestSuite) SetupTest() {
 	protocolInterfaceType := reflect.TypeFor[testNetworkTransportProtocol]()
 	apiInterfaceType := reflect.TypeFor[testApiIface]()
 	s.api = &testApi{}
-	err := setRawApiRequestHandlers(s.ctx, protocolInterfaceType, apiInterfaceType, s.api, types.BaseShardId, "testapi", s.serverNetworkManager, s.logger)
+	err := setRawApiRequestHandlers(
+		s.ctx,
+		protocolInterfaceType,
+		apiInterfaceType,
+		s.api,
+		types.BaseShardId,
+		"testapi",
+		s.serverNetworkManager,
+		s.logger)
 	s.Require().NoError(err)
 }
 
@@ -112,7 +123,8 @@ func (s *ApiServerTestSuite) TestValidResponse() {
 	}
 
 	request := s.makeValidLatestBlockRequest()
-	response, err := s.clientNetworkManager.SendRequestAndGetResponse(s.ctx, s.serverPeerId, "/shard/1/testapi/TestMethod", request)
+	response, err := s.clientNetworkManager.SendRequestAndGetResponse(
+		s.ctx, s.serverPeerId, "/shard/1/testapi/TestMethod", request)
 	s.Require().NoError(err)
 	s.Require().EqualValues(1, index)
 
@@ -128,7 +140,8 @@ func (s *ApiServerTestSuite) TestNilResponse() {
 	}
 
 	request := s.makeValidLatestBlockRequest()
-	response, err := s.clientNetworkManager.SendRequestAndGetResponse(s.ctx, s.serverPeerId, "/shard/1/testapi/TestMethod", request)
+	response, err := s.clientNetworkManager.SendRequestAndGetResponse(
+		s.ctx, s.serverPeerId, "/shard/1/testapi/TestMethod", request)
 	s.Require().NoError(err)
 
 	var pbResponse pb.RawBlockResponse
@@ -143,7 +156,11 @@ func (s *ApiServerTestSuite) TestInvalidSchemaRequest() {
 		return sszx.SSZEncodedData{}, nil
 	}
 
-	response, err := s.clientNetworkManager.SendRequestAndGetResponse(s.ctx, s.serverPeerId, "/shard/1/testapi/TestMethod", []byte("invalid request"))
+	response, err := s.clientNetworkManager.SendRequestAndGetResponse(
+		s.ctx,
+		s.serverPeerId,
+		"/shard/1/testapi/TestMethod",
+		[]byte("invalid request"))
 	s.Require().NoError(err)
 
 	var pbResponse pb.RawBlockResponse
@@ -159,7 +176,8 @@ func (s *ApiServerTestSuite) TestInvalidDataRequest() {
 	}
 
 	request := s.makeInvalidBlockRequest()
-	response, err := s.clientNetworkManager.SendRequestAndGetResponse(s.ctx, s.serverPeerId, "/shard/1/testapi/TestMethod", request)
+	response, err := s.clientNetworkManager.SendRequestAndGetResponse(
+		s.ctx, s.serverPeerId, "/shard/1/testapi/TestMethod", request)
 	s.Require().NoError(err)
 
 	var pbResponse pb.RawBlockResponse
@@ -175,7 +193,8 @@ func (s *ApiServerTestSuite) TestHandlerPanic() {
 	}
 
 	request := s.makeValidLatestBlockRequest()
-	response, err := s.clientNetworkManager.SendRequestAndGetResponse(s.ctx, s.serverPeerId, "/shard/1/testapi/TestMethod", request)
+	response, err := s.clientNetworkManager.SendRequestAndGetResponse(
+		s.ctx, s.serverPeerId, "/shard/1/testapi/TestMethod", request)
 	s.Require().NoError(err)
 
 	s.Require().Empty(response)

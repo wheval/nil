@@ -144,7 +144,8 @@ func (p *TxnPool) add(txns ...*metaTxn) ([]DiscardReason, error) {
 
 	for i, txn := range txns {
 		if txn.To.ShardId() != p.cfg.ShardId {
-			return nil, fmt.Errorf("transaction shard id %d does not match pool shard id %d", txn.To.ShardId(), p.cfg.ShardId)
+			return nil, fmt.Errorf(
+				"transaction shard id %d does not match pool shard id %d", txn.To.ShardId(), p.cfg.ShardId)
 		}
 
 		if reason, ok := p.validateTxn(txn); !ok {

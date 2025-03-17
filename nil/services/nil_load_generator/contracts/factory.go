@@ -18,7 +18,11 @@ func NewFactory(contract Contract) *Factory {
 	return &Factory{Contract: contract}
 }
 
-func (f *Factory) Deploy(service *cliservice.Service, deploySmartAccount SmartAccount, smartAccount types.Address) error {
+func (f *Factory) Deploy(
+	service *cliservice.Service,
+	deploySmartAccount SmartAccount,
+	smartAccount types.Address,
+) error {
 	argsPacked, err := f.Abi.Pack("", smartAccount)
 	if err != nil {
 		return err
@@ -28,8 +32,16 @@ func (f *Factory) Deploy(service *cliservice.Service, deploySmartAccount SmartAc
 	return err
 }
 
-func (f *Factory) CreatePair(ctx context.Context, service *cliservice.Service, client client.Client, smartAccount SmartAccount, token0Address, token1Address types.Address) error {
-	calldata, err := f.Abi.Pack("createPair", token0Address, token1Address, big.NewInt(0), big.NewInt(int64(f.Addr.ShardId())))
+func (f *Factory) CreatePair(
+	ctx context.Context,
+	service *cliservice.Service,
+	client client.Client,
+	smartAccount SmartAccount,
+	token0Address types.Address,
+	token1Address types.Address,
+) error {
+	calldata, err := f.Abi.Pack(
+		"createPair", token0Address, token1Address, big.NewInt(0), big.NewInt(int64(f.Addr.ShardId())))
 	if err != nil {
 		return err
 	}
@@ -47,7 +59,11 @@ func (f *Factory) CreatePair(ctx context.Context, service *cliservice.Service, c
 	return nil
 }
 
-func (f *Factory) GetPair(service *cliservice.Service, token0Address, token1Address types.Address) (types.Address, error) {
+func (f *Factory) GetPair(
+	service *cliservice.Service,
+	token0Address types.Address,
+	token1Address types.Address,
+) (types.Address, error) {
 	res, err := GetFromContract(service, f.Abi, f.Addr, "getTokenPair", token0Address, token1Address)
 	if err != nil {
 		return types.EmptyAddress, err

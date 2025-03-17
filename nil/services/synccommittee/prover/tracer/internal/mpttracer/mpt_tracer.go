@@ -154,8 +154,9 @@ func (mt *MPTTracer) GetMPTTraces() (MPTTraces, error) {
 	}, nil
 }
 
-// GetAccountTrieTraces retrieves traces for changes in the contract trie. Modifies underlying StorageTrie for each account,
-// thus, should be called after `GetAccountsStorageUpdatesTraces` to not affect `before` values.
+// GetAccountTrieTraces retrieves traces for changes in the contract trie.
+// Modifies underlying StorageTrie for each account,  thus, should be called after `GetAccountsStorageUpdatesTraces`
+// to not affect `before` values.
 func (mt *MPTTracer) getAccountTrieTraces() ([]ContractTrieUpdateTrace, error) {
 	contractTrie := execution.NewContractTrie(mt.ContractSparseTrie)
 	contractTrieTraces := make([]ContractTrieUpdateTrace, 0, len(mt.accountsCache))

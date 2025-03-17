@@ -37,7 +37,11 @@ func newTaskStateChangeHandler(
 	}
 }
 
-func (h *taskStateChangeHandler) OnTaskTerminated(ctx context.Context, task *types.Task, result *types.TaskResult) error {
+func (h *taskStateChangeHandler) OnTaskTerminated(
+	ctx context.Context,
+	task *types.Task,
+	result *types.TaskResult,
+) error {
 	switch {
 	case result.IsSuccess():
 		log.NewTaskResultEvent(h.logger, zerolog.InfoLevel, result).

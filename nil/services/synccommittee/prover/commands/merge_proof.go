@@ -55,7 +55,10 @@ func (cmd *mergeProofCmd) MakeCommandDefinition(task *types.Task) (*CommandDefin
 	}, execCmd.Err
 }
 
-func (*mergeProofCmd) AfterCommandExecuted(task *types.Task, results types.TaskOutputArtifacts) (types.TaskResultData, error) {
+func (*mergeProofCmd) AfterCommandExecuted(
+	task *types.Task,
+	results types.TaskOutputArtifacts,
+) (types.TaskResultData, error) {
 	mergedProofFile := results[types.FinalProof]
 	proofContent, err := os.ReadFile(mergedProofFile)
 	if err != nil {

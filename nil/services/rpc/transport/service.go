@@ -121,7 +121,8 @@ func newCallback(receiver, fn reflect.Value, name string, logger zerolog.Logger)
 		outs[i] = fntype.Out(i)
 	}
 	if len(outs) > 2 {
-		logger.Warn().Msg(fmt.Sprintf("Cannot register RPC callback [%s] - maximum 2 return values are allowed, got %d", name, len(outs)))
+		logger.Warn().Msg(fmt.Sprintf(
+			"Cannot register RPC callback [%s] - maximum 2 return values are allowed, got %d", name, len(outs)))
 		return nil
 	}
 	// If an error is returned, it must be the last returned value.
@@ -137,7 +138,8 @@ func newCallback(receiver, fn reflect.Value, name string, logger zerolog.Logger)
 	}
 	// If there is only one return value (error), and the last argument is *jsoniter.Stream, mark it as streamable
 	if len(outs) != 1 && c.streamable {
-		logger.Warn().Msg(fmt.Sprintf("Cannot register RPC callback [%s] - streamable method may only return 1 value (error)", name))
+		logger.Warn().Msg(fmt.Sprintf(
+			"Cannot register RPC callback [%s] - streamable method may only return 1 value (error)", name))
 		return nil
 	}
 	return c
@@ -169,7 +171,12 @@ func (c *callback) makeArgTypes() {
 }
 
 // call invokes the callback.
-func (c *callback) call(ctx context.Context, method string, args []reflect.Value, stream *jsoniter.Stream) (res interface{}, errRes error) {
+func (c *callback) call(
+	ctx context.Context,
+	method string,
+	args []reflect.Value,
+	stream *jsoniter.Stream,
+) (res interface{}, errRes error) {
 	// Create the argument slice.
 	fullargs := make([]reflect.Value, 0, 2+len(args))
 	if c.rcvr.IsValid() {

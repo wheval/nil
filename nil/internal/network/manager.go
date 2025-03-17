@@ -51,7 +51,13 @@ func connectToDhtBootstrapPeers(ctx context.Context, conf *Config, h Host, logge
 	connectToPeers(ctx, conf.DHTBootstrapPeers, h, logger)
 }
 
-func newManagerFromHost(ctx context.Context, conf *Config, h host.Host, database db.DB, logger zerolog.Logger) (*Manager, error) {
+func newManagerFromHost(
+	ctx context.Context,
+	conf *Config,
+	h host.Host,
+	database db.DB,
+	logger zerolog.Logger,
+) (*Manager, error) {
 	logger.Info().Msgf("Listening on addresses:\n%s\n", common.Join("\n", h.Addrs()...))
 
 	connectToDhtBootstrapPeers(ctx, conf, h, logger)

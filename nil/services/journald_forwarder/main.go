@@ -98,7 +98,14 @@ func createDatabaseIfNotExists(ctx context.Context, connect driver.Conn, databas
 	return connect.Exec(ctx, query)
 }
 
-func createTableIfNotExists(ctx context.Context, connect driver.Conn, database, tableName string, columns map[string]string, orderBy string) error {
+func createTableIfNotExists(
+	ctx context.Context,
+	connect driver.Conn,
+	database string,
+	tableName string,
+	columns map[string]string,
+	orderBy string,
+) error {
 	columnDefinitions := make([]string, 0, len(columns))
 	for column, colType := range columns {
 		columnDefinitions = append(columnDefinitions, fmt.Sprintf("%s %s", column, colType))
@@ -115,7 +122,14 @@ func createTableIfNotExists(ctx context.Context, connect driver.Conn, database, 
 	return connect.Exec(ctx, query)
 }
 
-func insertData(ctx context.Context, connect driver.Conn, database, tableName string, columns []string, values []any) error {
+func insertData(
+	ctx context.Context,
+	connect driver.Conn,
+	database string,
+	tableName string,
+	columns []string,
+	values []any,
+) error {
 	placeholders := make([]string, len(columns))
 	for i := range columns {
 		placeholders[i] = "?"
@@ -227,7 +241,9 @@ func (s *LogServer) processLogRecord(ctx context.Context, logRecord *v12.LogReco
 	}
 }
 
-func (s *LogServer) Export(ctx context.Context, req *logs.ExportLogsServiceRequest) (*logs.ExportLogsServiceResponse, error) {
+func (s *LogServer) Export(
+	ctx context.Context, req *logs.ExportLogsServiceRequest,
+) (*logs.ExportLogsServiceResponse, error) {
 	s.logger.Info().Int("log_records", len(req.ResourceLogs)).Msg("Received log records")
 	for _, resourceLog := range req.ResourceLogs {
 		s.processResourceLog(ctx, resourceLog)

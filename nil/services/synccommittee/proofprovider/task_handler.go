@@ -24,7 +24,11 @@ type taskHandler struct {
 }
 
 func newTaskHandler(
-	taskStorage HandlerTaskStorage, resultSaver TaskResultSaver, skipRate int, clock clockwork.Clock, logger zerolog.Logger,
+	taskStorage HandlerTaskStorage,
+	resultSaver TaskResultSaver,
+	skipRate int,
+	clock clockwork.Clock,
+	logger zerolog.Logger,
 ) api.TaskHandler {
 	return &taskHandler{
 		taskStorage: taskStorage,
@@ -147,7 +151,13 @@ func (h *taskHandler) prepareTasksForBatch(providerTask *types.Task) []*types.Ta
 	// Create partial proof tasks (bottom level, no dependencies)
 	for ct := range types.Circuits() {
 		partialProveTaskEntry := types.NewPartialProveTaskEntry(
-			providerTask.BatchId, providerTask.ShardId, providerTask.BlockNum, providerTask.BlockHash, providerTask.BlockIds, ct, currentTime,
+			providerTask.BatchId,
+			providerTask.ShardId,
+			providerTask.BlockNum,
+			providerTask.BlockHash,
+			providerTask.BlockIds,
+			ct,
+			currentTime,
 		)
 		taskEntries = append(taskEntries, partialProveTaskEntry)
 

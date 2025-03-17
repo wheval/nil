@@ -263,7 +263,13 @@ func TestSetProof(t *testing.T) {
 		string([]byte{0xf, 0xd, 0xa, 0xa}): "val-7",
 	}
 
-	modifyAndBuildProof := func(t *testing.T, mpt *MerklePatriciaTrie, holder map[string][]byte, key []byte, value []byte) (*MerklePatriciaTrie, Proof) {
+	modifyAndBuildProof := func(
+		t *testing.T,
+		mpt *MerklePatriciaTrie,
+		holder map[string][]byte,
+		key []byte,
+		value []byte,
+	) (*MerklePatriciaTrie, Proof) {
 		t.Helper()
 
 		originalMpt := copyMpt(holder, mpt)

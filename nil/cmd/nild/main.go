@@ -41,7 +41,11 @@ func main() {
 	check.PanicIfErr(err)
 
 	if len(cfg.ReadThrough.SourceAddr) != 0 {
-		database, err = readthroughdb.NewReadThroughWithEndpoint(context.Background(), cfg.ReadThrough.SourceAddr, database, cfg.ReadThrough.ForkMainAtBlock)
+		database, err = readthroughdb.NewReadThroughWithEndpoint(
+			context.Background(),
+			cfg.ReadThrough.SourceAddr,
+			database,
+			cfg.ReadThrough.ForkMainAtBlock)
 		check.PanicIfErr(err)
 	}
 
@@ -71,7 +75,11 @@ func loadConfig() (*nildconfig.Config, error) {
 }
 
 func addAllowDbClearFlag(fset *pflag.FlagSet, cfg *nildconfig.Config) {
-	fset.BoolVar(&cfg.AllowDbDrop, "allow-db-clear", cfg.AllowDbDrop, "allow to clear database in case of outdated version")
+	fset.BoolVar(
+		&cfg.AllowDbDrop,
+		"allow-db-clear",
+		cfg.AllowDbDrop,
+		"allow to clear database in case of outdated version")
 }
 
 func addRpcNodeFlags(fset *pflag.FlagSet, cfg *nildconfig.Config) {
@@ -81,7 +89,8 @@ func addRpcNodeFlags(fset *pflag.FlagSet, cfg *nildconfig.Config) {
 func addBasicFlags(fset *pflag.FlagSet, cfg *nildconfig.Config) {
 	fset.UintSliceVar(&cfg.MyShards, "my-shards", cfg.MyShards, "run only specified shard(s)")
 	addAllowDbClearFlag(fset, cfg)
-	fset.Uint32Var(&cfg.CollatorTickPeriodMs, "collator-tick-ms", cfg.CollatorTickPeriodMs, "collator tick period in milliseconds")
+	fset.Uint32Var(
+		&cfg.CollatorTickPeriodMs, "collator-tick-ms", cfg.CollatorTickPeriodMs, "collator tick period in milliseconds")
 }
 
 func parseArgs() *nildconfig.Config {
@@ -102,14 +111,34 @@ func parseArgs() *nildconfig.Config {
 	cobrax.AddCustomLogLevelFlag(rootCmd.PersistentFlags(), "libp2p-log-level", "", &libp2pLogLevel)
 
 	rootCmd.PersistentFlags().StringVar(&cfg.DB.Path, "db-path", cfg.DB.Path, "path to database")
-	rootCmd.PersistentFlags().Float64Var(&cfg.DB.DiscardRatio, "db-discard-ratio", cfg.DB.DiscardRatio, "discard ratio for badger GC")
-	rootCmd.PersistentFlags().DurationVar(&cfg.DB.GcFrequency, "db-gc-interval", cfg.DB.GcFrequency, "frequency for badger GC")
+	rootCmd.PersistentFlags().Float64Var(
+		&cfg.DB.DiscardRatio, "db-discard-ratio", cfg.DB.DiscardRatio, "discard ratio for badger GC")
+	rootCmd.PersistentFlags().DurationVar(
+		&cfg.DB.GcFrequency, "db-gc-interval", cfg.DB.GcFrequency, "frequency for badger GC")
 	rootCmd.PersistentFlags().IntVar(&cfg.RPCPort, "http-port", cfg.RPCPort, "http port for rpc server")
-	rootCmd.PersistentFlags().Var(&cfg.BootstrapPeers, "bootstrap-peers", "peers for snapshot fetching or transaction sending, must go in the order of shards")
-	rootCmd.PersistentFlags().StringVar(&cfg.AdminSocketPath, "admin-socket-path", cfg.AdminSocketPath, "unix socket path to start admin server on (disabled if empty)}")
-	rootCmd.PersistentFlags().StringVar(&cfg.ReadThrough.SourceAddr, "read-through-db-addr", cfg.ReadThrough.SourceAddr, "address of the read-through database server. If provided, the local node will be run in read-through mode.")
-	rootCmd.PersistentFlags().Var(&cfg.ReadThrough.ForkMainAtBlock, "read-through-fork-main-at-block", "all blocks generated later than this MainChain block won't be fetched; latest block by default")
-	rootCmd.PersistentFlags().StringVar(&logFilter, "log-filter", "", "filter logs by component, e.g. 'all:-sync:-rpc' - enable all logs, but disable sync and rpc logs")
+	rootCmd.PersistentFlags().Var(
+		&cfg.BootstrapPeers,
+		"bootstrap-peers",
+		"peers for snapshot fetching or transaction sending, must go in the order of shards")
+	rootCmd.PersistentFlags().StringVar(
+		&cfg.AdminSocketPath,
+		"admin-socket-path",
+		cfg.AdminSocketPath,
+		"unix socket path to start admin server on (disabled if empty)}")
+	rootCmd.PersistentFlags().StringVar(
+		&cfg.ReadThrough.SourceAddr,
+		"read-through-db-addr",
+		cfg.ReadThrough.SourceAddr,
+		"address of the read-through database server. If provided, the local node will be run in read-through mode.")
+	rootCmd.PersistentFlags().Var(
+		&cfg.ReadThrough.ForkMainAtBlock,
+		"read-through-fork-main-at-block",
+		"all blocks generated later than this MainChain block won't be fetched; latest block by default")
+	rootCmd.PersistentFlags().StringVar(
+		&logFilter,
+		"log-filter",
+		"",
+		"filter logs by component, e.g. 'all:-sync:-rpc' - enable all logs, but disable sync and rpc logs")
 
 	cobrax.AddPprofPortFlag(rootCmd.PersistentFlags(), &cfg.PprofPort)
 
@@ -123,7 +152,8 @@ func parseArgs() *nildconfig.Config {
 	runCmd.Flags().Uint32Var(&cfg.NShards, "nshards", cfg.NShards, "number of shardchains")
 	runCmd.Flags().BoolVar(&cfg.SplitShards, "split-shards", cfg.SplitShards, "run each shard in separate process")
 	runCmd.Flags().StringVar(&cfg.CometaConfig, "cometa-config", "", "path to Cometa config")
-	runCmd.Flags().StringVar(&cfg.ValidatorKeysPath, "validator-keys-path", cfg.ValidatorKeysPath, "path to write validator keys")
+	runCmd.Flags().StringVar(
+		&cfg.ValidatorKeysPath, "validator-keys-path", cfg.ValidatorKeysPath, "path to write validator keys")
 
 	addBasicFlags(runCmd.Flags(), cfg)
 	cmdflags.AddNetwork(runCmd.Flags(), cfg.Config.Network)

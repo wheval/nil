@@ -151,7 +151,8 @@ func (b *BatchRequestImpl) SendTransactionViaSmartContract(
 ) (uint64, error) {
 	id := len(b.requests)
 
-	r, err := b.client.getSendTransactionViaSmartContractRequest(ctx, smartAccountAddress, bytecode, fee, value, tokens, contractAddress, pk, false, id)
+	r, err := b.client.getSendTransactionViaSmartContractRequest(
+		ctx, smartAccountAddress, bytecode, fee, value, tokens, contractAddress, pk, false, id)
 	if err != nil {
 		return 0, err
 	}
@@ -448,7 +449,12 @@ func (c *Client) getSendTransactionViaSmartContractRequest(ctx context.Context, 
 	return request, nil
 }
 
-func (c *Client) GetBlock(ctx context.Context, shardId types.ShardId, blockId any, fullTx bool) (*jsonrpc.RPCBlock, error) {
+func (c *Client) GetBlock(
+	ctx context.Context,
+	shardId types.ShardId,
+	blockId any,
+	fullTx bool,
+) (*jsonrpc.RPCBlock, error) {
 	request, err := c.getBlockRequest(shardId, blockId, fullTx, false)
 	if err != nil {
 		return nil, err
@@ -469,7 +475,12 @@ func toRPCBlock(raw json.RawMessage) (*jsonrpc.RPCBlock, error) {
 	return block, nil
 }
 
-func (c *Client) GetDebugBlock(ctx context.Context, shardId types.ShardId, blockId any, fullTx bool) (*jsonrpc.DebugRPCBlock, error) {
+func (c *Client) GetDebugBlock(
+	ctx context.Context,
+	shardId types.ShardId,
+	blockId any,
+	fullTx bool,
+) (*jsonrpc.DebugRPCBlock, error) {
 	request, err := c.getBlockRequest(shardId, blockId, fullTx, true)
 	if err != nil {
 		return nil, err
@@ -589,7 +600,11 @@ func (c *Client) GetBlockTransactionCount(ctx context.Context, shardId types.Sha
 	return 0, nil
 }
 
-func (c *Client) getBlockTransactionCountByNumber(ctx context.Context, shardId types.ShardId, number transport.BlockNumber) (uint64, error) {
+func (c *Client) getBlockTransactionCountByNumber(
+	ctx context.Context,
+	shardId types.ShardId,
+	number transport.BlockNumber,
+) (uint64, error) {
 	res, err := c.call(ctx, Eth_getBlockTransactionCountByNumber, shardId, number)
 	if err != nil {
 		return 0, err
@@ -698,8 +713,13 @@ func (c *Client) ClientVersion(ctx context.Context) (string, error) {
 }
 
 func (c *Client) DeployContract(
-	ctx context.Context, shardId types.ShardId, smartAccountAddress types.Address, payload types.DeployPayload,
-	value types.Value, fee types.FeePack, pk *ecdsa.PrivateKey,
+	ctx context.Context,
+	shardId types.ShardId,
+	smartAccountAddress types.Address,
+	payload types.DeployPayload,
+	value types.Value,
+	fee types.FeePack,
+	pk *ecdsa.PrivateKey,
 ) (common.Hash, types.Address, error) {
 	contractAddr := types.CreateAddress(shardId, payload)
 	txHash, err := client.SendTransactionViaSmartAccount(ctx, c, smartAccountAddress, payload.Bytes(), fee,
@@ -710,17 +730,29 @@ func (c *Client) DeployContract(
 	return txHash, contractAddr, nil
 }
 
-func (c *Client) DeployExternal(ctx context.Context, shardId types.ShardId, deployPayload types.DeployPayload, fee types.FeePack) (common.Hash, types.Address, error) {
+func (c *Client) DeployExternal(
+	ctx context.Context,
+	shardId types.ShardId,
+	deployPayload types.DeployPayload,
+	fee types.FeePack,
+) (common.Hash, types.Address, error) {
 	address := types.CreateAddress(shardId, deployPayload)
 	msgHash, err := client.SendExternalTransaction(ctx, c, deployPayload.Bytes(), address, nil, fee, true, false)
 	return msgHash, address, err
 }
 
 func (c *Client) SendTransactionViaSmartAccount(
-	ctx context.Context, smartAccountAddress types.Address, bytecode types.Code, fee types.FeePack, value types.Value,
-	tokens []types.TokenBalance, contractAddress types.Address, pk *ecdsa.PrivateKey,
+	ctx context.Context,
+	smartAccountAddress types.Address,
+	bytecode types.Code,
+	fee types.FeePack,
+	value types.Value,
+	tokens []types.TokenBalance,
+	contractAddress types.Address,
+	pk *ecdsa.PrivateKey,
 ) (common.Hash, error) {
-	return client.SendTransactionViaSmartAccount(ctx, c, smartAccountAddress, bytecode, fee, value, tokens, contractAddress, pk, false)
+	return client.SendTransactionViaSmartAccount(
+		ctx, c, smartAccountAddress, bytecode, fee, value, tokens, contractAddress, pk, false)
 }
 
 func (c *Client) SendExternalTransaction(
@@ -729,7 +761,12 @@ func (c *Client) SendExternalTransaction(
 	return client.SendExternalTransaction(ctx, c, bytecode, contractAddress, pk, fee, false, false)
 }
 
-func (c *Client) Call(ctx context.Context, args *jsonrpc.CallArgs, blockId any, stateOverride *jsonrpc.StateOverrides) (*jsonrpc.CallRes, error) {
+func (c *Client) Call(
+	ctx context.Context,
+	args *jsonrpc.CallArgs,
+	blockId any,
+	stateOverride *jsonrpc.StateOverrides,
+) (*jsonrpc.CallRes, error) {
 	blockNrOrHash, err := transport.AsBlockReference(blockId)
 	if err != nil {
 		return nil, err
@@ -747,7 +784,11 @@ func (c *Client) Call(ctx context.Context, args *jsonrpc.CallArgs, blockId any, 
 	return res, nil
 }
 
-func (c *Client) EstimateFee(ctx context.Context, args *jsonrpc.CallArgs, blockId any) (*jsonrpc.EstimateFeeRes, error) {
+func (c *Client) EstimateFee(
+	ctx context.Context,
+	args *jsonrpc.CallArgs,
+	blockId any,
+) (*jsonrpc.EstimateFeeRes, error) {
 	blockNrOrHash, err := transport.AsBlockReference(blockId)
 	if err != nil {
 		return nil, err
@@ -765,7 +806,12 @@ func (c *Client) EstimateFee(ctx context.Context, args *jsonrpc.CallArgs, blockI
 	return &res, nil
 }
 
-func (c *Client) SetTokenName(ctx context.Context, contractAddr types.Address, name string, pk *ecdsa.PrivateKey) (common.Hash, error) {
+func (c *Client) SetTokenName(
+	ctx context.Context,
+	contractAddr types.Address,
+	name string,
+	pk *ecdsa.PrivateKey,
+) (common.Hash, error) {
 	data, err := contracts.NewCallData(contracts.NameNilTokenBase, "setTokenName", name)
 	if err != nil {
 		return common.EmptyHash, err
@@ -774,7 +820,13 @@ func (c *Client) SetTokenName(ctx context.Context, contractAddr types.Address, n
 	return c.SendExternalTransaction(ctx, data, contractAddr, pk, types.NewFeePackFromGas(100_000))
 }
 
-func (c *Client) ChangeTokenAmount(ctx context.Context, contractAddr types.Address, amount types.Value, pk *ecdsa.PrivateKey, mint bool) (common.Hash, error) {
+func (c *Client) ChangeTokenAmount(
+	ctx context.Context,
+	contractAddr types.Address,
+	amount types.Value,
+	pk *ecdsa.PrivateKey,
+	mint bool,
+) (common.Hash, error) {
 	method := "mintToken"
 	if !mint {
 		method = "burnToken"
@@ -809,7 +861,12 @@ func (c *Client) DbGet(ctx context.Context, tableName db.TableName, key []byte) 
 	return callDbAPI[[]byte](ctx, c, Db_get, tableName, key)
 }
 
-func (c *Client) DbGetFromShard(ctx context.Context, shardId types.ShardId, tableName db.ShardedTableName, key []byte) ([]byte, error) {
+func (c *Client) DbGetFromShard(
+	ctx context.Context,
+	shardId types.ShardId,
+	tableName db.ShardedTableName,
+	key []byte,
+) ([]byte, error) {
 	return callDbAPI[[]byte](ctx, c, Db_getFromShard, shardId, tableName, key)
 }
 
@@ -817,7 +874,12 @@ func (c *Client) DbExists(ctx context.Context, tableName db.TableName, key []byt
 	return callDbAPI[bool](ctx, c, Db_exists, tableName, key)
 }
 
-func (c *Client) DbExistsInShard(ctx context.Context, shardId types.ShardId, tableName db.ShardedTableName, key []byte) (bool, error) {
+func (c *Client) DbExistsInShard(
+	ctx context.Context,
+	shardId types.ShardId,
+	tableName db.ShardedTableName,
+	key []byte,
+) (bool, error) {
 	return callDbAPI[bool](ctx, c, Db_existsInShard, shardId, tableName, key)
 }
 
@@ -868,7 +930,14 @@ func (c *Client) BatchCall(ctx context.Context, req client.BatchRequest) ([]any,
 	return result, nil
 }
 
-func (c *Client) fetchBlocksBatch(ctx context.Context, shardId types.ShardId, from, to types.BlockNumber, fullTx bool, isDebug bool) ([]any, error) {
+func (c *Client) fetchBlocksBatch(
+	ctx context.Context,
+	shardId types.ShardId,
+	from types.BlockNumber,
+	to types.BlockNumber,
+	fullTx bool,
+	isDebug bool,
+) ([]any, error) {
 	batch := c.CreateBatchRequest()
 
 	for i := from; i < to; i++ {
@@ -886,7 +955,15 @@ func (c *Client) fetchBlocksBatch(ctx context.Context, shardId types.ShardId, fr
 	return c.BatchCall(ctx, batch)
 }
 
-func (c *Client) getBlocksRange(ctx context.Context, shardId types.ShardId, from, to types.BlockNumber, fullTx bool, batchSize int, isDebug bool) ([]any, error) {
+func (c *Client) getBlocksRange(
+	ctx context.Context,
+	shardId types.ShardId,
+	from types.BlockNumber,
+	to types.BlockNumber,
+	fullTx bool,
+	batchSize int,
+	isDebug bool,
+) ([]any, error) {
 	if from >= to {
 		return nil, nil
 	}
@@ -911,7 +988,14 @@ func (c *Client) getBlocksRange(ctx context.Context, shardId types.ShardId, from
 	return result, nil
 }
 
-func (c *Client) GetDebugBlocksRange(ctx context.Context, shardId types.ShardId, from, to types.BlockNumber, fullTx bool, batchSize int) ([]*jsonrpc.DebugRPCBlock, error) {
+func (c *Client) GetDebugBlocksRange(
+	ctx context.Context,
+	shardId types.ShardId,
+	from types.BlockNumber,
+	to types.BlockNumber,
+	fullTx bool,
+	batchSize int,
+) ([]*jsonrpc.DebugRPCBlock, error) {
 	rawBlocks, err := c.getBlocksRange(ctx, shardId, from, to, fullTx, batchSize, true)
 	if err != nil {
 		return nil, err
@@ -926,7 +1010,14 @@ func (c *Client) GetDebugBlocksRange(ctx context.Context, shardId types.ShardId,
 	return result, nil
 }
 
-func (c *Client) GetBlocksRange(ctx context.Context, shardId types.ShardId, from, to types.BlockNumber, fullTx bool, batchSize int) ([]*jsonrpc.RPCBlock, error) {
+func (c *Client) GetBlocksRange(
+	ctx context.Context,
+	shardId types.ShardId,
+	from types.BlockNumber,
+	to types.BlockNumber,
+	fullTx bool,
+	batchSize int,
+) ([]*jsonrpc.RPCBlock, error) {
 	rawBlocks, err := c.getBlocksRange(ctx, shardId, from, to, fullTx, batchSize, false)
 	if err != nil {
 		return nil, err
@@ -941,7 +1032,11 @@ func (c *Client) GetBlocksRange(ctx context.Context, shardId types.ShardId, from
 	return result, nil
 }
 
-func (c *Client) GetDebugContract(ctx context.Context, contractAddr types.Address, blockId any) (*jsonrpc.DebugRPCContract, error) {
+func (c *Client) GetDebugContract(
+	ctx context.Context,
+	contractAddr types.Address,
+	blockId any,
+) (*jsonrpc.DebugRPCContract, error) {
 	blockRef, err := transport.AsBlockReference(blockId)
 	if err != nil {
 		return nil, err

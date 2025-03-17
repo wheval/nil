@@ -68,11 +68,21 @@ func (dbApi *DbAPIImpl) Get(ctx context.Context, tableName db.TableName, key []b
 	return res, err
 }
 
-func (dbApi *DbAPIImpl) ExistsInShard(ctx context.Context, shardId types.ShardId, tableName db.ShardedTableName, key []byte) (bool, error) {
+func (dbApi *DbAPIImpl) ExistsInShard(
+	ctx context.Context,
+	shardId types.ShardId,
+	tableName db.ShardedTableName,
+	key []byte,
+) (bool, error) {
 	return dbApi.Exists(ctx, db.ShardTableName(tableName, shardId), key)
 }
 
-func (dbApi *DbAPIImpl) GetFromShard(ctx context.Context, shardId types.ShardId, tableName db.ShardedTableName, key []byte) ([]byte, error) {
+func (dbApi *DbAPIImpl) GetFromShard(
+	ctx context.Context,
+	shardId types.ShardId,
+	tableName db.ShardedTableName,
+	key []byte,
+) ([]byte, error) {
 	return dbApi.Get(ctx, db.ShardTableName(tableName, shardId), key)
 }
 

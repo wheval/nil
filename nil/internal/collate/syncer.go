@@ -138,7 +138,8 @@ func (s *Syncer) Init(ctx context.Context, allowDbDrop bool) error {
 	remoteVersion, err := s.fetchRemoteVersion(ctx)
 	if err != nil {
 		// todo: when all shards can handle the new protocol, we should return an error here
-		s.logger.Warn().Err(err).Msgf("Failed to fetch remote version. For now we assume that local version %s is up to date", version)
+		s.logger.Warn().Err(err).Msgf(
+			"Failed to fetch remote version. For now we assume that local version %s is up to date", version)
 		return nil
 	}
 	if version == remoteVersion {
@@ -202,7 +203,8 @@ func (s *Syncer) Run(ctx context.Context) error {
 			saved, err := s.processTopicTransaction(ctx, msg.Data)
 			if err != nil {
 				if errors.As(err, new(invalidSignatureError)) {
-					if peerReputationTracker := network.TryGetPeerReputationTracker(s.networkManager); peerReputationTracker != nil {
+					peerReputationTracker := network.TryGetPeerReputationTracker(s.networkManager)
+					if peerReputationTracker != nil {
 						peerReputationTracker.ReportPeer(msg.ReceivedFrom, cm.ReputationChangeInvalidBlockSignature)
 					} else {
 						s.logger.Warn().Msg("Peer reputation tracker is not available")

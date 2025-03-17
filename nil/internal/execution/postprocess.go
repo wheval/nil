@@ -40,7 +40,8 @@ func (pp *blockPostprocessor) fillLastBlockTable() error {
 }
 
 func (pp *blockPostprocessor) fillBlockHashByNumberIndex() error {
-	return pp.tx.PutToShard(pp.shardId, db.BlockHashByNumberIndex, pp.blockResult.Block.Id.Bytes(), pp.blockResult.BlockHash.Bytes())
+	return pp.tx.PutToShard(
+		pp.shardId, db.BlockHashByNumberIndex, pp.blockResult.Block.Id.Bytes(), pp.blockResult.BlockHash.Bytes())
 }
 
 func (pp *blockPostprocessor) fillBlockHashAndTransactionIndexByTransactionHash() error {

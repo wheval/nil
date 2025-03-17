@@ -880,7 +880,10 @@ func TestExpirations(t *testing.T) {
 	if res, ok := ress.NextSync(); !ok {
 		t.Fatal("expected 1 result in iterator")
 	} else if res.Expiration != dsExp {
-		t.Fatalf("expiration returned from iterator differs from GetExpiration, expected: %v, actual: %v", dsExp, res.Expiration)
+		t.Fatalf(
+			"expiration returned from iterator differs from GetExpiration, expected: %v, actual: %v",
+			dsExp,
+			res.Expiration)
 	}
 
 	if _, ok := ress.NextSync(); ok {

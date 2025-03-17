@@ -31,8 +31,19 @@ func (s *SuiteRegression) SetupSuite() {
 	s.Require().NoError(err)
 	zeroState := &execution.ZeroStateConfig{
 		Contracts: []*execution.ContractDescr{
-			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: types.MainSmartAccountAddress, Value: smartAccountValue, CtorArgs: []any{execution.MainPublicKey}},
-			{Name: "Test", Contract: "tests/Test", Address: s.testAddress, Value: types.NewValueFromUint64(100000000000000)},
+			{
+				Name:     "MainSmartAccount",
+				Contract: "SmartAccount",
+				Address:  types.MainSmartAccountAddress,
+				Value:    smartAccountValue,
+				CtorArgs: []any{execution.MainPublicKey},
+			},
+			{
+				Name:     "Test",
+				Contract: "tests/Test",
+				Address:  s.testAddress,
+				Value:    types.NewValueFromUint64(100000000000000),
+			},
 		},
 	}
 
@@ -69,18 +80,36 @@ func (s *SuiteRegression) TestStaticCall() {
 	s.Require().NoError(err)
 
 	data := s.AbiPack(abiQuery, "checkValue", addrSource, types.NewUint256(42))
-	receipt = s.SendTransactionViaSmartAccountNoCheck(types.MainSmartAccountAddress, addrQuery, execution.MainPrivateKey, data,
-		types.NewFeePackFromGas(200_000), types.NewZeroValue(), nil)
+	receipt = s.SendTransactionViaSmartAccountNoCheck(
+		types.MainSmartAccountAddress,
+		addrQuery,
+		execution.MainPrivateKey,
+		data,
+		types.NewFeePackFromGas(200_000),
+		types.NewZeroValue(),
+		nil)
 	s.Require().True(receipt.AllSuccess())
 
 	data = s.AbiPack(abiQuery, "querySyncIncrement", addrSource)
-	receipt = s.SendTransactionViaSmartAccountNoCheck(types.MainSmartAccountAddress, addrQuery, execution.MainPrivateKey, data,
-		types.NewFeePackFromGas(200_000), types.NewZeroValue(), nil)
+	receipt = s.SendTransactionViaSmartAccountNoCheck(
+		types.MainSmartAccountAddress,
+		addrQuery,
+		execution.MainPrivateKey,
+		data,
+		types.NewFeePackFromGas(200_000),
+		types.NewZeroValue(),
+		nil)
 	s.Require().True(receipt.AllSuccess())
 
 	data = s.AbiPack(abiQuery, "checkValue", addrSource, types.NewUint256(43))
-	receipt = s.SendTransactionViaSmartAccountNoCheck(types.MainSmartAccountAddress, addrQuery, execution.MainPrivateKey, data,
-		types.NewFeePackFromGas(200_000), types.NewZeroValue(), nil)
+	receipt = s.SendTransactionViaSmartAccountNoCheck(
+		types.MainSmartAccountAddress,
+		addrQuery,
+		execution.MainPrivateKey,
+		data,
+		types.NewFeePackFromGas(200_000),
+		types.NewZeroValue(),
+		nil)
 	s.Require().True(receipt.AllSuccess())
 }
 
@@ -100,8 +129,12 @@ func (s *SuiteRegression) TestProposerOutOfGas() {
 	calldata, err := abi.Pack("burnGas")
 	s.Require().NoError(err)
 
-	txHash, err := s.Client.SendTransactionViaSmartAccount(s.T().Context(),
-		types.MainSmartAccountAddress, calldata, types.NewFeePackFromGas(100_000_000_000), types.Value0,
+	txHash, err := s.Client.SendTransactionViaSmartAccount(
+		s.T().Context(),
+		types.MainSmartAccountAddress,
+		calldata,
+		types.NewFeePackFromGas(100_000_000_000),
+		types.Value0,
 		[]types.TokenBalance{}, s.testAddress, execution.MainPrivateKey)
 	s.Require().NoError(err)
 
@@ -168,8 +201,15 @@ func (s *SuiteRegression) TestNonRevertedErrDecoding() {
 	payload := types.BuildDeployPayload(code, common.EmptyHash)
 	contractAddr := types.CreateAddress(1, payload)
 
-	txHash, err := s.Client.SendTransactionViaSmartAccount(s.Context, types.MainSmartAccountAddress,
-		nil, types.NewFeePackFromGas(10_000_000), types.NewValueFromUint64(1_000_000_000_000_000), nil, contractAddr, execution.MainPrivateKey)
+	txHash, err := s.Client.SendTransactionViaSmartAccount(
+		s.Context,
+		types.MainSmartAccountAddress,
+		nil,
+		types.NewFeePackFromGas(10_000_000),
+		types.NewValueFromUint64(1_000_000_000_000_000),
+		nil,
+		contractAddr,
+		execution.MainPrivateKey)
 	s.Require().NoError(err)
 	receipt := s.WaitForReceipt(txHash)
 	s.Require().True(receipt.AllSuccess())

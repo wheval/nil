@@ -74,8 +74,12 @@ func (dacr *DebugApiContractReader) GetRwTx() db.RwTx {
 // AppendToJournal is a no-op method to satisfy the interface
 func (dacr *DebugApiContractReader) AppendToJournal(je execution.JournalEntry) {}
 
-// GetAccount retrieves an account with its debug information. If not such contract at the given address, nil and empty proof are returned
-func (dacr *DebugApiContractReader) GetAccount(ctx context.Context, addr types.Address) (*TracerAccount, mpt.Proof, error) {
+// GetAccount retrieves an account with its debug information. If not such contract at the given address,
+// nil and empty proof are returned
+func (dacr *DebugApiContractReader) GetAccount(
+	ctx context.Context,
+	addr types.Address,
+) (*TracerAccount, mpt.Proof, error) {
 	debugRPCContract, err := dacr.client.GetDebugContract(ctx, addr, transport.BlockNumber(dacr.shardBlockNumber))
 	if err != nil || debugRPCContract == nil {
 		return nil, mpt.Proof{}, err

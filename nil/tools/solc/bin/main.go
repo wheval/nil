@@ -17,7 +17,8 @@ func main() {
 
 	cmd := &cobra.Command{
 		Short: "Tool for solidity contracts compilation",
-		Long:  "For each contract in solidity source this tool will output two files (code-hex and abi) with corresponding names",
+		Long: "For each contract in solidity source this tool will output two files (code-hex and abi) " +
+			"with corresponding names",
 	}
 
 	cmd.Flags().StringP("source", "s", "contract.sol", "path to solidity source file")
@@ -51,8 +52,16 @@ func main() {
 		abi, err := json.Marshal(c.Info.AbiDefinition)
 		check.PanicIfErr(err)
 
-		check.LogAndPanicIfErrf(os.WriteFile(abiFile, abi, 0o644), logger, "failed to write abi for contract %s", name) //nolint:gosec
+		check.LogAndPanicIfErrf(
+			os.WriteFile(abiFile, abi, 0o644), //nolint:gosec
+			logger,
+			"failed to write abi for contract %s",
+			name)
 
-		check.LogAndPanicIfErrf(os.WriteFile(codeFile, []byte(c.Code), 0o644), logger, "failed to write code hext for contract %s", name) //nolint:gosec
+		check.LogAndPanicIfErrf(
+			os.WriteFile(codeFile, []byte(c.Code), 0o644), //nolint:gosec
+			logger,
+			"failed to write code hext for contract %s",
+			name)
 	}
 }

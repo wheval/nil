@@ -78,7 +78,11 @@ func (s *SyncCommitteeTestSuite) newService() *SyncCommittee {
 
 	cfg := NewDefaultConfig()
 	cfg.RpcEndpoint = s.url
-	ethClientMock := &rollupcontract.EthClientMock{ChainIDFunc: func(ctx context.Context) (*big.Int, error) { return big.NewInt(0), errors.New("Empty mocked call") }}
+	ethClientMock := &rollupcontract.EthClientMock{
+		ChainIDFunc: func(ctx context.Context) (*big.Int, error) {
+			return big.NewInt(0), errors.New("Empty mocked call")
+		},
+	}
 	syncCommittee, err := New(cfg, s.scDb, ethClientMock)
 	s.Require().NoError(err)
 	return syncCommittee

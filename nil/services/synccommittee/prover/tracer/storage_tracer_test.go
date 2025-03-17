@@ -61,7 +61,8 @@ func TestIgnoresNonStorageOperations(t *testing.T) {
 	t.Parallel()
 	tracer := newTracerWithMockedGetter(t)
 
-	assert.False(t, traceStorageOperation(t, tracer, vm.ADD, 0, *uint256.NewInt(0))) // Non-storage opcode should result in no operation captured
+	// Non-storage opcode should result in no operation captured
+	assert.False(t, traceStorageOperation(t, tracer, vm.ADD, 0, *uint256.NewInt(0)))
 
 	assert.Empty(t, tracer.storageOps)
 }

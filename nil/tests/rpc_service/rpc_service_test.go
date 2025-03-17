@@ -39,7 +39,8 @@ func (s *SuiteRpcService) TearDownSuite() {
 
 func (s *SuiteRpcService) TestRpcBasicGetters() {
 	var someRandomMissingBlock common.Hash
-	s.Require().NoError(someRandomMissingBlock.UnmarshalText([]byte("0x0001117de2f3e6ee32953e78ced1db7b20214e0d8c745a03b8fecf7cc8ee76ef")))
+	s.Require().NoError(someRandomMissingBlock.UnmarshalText(
+		[]byte("0x0001117de2f3e6ee32953e78ced1db7b20214e0d8c745a03b8fecf7cc8ee76ef")))
 
 	shardIdListRes, err := s.Client.GetShardIdList(s.Context)
 	s.Require().NoError(err)
@@ -131,19 +132,24 @@ func (s *SuiteRpcService) TestRpcApiModules() {
 func (s *SuiteRpcService) TestUnsupportedCliVersion() {
 	logger := zerolog.New(os.Stderr)
 	s.Run("Unsupported version", func() {
-		client := rpc_client.NewClientWithDefaultHeaders(s.Endpoint, logger, map[string]string{"User-Agent": "nil-cli/12"})
+		client := rpc_client.NewClientWithDefaultHeaders(
+			s.Endpoint, logger, map[string]string{"User-Agent": "nil-cli/12"})
 		_, err := client.ChainId(s.Context)
 		s.Require().ErrorContains(err, "unexpected status code: 426: specified revision 12, minimum supported is")
 	})
 
 	s.Run("0 means unknown - skip check", func() {
-		client := rpc_client.NewClientWithDefaultHeaders(s.Endpoint, logger, map[string]string{"User-Agent": "nil-cli/0"})
+		client := rpc_client.NewClientWithDefaultHeaders(
+			s.Endpoint, logger, map[string]string{"User-Agent": "nil-cli/0"})
 		_, err := client.ChainId(s.Context)
 		s.Require().NoError(err)
 	})
 
 	s.Run("Valid revision", func() {
-		client := rpc_client.NewClientWithDefaultHeaders(s.Endpoint, logger, map[string]string{"User-Agent": "nil-cli/10000000"})
+		client := rpc_client.NewClientWithDefaultHeaders(
+			s.Endpoint,
+			logger,
+			map[string]string{"User-Agent": "nil-cli/10000000"})
 		_, err := client.ChainId(s.Context)
 		s.Require().NoError(err)
 	})
@@ -153,25 +159,38 @@ func (s *SuiteRpcService) TestUnsupportedNiljsVersion() {
 	logger := zerolog.New(os.Stderr)
 
 	s.Run("Invalid version", func() {
-		client := rpc_client.NewClientWithDefaultHeaders(s.Endpoint, logger, map[string]string{"Client-Version": "abc"})
+		client := rpc_client.NewClientWithDefaultHeaders(
+			s.Endpoint, logger, map[string]string{"Client-Version": "abc"})
 		_, err := client.ChainId(s.Context)
-		s.Require().ErrorContains(err, "unexpected status code: 400: invalid Client-Version header: \"abc\". Expected format is niljs/<version>")
+		s.Require().ErrorContains(
+			err,
+			"unexpected status code: 400: invalid Client-Version header: \"abc\". Expected format is niljs/<version>")
 	})
 
 	s.Run("Empty version", func() {
-		client := rpc_client.NewClientWithDefaultHeaders(s.Endpoint, logger, map[string]string{"Client-Version": "niljs"})
+		client := rpc_client.NewClientWithDefaultHeaders(
+			s.Endpoint, logger, map[string]string{"Client-Version": "niljs"})
 		_, err := client.ChainId(s.Context)
-		s.Require().ErrorContains(err, "unexpected status code: 400: invalid Client-Version header: \"niljs\". Expected format is niljs/<version>")
+		s.Require().ErrorContains(
+			err,
+			"unexpected status code: 400: invalid Client-Version header: \"niljs\". Expected format is niljs/<version>")
 	})
 
 	s.Run("Unsupported version", func() {
-		client := rpc_client.NewClientWithDefaultHeaders(s.Endpoint, logger, map[string]string{"Client-Version": "niljs/0.0.1"})
+		client := rpc_client.NewClientWithDefaultHeaders(
+			s.Endpoint,
+			logger,
+			map[string]string{"Client-Version": "niljs/0.0.1"})
 		_, err := client.ChainId(s.Context)
-		s.Require().ErrorContains(err, "unexpected status code: 426: specified niljs version 0.0.1, minimum supported is")
+		s.Require().ErrorContains(
+			err, "unexpected status code: 426: specified niljs version 0.0.1, minimum supported is")
 	})
 
 	s.Run("Valid version", func() {
-		client := rpc_client.NewClientWithDefaultHeaders(s.Endpoint, logger, map[string]string{"Client-Version": "niljs/100.0.0"})
+		client := rpc_client.NewClientWithDefaultHeaders(
+			s.Endpoint,
+			logger,
+			map[string]string{"Client-Version": "niljs/100.0.0"})
 		_, err := client.ChainId(s.Context)
 		s.Require().NoError(err)
 	})
@@ -208,10 +227,21 @@ func (s *SuiteRpcService) TestBatch() {
 	apis := `{"db":"1.0","debug":"1.0","eth":"1.0","faucet":"1.0","rpc":"1.0","web3":"1.0"}`
 	testcases := map[string]string{
 		"[]": `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"empty batch"}}`,
-		`[{"jsonrpc":"2.0","id": 1, "method":"rpc_modules","params":[]}]`:                                                                `[{"jsonrpc":"2.0","id":1,"result":` + apis + `}]`,
-		`[{"jsonrpc":"2.0","id": 1, "method":"rpc_modules","params":[]}, {"jsonrpc":"2.0","id": 2, "method":"rpc_modules","params":[]}]`: `[{"jsonrpc":"2.0","id":1,"result":` + apis + `}, {"jsonrpc":"2.0","id":2,"result":` + apis + `}]`,
-		`[{"jsonrpc":"2.0", "method":"rpc_modules","params":[]}]`:                                                                        `[{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"invalid request"}}]`,
-		`[{"jsonrpc":"2.0", "method":"eth_getBlockByNumber", "params": [0, "100500", false], "id": 1}]`:                                  `[{"jsonrpc":"2.0","id":1,"result":null}]`,
+
+		`[{"jsonrpc":"2.0","id": 1, "method":"rpc_modules","params":[]}]`://
+		`[{"jsonrpc":"2.0","id":1,"result":` + apis + `}]`,
+
+		`[
+			{"jsonrpc":"2.0","id": 1, "method":"rpc_modules","params":[]},
+			{"jsonrpc":"2.0","id": 2, "method":"rpc_modules","params":[]}
+		]`: //
+		`[{"jsonrpc":"2.0","id":1,"result":` + apis + `}, {"jsonrpc":"2.0","id":2,"result":` + apis + `}]`,
+
+		`[{"jsonrpc":"2.0", "method":"rpc_modules","params":[]}]`://
+		`[{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"invalid request"}}]`,
+
+		`[{"jsonrpc":"2.0", "method":"eth_getBlockByNumber", "params": [0, "100500", false], "id": 1}]`://
+		`[{"jsonrpc":"2.0","id":1,"result":null}]`,
 	}
 
 	for req, expectedResp := range testcases {

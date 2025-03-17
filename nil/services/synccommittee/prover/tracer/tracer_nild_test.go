@@ -269,8 +269,12 @@ func (s *TracerNildTestSuite) checkAllBlocksTracesSerialization() {
 			s.Require().Equal(len(deserializedData.CopyEvents), len(tracesData.CopyEvents))
 			s.Require().Equal(len(deserializedData.ZKEVMStates), len(tracesData.ZKEVMStates))
 			if tracesData.MPTTraces != nil {
-				s.Require().Equal(len(deserializedData.MPTTraces.StorageTracesByAccount), len(tracesData.MPTTraces.StorageTracesByAccount))
-				s.Require().Equal(len(deserializedData.MPTTraces.ContractTrieTraces), len(tracesData.MPTTraces.ContractTrieTraces))
+				s.Require().Equal(
+					len(deserializedData.MPTTraces.StorageTracesByAccount),
+					len(tracesData.MPTTraces.StorageTracesByAccount))
+				s.Require().Equal(
+					len(deserializedData.MPTTraces.ContractTrieTraces),
+					len(tracesData.MPTTraces.ContractTrieTraces))
 			}
 		}
 	}

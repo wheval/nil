@@ -82,7 +82,8 @@ func (s *TaskStorageSuite) Test_Request_And_Process_Result() {
 	// Make lower priority task ready for execution
 	err = s.ts.ProcessTaskResult(
 		s.ctx,
-		types.NewSuccessProverTaskResult(dependency1.Task.Id, dependency1.Owner, types.TaskOutputArtifacts{}, types.TaskResultData{}),
+		types.NewSuccessProverTaskResult(
+			dependency1.Task.Id, dependency1.Owner, types.TaskOutputArtifacts{}, types.TaskResultData{}),
 	)
 	s.Require().NoError(err)
 	task, err = s.ts.RequestTaskToExecute(s.ctx, 88)
@@ -93,7 +94,8 @@ func (s *TaskStorageSuite) Test_Request_And_Process_Result() {
 	// Make higher priority task ready
 	err = s.ts.ProcessTaskResult(
 		s.ctx,
-		types.NewSuccessProverTaskResult(dependency2.Task.Id, dependency2.Owner, types.TaskOutputArtifacts{}, types.TaskResultData{}),
+		types.NewSuccessProverTaskResult(
+			dependency2.Task.Id, dependency2.Owner, types.TaskOutputArtifacts{}, types.TaskResultData{}),
 	)
 	s.Require().NoError(err)
 
@@ -332,7 +334,8 @@ func (s *TaskStorageSuite) Test_ProcessTaskResult_Concurrently() {
 			defer waitGroup.Done()
 			err := s.ts.ProcessTaskResult(
 				s.ctx,
-				types.NewSuccessProverTaskResult(runningEntry.Task.Id, executorId, types.TaskOutputArtifacts{}, types.TaskResultData{}),
+				types.NewSuccessProverTaskResult(
+					runningEntry.Task.Id, executorId, types.TaskOutputArtifacts{}, types.TaskResultData{}),
 			)
 			s.NoError(err)
 		}()

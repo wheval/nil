@@ -214,7 +214,8 @@ var generateCommands = map[string]string{
 }
 
 func MissingKeyError(key string, logger zerolog.Logger) error {
-	logger.Info().Msgf("%s not specified in config.\nRun `%s config set %s <value>` or set via config file.", key, os.Args[0], key)
+	logger.Info().Msgf(
+		"%s not specified in config.\nRun `%s config set %s <value>` or set via config file.", key, os.Args[0], key)
 
 	if cmd, ok := generateCommands[key]; ok {
 		logger.Info().Msgf("You can also run `%s %s` to generate a new one.", os.Args[0], cmd)

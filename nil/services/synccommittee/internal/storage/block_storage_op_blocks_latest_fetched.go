@@ -37,7 +37,11 @@ func (blockLatestFetchedOp) getLatestFetchedMain(tx db.RoTx) (*scTypes.MainBlock
 	return blockRef, nil
 }
 
-func (blockLatestFetchedOp) putLatestFetchedBlock(tx db.RwTx, shardId types.ShardId, block *scTypes.MainBlockRef) error {
+func (blockLatestFetchedOp) putLatestFetchedBlock(
+	tx db.RwTx,
+	shardId types.ShardId,
+	block *scTypes.MainBlockRef,
+) error {
 	bytes, err := json.Marshal(block)
 	if err != nil {
 		return fmt.Errorf(
