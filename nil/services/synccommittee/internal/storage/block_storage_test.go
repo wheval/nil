@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
@@ -16,6 +15,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/testaide"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
+	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/sync/errgroup"
 )
@@ -41,10 +41,10 @@ func (s *BlockStorageTestSuite) SetupSuite() {
 
 func (s *BlockStorageTestSuite) newTestBlockStorage(config BlockStorageConfig) *BlockStorage {
 	s.T().Helper()
-	timer := common.NewTimer()
+	clock := clockwork.NewRealClock()
 	metricsHandler, err := metrics.NewSyncCommitteeMetrics()
 	s.Require().NoError(err)
-	return NewBlockStorage(s.db, config, timer, metricsHandler, logging.NewLogger("block_storage_test"))
+	return NewBlockStorage(s.db, config, clock, metricsHandler, logging.NewLogger("block_storage_test"))
 }
 
 func (s *BlockStorageTestSuite) SetupTest() {

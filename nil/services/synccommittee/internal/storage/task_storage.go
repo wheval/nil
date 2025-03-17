@@ -14,6 +14,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/public"
+	"github.com/jonboulle/clockwork"
 	"github.com/rs/zerolog"
 )
 
@@ -36,13 +37,13 @@ type TaskStorageMetrics interface {
 // TaskStorage defines a type for managing tasks and their lifecycle operations.
 type TaskStorage struct {
 	commonStorage
-	timer   common.Timer
+	clock   clockwork.Clock
 	metrics TaskStorageMetrics
 }
 
 func NewTaskStorage(
 	db db.DB,
-	timer common.Timer,
+	clock clockwork.Clock,
 	metrics TaskStorageMetrics,
 	logger zerolog.Logger,
 ) *TaskStorage {
@@ -52,7 +53,7 @@ func NewTaskStorage(
 			logger,
 			common.DoNotRetryIf(types.ErrTaskWrongExecutor, types.ErrTaskInvalidStatus, ErrTaskAlreadyExists),
 		),
-		timer:   timer,
+		clock:   clock,
 		metrics: metrics,
 	}
 }
@@ -155,7 +156,7 @@ func (st *TaskStorage) GetTaskViews(ctx context.Context, destination interface{ 
 	}
 	defer tx.Rollback()
 
-	currentTime := st.timer.NowTime()
+	currentTime := st.clock.Now()
 
 	err = st.iterateOverTaskEntries(tx, func(entry *types.TaskEntry) (bool, error) {
 		taskView := public.NewTaskView(entry, currentTime)
@@ -179,7 +180,7 @@ func (st *TaskStorage) GetTaskTreeView(ctx context.Context, rootTaskId types.Tas
 	}
 	defer tx.Rollback()
 
-	currentTime := st.timer.NowTime()
+	currentTime := st.clock.Now()
 
 	// track seen tasks to not extract them with dependencies more than once from the storage
 	seen := make(map[types.TaskId]*public.TaskTreeView)
@@ -281,7 +282,7 @@ func (st *TaskStorage) requestTaskToExecuteImpl(ctx context.Context, executor ty
 		return nil, nil
 	}
 
-	currentTime := st.timer.NowTime()
+	currentTime := st.clock.Now()
 	if err := taskEntry.Start(executor, currentTime); err != nil {
 		return nil, fmt.Errorf("failed to start task: %w", err)
 	}
@@ -350,7 +351,7 @@ func (st *TaskStorage) processTaskResultImpl(ctx context.Context, res *types.Tas
 }
 
 func (st *TaskStorage) terminateTaskTx(tx db.RwTx, entry *types.TaskEntry, res *types.TaskResult) error {
-	currentTime := st.timer.NowTime()
+	currentTime := st.clock.Now()
 
 	if err := entry.Terminate(res, currentTime); err != nil {
 		return err
@@ -433,7 +434,7 @@ func (st *TaskStorage) rescheduleHangingTasksImpl(
 	}
 	defer tx.Rollback()
 
-	currentTime := st.timer.NowTime()
+	currentTime := st.clock.Now()
 
 	err = st.iterateOverTaskEntries(tx, func(entry *types.TaskEntry) (bool, error) {
 		if entry.Status != types.Running {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
@@ -12,6 +11,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/testaide"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
+	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -22,7 +22,7 @@ type BlockTasksIntegrationTestSuite struct {
 	cancellation context.CancelFunc
 
 	db    db.DB
-	timer common.Timer
+	clock clockwork.Clock
 
 	taskStorage  *storage.TaskStorage
 	blockStorage *storage.BlockStorage
@@ -46,9 +46,9 @@ func (s *BlockTasksIntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	logger := logging.NewLogger("block_tasks_test_suite")
 
-	s.timer = testaide.NewTestTimer()
-	s.taskStorage = storage.NewTaskStorage(s.db, s.timer, metricsHandler, logger)
-	s.blockStorage = storage.NewBlockStorage(s.db, storage.DefaultBlockStorageConfig(), s.timer, metricsHandler, logger)
+	s.clock = testaide.NewTestClock()
+	s.taskStorage = storage.NewTaskStorage(s.db, s.clock, metricsHandler, logger)
+	s.blockStorage = storage.NewBlockStorage(s.db, storage.DefaultBlockStorageConfig(), s.clock, metricsHandler, logger)
 
 	s.scheduler = scheduler.New(
 		s.taskStorage,
@@ -76,7 +76,7 @@ func (s *BlockTasksIntegrationTestSuite) Test_Provide_Tasks_And_Handle_Success_R
 	err := s.blockStorage.SetBlockBatch(s.ctx, batch)
 	s.Require().NoError(err)
 
-	proofTasks, err := batch.CreateProofTasks(s.timer.NowTime())
+	proofTasks, err := batch.CreateProofTasks(s.clock.Now())
 	s.Require().NoError(err)
 
 	err = s.taskStorage.AddTaskEntries(s.ctx, proofTasks...)
@@ -128,7 +128,7 @@ func (s *BlockTasksIntegrationTestSuite) Test_Provide_Tasks_And_Handle_Failure_R
 	err := s.blockStorage.SetBlockBatch(s.ctx, batch)
 	s.Require().NoError(err)
 
-	proofTasks, err := batch.CreateProofTasks(s.timer.NowTime())
+	proofTasks, err := batch.CreateProofTasks(s.clock.Now())
 	s.Require().NoError(err)
 
 	err = s.taskStorage.AddTaskEntries(s.ctx, proofTasks...)

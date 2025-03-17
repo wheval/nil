@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
@@ -18,6 +17,7 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -29,7 +29,7 @@ type ProposerTestSuite struct {
 
 	params           ProposerParams
 	db               db.DB
-	timer            common.Timer
+	clock            clockwork.Clock
 	storage          *storage.BlockStorage
 	ethClient        *rollupcontract.EthClientMock
 	proposer         *proposer
@@ -113,10 +113,10 @@ func (s *ProposerTestSuite) SetupSuite() {
 	metricsHandler, err := metrics.NewSyncCommitteeMetrics()
 	s.Require().NoError(err)
 
-	s.timer = testaide.NewTestTimer()
-	s.storage = storage.NewBlockStorage(s.db, storage.DefaultBlockStorageConfig(), s.timer, metricsHandler, logger)
+	s.clock = testaide.NewTestClock()
+	s.storage = storage.NewBlockStorage(s.db, storage.DefaultBlockStorageConfig(), s.clock, metricsHandler, logger)
 	s.params = NewDefaultProposerParams()
-	s.testData = testaide.NewProposalData(3, s.timer.NowTime())
+	s.testData = testaide.NewProposalData(3, s.clock.Now())
 	s.callContractMock = newCallContractMock()
 	s.ethClient = &rollupcontract.EthClientMock{
 		CallContractFunc:    s.callContractMock.CallContract,
