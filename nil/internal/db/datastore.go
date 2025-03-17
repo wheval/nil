@@ -302,7 +302,7 @@ func (d *Datastore) Query(ctx context.Context, q dsq.Query) (dsq.Results, error)
 
 	txn := d.newImplicitTransaction(true)
 	// We cannot defer txn.Discard() here, as the txn must remain active while the iterator is open.
-	// https://github.com/dgraph-io/badger/commit/b1ad1e93e483bbfef123793ceedc9a7e34b09f79
+	// https://github.com/hypermodeinc/badger/commit/b1ad1e93e483bbfef123793ceedc9a7e34b09f79
 	// The closing logic in the query function takes care of discarding the implicit transaction.
 	return txn.query(q)
 }
