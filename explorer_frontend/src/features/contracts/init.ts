@@ -1,4 +1,4 @@
-import type { CometaService, Hex, SmartAccountV1, Token } from "@nilfoundation/niljs";
+import type { CometaClient, Hex, SmartAccountV1, Token } from "@nilfoundation/niljs";
 import type { Abi, AbiFunction } from "abitype";
 import { combine, merge, sample } from "effector";
 import { persist } from "effector-storage/local";
@@ -11,7 +11,7 @@ import {
   loadedTutorialPage,
 } from "../code/model";
 import type { App } from "../code/types";
-import { $cometaService } from "../cometa/model";
+import { $cometaClient } from "../cometa/model";
 import { getTokenAddressBySymbol } from "../tokens";
 import {
   $activeApp,
@@ -678,20 +678,20 @@ sample({
   target: registerContractInCometaFx,
   source: combine({
     app: $activeAppWithState,
-    cometaService: $cometaService,
+    cometaClient: $cometaClient,
     solidityVersion: $solidityVersion,
   }),
   filter: combine(
     $activeAppWithState,
-    $cometaService,
-    (app, cometaService) => !!app && !!cometaService,
+    $cometaClient,
+    (app, cometaClient) => !!app && !!cometaClient,
   ),
-  fn: ({ app, cometaService, solidityVersion }, { address, name }) => {
+  fn: ({ app, cometaClient, solidityVersion }, { address, name }) => {
     return {
       app: app as App,
       name: name,
       address: address as Hex,
-      cometaService: cometaService as CometaService,
+      cometaClient: cometaClient as CometaClient,
       solidityVersion,
     };
   },

@@ -1,11 +1,11 @@
 import { MockTransport } from "../transport/MockTransport.js";
-import { CometaService } from "./CometaService.js";
+import { CometaClient } from "./CometaClient.js";
 import type { ContractData } from "./types/CometaTypes.js";
 
 test("getContract", async ({ expect }) => {
   const fn = vi.fn();
   fn.mockReturnValue({});
-  const cometa = new CometaService({
+  const cometa = new CometaClient({
     transport: new MockTransport(fn),
     shardId: 1,
   });
@@ -22,7 +22,7 @@ test("getContract", async ({ expect }) => {
 test("getLocation", async ({ expect }) => {
   const fn = vi.fn();
   fn.mockReturnValue({});
-  const cometa = new CometaService({
+  const cometa = new CometaClient({
     transport: new MockTransport(fn),
     shardId: 1,
   });
@@ -39,7 +39,7 @@ test("getLocation", async ({ expect }) => {
 test("compileContract", async ({ expect }) => {
   const fn = vi.fn();
   fn.mockReturnValue({});
-  const cometa = new CometaService({
+  const cometa = new CometaClient({
     transport: new MockTransport(fn),
     shardId: 1,
   });
@@ -56,7 +56,7 @@ test("compileContract", async ({ expect }) => {
 test("registerContractData", async ({ expect }) => {
   const fn = vi.fn();
   fn.mockReturnValue({});
-  const cometa = new CometaService({
+  const cometa = new CometaClient({
     transport: new MockTransport(fn),
     shardId: 1,
   });
@@ -73,7 +73,7 @@ test("registerContractData", async ({ expect }) => {
 test("registerContract", async ({ expect }) => {
   const fn = vi.fn();
   fn.mockReturnValue({});
-  const cometa = new CometaService({
+  const cometa = new CometaClient({
     transport: new MockTransport(fn),
     shardId: 1,
   });
