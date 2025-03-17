@@ -235,6 +235,10 @@ type AsyncRequestInfo struct {
 	Caller Address `json:"caller"`
 }
 
+func (a AsyncRequestInfo) Value() (driver.Value, error) {
+	return []any{a.Id, a.Caller}, nil
+}
+
 // AsyncResponsePayload contains data returned in the response.
 type AsyncResponsePayload struct {
 	Success    bool
