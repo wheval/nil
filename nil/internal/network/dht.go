@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
-	"github.com/rs/zerolog"
 )
 
 type DHT = dht.IpfsDHT
@@ -25,7 +25,7 @@ const (
 	discoveryPid                = "/kad"
 )
 
-func NewDHT(ctx context.Context, h host.Host, conf *Config, database db.DB, logger zerolog.Logger) (*DHT, error) {
+func NewDHT(ctx context.Context, h host.Host, conf *Config, database db.DB, logger logging.Logger) (*DHT, error) {
 	if !conf.DHTEnabled {
 		return nil, nil
 	}
@@ -74,7 +74,7 @@ func discoverAndAdvertise(
 	dht *DHT,
 	h host.Host,
 	protocol ProtocolID,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) error {
 	rd := routing.NewRoutingDiscovery(dht)
 
@@ -97,7 +97,7 @@ func advertise(
 	rd *routing.RoutingDiscovery,
 	dht *DHT,
 	protocol ProtocolID,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) {
 	ttl := initialAdvertisementTimeout
 
@@ -130,7 +130,7 @@ func checkPeerCount(
 	rd *routing.RoutingDiscovery,
 	h host.Host,
 	protocol ProtocolID,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) {
 	ticker := time.NewTicker(connectToPeersTimeout)
 	maxPeers := defaultMaxPeers
@@ -155,7 +155,7 @@ func findPeers(
 	rd *routing.RoutingDiscovery,
 	h host.Host,
 	protocol ProtocolID,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) {
 	logger.Debug().Msg("attempting to find DHT peers...")
 

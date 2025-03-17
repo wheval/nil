@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -34,10 +35,10 @@ type Config struct {
 type LogServer struct {
 	logs.UnimplementedLogsServiceServer
 	connect driver.Conn
-	logger  zerolog.Logger
+	logger  logging.Logger
 }
 
-func NewLogServer(connect driver.Conn, logger zerolog.Logger) *LogServer {
+func NewLogServer(connect driver.Conn, logger logging.Logger) *LogServer {
 	return &LogServer{connect: connect, logger: logger}
 }
 
@@ -48,14 +49,17 @@ func createDatabaseIfNotExists(ctx context.Context, connect driver.Conn, databas
 
 func createTableIfNotExists(ctx context.Context, connect driver.Conn, database, tableName string) error {
 	query := fmt.Sprintf(
-		"CREATE TABLE IF NOT EXISTS %s.%s (time DateTime DEFAULT now()) ENGINE = MergeTree() ORDER BY time",
+		"CREATE TABLE IF NOT EXISTS %s.%s (time DateTime64 DEFAULT now()) ENGINE = MergeTree() ORDER BY time",
 		database,
 		tableName,
 	)
 	return connect.Exec(ctx, query)
 }
 
-func insertColumnsInTable(ctx context.Context, connect driver.Conn, database, tableName string, columns, columnsType []string) error {
+func insertColumnsInTable(ctx context.Context,
+	connect driver.Conn, database, tableName string,
+	columns, columnsType []string,
+) error {
 	query := fmt.Sprintf(
 		"ALTER TABLE %s.%s",
 		database,
@@ -121,24 +125,46 @@ func getTabelColumnNames(ctx context.Context, connect driver.Conn, database, tab
 	return res, nil
 }
 
-func storeData(ctx context.Context, logger zerolog.Logger, connect driver.Conn, data map[string]any) {
-	delete(data, "store_to_clickhouse"+logging.GetAbbreviation("bool"))
-	// caller
-	// time
-	// message
-	for _, field := range []string{"caller", "time", "message"} {
+var fieldStoreClickhouseTyped = logging.FieldStoreToClickhouse + logging.GetAbbreviation("bool")
+
+func storeData(ctx context.Context, logger logging.Logger, connect driver.Conn, data map[string]any) {
+	delete(data, fieldStoreClickhouseTyped)
+	for _, field := range []string{
+		zerolog.CallerFieldName,
+		zerolog.MessageFieldName,
+		zerolog.LevelFieldName,
+		zerolog.ErrorFieldName,
+		zerolog.ErrorStackFieldName,
+		logging.FieldHostName,
+		logging.FieldSystemdUnit,
+	} {
 		if value, ok := data[field]; ok {
 			data[field+logging.GetAbbreviation("string")] = value
 			delete(data, field)
 		}
 	}
 
-	columns := []string{}
-	columnsDef := []string{}
-	var values []any
+	if value, ok := data[zerolog.TimestampFieldName]; ok {
+		strValue, ok := value.(string)
+		if !ok {
+			logger.Error().Msg("Timestamp is not a string")
+			return
+		}
+		parsedTime, err := time.Parse(time.RFC3339, strValue)
+		if err != nil {
+			logger.Error().Err(err).Msg("Error parsing timestamp")
+			return
+		}
+		data[zerolog.TimestampFieldName+logging.GetAbbreviation("datetime64")] = parsedTime
+		delete(data, zerolog.TimestampFieldName)
+	}
+
+	columns := make([]string, 0, len(data))
+	columnsDef := make([]string, 0, len(data))
+	values := make([]any, 0, len(data))
 	for key, value := range data {
-		columns = append(columns, key)
-		columnsDef = append(columnsDef, key[len(key)-2:])
+		columns = append(columns, key[:len(key)-logging.LogAbbreviationSize])
+		columnsDef = append(columnsDef, key[len(key)-logging.LogAbbreviationSize:])
 		values = append(values, value)
 	}
 
@@ -151,21 +177,15 @@ func storeData(ctx context.Context, logger zerolog.Logger, connect driver.Conn, 
 		var diff []string
 		var typeDiff []string
 		for i, col1 := range columns {
-			found := false
-			for _, col2 := range columNames {
-				if col1 == col2 {
-					found = true
-					break
-				}
-			}
-			if !found {
+			idx := slices.Index(columNames, col1)
+			if idx == -1 {
 				diff = append(diff, col1)
-				abbreviation, err := logging.GetClickhouseByAbbreviation(columnsDef[i])
+				chType, err := logging.GetClickhouseByAbbreviation(columnsDef[i])
 				if err != nil {
-					logger.Error().Err(err).Msg("Error getting clickhouse type")
+					logger.Error().Err(err).Msgf("Error getting clickhouse type for log: %+v, column: %s", data, col1)
 					return
 				}
-				typeDiff = append(typeDiff, abbreviation)
+				typeDiff = append(typeDiff, chType)
 			}
 		}
 		if len(diff) == 0 {
@@ -176,9 +196,11 @@ func storeData(ctx context.Context, logger zerolog.Logger, connect driver.Conn, 
 			logger.Error().Err(err).Msg("Error inserting columns")
 			return
 		}
+		if err := insertData(ctx, connect, DefaultDatabase, DefaultTable, columns, values); err != nil {
+			logger.Error().Err(err).Msg("Error inserting data")
+			return
+		}
 	}
-
-	log.Printf("Inserted data: %v", data)
 }
 
 func (s *LogServer) processResourceLog(ctx context.Context, resourceLog *v12.ResourceLogs) {
@@ -195,7 +217,17 @@ func (s *LogServer) processScopeLog(ctx context.Context, scopeLog *v12.ScopeLogs
 
 func (s *LogServer) processLogRecord(ctx context.Context, logRecord *v12.LogRecord) {
 	var jsonData *v1.AnyValue
+	var hostname string
+	var unit string
 	for _, kv := range logRecord.Body.GetKvlistValue().GetValues() {
+		switch kv.GetKey() {
+		case "JSON":
+			jsonData = kv.GetValue()
+		case logging.FieldHostName:
+			hostname = kv.GetValue().GetStringValue()
+		case logging.FieldSystemdUnit:
+			unit = kv.GetValue().GetStringValue()
+		}
 		if kv.GetKey() == "JSON" {
 			jsonData = kv.GetValue()
 			break
@@ -211,7 +243,9 @@ func (s *LogServer) processLogRecord(ctx context.Context, logRecord *v12.LogReco
 		return
 	}
 
-	if data["store_to_clickhouse"+logging.GetAbbreviation("bool")] == true {
+	if data[fieldStoreClickhouseTyped] == true {
+		data[logging.FieldHostName] = hostname
+		data[logging.FieldSystemdUnit] = unit
 		storeData(ctx, s.logger, s.connect, data)
 	}
 }
@@ -226,7 +260,7 @@ func (s *LogServer) Export(
 	return &logs.ExportLogsServiceResponse{}, nil
 }
 
-func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
+func Run(ctx context.Context, cfg Config, logger logging.Logger) error {
 	connect, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{cfg.ClickhouseAddr},
 		Auth: clickhouse.Auth{

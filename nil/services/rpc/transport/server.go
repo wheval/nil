@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common/check"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	nil_http "github.com/NilFoundation/nil/nil/services/rpc/internal/http"
 	mapset "github.com/deckarep/golang-set"
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -46,7 +46,7 @@ type Server struct {
 	debugSingleRequest  bool     // Whether to print requests at INFO level
 	batchLimit          int      // Maximum number of requests in a batch
 	keepHeaders         []string // headers to pass to request handler
-	logger              zerolog.Logger
+	logger              logging.Logger
 	rpcSlowLogThreshold time.Duration
 	mh                  *metricsHandler
 }
@@ -55,7 +55,7 @@ type Server struct {
 func NewServer(
 	traceRequests bool,
 	debugSingleRequest bool,
-	logger zerolog.Logger,
+	logger logging.Logger,
 	rpcSlowLogThreshold time.Duration,
 	keepHeaders []string,
 ) *Server {

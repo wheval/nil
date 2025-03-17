@@ -8,6 +8,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/concurrent"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
@@ -16,7 +17,6 @@ import (
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
-	"github.com/rs/zerolog"
 )
 
 type ProposerStorage interface {
@@ -48,7 +48,7 @@ type proposer struct {
 	params                ProposerParams
 
 	metrics ProposerMetrics
-	logger  zerolog.Logger
+	logger  logging.Logger
 }
 
 type ProposerParams struct {
@@ -78,7 +78,7 @@ func NewProposer(
 	ethClient rollupcontract.EthClient,
 	rpcClient RpcBlockFetcher,
 	metrics ProposerMetrics,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (*proposer, error) {
 	retryRunner := common.NewRetryRunner(
 		common.RetryConfig{

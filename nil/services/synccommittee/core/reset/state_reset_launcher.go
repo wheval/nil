@@ -7,7 +7,6 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common/logging"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -29,14 +28,14 @@ type stateResetLauncher struct {
 	blockFetcher BlockFetcher
 	resetter     *StateResetter
 	service      Service
-	logger       zerolog.Logger
+	logger       logging.Logger
 }
 
 func NewResetLauncher(
 	blockFetcher BlockFetcher,
 	resetter *StateResetter,
 	service Service,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) *stateResetLauncher {
 	return &stateResetLauncher{
 		blockFetcher: blockFetcher,

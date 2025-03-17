@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/jonboulle/clockwork"
-	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -60,7 +60,7 @@ type EventListener struct {
 		currentBlockHash   ethcommon.Hash
 	}
 
-	logger zerolog.Logger
+	logger logging.Logger
 }
 
 func NewEventListener(
@@ -69,7 +69,7 @@ func NewEventListener(
 	ethClient EthClient,
 	contractClient L1Contract,
 	storage *EventStorage,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (*EventListener, error) {
 	el := &EventListener{
 		rawEthClient:    ethClient,

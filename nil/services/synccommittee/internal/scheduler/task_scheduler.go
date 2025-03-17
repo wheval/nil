@@ -63,7 +63,7 @@ func New(
 	storage Storage,
 	stateHandler api.TaskStateChangeHandler,
 	metrics Metrics,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) TaskScheduler {
 	scheduler := &taskSchedulerImpl{
 		storage:      storage,
@@ -85,7 +85,7 @@ type taskSchedulerImpl struct {
 	stateHandler api.TaskStateChangeHandler
 	config       Config
 	metrics      Metrics
-	logger       zerolog.Logger
+	logger       logging.Logger
 }
 
 func (s *taskSchedulerImpl) runIteration(ctx context.Context) {

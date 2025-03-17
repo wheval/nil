@@ -12,7 +12,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rollup"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
-	"github.com/rs/zerolog"
 )
 
 type TxnPool interface {
@@ -48,7 +47,7 @@ type Scheduler struct {
 
 	params *Params
 
-	logger zerolog.Logger
+	logger logging.Logger
 
 	l1Fetcher rollup.L1BlockFetcher
 }

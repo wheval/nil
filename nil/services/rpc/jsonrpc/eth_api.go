@@ -12,7 +12,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/filters"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
-	"github.com/rs/zerolog"
 )
 
 type EthAPIRo interface {
@@ -353,8 +352,8 @@ type APIImplRo struct {
 	accessor *execution.StateAccessor
 
 	logs            *LogsAggregator
-	logger          zerolog.Logger
-	clientEventsLog logging.CHLogger
+	logger          logging.Logger
+	clientEventsLog logging.Logger
 	rawapi          rawapi.NodeApi
 }
 
@@ -380,11 +379,11 @@ func NewEthAPIRo(
 		logger:          logging.NewLogger("eth-api"),
 		accessor:        accessor,
 		rawapi:          rawapi,
-		clientEventsLog: logging.NewCHLogger("eth-api", "rpc_requests"),
+		clientEventsLog: logging.NewLogger("eth-api-rpc-requests"),
 	}
 	api.logs = NewLogsAggregator(ctx, db, pollBlocksForLogs)
 	if !logClientEvents {
-		api.clientEventsLog = api.clientEventsLog.Disable()
+		api.clientEventsLog = logging.Nop()
 	}
 	return api
 }

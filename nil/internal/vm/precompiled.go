@@ -26,6 +26,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
@@ -34,7 +35,6 @@ import (
 	eth_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/holiman/uint256"
-	"github.com/rs/zerolog/log"
 )
 
 func init() {
@@ -247,7 +247,7 @@ func setRefundTo(refundTo *types.Address, txn *types.Transaction) {
 		}
 	}
 	if *refundTo == types.EmptyAddress {
-		log.Logger.Warn().Msg("refund address is empty")
+		logging.GlobalLogger.Warn().Msg("refund address is empty")
 	}
 }
 
@@ -263,7 +263,7 @@ func setBounceTo(bounceTo *types.Address, txn *types.Transaction) {
 		}
 	}
 	if *bounceTo == types.EmptyAddress {
-		log.Logger.Warn().Msg("bounce address is empty")
+		logging.GlobalLogger.Warn().Msg("bounce address is empty")
 	}
 }
 
@@ -276,7 +276,7 @@ func withdrawFunds(state StateDB, addr types.Address, value types.Value) error {
 		return err
 	}
 	if balance.Cmp(value) < 0 {
-		log.Logger.Error().Msgf(
+		logging.GlobalLogger.Error().Msgf(
 			"withdrawFunds failed: insufficient balance on address %v, expected at least %v, got %v",
 			addr, value, balance)
 		return ErrInsufficientBalance
@@ -346,7 +346,7 @@ var gasScale = types.DefaultGasPrice.Div(types.Value100)
 func GetExtraGasForOutboundTransaction(state StateDBReadOnly, shardId types.ShardId) uint64 {
 	gasPrice, err := state.GetGasPrice(shardId)
 	if err != nil {
-		log.Logger.Error().Msgf("GetExtraGasForOutboundTransaction failed to get gas price: %s", err)
+		logging.GlobalLogger.Error().Msgf("GetExtraGasForOutboundTransaction failed to get gas price: %s", err)
 		return 0
 	}
 
@@ -437,7 +437,7 @@ func (c *asyncCall) Run(state StateDB, input []byte, value *uint256.Int, caller 
 	// Get `tokens` argument, which is a slice of `TokenBalance`
 	tokens, err := extractTokens(args[6])
 	if err != nil {
-		log.Logger.Error().Err(err).Msgf("failed to extract tokens from %T", args[6])
+		logging.GlobalLogger.Error().Err(err).Msgf("failed to extract tokens from %T", args[6])
 		if types.IsVmError(err) {
 			return nil, err
 		}
@@ -557,7 +557,8 @@ func (a *awaitCall) Run(evm *EVM, input []byte, value *uint256.Int, caller Contr
 	// Get `responseProcessingGas` argument
 	responseProcessingGas := types.Gas(extractUintParam(args[1], "awaitCall", "responseProcessingGas").Uint64())
 	if responseProcessingGas < MinGasReserveForAsyncRequest {
-		log.Logger.Error().Msgf("awaitCall failed: responseProcessingGas is too low (%d)", responseProcessingGas)
+		logging.GlobalLogger.Error().Msgf(
+			"awaitCall failed: responseProcessingGas is too low (%d)", responseProcessingGas)
 		return nil, types.NewVmError(types.ErrorAwaitCallTooLowResponseProcessingGas)
 	}
 
@@ -579,7 +580,7 @@ func (a *awaitCall) Run(evm *EVM, input []byte, value *uint256.Int, caller Contr
 	setRefundTo(&payload.RefundTo, state.GetInTransaction())
 
 	if _, err = state.AddOutRequestTransaction(caller.Address(), &payload, responseProcessingGas, true); err != nil {
-		log.Logger.Error().Msgf("AddOutRequestTransaction failed: %s", err)
+		logging.GlobalLogger.Error().Msgf("AddOutRequestTransaction failed: %s", err)
 		return nil, types.NewVmVerboseError(types.ErrorPrecompileStateDbReturnedError, err.Error())
 	}
 
@@ -623,14 +624,15 @@ func (a *sendRequest) Run(state StateDB, input []byte, value *uint256.Int, calle
 	// Get `tokens` argument, which is a slice of `TokenBalance`
 	tokens, err := extractTokens(args[1])
 	if err != nil {
-		log.Logger.Error().Err(err).Msg("tokens is not a slice of TokenBalance")
+		logging.GlobalLogger.Error().Err(err).Msg("tokens is not a slice of TokenBalance")
 		return nil, types.NewVmVerboseError(types.ErrorPrecompileInvalidTokenArray, err.Error())
 	}
 
 	// Get `responseProcessingGas` argument
 	responseProcessingGas := types.Gas(extractUintParam(args[2], "sendRequest", "responseProcessingGas").Uint64())
 	if responseProcessingGas < MinGasReserveForAsyncRequest {
-		log.Logger.Error().Msgf("sendRequest failed: responseProcessingGas is too low (%d)", responseProcessingGas)
+		logging.GlobalLogger.Error().Msgf(
+			"sendRequest failed: responseProcessingGas is too low (%d)", responseProcessingGas)
 		return nil, types.NewVmError(types.ErrorAwaitCallTooLowResponseProcessingGas)
 	}
 
@@ -660,7 +662,7 @@ func (a *sendRequest) Run(state StateDB, input []byte, value *uint256.Int, calle
 	setRefundTo(&payload.RefundTo, state.GetInTransaction())
 
 	if _, err = state.AddOutRequestTransaction(caller.Address(), &payload, responseProcessingGas, false); err != nil {
-		log.Logger.Error().Msgf("AddOutRequestTransaction failed: %s", err)
+		logging.GlobalLogger.Error().Msgf("AddOutRequestTransaction failed: %s", err)
 		return nil, types.NewVmVerboseError(types.ErrorPrecompileStateDbReturnedError, err.Error())
 	}
 

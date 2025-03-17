@@ -8,13 +8,13 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
-	"github.com/rs/zerolog"
 )
 
 // DirectClient is a client that interacts with the end api directly, without using the rpc server.
@@ -31,7 +31,7 @@ func NewEthClient(
 	ctx context.Context,
 	db db.ReadOnlyDB,
 	localApi *rawapi.NodeApiOverShardApis,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (*DirectClient, error) {
 	ethApi := jsonrpc.NewEthAPI(ctx, localApi, db, true, false)
 	debugApi := jsonrpc.NewDebugAPI(localApi, logger)

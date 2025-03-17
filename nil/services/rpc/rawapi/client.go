@@ -10,13 +10,13 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
 	rpctypes "github.com/NilFoundation/nil/nil/services/rpc/types"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
-	"github.com/rs/zerolog"
 )
 
 type (
@@ -24,7 +24,7 @@ type (
 		codec *methodCodec, methodName string, ctx context.Context, args ...any) ([]byte, error)
 	nodeApiSetter                            func(NodeApi)
 	setAsP2pRequestHandlersIfAllowedFunction func(
-		ctx context.Context, networkManager *network.Manager, readonly bool, logger zerolog.Logger) error
+		ctx context.Context, networkManager *network.Manager, readonly bool, logger logging.Logger) error
 )
 
 type ShardApiAccessor struct {
@@ -62,7 +62,7 @@ func newNetworkRawApiAccessor(
 		doApiRequest: makeDoNetworkRawApiRequestFunction(networkManager, shardId, "rawapi"),
 		onSetNodeApi: func(NodeApi) {},
 		onSetAsP2pRequestHandlersIfAllowed: func(
-			ctx context.Context, networkManager *network.Manager, readonly bool, logger zerolog.Logger,
+			ctx context.Context, networkManager *network.Manager, readonly bool, logger logging.Logger,
 		) error {
 			return nil
 		},
@@ -87,7 +87,7 @@ func newDirectRawApiAccessor(
 			rawapi.setNodeApi(nodeApi)
 		},
 		onSetAsP2pRequestHandlersIfAllowed: func(
-			ctx context.Context, networkManager *network.Manager, readonly bool, logger zerolog.Logger,
+			ctx context.Context, networkManager *network.Manager, readonly bool, logger logging.Logger,
 		) error {
 			return SetRawApiRequestHandlers(ctx, shardId, rawapi, networkManager, readonly, logger)
 		},
@@ -245,7 +245,7 @@ func (api *ShardApiAccessor) setAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
 	networkManager *network.Manager,
 	readonly bool,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) error {
 	return api.onSetAsP2pRequestHandlersIfAllowed(ctx, networkManager, readonly, logger)
 }

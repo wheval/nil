@@ -3,7 +3,7 @@ package transport
 import (
 	"strings"
 
-	"github.com/rs/zerolog"
+	"github.com/NilFoundation/nil/nil/common/logging"
 )
 
 // checkModuleAvailability checks that all names given in modules are actually
@@ -27,7 +27,7 @@ func checkModuleAvailability(modules []string, apis []API) (bad, available []str
 
 // RegisterApisFromWhitelist checks the given modules' availability, generates a whitelist based on the allowed modules,
 // and then registers all of the APIs exposed by the services.
-func RegisterApisFromWhitelist(apis []API, modules []string, srv *Server, logger zerolog.Logger) error {
+func RegisterApisFromWhitelist(apis []API, modules []string, srv *Server, logger logging.Logger) error {
 	if bad, available := checkModuleAvailability(modules, apis); len(bad) > 0 {
 		logger.Error().
 			Str("non-existing", strings.Join(bad, ", ")).

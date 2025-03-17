@@ -18,7 +18,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rollup"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 	l1types "github.com/ethereum/go-ethereum/core/types"
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -36,7 +35,7 @@ type proposer struct {
 	topology ShardTopology
 	pool     TxnPool
 
-	logger zerolog.Logger
+	logger logging.Logger
 
 	proposal       *execution.ProposalSSZ
 	executionState *execution.ExecutionState
@@ -46,7 +45,7 @@ type proposer struct {
 	l1BlockFetcher rollup.L1BlockFetcher
 }
 
-func newProposer(params *Params, topology ShardTopology, pool TxnPool, logger zerolog.Logger) *proposer {
+func newProposer(params *Params, topology ShardTopology, pool TxnPool, logger logging.Logger) *proposer {
 	if params.MaxGasInBlock == 0 {
 		params.MaxGasInBlock = defaultMaxGasInBlock
 	}

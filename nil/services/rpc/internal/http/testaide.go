@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/services/rpc/httpcfg"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +27,7 @@ type StoppableSingleRequestServer interface {
 
 func DoTestServer(
 	t *testing.T,
-	createServerAndLogger func(t *testing.T, conf *HttpConfig) (*StoppableSingleRequestServer, zerolog.Logger),
+	createServerAndLogger func(t *testing.T, conf *HttpConfig) (*StoppableSingleRequestServer, logging.Logger),
 ) {
 	t.Helper()
 
@@ -93,7 +93,7 @@ func createAndStartServer(
 	t *testing.T,
 	server StoppableSingleRequestServer,
 	conf *HttpConfig,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) *httpServer {
 	t.Helper()
 

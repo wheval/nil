@@ -21,7 +21,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/jonboulle/clockwork"
-	"github.com/rs/zerolog"
 )
 
 type AggregatorMetrics interface {
@@ -57,7 +56,7 @@ func NewDefaultAggregatorConfig() AggregatorConfig {
 }
 
 type aggregator struct {
-	logger         zerolog.Logger
+	logger         logging.Logger
 	rpcClient      client.Client
 	blockStorage   AggregatorBlockStorage
 	taskStorage    AggregatorTaskStorage
@@ -74,7 +73,7 @@ func NewAggregator(
 	taskStorage AggregatorTaskStorage,
 	resetter *reset.StateResetter,
 	clock clockwork.Clock,
-	logger zerolog.Logger,
+	logger logging.Logger,
 	metrics AggregatorMetrics,
 	config AggregatorConfig,
 ) *aggregator {

@@ -10,7 +10,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	"github.com/NilFoundation/nil/nil/internal/telemetry/telattr"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/rs/zerolog"
 )
 
 const subscriptionChannelSize = 100
@@ -27,7 +26,7 @@ type PubSub struct {
 	published     telemetry.Counter
 	publishedSize telemetry.Counter
 
-	logger zerolog.Logger
+	logger logging.Logger
 }
 
 type SubscriptionCounters struct {
@@ -45,12 +44,12 @@ type Subscription struct {
 
 	received     telemetry.Counter
 	receivedSize telemetry.Counter
-	logger       zerolog.Logger
+	logger       logging.Logger
 	counters     SubscriptionCounters
 }
 
 // newPubSub creates a new PubSub instance. It must be closed after use.
-func newPubSub(ctx context.Context, h Host, conf *Config, logger zerolog.Logger) (*PubSub, error) {
+func newPubSub(ctx context.Context, h Host, conf *Config, logger logging.Logger) (*PubSub, error) {
 	impl, err := pubsub.NewGossipSub(ctx, h)
 	if err != nil {
 		return nil, err

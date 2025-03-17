@@ -12,7 +12,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc"
 	"github.com/NilFoundation/nil/nil/tests"
 	"github.com/NilFoundation/nil/nil/tools/solc"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -25,7 +24,7 @@ type NilBlockGeneratorTestSuite struct {
 	deployArgs       []string
 	callArgs         []string
 	url              string
-	logger           zerolog.Logger
+	logger           logging.Logger
 }
 
 func NewNilBlockGeneratorTestSuite(

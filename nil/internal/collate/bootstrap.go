@@ -10,7 +10,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/rs/zerolog"
 )
 
 const topicVersion = "/nil/version"
@@ -19,7 +18,7 @@ func topicBootstrapShard() network.ProtocolID {
 	return "/nil/snap"
 }
 
-func createShardBootstrapHandler(ctx context.Context, database db.DB, logger zerolog.Logger) func(s network.Stream) {
+func createShardBootstrapHandler(ctx context.Context, database db.DB, logger logging.Logger) func(s network.Stream) {
 	dummyFilter := func([]byte) bool { return true }
 	return func(s network.Stream) {
 		defer s.Close()
@@ -84,7 +83,7 @@ func fetchShardSnap(
 	nm *network.Manager,
 	peerId network.PeerID,
 	db db.DB,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) error {
 	stream, err := nm.NewStream(ctx, peerId, topicBootstrapShard())
 	if err != nil {
@@ -110,7 +109,7 @@ func fetchSnapshot(
 	nm *network.Manager,
 	peerAddr network.AddrInfo,
 	db db.DB,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) error {
 	peerId, err := nm.Connect(ctx, peerAddr)
 	if err != nil {

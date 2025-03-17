@@ -21,7 +21,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/httpcfg"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
-	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -201,7 +200,7 @@ func selectPairAndAccount(shardIdList []types.ShardId) ([]types.ShardId, []types
 	return pairsToCall, smartAccountsToCall, nil
 }
 
-func mint(ctx context.Context, i int, shardIdList []types.ShardId, logger zerolog.Logger) error {
+func mint(ctx context.Context, i int, shardIdList []types.ShardId, logger logging.Logger) error {
 	token2 := types.EthFaucetAddress
 	logger.Info().Msgf("Minting liqudity for smart account %s on shard %v", smartAccounts[i].Addr, shardIdList[i])
 	token1 := types.UsdtFaucetAddress
@@ -217,7 +216,7 @@ func mint(ctx context.Context, i int, shardIdList []types.ShardId, logger zerolo
 	)
 }
 
-func swap(ctx context.Context, whoWantSwap, whatPairHeWant types.ShardId, logger zerolog.Logger) error {
+func swap(ctx context.Context, whoWantSwap, whatPairHeWant types.ShardId, logger logging.Logger) error {
 	token2 := types.EthFaucetAddress
 	token1 := types.UsdtFaucetAddress
 	if whatPairHeWant%2 == 0 {
@@ -247,7 +246,7 @@ func swap(ctx context.Context, whoWantSwap, whatPairHeWant types.ShardId, logger
 	return nil
 }
 
-func burn(ctx context.Context, i int, shardIdList []types.ShardId, logger zerolog.Logger) error {
+func burn(ctx context.Context, i int, shardIdList []types.ShardId, logger logging.Logger) error {
 	logger.Info().Msgf("Burn liquidity for user smart account %s on shard %v", smartAccounts[i].Addr, shardIdList[i])
 	userLpBalance, err := pairs[i].GetTokenBalanceOf(services[i], smartAccounts[i].Addr)
 	if err != nil {
@@ -263,7 +262,7 @@ func burn(ctx context.Context, i int, shardIdList []types.ShardId, logger zerolo
 	return nil
 }
 
-func deployPairs(ctx context.Context, i int, shardIdList []types.ShardId, logger zerolog.Logger) error {
+func deployPairs(ctx context.Context, i int, shardIdList []types.ShardId, logger logging.Logger) error {
 	contracts, err := compileContracts([]string{"UniswapV2Factory", "Token", "UniswapV2Pair"})
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to compile contracts")
@@ -345,7 +344,7 @@ func waitClusterStart(
 	}
 }
 
-func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
+func Run(ctx context.Context, cfg Config, logger logging.Logger) error {
 	signalCtx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 	ctx = signalCtx

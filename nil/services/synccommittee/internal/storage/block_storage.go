@@ -12,7 +12,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/jonboulle/clockwork"
-	"github.com/rs/zerolog"
 )
 
 type BlockStorageMetrics interface {
@@ -56,7 +55,7 @@ func NewBlockStorage(
 	config BlockStorageConfig,
 	clock clockwork.Clock,
 	metrics BlockStorageMetrics,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) *BlockStorage {
 	return &BlockStorage{
 		commonStorage: makeCommonStorage(

@@ -9,7 +9,6 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -61,7 +60,7 @@ func (blockOp) putBlockTx(tx db.RwTx, entry *blockEntry) error {
 	return nil
 }
 
-func (blockOp) deleteBlock(tx db.RwTx, blockId scTypes.BlockId, logger zerolog.Logger) error {
+func (blockOp) deleteBlock(tx db.RwTx, blockId scTypes.BlockId, logger logging.Logger) error {
 	err := tx.Delete(blocksTable, blockId.Bytes())
 
 	switch {

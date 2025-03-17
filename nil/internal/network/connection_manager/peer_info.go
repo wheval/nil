@@ -3,7 +3,7 @@ package connection_manager
 import (
 	"time"
 
-	"github.com/rs/zerolog"
+	"github.com/NilFoundation/nil/nil/common/logging"
 )
 
 // With a normal peerInfo life cycle, it is created when connecting to the peer.
@@ -20,7 +20,7 @@ import (
 type peerInfo struct {
 	reputation     Reputation
 	disconnectedAt *time.Time
-	logger         zerolog.Logger
+	logger         logging.Logger
 	closeFunc      func()
 }
 
@@ -32,7 +32,7 @@ func (pi *peerInfo) closePeer() {
 	}
 }
 
-func newPeerInfo(reputation Reputation, logger zerolog.Logger, closePeer func()) *peerInfo {
+func newPeerInfo(reputation Reputation, logger logging.Logger, closePeer func()) *peerInfo {
 	return &peerInfo{
 		reputation: reputation,
 		logger:     logger,

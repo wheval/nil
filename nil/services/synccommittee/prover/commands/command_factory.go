@@ -1,16 +1,16 @@
 package commands
 
 import (
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
-	"github.com/rs/zerolog"
 )
 
 type CommandFactory struct {
 	config CommandConfig
-	logger zerolog.Logger
+	logger logging.Logger
 }
 
-func NewCommandFactory(config CommandConfig, logger zerolog.Logger) *CommandFactory {
+func NewCommandFactory(config CommandConfig, logger logging.Logger) *CommandFactory {
 	return &CommandFactory{
 		config: config,
 		logger: logger,

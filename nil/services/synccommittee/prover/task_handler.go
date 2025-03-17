@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/NilFoundation/nil/nil/client/rpc"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
@@ -27,14 +28,14 @@ type TaskResultSaver interface {
 type taskHandler struct {
 	resultSaver TaskResultSaver
 	clock       clockwork.Clock
-	logger      zerolog.Logger
+	logger      logging.Logger
 	config      taskHandlerConfig
 }
 
 func newTaskHandler(
 	resultSaver TaskResultSaver,
 	clock clockwork.Clock,
-	logger zerolog.Logger,
+	logger logging.Logger,
 	config taskHandlerConfig,
 ) api.TaskHandler {
 	return &taskHandler{

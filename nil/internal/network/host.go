@@ -17,17 +17,16 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
-	"github.com/rs/zerolog"
 )
 
 type Host = host.Host
 
 var defaultGracePeriod = connmgr.WithGracePeriod(time.Minute)
 
-func getCommonOptions(ctx context.Context, conf *Config) ([]libp2p.Option, zerolog.Logger, error) {
+func getCommonOptions(ctx context.Context, conf *Config) ([]libp2p.Option, logging.Logger, error) {
 	pid, err := peer.IDFromPublicKey(conf.PrivateKey.GetPublic())
 	if err != nil {
-		return nil, zerolog.Nop(), err
+		return nil, logging.Nop(), err
 	}
 
 	logger := internal.Logger.With().
@@ -62,7 +61,7 @@ func getCommonOptions(ctx context.Context, conf *Config) ([]libp2p.Option, zerol
 }
 
 // newHost creates a new libp2p host. It must be closed after use.
-func newHost(ctx context.Context, conf *Config) (Host, zerolog.Logger, error) {
+func newHost(ctx context.Context, conf *Config) (Host, logging.Logger, error) {
 	addr := conf.IPV4Address
 	if addr == "" {
 		addr = "0.0.0.0"
@@ -70,7 +69,7 @@ func newHost(ctx context.Context, conf *Config) (Host, zerolog.Logger, error) {
 
 	options, logger, err := getCommonOptions(ctx, conf)
 	if err != nil {
-		return nil, zerolog.Nop(), err
+		return nil, logging.Nop(), err
 	}
 
 	if conf.TcpPort != 0 {
@@ -107,13 +106,13 @@ func newHost(ctx context.Context, conf *Config) (Host, zerolog.Logger, error) {
 
 	host, err := libp2p.New(options...)
 	if err != nil {
-		return nil, zerolog.Nop(), err
+		return nil, logging.Nop(), err
 	}
 	return host, logger, nil
 }
 
 // newClient creates a new libp2p host that doesn't listen to any port. It must be closed after use.
-func newClient(ctx context.Context, conf *Config) (Host, zerolog.Logger, error) {
+func newClient(ctx context.Context, conf *Config) (Host, logging.Logger, error) {
 	var privateKey libp2pcrypto.PrivKey
 	if conf != nil && conf.PrivateKey != nil {
 		privateKey = conf.PrivateKey
@@ -122,18 +121,18 @@ func newClient(ctx context.Context, conf *Config) (Host, zerolog.Logger, error) 
 		var err error
 		privateKey, err = GeneratePrivateKey()
 		if err != nil {
-			return nil, zerolog.Nop(), err
+			return nil, logging.Nop(), err
 		}
 	}
 
 	options, logger, err := getCommonOptions(ctx, &Config{PrivateKey: privateKey})
 	if err != nil {
-		return nil, zerolog.Nop(), err
+		return nil, logging.Nop(), err
 	}
 	options = append(options, libp2p.NoListenAddrs)
 	host, err := libp2p.New(options...)
 	if err != nil {
-		return nil, zerolog.Nop(), err
+		return nil, logging.Nop(), err
 	}
 	return host, logger, nil
 }

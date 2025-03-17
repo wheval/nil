@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/faucet"
@@ -14,7 +15,6 @@ import (
 	"github.com/NilFoundation/nil/nil/tests"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/holiman/uint256"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -109,7 +109,7 @@ func (s *SuiteFaucet) TestDeployContractViaFaucet() {
 	s.Require().NoError(err)
 	s.Require().Less(balance.Uint64(), value.Uint64())
 	s.Require().Positive(balance.Uint64())
-	log.Logger.Info().Msgf("Spent %s nil", value.Sub(balance))
+	logging.GlobalLogger.Info().Msgf("Spent %s nil", value.Sub(balance))
 }
 
 func (s *SuiteFaucet) TestTopUpViaFaucet() {

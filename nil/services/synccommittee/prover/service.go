@@ -15,7 +15,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/jonboulle/clockwork"
-	"github.com/rs/zerolog"
 )
 
 type Config struct {
@@ -80,6 +79,6 @@ func New(config Config, database db.DB) (*Prover, error) {
 	}, nil
 }
 
-func NewRPCClient(endpoint string, logger zerolog.Logger) client.Client {
+func NewRPCClient(endpoint string, logger logging.Logger) client.Client {
 	return rpc.NewRetryClient(endpoint, logger)
 }

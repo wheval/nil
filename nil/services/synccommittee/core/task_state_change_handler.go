@@ -22,13 +22,13 @@ type StateResetLauncher interface {
 type taskStateChangeHandler struct {
 	batchSetter        ProvedBatchSetter
 	stateResetLauncher StateResetLauncher
-	logger             zerolog.Logger
+	logger             logging.Logger
 }
 
 func newTaskStateChangeHandler(
 	batchSetter ProvedBatchSetter,
 	stateResetLauncher StateResetLauncher,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) api.TaskStateChangeHandler {
 	return &taskStateChangeHandler{
 		batchSetter:        batchSetter,

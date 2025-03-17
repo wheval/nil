@@ -34,7 +34,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/rs/zerolog"
 )
 
 // syncer will pull blocks actively if no blocks appear for 5 rounds
@@ -194,7 +193,7 @@ func setP2pRequestHandlers(
 	rawApi *rawapi.NodeApiOverShardApis,
 	networkManager *network.Manager,
 	readonly bool,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) error {
 	if networkManager == nil {
 		return nil
@@ -259,7 +258,7 @@ func createSyncers(
 	validators []*collate.Validator,
 	nm *network.Manager,
 	database db.DB,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (*syncersResult, error) {
 	res := &syncersResult{
 		funcs:   make([]concurrent.Func, 0, cfg.NShards+2),
@@ -308,7 +307,7 @@ func createSyncers(
 type Node struct {
 	NetworkManager *network.Manager
 	funcs          []concurrent.Func
-	logger         zerolog.Logger
+	logger         logging.Logger
 	ctx            context.Context
 }
 
@@ -334,7 +333,7 @@ func runNormalOrCollatorsOnly(
 	cfg *Config,
 	database db.DB,
 	networkManager *network.Manager,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) ([]concurrent.Func, map[types.ShardId]txnpool.Pool, error) {
 	if err := cfg.LoadValidatorKeys(); err != nil {
 		return nil, nil, err
@@ -635,7 +634,7 @@ func createShards(
 	cfg *Config,
 	validators []*collate.Validator, syncers *syncersResult,
 	database db.DB, networkManager *network.Manager,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) ([]concurrent.Func, error) {
 	funcs := make([]concurrent.Func, 0, cfg.NShards)
 

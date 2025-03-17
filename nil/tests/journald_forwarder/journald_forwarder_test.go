@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"sync"
 	"testing"
@@ -43,7 +45,8 @@ func (s *SuiteJournaldForwarder) SetupSuite() {
 		}
 	}()
 
-	dir := s.T().TempDir()
+	dir := s.T().TempDir() + "/clickhouse"
+	s.Require().NoError(os.MkdirAll(dir, 0o755))
 	s.clickhouse = exec.Command( //nolint:gosec
 		"clickhouse", "server", "--",
 		"--tcp_port=9001",
@@ -64,12 +67,12 @@ func (s *SuiteJournaldForwarder) SetupSuite() {
 	s.connect, err = clickhouse.Open(&clickhouse.Options{
 		Addr: []string{s.cfg.ClickhouseAddr},
 		Auth: clickhouse.Auth{
-			Database: "default",
+			Database: s.cfg.DbDatabase,
 			Username: s.cfg.DbUser,
 			Password: "",
 		},
 	})
-	s.Require().NoErrorf(err, "Failed to connect to ClickHouse")
+	s.Require().NoError(err, "Failed to connect to ClickHouse")
 	defer s.connect.Close()
 	s.dropDatabase(journald_forwarder.DefaultDatabase)
 
@@ -77,11 +80,8 @@ func (s *SuiteJournaldForwarder) SetupSuite() {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		if err := journald_forwarder.Run(s.context, s.cfg, logging.NewLogger("test_journald_forwarder", false).Logger()); err != nil {
-			s.runErrCh <- err
-		} else {
-			s.runErrCh <- nil
-		}
+		s.runErrCh <- journald_forwarder.Run(
+			s.context, s.cfg, logging.NewLoggerWithStore("test_journald_forwarder", false))
 	}()
 	time.Sleep(time.Second)
 
@@ -126,27 +126,58 @@ func (s *SuiteJournaldForwarder) dropDatabase(dbName string) {
 }
 
 func (s *SuiteJournaldForwarder) TestLogDataInsert() {
-	s.Run("Check insert columns", func() {
+	s.Run("Check insert columns and values", func() {
+		valueString := "test log"
+		valueFloat := 123.01
+		valueMessage := "test log1"
+
 		logBuf := new(bytes.Buffer)
-		log1 := logging.NewLoggerWithWriter("log1", true, logBuf)
-		logger := log1.Float64("valueFloat", 123.01).Str("valueStr", "test log").Logger()
-		logger.Log().Msg("test log1")
+		logger := logging.NewLoggerWithWriter("log1", logBuf).With().
+			Float64("valueFloat", valueFloat).Str("valueStr", valueString).Logger()
+		logger.Info().Err(errors.New("test error")).Msg(valueMessage)
+
 		s.Require().NoError(sendLogs(s.cfg.ListenAddr, logBuf.String()))
 		time.Sleep(1 * time.Second)
+
 		schema1 := map[string]string{
-			"time":       "DateTime",
-			"message":    "String",
-			"caller":     "String",
-			"component":  "String",
-			"valueFloat": "Float64",
-			"valueStr":   "String",
+			"_HOSTNAME":     "String",
+			"_SYSTEMD_UNIT": "String",
+			"time":          "DateTime64(3)",
+			"level":         "String",
+			"error":         "String",
+			"message":       "String",
+			"caller":        "String",
+			"component":     "String",
+			"valueFloat":    "Float64",
+			"valueStr":      "String",
 		}
 		schemaRes := s.getTableSchema(s.connect, journald_forwarder.DefaultDatabase, journald_forwarder.DefaultTable)
 		s.Require().Equal(schema1, schemaRes)
 
+		query := fmt.Sprintf(
+			"SELECT component, valueStr, valueFloat FROM %s.%s WHERE message = '%s';",
+			journald_forwarder.DefaultDatabase, journald_forwarder.DefaultTable, valueMessage,
+		)
+		rows, err := s.connect.Query(context.Background(), query)
+		s.Require().NoError(err)
+		defer rows.Close()
+
+		s.Require().True(rows.Next())
+
+		var resComponent, resValueStr string
+		var resValueFloat float64
+		s.Require().NoError(rows.Scan(&resComponent, &resValueStr, &resValueFloat))
+
+		s.Require().Equal("log1", resComponent)
+		s.Require().Equal(valueString, resValueStr)
+		s.Require().InEpsilon(valueFloat, resValueFloat, 0.0001)
+
 		logBuf = new(bytes.Buffer)
-		log1 = logging.NewLoggerWithWriter("log2", true, logBuf)
-		logger = log1.Uint256("valueUInt256", "115792089237316195423570985008687907853269984665640564039457584007913129639935").Logger()
+		logger = logging.NewLoggerWithWriter("log2", logBuf).With().
+			Uint256(
+				"valueUInt256",
+				"115792089237316195423570985008687907853269984665640564039457584007913129639935").
+			Logger()
 		logger.Log().Msg("test log2")
 		s.Require().NoError(sendLogs(s.cfg.ListenAddr, logBuf.String()))
 		time.Sleep(1 * time.Second)
@@ -156,8 +187,7 @@ func (s *SuiteJournaldForwarder) TestLogDataInsert() {
 		s.Require().Equal(schema2, schemaRes)
 
 		logBuf = new(bytes.Buffer)
-		log1 = logging.NewLoggerWithWriter("log2noCh", false, logBuf)
-		logger = log1.Bool("newBool", false).Logger()
+		logger = logging.NewLoggerWithWriterStore("log2noCh", false, logBuf).With().Bool("newBool", false).Logger()
 		logger.Log().Msg("test log2notCh")
 		s.Require().NoError(sendLogs(s.cfg.ListenAddr, logBuf.String()))
 		time.Sleep(1 * time.Second)

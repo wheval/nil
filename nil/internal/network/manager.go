@@ -6,13 +6,13 @@ import (
 	"strings"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/rs/zerolog"
 )
 
 type Manager struct {
@@ -25,14 +25,14 @@ type Manager struct {
 
 	meter telemetry.Meter
 
-	logger zerolog.Logger
+	logger logging.Logger
 }
 
-func ConnectToPeers(ctx context.Context, peers AddrInfoSlice, m Manager, logger zerolog.Logger) {
+func ConnectToPeers(ctx context.Context, peers AddrInfoSlice, m Manager, logger logging.Logger) {
 	connectToPeers(ctx, peers, m.host, logger)
 }
 
-func connectToPeers(ctx context.Context, peers AddrInfoSlice, h Host, logger zerolog.Logger) {
+func connectToPeers(ctx context.Context, peers AddrInfoSlice, h Host, logger logging.Logger) {
 	for _, peerInfo := range peers {
 		if h.ID() == peerInfo.ID {
 			// Skip connecting to self.
@@ -47,7 +47,7 @@ func connectToPeers(ctx context.Context, peers AddrInfoSlice, h Host, logger zer
 	}
 }
 
-func connectToDhtBootstrapPeers(ctx context.Context, conf *Config, h Host, logger zerolog.Logger) {
+func connectToDhtBootstrapPeers(ctx context.Context, conf *Config, h Host, logger logging.Logger) {
 	connectToPeers(ctx, conf.DHTBootstrapPeers, h, logger)
 }
 
@@ -56,7 +56,7 @@ func newManagerFromHost(
 	conf *Config,
 	h host.Host,
 	database db.DB,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (*Manager, error) {
 	logger.Info().Msgf("Listening on addresses:\n%s\n", common.Join("\n", h.Addrs()...))
 
@@ -199,7 +199,7 @@ func (m *Manager) logError(err error, msg string) {
 	m.logErrorWithLogger(m.logger, err, msg)
 }
 
-func (m *Manager) logErrorWithLogger(logger zerolog.Logger, err error, msg string) {
+func (m *Manager) logErrorWithLogger(logger logging.Logger, err error, msg string) {
 	if m.ctx.Err() != nil {
 		// If we're already closing, no need to log errors.
 		return

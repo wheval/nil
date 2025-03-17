@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/common/math"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
@@ -43,7 +44,7 @@ func New(
 	requestHandler api.TaskRequestHandler,
 	taskHandler api.TaskHandler,
 	metrics TaskExecutorMetrics,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (TaskExecutor, error) {
 	nonceId, err := generateNonceId()
 	if err != nil {
@@ -71,7 +72,7 @@ type taskExecutorImpl struct {
 	requestHandler api.TaskRequestHandler
 	taskHandler    api.TaskHandler
 	metrics        TaskExecutorMetrics
-	logger         zerolog.Logger
+	logger         logging.Logger
 }
 
 func (p *taskExecutorImpl) Id() types.TaskExecutorId {

@@ -6,11 +6,11 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
-	"github.com/rs/zerolog"
 )
 
 type DebugAPI interface {
@@ -29,13 +29,13 @@ type DebugAPI interface {
 }
 
 type DebugAPIImpl struct {
-	logger zerolog.Logger
+	logger logging.Logger
 	rawApi rawapi.NodeApi
 }
 
 var _ DebugAPI = &DebugAPIImpl{}
 
-func NewDebugAPI(rawApi rawapi.NodeApi, logger zerolog.Logger) *DebugAPIImpl {
+func NewDebugAPI(rawApi rawapi.NodeApi, logger logging.Logger) *DebugAPIImpl {
 	return &DebugAPIImpl{
 		logger: logger,
 		rawApi: rawApi,

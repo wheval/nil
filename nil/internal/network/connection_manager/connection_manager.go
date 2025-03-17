@@ -3,10 +3,10 @@ package connection_manager
 import (
 	"context"
 
+	"github.com/NilFoundation/nil/nil/common/logging"
 	libp2pconnmgr "github.com/libp2p/go-libp2p/core/connmgr"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
-	"github.com/rs/zerolog"
 )
 
 type withCustomNotifeeDecorator struct {
@@ -24,7 +24,7 @@ var _ libp2pconnmgr.ConnManager = (*withCustomNotifeeDecorator)(nil)
 func NewConnectionManagerWithPeerReputationTracking(
 	ctx context.Context,
 	conf *Config,
-	logger zerolog.Logger,
+	logger logging.Logger,
 	low, hi int,
 	opts ...connmgr.Option,
 ) (libp2pconnmgr.ConnManager, error) {

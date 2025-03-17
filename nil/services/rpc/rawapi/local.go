@@ -3,12 +3,12 @@ package rawapi
 import (
 	"context"
 
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
-	"github.com/rs/zerolog"
 )
 
 type LocalShardApi struct {
@@ -39,7 +39,7 @@ func (api *LocalShardApi) setAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
 	networkManager *network.Manager,
 	readonly bool,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) error {
 	return SetRawApiRequestHandlers(ctx, api.ShardId, api, networkManager, readonly, logger)
 }

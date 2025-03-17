@@ -4,16 +4,16 @@ import (
 	"context"
 
 	"github.com/NilFoundation/nil/nil/client"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/public"
-	"github.com/rs/zerolog"
 )
 
 type taskDebugRpcClient struct {
 	client client.RawClient
 }
 
-func NewTaskDebugRpcClient(apiEndpoint string, logger zerolog.Logger) public.TaskDebugApi {
+func NewTaskDebugRpcClient(apiEndpoint string, logger logging.Logger) public.TaskDebugApi {
 	return &taskDebugRpcClient{
 		client: NewRetryClient(apiEndpoint, logger),
 	}

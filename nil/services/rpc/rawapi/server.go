@@ -8,10 +8,10 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi/pb"
-	"github.com/rs/zerolog"
 )
 
 var errRequestHandlerCreation = errors.New("failed to create request handler")
@@ -52,7 +52,7 @@ func SetRawApiRequestHandlers(
 	api ShardApi,
 	manager *network.Manager,
 	readonly bool,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) error {
 	var protocolInterfaceType, apiType reflect.Type
 	if readonly {
@@ -99,7 +99,7 @@ func setRawApiRequestHandlers(
 	shardId types.ShardId,
 	apiName string,
 	manager *network.Manager,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) error {
 	requestHandlers, err := getRawApiRequestHandlers(protocolInterfaceType, apiType, api, shardId, apiName)
 	if err != nil {

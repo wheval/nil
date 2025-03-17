@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -22,7 +23,7 @@ type EventListenerTestSuite struct {
 	// high level dependencies
 	database db.DB
 	storage  *EventStorage
-	logger   zerolog.Logger
+	logger   logging.Logger
 	clock    clockwork.Clock
 
 	// testing entity
@@ -51,7 +52,7 @@ func (s *EventListenerTestSuite) SetupTest() {
 	var err error
 
 	s.ctx, s.canceler = context.WithCancel(context.Background())
-	s.logger = zerolog.New(zerolog.NewConsoleWriter())
+	s.logger = logging.NewFromZerolog(zerolog.New(zerolog.NewConsoleWriter()))
 
 	s.database, err = db.NewBadgerDbInMemory()
 	s.Require().NoError(err, "failed to initialize test db")

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common/logging"
-	"github.com/rs/zerolog"
 )
 
 var defaultTimeout = 30 * time.Second
@@ -21,10 +20,10 @@ var defaultTimeout = 30 * time.Second
 type adminServer struct {
 	mux    *http.ServeMux
 	cfg    *ServerConfig
-	logger zerolog.Logger
+	logger logging.Logger
 }
 
-func StartAdminServer(ctx context.Context, cfg *ServerConfig, logger zerolog.Logger) error {
+func StartAdminServer(ctx context.Context, cfg *ServerConfig, logger logging.Logger) error {
 	if !cfg.Enabled {
 		return nil
 	}

@@ -17,13 +17,13 @@ type TaskResultSaver interface {
 type taskStateChangeHandler struct {
 	resultStorage     TaskResultSaver
 	currentExecutorId types.TaskExecutorId
-	logger            zerolog.Logger
+	logger            logging.Logger
 }
 
 func newTaskStateChangeHandler(
 	resultStorage TaskResultSaver,
 	currentExecutorId types.TaskExecutorId,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) api.TaskStateChangeHandler {
 	return &taskStateChangeHandler{
 		resultStorage:     resultStorage,
