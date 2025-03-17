@@ -96,7 +96,7 @@ async function runTutorialCheckTwo() {
   const hashSending = await smartAccount.sendTransaction({
     to: resultOperator.address,
     abi: operatorContract.abi,
-    functionName: "sendTokenCustom",
+    functionName: "checkSendToken",
     args: [resultCustomToken.address, CUSTOM_TOKEN_AMOUNT],
   });
 
