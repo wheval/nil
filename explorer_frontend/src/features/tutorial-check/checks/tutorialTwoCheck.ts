@@ -47,6 +47,8 @@ async function runTutorialCheckTwo() {
     faucetEndpoint: $rpcUrl.getState(),
   });
 
+  tutorialContractStepPassedEvent("A new smart account has been generated!");
+
   const resultOperator = await deploySmartContractFx({
     app: appOperator,
     args: [],
