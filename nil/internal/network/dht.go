@@ -139,16 +139,21 @@ func findPeers(ctx context.Context, rd *routing.RoutingDiscovery, h host.Host, p
 	defer cancel()
 	peerCh, err := rd.FindPeers(ctx, string(protocol))
 	if err != nil {
-		logger.Warn().Err(err).Msgf("failed to begin finding peers via DHT")
+		logger.Warn().Err(err).Msg("failed to begin finding peers via DHT")
 		return
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Debug().Msgf("findPeers: timer expired")
+			logger.Debug().Msg("findPeers: timer expired")
 			return
-		case peer := <-peerCh:
+		case peer, ok := <-peerCh:
+			if !ok {
+				logger.Trace().Msg("findPeers: peer channel closed")
+				return
+			}
+
 			logger.Trace().Msgf("findPeers: received peer %s", peer.ID)
 			if peer.ID == h.ID() || peer.ID == "" {
 				continue
