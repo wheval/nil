@@ -20,6 +20,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
+	"github.com/jonboulle/clockwork"
 	"github.com/rs/zerolog"
 )
 
@@ -62,7 +63,7 @@ type aggregator struct {
 	taskStorage    AggregatorTaskStorage
 	batchCommitter batches.BatchCommitter
 	resetter       *reset.StateResetter
-	timer          common.Timer
+	clock          clockwork.Clock
 	metrics        AggregatorMetrics
 	workerAction   *concurrent.Suspendable
 }
@@ -72,7 +73,7 @@ func NewAggregator(
 	blockStorage AggregatorBlockStorage,
 	taskStorage AggregatorTaskStorage,
 	resetter *reset.StateResetter,
-	timer common.Timer,
+	clock clockwork.Clock,
 	logger zerolog.Logger,
 	metrics AggregatorMetrics,
 	config AggregatorConfig,
@@ -89,7 +90,7 @@ func NewAggregator(
 			batches.DefaultCommitOptions(),
 		),
 		resetter: resetter,
-		timer:    timer,
+		clock:    clock,
 		metrics:  metrics,
 	}
 
@@ -342,7 +343,7 @@ func (agg *aggregator) handleBlockBatch(ctx context.Context, batch *types.BlockB
 
 // createProofTask generates proof tasks for block batch
 func (agg *aggregator) createProofTasks(ctx context.Context, batch *types.BlockBatch) error {
-	currentTime := agg.timer.NowTime()
+	currentTime := agg.clock.Now()
 	proofTasks, err := batch.CreateProofTasks(currentTime)
 	if err != nil {
 		return fmt.Errorf("error creating proof tasks, mainHash=%s: %w", batch.MainShardBlock.Hash, err)

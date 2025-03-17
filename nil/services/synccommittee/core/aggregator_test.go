@@ -16,6 +16,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/testaide"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
+	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -49,9 +50,9 @@ func (s *AggregatorTestSuite) SetupSuite() {
 
 	s.db, err = db.NewBadgerDbInMemory()
 	s.Require().NoError(err)
-	timer := common.NewTimer()
+	clock := clockwork.NewRealClock()
 	s.blockStorage = s.newTestBlockStorage(storage.DefaultBlockStorageConfig())
-	s.taskStorage = storage.NewTaskStorage(s.db, timer, s.metrics, logger)
+	s.taskStorage = storage.NewTaskStorage(s.db, clock, s.metrics, logger)
 	s.rpcClientMock = &client.ClientMock{}
 
 	s.aggregator = s.newTestAggregator(s.blockStorage)
@@ -64,14 +65,14 @@ func (s *AggregatorTestSuite) newTestAggregator(
 
 	logger := logging.NewLogger("aggregator_test")
 	stateResetter := reset.NewStateResetter(logger, s.blockStorage)
-	timer := common.NewTimer()
+	clock := clockwork.NewRealClock()
 
 	return NewAggregator(
 		s.rpcClientMock,
 		blockStorage,
 		s.taskStorage,
 		stateResetter,
-		timer,
+		clock,
 		logger,
 		s.metrics,
 		NewDefaultAggregatorConfig(),
@@ -80,8 +81,8 @@ func (s *AggregatorTestSuite) newTestAggregator(
 
 func (s *AggregatorTestSuite) newTestBlockStorage(config storage.BlockStorageConfig) *storage.BlockStorage {
 	s.T().Helper()
-	timer := common.NewTimer()
-	return storage.NewBlockStorage(s.db, config, timer, s.metrics, logging.NewLogger("aggregator_test"))
+	clock := clockwork.NewRealClock()
+	return storage.NewBlockStorage(s.db, config, clock, s.metrics, logging.NewLogger("aggregator_test"))
 }
 
 func (s *AggregatorTestSuite) SetupTest() {

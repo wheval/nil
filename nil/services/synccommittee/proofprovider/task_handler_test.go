@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
@@ -12,6 +11,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/testaide"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
+	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -20,7 +20,7 @@ type TaskHandlerTestSuite struct {
 	context      context.Context
 	cancellation context.CancelFunc
 	database     db.DB
-	timer        common.Timer
+	clock        clockwork.Clock
 	taskStorage  *storage.TaskStorage
 	taskHandler  api.TaskHandler
 }
@@ -37,10 +37,10 @@ func (s *TaskHandlerTestSuite) SetupSuite() {
 	metricsHandler, err := metrics.NewProofProviderMetrics()
 	s.Require().NoError(err)
 
-	s.taskStorage = storage.NewTaskStorage(s.database, common.NewTimer(), metricsHandler, logger)
+	s.taskStorage = storage.NewTaskStorage(s.database, clockwork.NewRealClock(), metricsHandler, logger)
 	taskResultStorage := storage.NewTaskResultStorage(s.database, logger)
-	s.timer = testaide.NewTestTimer()
-	s.taskHandler = newTaskHandler(s.taskStorage, taskResultStorage, 0, s.timer, logger)
+	s.clock = testaide.NewTestClock()
+	s.taskHandler = newTaskHandler(s.taskStorage, taskResultStorage, 0, s.clock, logger)
 }
 
 func TestTaskHandlerSuite(t *testing.T) {
@@ -84,7 +84,7 @@ func (s *TaskHandlerTestSuite) TestReturnErrorOnUnexpectedTaskType() {
 }
 
 func (s *TaskHandlerTestSuite) TestHandleBatchProofTask() {
-	now := s.timer.NowTime()
+	now := s.clock.Now()
 	executorId := testaide.RandomExecutorId()
 	batch := testaide.NewBlockBatch(testaide.ShardsCount)
 	taskEntry, err := types.NewBatchProofTaskEntry(types.NewBatchId(), batch.AllBlocks(), now)

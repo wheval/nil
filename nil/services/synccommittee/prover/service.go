@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/NilFoundation/nil/nil/client"
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
@@ -15,6 +14,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/scheduler"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
+	"github.com/jonboulle/clockwork"
 	"github.com/rs/zerolog"
 )
 
@@ -56,7 +56,7 @@ func New(config Config, database db.DB) (*Prover, error) {
 
 	handler := newTaskHandler(
 		taskResultStorage,
-		common.NewTimer(),
+		clockwork.NewRealClock(),
 		logger,
 		newTaskHandlerConfig(config.NilRpcEndpoint),
 	)

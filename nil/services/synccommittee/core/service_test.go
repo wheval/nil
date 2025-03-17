@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
@@ -16,6 +15,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rollupcontract"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/tests"
+	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -55,7 +55,7 @@ func (s *SyncCommitteeTestSuite) SetupSuite() {
 	s.blockStorage = storage.NewBlockStorage(
 		s.scDb,
 		storage.DefaultBlockStorageConfig(),
-		common.NewTimer(),
+		clockwork.NewRealClock(),
 		syncCommitteeMetrics,
 		logging.NewLogger("sync_committee_srv_test"),
 	)

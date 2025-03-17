@@ -3,10 +3,10 @@ package proofprovider
 import (
 	"context"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
+	"github.com/jonboulle/clockwork"
 	"github.com/rs/zerolog"
 )
 
@@ -19,19 +19,19 @@ type taskHandler struct {
 	resultSaver TaskResultSaver
 	skipRate    int
 	taskNum     int
-	timer       common.Timer
+	clock       clockwork.Clock
 	logger      zerolog.Logger
 }
 
 func newTaskHandler(
-	taskStorage HandlerTaskStorage, resultSaver TaskResultSaver, skipRate int, timer common.Timer, logger zerolog.Logger,
+	taskStorage HandlerTaskStorage, resultSaver TaskResultSaver, skipRate int, clock clockwork.Clock, logger zerolog.Logger,
 ) api.TaskHandler {
 	return &taskHandler{
 		taskStorage: taskStorage,
 		resultSaver: resultSaver,
 		skipRate:    skipRate,
 		taskNum:     0,
-		timer:       timer,
+		clock:       clock,
 		logger:      logger,
 	}
 }
@@ -79,7 +79,7 @@ func (h *taskHandler) Handle(ctx context.Context, executorId types.TaskExecutorI
 }
 
 func (h *taskHandler) prepareTasksForBatch(providerTask *types.Task) []*types.TaskEntry {
-	currentTime := h.timer.NowTime()
+	currentTime := h.clock.Now()
 	taskEntries := make([]*types.TaskEntry, 0)
 
 	// Final task, depends on partial proofs, aggregate FRI and consistency checks

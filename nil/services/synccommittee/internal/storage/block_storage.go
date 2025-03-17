@@ -16,6 +16,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
+	"github.com/jonboulle/clockwork"
 	"github.com/rs/zerolog"
 )
 
@@ -120,14 +121,14 @@ func DefaultBlockStorageConfig() BlockStorageConfig {
 type BlockStorage struct {
 	commonStorage
 	config  BlockStorageConfig
-	timer   common.Timer
+	clock   clockwork.Clock
 	metrics BlockStorageMetrics
 }
 
 func NewBlockStorage(
 	database db.DB,
 	config BlockStorageConfig,
-	timer common.Timer,
+	clock clockwork.Clock,
 	metrics BlockStorageMetrics,
 	logger zerolog.Logger,
 ) *BlockStorage {
@@ -141,7 +142,7 @@ func NewBlockStorage(
 			),
 		),
 		config:  config,
-		timer:   timer,
+		clock:   clock,
 		metrics: metrics,
 	}
 }
@@ -842,7 +843,7 @@ func (bs *BlockStorage) putBatchWithBlocksTx(tx db.RwTx, batch *scTypes.BlockBat
 		return err
 	}
 
-	currentTime := bs.timer.NowTime()
+	currentTime := bs.clock.Now()
 
 	entry := newBatchEntry(batch, currentTime)
 	if err := bs.putBatchTx(tx, entry); err != nil {

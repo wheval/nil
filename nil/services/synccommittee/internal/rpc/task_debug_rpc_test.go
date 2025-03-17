@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
@@ -17,6 +16,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/testaide"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/public"
+	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -30,7 +30,7 @@ type TaskSchedulerDebugRpcTestSuite struct {
 
 	database db.DB
 	storage  *storage.TaskStorage
-	timer    *common.TestTimerImpl
+	clock    *clockwork.FakeClock
 }
 
 func TestTaskSchedulerDebugRpcTestSuite(t *testing.T) {
@@ -71,11 +71,11 @@ func (s *TaskSchedulerDebugRpcTestSuite) SetupSuite() {
 	metricsHandler, err := metrics.NewSyncCommitteeMetrics()
 	s.Require().NoError(err)
 
-	s.timer = testaide.NewTestTimer()
+	s.clock = testaide.NewTestClock()
 
 	s.storage = storage.NewTaskStorage(
 		s.database,
-		s.timer,
+		s.clock,
 		metricsHandler,
 		logger,
 	)
@@ -105,7 +105,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) SetupSuite() {
 }
 
 func (s *TaskSchedulerDebugRpcTestSuite) TearDownTest() {
-	s.timer.SetTime(testaide.Now)
+	testaide.ResetTestClock(s.clock)
 	err := s.database.DropAll()
 	s.Require().NoError(err, "failed to clear database in TearDownTest")
 }
@@ -134,7 +134,7 @@ type getTaskTestCase struct {
 }
 
 func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Tasks() {
-	entries := newTaskEntries(s.timer.NowTime())
+	entries := newTaskEntries(s.clock.Now())
 	err := s.storage.AddTaskEntries(s.context, entries...)
 	s.Require().NoError(err)
 
@@ -233,7 +233,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_Empty_Storage() {
 }
 
 func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_Not_Found() {
-	entries := newTaskEntries(s.timer.NowTime())
+	entries := newTaskEntries(s.clock.Now())
 	err := s.storage.AddTaskEntries(s.context, entries...)
 	s.Require().NoError(err)
 
@@ -244,7 +244,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_Not_Found() {
 }
 
 func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_No_Dependencies() {
-	now := s.timer.NowTime()
+	now := s.clock.Now()
 	entry := testaide.NewTaskEntry(now, running, testaide.RandomExecutorId())
 	err := s.storage.AddTaskEntries(s.context, entry)
 	s.Require().NoError(err)
@@ -265,7 +265,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_With_Dependencies() 
 	//  \ / \
 	//   D   E
 
-	now := s.timer.NowTime()
+	now := s.clock.Now()
 
 	taskA := testaide.NewTaskEntry(now, types.WaitingForInput, testaide.RandomExecutorId())
 
@@ -316,7 +316,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Task_Tree_With_Terminated_Depe
 	//  / \
 	// B   C
 
-	now := s.timer.NowTime()
+	now := s.clock.Now()
 
 	taskA := testaide.NewTaskEntry(now.Add(-10*time.Minute), types.WaitingForInput, types.UnknownExecutorId)
 
@@ -357,7 +357,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) requestAndSendResult(
 	s.Require().Equal(expected, taskToExec)
 
 	// emulate time progress for non-zero Task.ExecutionTime results
-	s.timer.Add(10 * time.Minute)
+	s.clock.Advance(10 * time.Minute)
 
 	var taskResult *types.TaskResult
 	if completeSuccessfully {
@@ -439,7 +439,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) requireTaskTreeViewEqual(
 func (s *TaskSchedulerDebugRpcTestSuite) commonTaskAssertions(
 	expected *types.TaskEntry, actual *public.TaskViewCommon,
 ) []bool {
-	now := s.timer.NowTime()
+	now := s.clock.Now()
 
 	return []bool{
 		s.Equal(expected.Task.Id, actual.Id),
