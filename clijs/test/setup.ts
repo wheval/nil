@@ -3,7 +3,7 @@ import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
-  CometaService,
+  CometaClient,
   FaucetClient,
   type Hex,
   HttpTransport,
@@ -37,7 +37,7 @@ interface CliTestFixture {
     stdout: string;
   }>;
 
-  cometaClient: CometaService;
+  cometaClient: CometaClient;
   faucetClient: FaucetClient;
   rpcClient: PublicClient;
 
@@ -80,7 +80,7 @@ export const CliTest = test.extend<CliTestFixture>({
     });
   },
 
-  cometaClient: new CometaService({
+  cometaClient: new CometaClient({
     transport: new HttpTransport({
       endpoint: testEnv.cometaServiceEndpoint,
     }),

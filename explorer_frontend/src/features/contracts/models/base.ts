@@ -1,5 +1,5 @@
 import {
-  type CometaService,
+  type CometaClient,
   type Hex,
   HttpTransport,
   PublicClient,
@@ -131,11 +131,11 @@ export const registerContractInCometaFx = createEffect<
     name: string;
     app: App;
     address: Hex;
-    cometaService: CometaService;
+    cometaClient: CometaClient;
     solidityVersion: string;
   },
   void
->(async ({ name, app, address, cometaService, solidityVersion }) => {
+>(async ({ name, app, address, cometaClient, solidityVersion }) => {
   const result = createCompileInput(app.sourcecode);
 
   const refinedSolidityVersion = solidityVersion.match(/\d+\.\d+\.\d+/)?.[0] || "";
@@ -146,7 +146,7 @@ export const registerContractInCometaFx = createEffect<
     compilerVersion: refinedSolidityVersion,
   };
 
-  await cometaService.registerContract(JSON.stringify(refinedResult), address);
+  await cometaClient.registerContract(JSON.stringify(refinedResult), address);
 });
 
 export const $importedSmartContractAddress = createStore<Hex>("" as Hex);

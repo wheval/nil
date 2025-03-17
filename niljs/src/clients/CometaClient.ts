@@ -1,25 +1,25 @@
 import type { Hex } from "../types/Hex.js";
 import { BaseClient } from "./BaseClient.js";
 import type { ContractData, Location } from "./types/CometaTypes.js";
-import type { CometaServiceConfig } from "./types/Configs.js";
+import type { CometaClientConfig } from "./types/Configs.js";
 
 /**
- * CometaService is a client that interacts with the Cometa service.
+ * CometaClient is a client that interacts with the Cometa service.
  * Cometa service is used to store contract metadata: source code, ABI, etc.
- * @class CometaService
+ * @class CometaClient
  * @extends BaseClient
  * @example
- * import { CometaService } from '@nilfoundation/niljs';
+ * import { CometaClient } from '@nilfoundation/niljs';
  *
- * const service = new CometaService({
+ * const service = new CometaClient({
  *   transport: new HttpTransport({
  *     endpoint: COMETA_ENDPOINT,
  *   }),
  * });
  */
-class CometaService extends BaseClient {
+class CometaClient extends BaseClient {
   // biome-ignore lint/complexity/noUselessConstructor: may be useful in the future
-  constructor(config: CometaServiceConfig) {
+  constructor(config: CometaClientConfig) {
     super(config);
   }
 
@@ -85,4 +85,4 @@ class CometaService extends BaseClient {
   }
 }
 
-export { CometaService };
+export { CometaClient };
