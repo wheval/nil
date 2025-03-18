@@ -140,7 +140,7 @@ export const TutorialsPanel = ({ tutorials }) => {
             backgroundColor: COLORS.blue900,
             flexDirection: "column",
             padding: "6px",
-            height: "100%",
+            height: "calc(100% - 24px)",
           },
         },
         Contents: {

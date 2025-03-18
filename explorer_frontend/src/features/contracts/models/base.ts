@@ -112,7 +112,7 @@ export const deploySmartContractFx = createEffect<
     args,
     salt,
     shardId,
-    feeCredit: convertEthToWei(0.00001),
+    feeCredit: convertEthToWei(0.0002),
   });
 
   await waitTillCompleted(smartAccount.client, hash);

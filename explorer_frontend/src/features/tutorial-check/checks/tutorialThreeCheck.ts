@@ -5,8 +5,8 @@ import {
   waitTillCompleted,
 } from "@nilfoundation/niljs";
 import { TutorialChecksStatus, setTutorialChecksState } from "../../../pages/tutorials/model";
-import type { App } from "../../../types";
 import { $rpcUrl } from "../../account-connector/model";
+import type { App } from "../../code/types";
 import { $contracts, deploySmartContractFx } from "../../contracts/models/base";
 import { setCompletedTutorial } from "../../tutorial/model";
 import { tutorialContractStepFailedEvent, tutorialContractStepPassedEvent } from "../model";
@@ -45,6 +45,8 @@ async function runTutorialCheckThree() {
     rpcEndpoint: $rpcUrl.getState(),
     faucetEndpoint: $rpcUrl.getState(),
   });
+
+  tutorialContractStepPassedEvent("A new smart account has been generated!");
 
   const resultRequester = await deploySmartContractFx({
     app: appRequester,
@@ -101,7 +103,11 @@ async function runTutorialCheckThree() {
 
   tutorialContractStepPassedEvent("The result of multiplication has been verified!");
 
+  setTutorialChecksState(TutorialChecksStatus.Successful);
+
   setCompletedTutorial(3);
+
+  tutorialContractStepPassedEvent("Tutorial Three has been completed successfully!");
 }
 
 export default runTutorialCheckThree;
