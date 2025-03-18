@@ -30,11 +30,10 @@ var (
 // extend types.Block with binary field
 type BlockWithBinary struct {
 	types.Block
-	Binary    []byte        `ch:"binary"`
-	Hash      common.Hash   `ch:"hash"`
-	ShardId   types.ShardId `ch:"shard_id"`
-	OutTxnNum uint64        `ch:"out_txn_num"`
-	InTxnNum  uint64        `ch:"in_txn_num"`
+	Binary   []byte        `ch:"binary"`
+	Hash     common.Hash   `ch:"hash"`
+	ShardId  types.ShardId `ch:"shard_id"`
+	InTxnNum uint64        `ch:"in_txn_num"`
 }
 
 type TransactionWithBinary struct {
@@ -271,12 +270,11 @@ func (d *ClickhouseDriver) ExportBlocks(ctx context.Context, blocksToExport []*i
 			return blockErr
 		}
 		binaryBlockExtended := &BlockWithBinary{
-			Block:     *block.decoded.Block,
-			Binary:    binary,
-			ShardId:   block.decoded.ShardId,
-			Hash:      block.decoded.Block.Hash(block.decoded.ShardId),
-			OutTxnNum: uint64(len(block.decoded.OutTransactions)),
-			InTxnNum:  uint64(len(block.decoded.InTransactions)),
+			Block:    *block.decoded.Block,
+			Binary:   binary,
+			ShardId:  block.decoded.ShardId,
+			Hash:     block.decoded.Block.Hash(block.decoded.ShardId),
+			InTxnNum: uint64(len(block.decoded.InTransactions)),
 		}
 		blockErr = blockBatch.AppendStruct(binaryBlockExtended)
 		if blockErr != nil {
