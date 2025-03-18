@@ -43,13 +43,18 @@ type BlocksRange struct {
 // latestHandled can be equal to:
 // a) The latest block fetched from the cluster, or
 // b) The latest proved state root, if `latestFetched` is nil.
-func GetBlocksFetchingRange(latestHandled *MainBlockRef, actualLatest MainBlockRef) (*BlocksRange, error) {
+func GetBlocksFetchingRange(latestHandled *MainBlockRef, actualLatest MainBlockRef, maxNumBlocks uint32) (*BlocksRange, error) {
+	if maxNumBlocks == 0 {
+		return nil, nil
+	}
+
+	var blocksRange BlocksRange
 	switch {
 	case latestHandled == nil:
-		return &BlocksRange{actualLatest.Number, actualLatest.Number}, nil
+		blocksRange = BlocksRange{actualLatest.Number, actualLatest.Number}
 
 	case latestHandled.Number < actualLatest.Number:
-		return &BlocksRange{latestHandled.Number + 1, actualLatest.Number}, nil
+		blocksRange = BlocksRange{latestHandled.Number + 1, actualLatest.Number}
 
 	case latestHandled.Number == actualLatest.Number && latestHandled.Hash != actualLatest.Hash:
 		return nil, fmt.Errorf(
@@ -66,6 +71,13 @@ func GetBlocksFetchingRange(latestHandled *MainBlockRef, actualLatest MainBlockR
 	default:
 		return nil, nil
 	}
+
+	rangeSize := uint32(blocksRange.End - blocksRange.Start + 1)
+	if rangeSize <= maxNumBlocks {
+		return &blocksRange, nil
+	}
+
+	return &BlocksRange{blocksRange.Start, blocksRange.Start + types.BlockNumber(maxNumBlocks-1)}, nil
 }
 
 func (br *MainBlockRef) Equals(child *jsonrpc.RPCBlock) bool {

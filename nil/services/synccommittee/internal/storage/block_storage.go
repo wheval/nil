@@ -1066,6 +1066,19 @@ func (bs *BlockStorage) addStoredCountTx(tx db.RwTx, delta int32) error {
 	return bs.putBatchesCountTx(tx, newBatchesCount)
 }
 
+func (bs *BlockStorage) GetFreeSpaceBatchCount(ctx context.Context) (uint32, error) {
+	tx, err := bs.database.CreateRoTx(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	batchCount, err := bs.getBatchesCountTx(tx)
+	if err != nil {
+		return 0, err
+	}
+	return bs.config.StoredBatchesLimit - batchCount, nil
+}
+
 func (bs *BlockStorage) getBatchesCountTx(tx db.RoTx) (uint32, error) {
 	bytes, err := tx.Get(storedBatchesCountTable, mainShardKey)
 	switch {

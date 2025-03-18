@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/NilFoundation/nil/nil/client"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
@@ -32,6 +33,7 @@ type ProposerTestSuite struct {
 	clock            clockwork.Clock
 	storage          *storage.BlockStorage
 	ethClient        *rollupcontract.EthClientMock
+	rpcClientMock    *client.ClientMock
 	proposer         *proposer
 	testData         *types.ProposalData
 	callContractMock *callContractMock
@@ -137,7 +139,8 @@ func (s *ProposerTestSuite) SetupSuite() {
 			return &ethtypes.Receipt{Status: ethtypes.ReceiptStatusSuccessful}, nil
 		},
 	}
-	s.proposer, err = NewProposer(s.ctx, s.params, s.storage, s.ethClient, metricsHandler, logger)
+	s.rpcClientMock = &client.ClientMock{}
+	s.proposer, err = NewProposer(s.ctx, s.params, s.storage, s.ethClient, s.rpcClientMock, metricsHandler, logger)
 	s.Require().NoError(err)
 }
 

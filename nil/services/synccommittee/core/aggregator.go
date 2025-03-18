@@ -39,7 +39,7 @@ type AggregatorBlockStorage interface {
 	TryGetProvedStateRoot(ctx context.Context) (*common.Hash, error)
 	TryGetLatestBatchId(ctx context.Context) (*types.BatchId, error)
 	SetBlockBatch(ctx context.Context, batch *types.BlockBatch) error
-	SetProvedStateRoot(ctx context.Context, stateRoot common.Hash) error
+	GetFreeSpaceBatchCount(ctx context.Context) (uint32, error)
 }
 
 type AggregatorConfig struct {
@@ -154,12 +154,12 @@ func (agg *aggregator) runIteration(ctx context.Context) {
 // processNewBlocks fetches and processes new blocks for all shards.
 // It handles the overall flow of block synchronization and proof creation.
 func (agg *aggregator) processNewBlocks(ctx context.Context) error {
-	latestBlock, latestParentHash, err := agg.fetchLatestBlockRef(ctx)
+	latestBlock, err := agg.fetchLatestBlockRef(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = agg.processShardBlocks(ctx, *latestBlock, latestParentHash)
+	err = agg.processShardBlocks(ctx, *latestBlock)
 
 	switch {
 	case errors.Is(err, types.ErrBatchNotReady):
@@ -186,24 +186,29 @@ func (agg *aggregator) processNewBlocks(ctx context.Context) error {
 }
 
 // fetchLatestBlocks retrieves the latest block for main shard
-func (agg *aggregator) fetchLatestBlockRef(ctx context.Context) (*types.MainBlockRef, common.Hash, error) {
+func (agg *aggregator) fetchLatestBlockRef(ctx context.Context) (*types.MainBlockRef, error) {
 	block, err := agg.rpcClient.GetBlock(ctx, coreTypes.MainShardId, "latest", false)
 	if err != nil && block == nil {
-		return nil, common.EmptyHash, fmt.Errorf("error fetching latest block from shard %d: %w", coreTypes.MainShardId, err)
+		return nil, fmt.Errorf("error fetching latest block from shard %d: %w", coreTypes.MainShardId, err)
 	}
 	blockRef, err := types.NewBlockRef(block)
-	return blockRef, block.ParentHash, err
+	return blockRef, err
 }
 
 // processShardBlocks handles the processing of new blocks for the main shard.
 // It fetches new blocks, updates the storage, and records relevant metrics.
-func (agg *aggregator) processShardBlocks(ctx context.Context, actualLatest types.MainBlockRef, actualLatestParentHash common.Hash) error {
-	latestHandledMainRef, err := agg.getLatestHandledBlockRef(ctx, actualLatestParentHash)
+func (agg *aggregator) processShardBlocks(ctx context.Context, actualLatest types.MainBlockRef) error {
+	latestHandledMainRef, err := agg.getLatestHandledBlockRef(ctx)
 	if err != nil {
 		return fmt.Errorf("error reading latest handled block: %w", err)
 	}
 
-	fetchingRange, err := types.GetBlocksFetchingRange(latestHandledMainRef, actualLatest)
+	maxNumBatches, err := agg.blockStorage.GetFreeSpaceBatchCount(ctx)
+	if err != nil {
+		return err
+	}
+
+	fetchingRange, err := types.GetBlocksFetchingRange(latestHandledMainRef, actualLatest, maxNumBatches)
 	if err != nil {
 		return err
 	}
@@ -224,7 +229,7 @@ func (agg *aggregator) processShardBlocks(ctx context.Context, actualLatest type
 
 // getLatestHandledBlockRef retrieves the latest handled block reference, prioritizing the latest fetched block if available.
 // If `latestFetched` value is not defined, method uses `latestProvedStateRoot`.
-func (agg *aggregator) getLatestHandledBlockRef(ctx context.Context, actualLatestParentHash common.Hash) (*types.MainBlockRef, error) {
+func (agg *aggregator) getLatestHandledBlockRef(ctx context.Context) (*types.MainBlockRef, error) {
 	latestFetched, err := agg.blockStorage.TryGetLatestFetched(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error reading latest fetched block for the main shard: %w", err)
@@ -240,14 +245,8 @@ func (agg *aggregator) getLatestHandledBlockRef(ctx context.Context, actualLates
 		return nil, fmt.Errorf("error reading latest proved state root: %w", err)
 	}
 	if latestProvedRoot == nil {
-		agg.logger.Debug().Msg("Latest proved state root is not defined, parent of the latest block wil be used")
-
-		if actualLatestParentHash != common.EmptyHash {
-			if err := agg.blockStorage.SetProvedStateRoot(ctx, actualLatestParentHash); err != nil {
-				return nil, fmt.Errorf("failed set proved state root: %w", err)
-			}
-		}
-		return nil, nil
+		agg.logger.Debug().Msg("Latest proved state root is not defined, waiting for proposer initialization")
+		return nil, errors.New("latest proved state root is not defined")
 	}
 
 	rpcBlock, err := agg.rpcClient.GetBlock(ctx, coreTypes.MainShardId, *latestProvedRoot, false)

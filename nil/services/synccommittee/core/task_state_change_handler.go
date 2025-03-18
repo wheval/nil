@@ -57,7 +57,7 @@ func (h *taskStateChangeHandler) OnTaskTerminated(ctx context.Context, task *typ
 }
 
 func (h *taskStateChangeHandler) onTaskSuccess(ctx context.Context, task *types.Task, result *types.TaskResult) error {
-	if task.TaskType != types.AggregateProofs {
+	if task.TaskType != types.ProofBatch {
 		log.NewTaskEvent(h.logger, zerolog.DebugLevel, task).
 			Msgf("task has type %s, just update pending dependency", task.TaskType)
 		return nil
