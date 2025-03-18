@@ -53,7 +53,12 @@ type Scheduler struct {
 	l1Fetcher rollup.L1BlockFetcher
 }
 
-func NewScheduler(validator *Validator, txFabric db.DB, consensus Consensus, networkManager *network.Manager) *Scheduler {
+func NewScheduler(
+	validator *Validator,
+	txFabric db.DB,
+	consensus Consensus,
+	networkManager *network.Manager,
+) *Scheduler {
 	params := validator.params
 	return &Scheduler{
 		txFabric:       txFabric,

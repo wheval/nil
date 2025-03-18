@@ -46,7 +46,14 @@ type NetworkTransportProtocol interface {
 	SendTransaction(pb.SendTransactionRequest) pb.SendTransactionResponse
 }
 
-func SetRawApiRequestHandlers(ctx context.Context, shardId types.ShardId, api ShardApi, manager *network.Manager, readonly bool, logger zerolog.Logger) error {
+func SetRawApiRequestHandlers(
+	ctx context.Context,
+	shardId types.ShardId,
+	api ShardApi,
+	manager *network.Manager,
+	readonly bool,
+	logger zerolog.Logger,
+) error {
 	var protocolInterfaceType, apiType reflect.Type
 	if readonly {
 		protocolInterfaceType = reflect.TypeFor[NetworkTransportProtocolRo]()
@@ -58,7 +65,13 @@ func SetRawApiRequestHandlers(ctx context.Context, shardId types.ShardId, api Sh
 	return setRawApiRequestHandlers(ctx, protocolInterfaceType, apiType, api, shardId, "rawapi", manager, logger)
 }
 
-func getRawApiRequestHandlers(protocolInterfaceType, apiType reflect.Type, api any, shardId types.ShardId, apiName string) (map[network.ProtocolID]network.RequestHandler, error) {
+func getRawApiRequestHandlers(
+	protocolInterfaceType reflect.Type,
+	apiType reflect.Type,
+	api any,
+	shardId types.ShardId,
+	apiName string,
+) (map[network.ProtocolID]network.RequestHandler, error) {
 	check.PanicIfNotf(reflect.ValueOf(api).Type().Implements(apiType), "api does not implement %s", apiType)
 	requestHandlers := make(map[network.ProtocolID]network.RequestHandler)
 	codec, err := newApiCodec(apiType, protocolInterfaceType)
@@ -78,7 +91,16 @@ func getRawApiRequestHandlers(protocolInterfaceType, apiType reflect.Type, api a
 	return requestHandlers, nil
 }
 
-func setRawApiRequestHandlers(ctx context.Context, protocolInterfaceType, apiType reflect.Type, api any, shardId types.ShardId, apiName string, manager *network.Manager, logger zerolog.Logger) error {
+func setRawApiRequestHandlers(
+	ctx context.Context,
+	protocolInterfaceType reflect.Type,
+	apiType reflect.Type,
+	api any,
+	shardId types.ShardId,
+	apiName string,
+	manager *network.Manager,
+	logger zerolog.Logger,
+) error {
 	requestHandlers, err := getRawApiRequestHandlers(protocolInterfaceType, apiType, api, shardId, apiName)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to create request handlers")

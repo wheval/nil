@@ -42,25 +42,42 @@ func (c *Token) Deploy(service *cliservice.Service, deploySmartAccount SmartAcco
 	return nil
 }
 
-func (c *Token) MintAndSend(ctx context.Context, client client.Client, service *cliservice.Service, smartAccountTo types.Address, mintAmount uint64) error {
+func (c *Token) MintAndSend(
+	ctx context.Context,
+	client client.Client,
+	service *cliservice.Service,
+	smartAccountTo types.Address,
+	mintAmount uint64,
+) error {
 	calldata, err := c.Abi.Pack("mintToken", types.NewValueFromUint64(mintAmount))
 	if err != nil {
 		return err
 	}
-	if err := sendExternalTransaction(ctx, client, service, calldata, c.Addr, c.OwnerSmartAccount.PrivateKey); err != nil {
+	if err := sendExternalTransaction(
+		ctx, client, service, calldata, c.Addr, c.OwnerSmartAccount.PrivateKey,
+	); err != nil {
 		return err
 	}
 	calldata, err = c.Abi.Pack("sendToken", smartAccountTo, c.Id, types.NewValueFromUint64(mintAmount))
 	if err != nil {
 		return err
 	}
-	if err := sendExternalTransaction(ctx, client, service, calldata, c.Addr, c.OwnerSmartAccount.PrivateKey); err != nil {
+	if err := sendExternalTransaction(
+		ctx, client, service, calldata, c.Addr, c.OwnerSmartAccount.PrivateKey,
+	); err != nil {
 		return err
 	}
 	return nil
 }
 
-func sendExternalTransaction(ctx context.Context, client client.Client, service *cliservice.Service, calldata types.Code, contractAddr types.Address, pk *ecdsa.PrivateKey) error {
+func sendExternalTransaction(
+	ctx context.Context,
+	client client.Client,
+	service *cliservice.Service,
+	calldata types.Code,
+	contractAddr types.Address,
+	pk *ecdsa.PrivateKey,
+) error {
 	hash, err := client.SendExternalTransaction(ctx, calldata, contractAddr, pk, types.FeePack{})
 	if err != nil {
 		return err

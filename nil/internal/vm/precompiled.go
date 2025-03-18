@@ -191,7 +191,12 @@ func (a *simple) RequiredGas(input []byte, state StateDBReadOnly) (uint64, error
 	return a.contract.RequiredGas(input), nil
 }
 
-func (a *simple) Run(_ StateDBReadOnly /* state */, input []byte, _ *uint256.Int /* value */, _ ContractRef /* caller */) ([]byte, error) {
+func (a *simple) Run(
+	_ StateDBReadOnly, /* state */
+	input []byte,
+	_ *uint256.Int, /* value */
+	_ ContractRef, /* caller */
+) ([]byte, error) {
 	return a.contract.Run(input)
 }
 
@@ -271,7 +276,9 @@ func withdrawFunds(state StateDB, addr types.Address, value types.Value) error {
 		return err
 	}
 	if balance.Cmp(value) < 0 {
-		log.Logger.Error().Msgf("withdrawFunds failed: insufficient balance on address %v, expected at least %v, got %v", addr, value, balance)
+		log.Logger.Error().Msgf(
+			"withdrawFunds failed: insufficient balance on address %v, expected at least %v, got %v",
+			addr, value, balance)
 		return ErrInsufficientBalance
 	}
 	return state.SubBalance(addr, value, tracing.BalanceDecreasePrecompile)
@@ -334,8 +341,8 @@ func (c *sendRawTransaction) Run(state StateDB, input []byte, value *uint256.Int
 
 var gasScale = types.DefaultGasPrice.Div(types.Value100)
 
-// GetExtraGasForOutboundTransaction returns the extra gas required for sending a transaction to a shard according to its gas
-// price. If the gas price is higher than the default gas price, the extra gas will be higher.
+// GetExtraGasForOutboundTransaction returns the extra gas required for sending a transaction to a shard
+// according to its gas price. If the gas price is higher than the default gas price, the extra gas will be higher.
 func GetExtraGasForOutboundTransaction(state StateDBReadOnly, shardId types.ShardId) uint64 {
 	gasPrice, err := state.GetGasPrice(shardId)
 	if err != nil {
@@ -712,7 +719,12 @@ func (c *checkIsInternal) RequiredGas([]byte, StateDBReadOnly) (uint64, error) {
 	return 10, nil
 }
 
-func (a *checkIsInternal) Run(state StateDBReadOnly, input []byte, value *uint256.Int, caller ContractRef) ([]byte, error) {
+func (a *checkIsInternal) Run(
+	state StateDBReadOnly,
+	input []byte,
+	value *uint256.Int,
+	caller ContractRef,
+) ([]byte, error) {
 	res := make([]byte, 32)
 
 	if state.IsInternalTransaction() {
@@ -790,7 +802,12 @@ func (c *checkIsResponse) RequiredGas([]byte, StateDBReadOnly) (uint64, error) {
 	return 10, nil
 }
 
-func (a *checkIsResponse) Run(state StateDBReadOnly, input []byte, value *uint256.Int, caller ContractRef) ([]byte, error) {
+func (a *checkIsResponse) Run(
+	state StateDBReadOnly,
+	input []byte,
+	value *uint256.Int,
+	caller ContractRef,
+) ([]byte, error) {
 	if !state.GetTransactionFlags().IsResponse() {
 		return nil, types.NewVmError(types.ErrorOnlyResponseCheckFailed)
 	}
@@ -843,7 +860,8 @@ func (c *manageToken) Run(state StateDB, input []byte, value *uint256.Int, calle
 		if !mint {
 			actionName = "SubToken"
 		}
-		return nil, types.NewVmVerboseError(types.ErrorPrecompileWrongNumberOfArguments, fmt.Sprintf("%s failed: %v", actionName, err))
+		return nil, types.NewVmVerboseError(
+			types.ErrorPrecompileWrongNumberOfArguments, fmt.Sprintf("%s failed: %v", actionName, err))
 	}
 
 	// Set return data to boolean `true` value
@@ -860,7 +878,12 @@ func (c *tokenBalance) RequiredGas([]byte, StateDBReadOnly) (uint64, error) {
 	return 10, nil
 }
 
-func (a *tokenBalance) Run(state StateDBReadOnly, input []byte, value *uint256.Int, caller ContractRef) ([]byte, error) {
+func (a *tokenBalance) Run(
+	state StateDBReadOnly,
+	input []byte,
+	value *uint256.Int,
+	caller ContractRef,
+) ([]byte, error) {
 	if len(input) < 4 {
 		return nil, types.NewVmError(types.ErrorPrecompileTooShortCallData)
 	}
@@ -953,7 +976,12 @@ func (c *getTransactionTokens) RequiredGas([]byte, StateDBReadOnly) (uint64, err
 	return 10, nil
 }
 
-func (c *getTransactionTokens) Run(state StateDBReadOnly, input []byte, value *uint256.Int, caller ContractRef) ([]byte, error) {
+func (c *getTransactionTokens) Run(
+	state StateDBReadOnly,
+	input []byte,
+	value *uint256.Int,
+	caller ContractRef,
+) ([]byte, error) {
 	callerTokens := caller.Token()
 	res, err := getPrecompiledMethod("precompileGetTransactionTokens").Outputs.Pack(callerTokens)
 	if err != nil {
@@ -1014,7 +1042,12 @@ func (c *poseidonHash) RequiredGas([]byte, StateDBReadOnly) (uint64, error) {
 	return 10, nil
 }
 
-func (c *poseidonHash) Run(state StateDBReadOnly, input []byte, value *uint256.Int, caller ContractRef) ([]byte, error) {
+func (c *poseidonHash) Run(
+	state StateDBReadOnly,
+	input []byte,
+	value *uint256.Int,
+	caller ContractRef,
+) ([]byte, error) {
 	if len(input) < 4 {
 		return nil, types.NewVmError(types.ErrorPrecompileTooShortCallData)
 	}

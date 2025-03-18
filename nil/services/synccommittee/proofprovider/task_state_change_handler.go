@@ -32,7 +32,11 @@ func newTaskStateChangeHandler(
 	}
 }
 
-func (h taskStateChangeHandler) OnTaskTerminated(ctx context.Context, task *types.Task, result *types.TaskResult) error {
+func (h taskStateChangeHandler) OnTaskTerminated(
+	ctx context.Context,
+	task *types.Task,
+	result *types.TaskResult,
+) error {
 	if task.ParentTaskId == nil {
 		log.NewTaskEvent(h.logger, zerolog.ErrorLevel, task).Msg("Task has nil parentTaskId")
 		return nil

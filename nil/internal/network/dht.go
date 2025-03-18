@@ -69,7 +69,13 @@ func NewDHT(ctx context.Context, h host.Host, conf *Config, database db.DB, logg
 
 // Almost all discovery/advertisement logic is taken from Polkadot:
 // https://github.com/ChainSafe/gossamer/blob/ff33dc50f902b71bb7940a66269ac2bf194a59c7/dot/network/discovery.go
-func discoverAndAdvertise(ctx context.Context, dht *DHT, h host.Host, protocol ProtocolID, logger zerolog.Logger) error {
+func discoverAndAdvertise(
+	ctx context.Context,
+	dht *DHT,
+	h host.Host,
+	protocol ProtocolID,
+	logger zerolog.Logger,
+) error {
 	rd := routing.NewRoutingDiscovery(dht)
 
 	err := dht.Bootstrap(ctx)
@@ -86,7 +92,13 @@ func discoverAndAdvertise(ctx context.Context, dht *DHT, h host.Host, protocol P
 	return nil
 }
 
-func advertise(ctx context.Context, rd *routing.RoutingDiscovery, dht *DHT, protocol ProtocolID, logger zerolog.Logger) {
+func advertise(
+	ctx context.Context,
+	rd *routing.RoutingDiscovery,
+	dht *DHT,
+	protocol ProtocolID,
+	logger zerolog.Logger,
+) {
 	ttl := initialAdvertisementTimeout
 
 	for {
@@ -113,7 +125,13 @@ func advertise(ctx context.Context, rd *routing.RoutingDiscovery, dht *DHT, prot
 	}
 }
 
-func checkPeerCount(ctx context.Context, rd *routing.RoutingDiscovery, h host.Host, protocol ProtocolID, logger zerolog.Logger) {
+func checkPeerCount(
+	ctx context.Context,
+	rd *routing.RoutingDiscovery,
+	h host.Host,
+	protocol ProtocolID,
+	logger zerolog.Logger,
+) {
 	ticker := time.NewTicker(connectToPeersTimeout)
 	maxPeers := defaultMaxPeers
 	defer ticker.Stop()
@@ -132,7 +150,13 @@ func checkPeerCount(ctx context.Context, rd *routing.RoutingDiscovery, h host.Ho
 	}
 }
 
-func findPeers(ctx context.Context, rd *routing.RoutingDiscovery, h host.Host, protocol ProtocolID, logger zerolog.Logger) {
+func findPeers(
+	ctx context.Context,
+	rd *routing.RoutingDiscovery,
+	h host.Host,
+	protocol ProtocolID,
+	logger zerolog.Logger,
+) {
 	logger.Debug().Msg("attempting to find DHT peers...")
 
 	ctx, cancel := context.WithTimeout(ctx, findPeersTimeout)
@@ -161,7 +185,8 @@ func findPeers(ctx context.Context, rd *routing.RoutingDiscovery, h host.Host, p
 
 			logger.Debug().Msgf("found new peer %s via DHT", peer.ID)
 			h.Peerstore().AddAddrs(peer.ID, peer.Addrs, peerstore.PermanentAddrTTL)
-			// TODO: add peerset (https://github.com/ChainSafe/gossamer/tree/ff33dc50f902b71bb7940a66269ac2bf194a59c7/dot/peerset)
+			// TODO: add [peerset](
+			//  https://github.com/ChainSafe/gossamer/tree/ff33dc50f902b71bb7940a66269ac2bf194a59c7/dot/peerset)
 		}
 	}
 }

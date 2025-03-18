@@ -95,7 +95,8 @@ func buildAddContractCmd(logger zerolog.Logger) (*cobra.Command, error) {
 			}
 
 			deployArgs := strings.Fields(argsCmd)
-			adr, err := commands.DeployContract(cfg.HttpUrl, cfg.SmartAccountAdr, contractPath, cfg.PrivateKey, deployArgs, logger)
+			adr, err := commands.DeployContract(
+				cfg.HttpUrl, cfg.SmartAccountAdr, contractPath, cfg.PrivateKey, deployArgs, logger)
 			if err != nil {
 				return err
 			}

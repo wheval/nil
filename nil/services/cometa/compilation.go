@@ -33,7 +33,8 @@ type ContractData struct {
 	// SourceCode holds source code content for each file: {name -> content}
 	SourceCode map[string]string `json:"sourceCode,omitempty"`
 
-	// SourceMap holds mappings between bytecode and source code. See https://docs.soliditylang.org/en/latest/internals/source_mappings.html
+	// SourceMap holds mappings between bytecode and source code.
+	// See https://docs.soliditylang.org/en/latest/internals/source_mappings.html
 	SourceMap string `json:"sourceMap,omitempty"`
 
 	// Metadata holds metadata in JSON format, directly copied from the compiler output.
@@ -186,7 +187,8 @@ func CreateContractData(input *CompilerJsonInput, outputJson *CompilerJsonOutput
 			return nil, errors.New("last id must be empty")
 		}
 		contractData.SourceFilesList[len(contractData.SourceFilesList)-1] = GeneratedSourceFileName
-		contractData.SourceCode[GeneratedSourceFileName] = contractDescr.Evm.DeployedBytecode.GeneratedSources[0].Contents
+		contractData.SourceCode[GeneratedSourceFileName] = //
+			contractDescr.Evm.DeployedBytecode.GeneratedSources[0].Contents
 	}
 
 	contractData.SourceMap = contractDescr.Evm.DeployedBytecode.SourceMap

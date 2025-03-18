@@ -50,7 +50,12 @@ func (s *TaskRequestHandlerTestSuite) TearDownSuite() {
 	s.cancellation()
 }
 
-func runTaskListener(ctx context.Context, scheduler scheduler.TaskScheduler, listenerHttpEndpoint string, started chan<- struct{}) error {
+func runTaskListener(
+	ctx context.Context,
+	scheduler scheduler.TaskScheduler,
+	listenerHttpEndpoint string,
+	started chan<- struct{},
+) error {
 	taskListener := NewTaskListener(
 		&TaskListenerConfig{HttpEndpoint: listenerHttpEndpoint},
 		scheduler,

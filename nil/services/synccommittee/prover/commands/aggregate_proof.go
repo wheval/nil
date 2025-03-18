@@ -47,7 +47,10 @@ func (cmd *aggregateProofCmd) MakeCommandDefinition(task *types.Task) (*CommandD
 	}, execCmd.Err
 }
 
-func (cmd *aggregateProofCmd) AfterCommandExecuted(task *types.Task, results types.TaskOutputArtifacts) (types.TaskResultData, error) {
+func (cmd *aggregateProofCmd) AfterCommandExecuted(
+	task *types.Task,
+	results types.TaskOutputArtifacts,
+) (types.TaskResultData, error) {
 	// TODO: pass aggregated proof here
 	return types.TaskResultData{}, nil
 }

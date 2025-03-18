@@ -306,10 +306,26 @@ func ToProto(tr ExecutionTraces, traceIdx uint64) (*PbTracesSet, error) {
 			TraceIdx:   traceIdx,
 			ProtoHash:  constants.ProtoHash,
 		},
-		exp:     &pb.ExpTraces{ExpOps: make([]*pb.ExpOp, len(traces.ExpOps)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
-		zkevm:   &pb.ZKEVMTraces{ZkevmStates: make([]*pb.ZKEVMState, len(traces.ZKEVMStates)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
-		copy:    &pb.CopyTraces{CopyEvents: make([]*pb.CopyEvent, len(traces.CopyEvents)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
-		keccaks: &pb.KeccakTraces{HashedBuffers: make([]*pb.KeccakBuffer, len(traces.KeccakTraces)), TraceIdx: traceIdx, ProtoHash: constants.ProtoHash},
+		exp: &pb.ExpTraces{
+			ExpOps:    make([]*pb.ExpOp, len(traces.ExpOps)),
+			TraceIdx:  traceIdx,
+			ProtoHash: constants.ProtoHash,
+		},
+		zkevm: &pb.ZKEVMTraces{
+			ZkevmStates: make([]*pb.ZKEVMState, len(traces.ZKEVMStates)),
+			TraceIdx:    traceIdx,
+			ProtoHash:   constants.ProtoHash,
+		},
+		copy: &pb.CopyTraces{
+			CopyEvents: make([]*pb.CopyEvent, len(traces.CopyEvents)),
+			TraceIdx:   traceIdx,
+			ProtoHash:  constants.ProtoHash,
+		},
+		keccaks: &pb.KeccakTraces{
+			HashedBuffers: make([]*pb.KeccakBuffer, len(traces.KeccakTraces)),
+			TraceIdx:      traceIdx,
+			ProtoHash:     constants.ProtoHash,
+		},
 	}
 
 	// Convert StackOps

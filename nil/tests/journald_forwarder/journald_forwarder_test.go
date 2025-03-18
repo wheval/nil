@@ -195,7 +195,8 @@ func (s *SuiteJournaldForwarder) TestLogDataInsert() {
 	table := "x2"
 	s.dropDatabase(connect, database)
 
-	valueUInt256, _ := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129639935", 10)
+	valueUInt256, _ := new(big.Int).SetString(
+		"115792089237316195423570985008687907853269984665640564039457584007913129639935", 10)
 	metrics := map[string]any{
 		"valueFloat":   123.01,
 		"valueStr":     "test log",

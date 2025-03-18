@@ -83,7 +83,14 @@ func randomPermutation(shardIdList []types.ShardId, amount uint64) ([]types.Shar
 	return arr[:amount], nil
 }
 
-func initializeSmartAccountsAndServices(ctx context.Context, uniswapAccounts uint32, shardIdList []types.ShardId, client *rpc_client.Client, service *cliservice.Service, faucet *faucet.Client) ([]uniswap.SmartAccount, error) {
+func initializeSmartAccountsAndServices(
+	ctx context.Context,
+	uniswapAccounts uint32,
+	shardIdList []types.ShardId,
+	client *rpc_client.Client,
+	service *cliservice.Service,
+	faucet *faucet.Client,
+) ([]uniswap.SmartAccount, error) {
 	res := make([]uniswap.SmartAccount, len(shardIdList))
 
 	var err error
@@ -221,9 +228,20 @@ func swap(ctx context.Context, whoWantSwap, whatPairHeWant types.ShardId, logger
 		return err
 	}
 	expectedOutputAmount := calculateOutputAmount(swapAmount.ToBig(), reserve0, reserve1)
-	logger.Info().Msgf("User: %v, Pair: %v, AmountSend: %s,  AmountGet: %s, TokenFrom: %s, TokenTo %s", whoWantSwap, whatPairHeWant, swapAmount, expectedOutputAmount, token1, token2)
+	logger.Info().Msgf(
+		"User: %v, Pair: %v, AmountSend: %s,  AmountGet: %s, TokenFrom: %s, TokenTo %s",
+		whoWantSwap, whatPairHeWant, swapAmount, expectedOutputAmount, token1, token2)
 
-	if _, err = pairs[whatPairHeWant].Swap(ctx, services[whoWantSwap], client, smartAccounts[whoWantSwap], smartAccounts[whoWantSwap].Addr, big.NewInt(0), expectedOutputAmount, types.Value{Uint256: &swapAmount}, *types.TokenIdForAddress(token1)); err != nil {
+	if _, err = pairs[whatPairHeWant].Swap(
+		ctx,
+		services[whoWantSwap],
+		client,
+		smartAccounts[whoWantSwap],
+		smartAccounts[whoWantSwap].Addr,
+		big.NewInt(0),
+		expectedOutputAmount,
+		types.Value{Uint256: &swapAmount},
+		*types.TokenIdForAddress(token1)); err != nil {
 		return err
 	}
 	return nil
@@ -289,7 +307,12 @@ func deployPairs(ctx context.Context, i int, shardIdList []types.ShardId, logger
 	return nil
 }
 
-func waitClusterStart(ctx context.Context, timeout time.Duration, tick time.Duration, client *rpc_client.Client) ([]types.ShardId, error) {
+func waitClusterStart(
+	ctx context.Context,
+	timeout time.Duration,
+	tick time.Duration,
+	client *rpc_client.Client,
+) ([]types.ShardId, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -362,7 +385,8 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 		return err
 	}
 	logger.Info().Msg("Creating smart accounts...")
-	smartAccounts, err = initializeSmartAccountsAndServices(ctx, cfg.UniswapAccounts, shardIdList, client, service, faucet)
+	smartAccounts, err = initializeSmartAccountsAndServices(
+		ctx, cfg.UniswapAccounts, shardIdList, client, service, faucet)
 	if err != nil {
 		handler.RecordError(ctx)
 		return err
@@ -388,7 +412,11 @@ func Run(ctx context.Context, cfg Config, logger zerolog.Logger) error {
 			if checkBalanceCounterDownInt == 0 {
 				checkBalanceCounterDownInt = int(cfg.CheckBalance)
 				logger.Info().Msg("Checking balance and minting tokens.")
-				if err := uniswap.TopUpBalance(thresholdAmount, append(services, uniswapServices...), append(smartAccounts, uniswapSmartAccounts...)); err != nil {
+				if err := uniswap.TopUpBalance(
+					thresholdAmount,
+					append(services, uniswapServices...),
+					append(smartAccounts, uniswapSmartAccounts...),
+				); err != nil {
 					handler.RecordError(ctx)
 					return err
 				}

@@ -80,7 +80,11 @@ func (h *taskStorageMetricsHandler) RecordTaskStarted(ctx context.Context, taskE
 	h.currentActiveTasks.Add(ctx, 1, h.attributes, activeAttributes)
 }
 
-func (h *taskStorageMetricsHandler) RecordTaskTerminated(ctx context.Context, taskEntry *types.TaskEntry, taskResult *types.TaskResult) {
+func (h *taskStorageMetricsHandler) RecordTaskTerminated(
+	ctx context.Context,
+	taskEntry *types.TaskEntry,
+	taskResult *types.TaskResult,
+) {
 	taskAttributes := h.getAttrTypeAndOwner(taskEntry)
 
 	h.currentActiveTasks.Add(ctx, -1, h.attributes, taskAttributes)
@@ -94,7 +98,11 @@ func (h *taskStorageMetricsHandler) RecordTaskTerminated(ctx context.Context, ta
 	}
 }
 
-func (h *taskStorageMetricsHandler) RecordTaskRescheduled(ctx context.Context, taskType types.TaskType, previousExecutor types.TaskExecutorId) {
+func (h *taskStorageMetricsHandler) RecordTaskRescheduled(
+	ctx context.Context,
+	taskType types.TaskType,
+	previousExecutor types.TaskExecutorId,
+) {
 	taskAttributes := telattr.With(
 		attribute.Stringer(attrTaskType, taskType),
 		attribute.Int64(attrTaskExecutor, int64(previousExecutor)),

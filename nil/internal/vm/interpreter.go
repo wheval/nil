@@ -184,7 +184,8 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 				return
 			}
 			if !logged && in.evm.Config.Tracer.OnOpcode != nil {
-				in.evm.Config.Tracer.OnOpcode(pcCopy, byte(op), gasCopy, cost, callContext, in.returnData, in.evm.depth, err)
+				in.evm.Config.Tracer.OnOpcode(
+					pcCopy, byte(op), gasCopy, cost, callContext, in.returnData, in.evm.depth, err)
 			}
 			if logged && in.evm.Config.Tracer.OnFault != nil {
 				in.evm.Config.Tracer.OnFault(pcCopy, byte(op), gasCopy, cost, callContext, in.evm.depth, err)
@@ -234,7 +235,8 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 				in.evm.Config.Tracer.OnGasChange(gasCopy, gasCopy-cost, tracing.GasChangeCallOpCode)
 			}
 			if in.evm.Config.Tracer.OnOpcode != nil {
-				in.evm.Config.Tracer.OnOpcode(pc, byte(op), gasCopy, cost, callContext, in.returnData, in.evm.depth, err)
+				in.evm.Config.Tracer.OnOpcode(
+					pc, byte(op), gasCopy, cost, callContext, in.returnData, in.evm.depth, err)
 				logged = true
 			}
 		}
@@ -278,7 +280,13 @@ func (in *EVMInterpreter) GetNumRequiredStackItems(op OpCode) int {
 	return in.table[op].minStack
 }
 
-func calcDynamicCosts(contract *Contract, operation *operation, stack *Stack, in *EVMInterpreter, mem *Memory) (uint64, uint64, error) {
+func calcDynamicCosts(
+	contract *Contract,
+	operation *operation,
+	stack *Stack,
+	in *EVMInterpreter,
+	mem *Memory,
+) (uint64, uint64, error) {
 	// Calculate the new memory size and expand the memory to fit the operation.
 	// Memory check needs to be done prior to evaluating the dynamic gas portion
 	// to detect calculation overflows.
@@ -302,7 +310,8 @@ func calcDynamicCosts(contract *Contract, operation *operation, stack *Stack, in
 		return 0, 0, types.NewWrapError(types.ErrorOutOfGasDynamic, err)
 	}
 	if !contract.UseGas(dynamicCost, in.evm.Config.Tracer, tracing.GasChangeIgnored) {
-		return 0, 0, types.NewVerboseError(types.ErrorOutOfGasDynamic, fmt.Sprintf("%d < %d", contract.Gas, dynamicCost))
+		return 0, 0, types.NewVerboseError(types.ErrorOutOfGasDynamic,
+			fmt.Sprintf("%d < %d", contract.Gas, dynamicCost))
 	}
 	return memorySize, dynamicCost, nil
 }

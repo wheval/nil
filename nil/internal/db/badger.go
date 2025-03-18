@@ -191,7 +191,8 @@ func (tx *BadgerRoTx) Rollback() {
 	tx.onFinish()
 	// Managed transaction can be only read-only.
 	// We don't need to discard them, but if we do, than we will have a panic from badger.
-	// It happens because badger tries to move watermarks, because it doesn't distinguish managed transactions in automatic mode
+	// It happens because badger tries to move watermarks,
+	// because it doesn't distinguish managed transactions in automatic mode
 	// TODO: maybe we should patch badger to distinguish managed transactions in automatic mode
 	if !tx.managed {
 		tx.tx.Discard()
@@ -260,7 +261,12 @@ func (tx *BadgerRwTx) DeleteFromShard(shardId types.ShardId, tableName ShardedTa
 	return tx.Delete(ShardTableName(tableName, shardId), key)
 }
 
-func (tx *BadgerRoTx) RangeByShard(shardId types.ShardId, tableName ShardedTableName, from []byte, to []byte) (Iter, error) {
+func (tx *BadgerRoTx) RangeByShard(
+	shardId types.ShardId,
+	tableName ShardedTableName,
+	from []byte,
+	to []byte,
+) (Iter, error) {
 	return tx.Range(ShardTableName(tableName, shardId), from, to)
 }
 

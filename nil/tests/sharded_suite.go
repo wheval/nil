@@ -70,7 +70,10 @@ func (s *ShardedSuite) Cancel() {
 	}
 }
 
-func newZeroState(oldZeroState *execution.ZeroStateConfig, validators []config.ListValidators) *execution.ZeroStateConfig {
+func newZeroState(
+	oldZeroState *execution.ZeroStateConfig,
+	validators []config.ListValidators,
+) *execution.ZeroStateConfig {
 	return &execution.ZeroStateConfig{
 		ConfigParams: execution.ConfigParams{
 			Validators: config.ParamValidators{
@@ -82,7 +85,11 @@ func newZeroState(oldZeroState *execution.ZeroStateConfig, validators []config.L
 }
 
 func createOneShardOneValidatorCfg(
-	s *ShardedSuite, index InstanceId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[InstanceId]*keys.ValidatorKeysManager,
+	s *ShardedSuite,
+	index InstanceId,
+	cfg *nilservice.Config,
+	netCfg *network.Config,
+	keyManagers map[InstanceId]*keys.ValidatorKeysManager,
 ) *nilservice.Config {
 	validators := make([]config.ListValidators, cfg.NShards-1)
 	for i := range validators {
@@ -122,7 +129,11 @@ func createOneShardOneValidatorCfg(
 }
 
 func createAllShardsAllValidatorsCfg(
-	s *ShardedSuite, index InstanceId, cfg *nilservice.Config, netCfg *network.Config, keyManagers map[InstanceId]*keys.ValidatorKeysManager,
+	s *ShardedSuite,
+	index InstanceId,
+	cfg *nilservice.Config,
+	netCfg *network.Config,
+	keyManagers map[InstanceId]*keys.ValidatorKeysManager,
 ) *nilservice.Config {
 	if cfg.DisableConsensus {
 		s.Require().Fail("Consensus is disabled")
@@ -160,7 +171,13 @@ func createAllShardsAllValidatorsCfg(
 
 func (s *ShardedSuite) start(
 	cfg *nilservice.Config, port int,
-	shardCfgGen func(*ShardedSuite, InstanceId, *nilservice.Config, *network.Config, map[InstanceId]*keys.ValidatorKeysManager) *nilservice.Config,
+	shardCfgGen func(
+		*ShardedSuite,
+		InstanceId,
+		*nilservice.Config,
+		*network.Config,
+		map[InstanceId]*keys.ValidatorKeysManager,
+	) *nilservice.Config,
 ) {
 	s.T().Helper()
 	s.Context, s.ctxCancel = context.WithCancel(context.Background())
@@ -210,7 +227,8 @@ func (s *ShardedSuite) start(
 		shardConfig := shardCfgGen(s, index, cfg, networkConfigs[index], keysManagers)
 		shardConfig.L1Fetcher = cfg.L1Fetcher
 
-		node, err := nilservice.CreateNode(s.Context, fmt.Sprintf("shard-%d", index), shardConfig, s.Instances[index].Db, nil)
+		node, err := nilservice.CreateNode(
+			s.Context, fmt.Sprintf("shard-%d", index), shardConfig, s.Instances[index].Db, nil)
 		s.Require().NoError(err)
 		s.Instances[index].nm = node.NetworkManager
 		s.Instances[index].Config = shardConfig
@@ -324,7 +342,10 @@ func (s *ShardedSuite) StartArchiveNode(params *ArchiveNodeConfig) (client.Clien
 	return c, addr
 }
 
-func (s *ShardedSuite) StartRPCNode(dhtBootstrapByValidators DhtBootstrapByValidators, archiveNodes network.AddrInfoSlice) (client.Client, string) {
+func (s *ShardedSuite) StartRPCNode(
+	dhtBootstrapByValidators DhtBootstrapByValidators,
+	archiveNodes network.AddrInfoSlice,
+) (client.Client, string) {
 	s.T().Helper()
 
 	netCfg, _ := network.GenerateConfig(s.T(), 0)
@@ -378,10 +399,22 @@ func (s *ShardedSuite) GasToValue(gas uint64) types.Value {
 	return GasToValue(gas)
 }
 
-func (s *ShardedSuite) DeployContractViaMainSmartAccount(shardId types.ShardId, payload types.DeployPayload, initialAmount types.Value) (types.Address, *jsonrpc.RPCReceipt) {
+func (s *ShardedSuite) DeployContractViaMainSmartAccount(
+	shardId types.ShardId,
+	payload types.DeployPayload,
+	initialAmount types.Value,
+) (types.Address, *jsonrpc.RPCReceipt) {
 	s.T().Helper()
 
-	return DeployContractViaSmartAccount(s.T(), s.Context, s.DefaultClient, types.MainSmartAccountAddress, execution.MainPrivateKey, shardId, payload, initialAmount)
+	return DeployContractViaSmartAccount(
+		s.T(),
+		s.Context,
+		s.DefaultClient,
+		types.MainSmartAccountAddress,
+		execution.MainPrivateKey,
+		shardId,
+		payload,
+		initialAmount)
 }
 
 func (s *ShardedSuite) checkNodeStart(nShards uint32, client client.Client) {
@@ -443,7 +476,10 @@ func (s *ShardedSuite) AbiPack(abi *abi.ABI, name string, args ...any) []byte {
 	return AbiPack(s.T(), abi, name, args...)
 }
 
-func (s *ShardedSuite) SendExternalTransactionNoCheck(bytecode types.Code, contractAddress types.Address) *jsonrpc.RPCReceipt {
+func (s *ShardedSuite) SendExternalTransactionNoCheck(
+	bytecode types.Code,
+	contractAddress types.Address,
+) *jsonrpc.RPCReceipt {
 	s.T().Helper()
 	return SendExternalTransactionNoCheck(s.T(), s.Context, s.DefaultClient, bytecode, contractAddress)
 }
@@ -458,7 +494,12 @@ func (s *ShardedSuite) CheckBalance(infoMap ReceiptInfo, balance types.Value, ac
 	return CheckBalance(s.T(), s.Context, s.DefaultClient, infoMap, balance, accounts)
 }
 
-func (s *ShardedSuite) CallGetter(addr types.Address, calldata []byte, blockId any, overrides *jsonrpc.StateOverrides) []byte {
+func (s *ShardedSuite) CallGetter(
+	addr types.Address,
+	calldata []byte,
+	blockId any,
+	overrides *jsonrpc.StateOverrides,
+) []byte {
 	s.T().Helper()
 	return CallGetter(s.T(), s.Context, s.DefaultClient, addr, calldata, blockId, overrides)
 }

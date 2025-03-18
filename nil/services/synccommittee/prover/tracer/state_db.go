@@ -78,7 +78,8 @@ func (mtc *transactionTraceContext) processOpcode(
 	// Finish in reverse order to keep rw_counter sequential.
 	// Each operation consists of read stack -> read data -> write data -> write stack (we
 	// ignore specific memory parts like returndata, etc for now). Intermediate stages could be omitted, but
-	// to keep RW ctr correct, stack tracer should be run the first on new opcode, and be finalized the last on previous opcode.
+	// to keep RW ctr correct, stack tracer should be run the first on new opcode,
+	// and be finalized the last on previous opcode.
 	// TODO: add check that only one of first 3 is run
 	mtc.memoryTracer.FinishPrevOpcodeTracing()
 	mtc.expTracer.FinishPrevOpcodeTracing()
@@ -100,7 +101,9 @@ func (mtc *transactionTraceContext) processOpcode(
 			additionalInput = types.NewUint256FromBytes(mtc.code[pc+1 : pc+bytesToPush+1])
 		}
 	}
-	if err := mtc.zkevmTracer.TraceOp(opCode, pc, gas, numRequiredStackItems, additionalInput, ranges, scope); err != nil {
+	if err := mtc.zkevmTracer.TraceOp(
+		opCode, pc, gas, numRequiredStackItems, additionalInput, ranges, scope,
+	); err != nil {
 		return err
 	}
 
@@ -295,7 +298,8 @@ func (tsdb *TracerStateDB) handleExecutionTransaction(transaction *types.Transac
 	defer tsdb.resetTxnTrace()
 
 	gas := transaction.FeeCredit.ToGas(tsdb.gasPrice)
-	ret, gasLeft, err := tsdb.txnTraceCtx.evm.Call(caller, transaction.To, callData, gas.Uint64(), transaction.Value.Int())
+	ret, gasLeft, err := tsdb.txnTraceCtx.evm.Call(
+		caller, transaction.To, callData, gas.Uint64(), transaction.Value.Int())
 	_, _ = ret, gasLeft
 
 	if err != nil {
@@ -319,7 +323,12 @@ func (tsdb *TracerStateDB) handleDeployTransaction(transaction *types.Transactio
 	defer tsdb.resetTxnTrace()
 
 	gas := transaction.FeeCredit.ToGas(tsdb.gasPrice)
-	ret, addr, leftOver, err := tsdb.txnTraceCtx.evm.Deploy(addr, (vm.AccountRef)(transaction.From), deployTxn.Code(), gas.Uint64(), transaction.Value.Int())
+	ret, addr, leftOver, err := tsdb.txnTraceCtx.evm.Deploy(
+		addr,
+		(vm.AccountRef)(transaction.From),
+		deployTxn.Code(),
+		gas.Uint64(),
+		transaction.Value.Int())
 	if err != nil {
 		return err
 	}
@@ -365,7 +374,16 @@ func (tsdb *TracerStateDB) initTransactionTraceContext(
 	txnTraceCtx.evm.IsAsyncCall = internal
 	txnTraceCtx.evm.SetTokenTransfer(tokens)
 	txnTraceCtx.evm.Config.Tracer = &tracing.Hooks{
-		OnOpcode: func(pc uint64, op byte, gas uint64, cost uint64, scope tracing.OpContext, returnData []byte, depth int, err error) {
+		OnOpcode: func(
+			pc uint64,
+			op byte,
+			gas uint64,
+			cost uint64,
+			scope tracing.OpContext,
+			returnData []byte,
+			depth int,
+			err error,
+		) {
 			if err != nil {
 				return // this error will be forwarded to the caller as is, no need to trace anything
 			}
@@ -376,11 +394,12 @@ func (tsdb *TracerStateDB) initTransactionTraceContext(
 
 			txnTraceCtx.curPC = pc
 			if err := txnTraceCtx.processOpcode(&tsdb.Stats, pc, op, gas, scope, returnData); err != nil {
-				err = fmt.Errorf("pc: %d opcode: %X, gas: %d, cost: %d, mem_size: %d bytes, stack: %d items, ret_data_size: %d bytes, depth: %d cause: %w",
+				err = fmt.Errorf("pc: %d opcode: %X, gas: %d, cost: %d, mem_size: %d bytes, stack: %d items, ret_data_size: %d bytes, depth: %d cause: %w", //nolint:lll
 					pc, op, gas, cost, len(scope.MemoryData()), len(scope.StackData()), len(returnData), depth, err,
 				)
 
-				// tracer by default should not affect the code execution but since we only run code to collect the traces - we should know
+				// tracer by default should not affect the code execution
+				// but since we only run code to collect the traces - we should know
 				// about any failure as soon as possible instead of continue running
 				panic(managedTracerFailureError{underlying: err})
 			}
@@ -453,7 +472,11 @@ func (tsdb *TracerStateDB) CreateContract(addr types.Address) error {
 }
 
 // SubBalance subtracts amount from the account associated with addr.
-func (tsdb *TracerStateDB) SubBalance(addr types.Address, amount types.Value, reason tracing.BalanceChangeReason) error {
+func (tsdb *TracerStateDB) SubBalance(
+	addr types.Address,
+	amount types.Value,
+	reason tracing.BalanceChangeReason,
+) error {
 	acc, err := tsdb.getOrNewAccount(addr)
 	if err != nil { // in state.go there is also `|| acc == nil`, but seems redundant (acc is always non-nil)
 		return err
@@ -463,7 +486,11 @@ func (tsdb *TracerStateDB) SubBalance(addr types.Address, amount types.Value, re
 }
 
 // AddBalance adds amount to the account associated with addr.
-func (tsdb *TracerStateDB) AddBalance(addr types.Address, amount types.Value, reason tracing.BalanceChangeReason) error {
+func (tsdb *TracerStateDB) AddBalance(
+	addr types.Address,
+	amount types.Value,
+	reason tracing.BalanceChangeReason,
+) error {
 	acc, err := tsdb.getOrNewAccount(addr)
 	if err != nil { // in state.go there is also `|| acc == nil`, but seems redundant (acc is always non-nil)
 		return err
@@ -639,7 +666,8 @@ func (tsdb *TracerStateDB) SetState(addr types.Address, key common.Hash, val com
 	}
 
 	// Pass slote data before setting to zkevm_state
-	return tsdb.txnTraceCtx.zkevmTracer.SetLastStateStorage((types.Uint256)(*key.Uint256()), types.Uint256(*prevValue.Uint256()))
+	return tsdb.txnTraceCtx.zkevmTracer.SetLastStateStorage(
+		(types.Uint256)(*key.Uint256()), types.Uint256(*prevValue.Uint256()))
 }
 
 func (tsdb *TracerStateDB) GetStorageRoot(addr types.Address) (common.Hash, error) {
@@ -744,7 +772,8 @@ func (tsdb *TracerStateDB) RevertToSnapshot(int) {
 // Snapshot returns an identifier for the current revision of the state.
 func (tsdb *TracerStateDB) Snapshot() int {
 	// Snapshot is needed for rollback when an error was returned by the EVM.
-	// We could just ignore failing transactions in proof provider. In case revert occurs, we fail in RevertToSnapshot(int)
+	// We could just ignore failing transactions in proof provider.
+	// In case revert occurs, we fail in RevertToSnapshot(int)
 	return 0
 }
 
@@ -757,7 +786,10 @@ func (tsdb *TracerStateDB) AddDebugLog(*types.DebugLog) error {
 }
 
 // AddOutTransaction adds internal out transaction for current transaction
-func (tsdb *TracerStateDB) AddOutTransaction(caller types.Address, payload *types.InternalTransactionPayload) (*types.Transaction, error) {
+func (tsdb *TracerStateDB) AddOutTransaction(
+	caller types.Address,
+	payload *types.InternalTransactionPayload,
+) (*types.Transaction, error) {
 	// TODO: seems useless now, implement when final hash calculation is needed
 	return nil, nil
 }

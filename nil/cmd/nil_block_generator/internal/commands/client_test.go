@@ -28,7 +28,13 @@ type NilBlockGeneratorTestSuite struct {
 	logger           zerolog.Logger
 }
 
-func NewNilBlockGeneratorTestSuite(contractCodePath, contractName, method, deployArgs, callArgs string) *NilBlockGeneratorTestSuite {
+func NewNilBlockGeneratorTestSuite(
+	contractCodePath string,
+	contractName string,
+	method string,
+	deployArgs string,
+	callArgs string,
+) *NilBlockGeneratorTestSuite {
 	return &NilBlockGeneratorTestSuite{
 		contractCodePath: contractCodePath,
 		contractName:     contractName,
@@ -111,5 +117,6 @@ func (s *NilBlockGeneratorTestSuite) TestGetBlock() {
 func TestNilBlockGeneratorTestSuite(t *testing.T) {
 	t.Parallel()
 
-	suite.Run(t, NewNilBlockGeneratorTestSuite("../../../../tests/contracts/increment.sol", "Incrementer", "increment", "0", ""))
+	suite.Run(t, NewNilBlockGeneratorTestSuite(
+		"../../../../tests/contracts/increment.sol", "Incrementer", "increment", "0", ""))
 }

@@ -169,13 +169,21 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 	return res.Block, nil
 }
 
-func (s *Validator) InsertProposal(ctx context.Context, proposal *execution.ProposalSSZ, params *types.ConsensusParams) error {
+func (s *Validator) InsertProposal(
+	ctx context.Context,
+	proposal *execution.ProposalSSZ,
+	params *types.ConsensusParams,
+) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	return s.insertProposalUnlocked(ctx, proposal, params)
 }
 
-func (s *Validator) insertProposalUnlocked(ctx context.Context, proposal *execution.ProposalSSZ, params *types.ConsensusParams) error {
+func (s *Validator) insertProposalUnlocked(
+	ctx context.Context,
+	proposal *execution.ProposalSSZ,
+	params *types.ConsensusParams,
+) error {
 	p, err := execution.ConvertProposal(proposal)
 	if err != nil {
 		return err

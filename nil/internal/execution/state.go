@@ -83,7 +83,8 @@ type ExecutionState struct {
 	InTransactions      []*types.Transaction
 	InTransactionHashes []common.Hash
 
-	// OutTransactions holds outbound transactions for every transaction in the executed block, where key is hash of Transaction that sends the transaction
+	// OutTransactions holds outbound transactions for every transaction in the executed block, where key is hash of
+	// Transaction that sends the transaction
 	OutTransactions map[common.Hash][]*types.OutboundTransaction
 
 	Receipts []*types.Receipt
@@ -557,7 +558,9 @@ func (es *ExecutionState) SetCode(addr types.Address, code []byte) error {
 
 func (es *ExecutionState) EnableVmTracing() {
 	es.evm.Config.Tracer = &tracing.Hooks{
-		OnOpcode: func(pc uint64, op byte, gas, cost uint64, scope tracing.OpContext, rData []byte, depth int, err error) {
+		OnOpcode: func(
+			pc uint64, op byte, gas, cost uint64, scope tracing.OpContext, rData []byte, depth int, err error,
+		) {
 			for i, item := range scope.StackData() {
 				logger.Debug().Msgf("     %d: %s", i, item.String())
 			}
@@ -578,7 +581,8 @@ func (es *ExecutionState) SetInitState(addr types.Address, transaction *types.Tr
 	}
 	defer es.resetVm()
 
-	_, deployAddr, _, err := es.evm.Deploy(addr, vm.AccountRef{}, transaction.Data, uint64(100_000_000) /* gas */, uint256.NewInt(0))
+	_, deployAddr, _, err := es.evm.Deploy(
+		addr, vm.AccountRef{}, transaction.Data, uint64(100_000_000) /* gas */, uint256.NewInt(0))
 	if err != nil {
 		return err
 	}
@@ -698,7 +702,8 @@ func (es *ExecutionState) CreateAccount(addr types.Address) error {
 
 func (es *ExecutionState) createAccount(addr types.Address) (*AccountState, error) {
 	if addr.ShardId() != es.ShardId {
-		return nil, fmt.Errorf("Attempt to create account %v from %v shard on %v shard", addr, addr.ShardId(), es.ShardId)
+		return nil, fmt.Errorf(
+			"Attempt to create account %v from %v shard on %v shard", addr, addr.ShardId(), es.ShardId)
 	}
 	acc, err := es.GetAccount(addr)
 	if err != nil {
@@ -853,15 +858,20 @@ func (es *ExecutionState) AddOutRequestTransaction(
 	return txn, nil
 }
 
-func (es *ExecutionState) AddOutTransaction(caller types.Address, payload *types.InternalTransactionPayload) (*types.Transaction, error) {
+func (es *ExecutionState) AddOutTransaction(
+	caller types.Address,
+	payload *types.InternalTransactionPayload,
+) (*types.Transaction, error) {
 	seqno, err := es.GetSeqno(caller)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO:	This happens when we send refunds from uninitialized accounts when transferring money to them.
-	//			For now we will write all such refunds with identical zero seqno, because we can't change seqno of uninitialized accounts.
-	//			In future we should add transfer that is free on the reciepient's side, so that these transfers won't require refunds.
+	//			For now we will write all such refunds with identical zero seqno, because we can't change seqno
+	//			of uninitialized accounts.
+	//			In future we should add transfer that is free on the reciepient's side, so that these transfers
+	//			won't require refunds.
 	if seqno != 0 {
 		if seqno+1 < seqno {
 			return nil, vm.ErrNonceUintOverflow
@@ -932,7 +942,9 @@ func (es *ExecutionState) sendBounceTransaction(txn *types.Transaction, execResu
 		return false, err
 	}
 
-	check.PanicIfNotf(execResult.CoinsForwarded.IsZero(), "CoinsForwarded should be zero when sending bounce transaction")
+	check.PanicIfNotf(
+		execResult.CoinsForwarded.IsZero(),
+		"CoinsForwarded should be zero when sending bounce transaction")
 	toReturn := es.txnFeeCredit.Sub(execResult.CoinsUsed())
 
 	bounceTxn := &types.InternalTransactionPayload{
@@ -947,7 +959,10 @@ func (es *ExecutionState) sendBounceTransaction(txn *types.Transaction, execResu
 	if _, err = es.AddOutTransaction(txn.To, bounceTxn); err != nil {
 		return false, err
 	}
-	logger.Debug().Stringer(logging.FieldTransactionFrom, txn.To).Stringer(logging.FieldTransactionTo, txn.BounceTo).Msg("Bounce transaction sent")
+	logger.Debug().
+		Stringer(logging.FieldTransactionFrom, txn.To).
+		Stringer(logging.FieldTransactionTo, txn.BounceTo).
+		Msg("Bounce transaction sent")
 	return true, nil
 }
 
@@ -994,7 +1009,11 @@ func (es *ExecutionState) SendResponseTransaction(txn *types.Transaction, res *E
 	return nil
 }
 
-func (es *ExecutionState) HandleTransaction(ctx context.Context, txn *types.Transaction, payer Payer) (retError *ExecutionResult) {
+func (es *ExecutionState) HandleTransaction(
+	ctx context.Context,
+	txn *types.Transaction,
+	payer Payer,
+) (retError *ExecutionResult) {
 	// Catch panic during execution and return it as an error
 	defer func() {
 		if recResult := recover(); recResult != nil {
@@ -1002,7 +1021,9 @@ func (es *ExecutionState) HandleTransaction(ctx context.Context, txn *types.Tran
 				retError = NewExecutionResult().SetError(types.NewWrapError(types.ErrorPanicDuringExecution, err))
 			} else {
 				retError = NewExecutionResult().SetError(
-					types.NewVerboseError(types.ErrorPanicDuringExecution, fmt.Sprintf("panic transaction: %v", recResult)))
+					types.NewVerboseError(
+						types.ErrorPanicDuringExecution,
+						fmt.Sprintf("panic transaction: %v", recResult)))
 			}
 		}
 	}()
@@ -1117,7 +1138,8 @@ func (es *ExecutionState) handleDeployTransaction(_ context.Context, transaction
 	defer es.resetVm()
 
 	gas := transaction.FeeCredit.ToGas(es.GasPrice)
-	ret, addr, leftOver, err := es.evm.Deploy(addr, (vm.AccountRef)(transaction.From), deployTxn.Code(), gas.Uint64(), transaction.Value.Int())
+	ret, addr, leftOver, err := es.evm.Deploy(
+		addr, (vm.AccountRef)(transaction.From), deployTxn.Code(), gas.Uint64(), transaction.Value.Int())
 
 	event := logger.Debug().Stringer(logging.FieldTransactionTo, addr)
 	if err != nil {
@@ -1132,7 +1154,9 @@ func (es *ExecutionState) handleDeployTransaction(_ context.Context, transaction
 		SetReturnData(ret).SetDebugInfo(es.evm.DebugInfo)
 }
 
-func (es *ExecutionState) TryProcessResponse(transaction *types.Transaction) ([]byte, *vm.EvmRestoreData, *ExecutionResult) {
+func (es *ExecutionState) TryProcessResponse(
+	transaction *types.Transaction,
+) ([]byte, *vm.EvmRestoreData, *ExecutionResult) {
 	if !transaction.IsResponse() {
 		return transaction.Data, nil, nil
 	}
@@ -1153,7 +1177,8 @@ func (es *ExecutionState) TryProcessResponse(transaction *types.Transaction) ([]
 
 	responsePayload := new(types.AsyncResponsePayload)
 	if err := responsePayload.UnmarshalSSZ(transaction.Data); err != nil {
-		return nil, nil, NewExecutionResult().SetFatal(fmt.Errorf("AsyncResponsePayload unmarshal failed: %w", err))
+		return nil, nil, NewExecutionResult().SetFatal(
+			fmt.Errorf("AsyncResponsePayload unmarshal failed: %w", err))
 	}
 
 	es.txnFeeCredit = es.txnFeeCredit.Add(asyncContext.ResponseProcessingGas.ToValue(es.GasPrice))
@@ -1169,7 +1194,8 @@ func (es *ExecutionState) TryProcessResponse(transaction *types.Transaction) ([]
 		restoreState.Result = responsePayload.Success
 	} else {
 		if len(asyncContext.Data) < 4 {
-			return nil, nil, NewExecutionResult().SetError(types.NewError(types.ErrorAwaitCallTooShortContextData))
+			return nil, nil, NewExecutionResult().SetError(
+				types.NewError(types.ErrorAwaitCallTooShortContextData))
 		}
 		contextData := asyncContext.Data[4:]
 		bytesTy, _ := abi.NewType("bytes", "", nil)
@@ -1188,7 +1214,10 @@ func (es *ExecutionState) TryProcessResponse(transaction *types.Transaction) ([]
 	return callData, restoreState, nil
 }
 
-func (es *ExecutionState) handleExecutionTransaction(_ context.Context, transaction *types.Transaction) *ExecutionResult {
+func (es *ExecutionState) handleExecutionTransaction(
+	_ context.Context,
+	transaction *types.Transaction,
+) *ExecutionResult {
 	check.PanicIfNot(transaction.IsExecution())
 	addr := transaction.To
 	logger.Debug().
@@ -1324,7 +1353,9 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 	treeShardsRootHash := common.EmptyHash
 	if len(es.ChildShardBlocks) > 0 {
 		treeShards := NewDbShardBlocksTrie(es.tx, es.ShardId, blockId)
-		if err := UpdateFromMap(treeShards, es.ChildShardBlocks, func(v common.Hash) *common.Hash { return &v }); err != nil {
+		if err := UpdateFromMap(
+			treeShards, es.ChildShardBlocks, func(v common.Hash) *common.Hash { return &v },
+		); err != nil {
 			return nil, err
 		}
 		treeShardsRootHash = treeShards.RootHash()
@@ -1370,7 +1401,9 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 		}
 	}
 	if len(es.InTransactions) != len(es.Receipts) {
-		return nil, fmt.Errorf("number of transactions does not match number of receipts: %d != %d", len(es.InTransactions), len(es.Receipts))
+		return nil, fmt.Errorf(
+			"number of transactions does not match number of receipts: %d != %d",
+			len(es.InTransactions), len(es.Receipts))
 	}
 	for i, txnHash := range es.InTransactionHashes {
 		if txnHash != es.Receipts[i].TxnHash {
@@ -1455,7 +1488,10 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 	}, nil
 }
 
-func (es *ExecutionState) Commit(blockId types.BlockNumber, params *types.ConsensusParams) (*BlockGenerationResult, error) {
+func (es *ExecutionState) Commit(
+	blockId types.BlockNumber,
+	params *types.ConsensusParams,
+) (*BlockGenerationResult, error) {
 	blockRes, err := es.BuildBlock(blockId)
 	if err != nil {
 		return nil, err
@@ -1610,7 +1646,8 @@ func (es *ExecutionState) CallVerifyExternal(transaction *types.Transaction, acc
 		gasCreditLimit = gasAvailable
 	}
 
-	ret, leftOverGas, err := es.evm.StaticCall((vm.AccountRef)(account.address), account.address, calldata, gasCreditLimit.Uint64())
+	ret, leftOverGas, err := es.evm.StaticCall(
+		(vm.AccountRef)(account.address), account.address, calldata, gasCreditLimit.Uint64())
 	if err != nil {
 		if types.IsOutOfGasError(err) && gasCreditLimit.Lt(ExternalTransactionVerificationMaxGas) {
 			// This condition means that account has not enough balance even to execute the verification.

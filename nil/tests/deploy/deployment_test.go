@@ -42,8 +42,19 @@ func (s *SuiteDeployment) SetupTest() {
 
 	zeroState := &execution.ZeroStateConfig{
 		Contracts: []*execution.ContractDescr{
-			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: types.MainSmartAccountAddress, Value: smartAccountValue, CtorArgs: []any{execution.MainPublicKey}},
-			{Name: "Deployer", Contract: "tests/Deployer", Address: s.addressDeployer, Value: smartAccountValue},
+			{
+				Name:     "MainSmartAccount",
+				Contract: "SmartAccount",
+				Address:  types.MainSmartAccountAddress,
+				Value:    smartAccountValue,
+				CtorArgs: []any{execution.MainPublicKey},
+			},
+			{
+				Name:     "Deployer",
+				Contract: "tests/Deployer",
+				Address:  s.addressDeployer,
+				Value:    smartAccountValue,
+			},
 		},
 	}
 
@@ -88,7 +99,8 @@ func (s *SuiteDeployment) TestDeploy() {
 		s.Require().NoError(err)
 		deployPayload := s.PrepareDefaultDeployPayload(*s.abiDeployee, code, s.addressDeployer, uint32(987654321))
 
-		calldata := s.AbiPack(abiSmartAccount, "asyncDeploy", big.NewInt(2), big.NewInt(1111), deployPayload.Bytes(), salt)
+		calldata := s.AbiPack(
+			abiSmartAccount, "asyncDeploy", big.NewInt(2), big.NewInt(1111), deployPayload.Bytes(), salt)
 		receipt := s.SendExternalTransaction(calldata, types.MainSmartAccountAddress)
 		s.Require().True(receipt.AllSuccess())
 

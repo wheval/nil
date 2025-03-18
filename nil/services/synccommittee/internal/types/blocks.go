@@ -39,11 +39,16 @@ type BlocksRange struct {
 	End   types.BlockNumber
 }
 
-// GetBlocksFetchingRange determines the range of blocks to fetch between the latest handled block and the actual latest block.
+// GetBlocksFetchingRange determines the range of blocks to fetch between the latest handled block
+// and the actual latest block.
 // latestHandled can be equal to:
 // a) The latest block fetched from the cluster, or
 // b) The latest proved state root, if `latestFetched` is nil.
-func GetBlocksFetchingRange(latestHandled *MainBlockRef, actualLatest MainBlockRef, maxNumBlocks uint32) (*BlocksRange, error) {
+func GetBlocksFetchingRange(
+	latestHandled *MainBlockRef,
+	actualLatest MainBlockRef,
+	maxNumBlocks uint32,
+) (*BlocksRange, error) {
 	if maxNumBlocks == 0 {
 		return nil, nil
 	}

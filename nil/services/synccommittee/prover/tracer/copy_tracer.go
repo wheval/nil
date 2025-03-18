@@ -52,7 +52,8 @@ type CopyTracer struct {
 	// array of recorded events
 	events []CopyEvent
 
-	// initialized during TraceOp if the event requires to be enriched with some data from stack or memory after actual op execution
+	// initialized during TraceOp if the event requires to be enriched with some data from stack
+	// or memory after actual op execution
 	finalizer func() error
 }
 

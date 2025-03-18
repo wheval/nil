@@ -149,7 +149,11 @@ func (st *TaskStorage) TryGetTaskEntry(ctx context.Context, id types.TaskId) (*t
 }
 
 // GetTaskViews Retrieve tasks that match the given predicate function and pushes them to the destination container.
-func (st *TaskStorage) GetTaskViews(ctx context.Context, destination interface{ Add(task *public.TaskView) }, predicate func(*public.TaskView) bool) error {
+func (st *TaskStorage) GetTaskViews(
+	ctx context.Context,
+	destination interface{ Add(task *public.TaskView) },
+	predicate func(*public.TaskView) bool,
+) error {
 	tx, err := st.database.CreateRoTx(ctx)
 	if err != nil {
 		return err
@@ -266,7 +270,10 @@ func (st *TaskStorage) RequestTaskToExecute(ctx context.Context, executor types.
 	return &taskEntry.Task, nil
 }
 
-func (st *TaskStorage) requestTaskToExecuteImpl(ctx context.Context, executor types.TaskExecutorId) (*types.TaskEntry, error) {
+func (st *TaskStorage) requestTaskToExecuteImpl(
+	ctx context.Context,
+	executor types.TaskExecutorId,
+) (*types.TaskEntry, error) {
 	tx, err := st.database.CreateRwTx(ctx)
 	if err != nil {
 		return nil, err

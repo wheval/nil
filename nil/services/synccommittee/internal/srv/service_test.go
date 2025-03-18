@@ -236,7 +236,10 @@ func (s *ServiceTestSuite) runWorkersAndReturnErrAt(testCase runAndCancelTestCas
 				close(started)
 
 				<-ctx.Done()
-				s.Equal(worker.Name(), activeWorkersStack[len(activeWorkersStack)-1], "worker termination order is not preserved")
+				s.Equal(
+					worker.Name(),
+					activeWorkersStack[len(activeWorkersStack)-1],
+					"worker termination order is not preserved")
 				activeWorkersStack = activeWorkersStack[:len(activeWorkersStack)-1]
 				return ctx.Err()
 			},

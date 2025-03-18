@@ -36,8 +36,8 @@ type BlockData struct {
 	PrevBlock          common.Hash `json:"prevBlock" ch:"prev_block"`
 	SmartContractsRoot common.Hash `json:"smartContractsRoot" ch:"smart_contracts_root"`
 	InTransactionsRoot common.Hash `json:"inTransactionsRoot" ch:"in_transactions_root"`
-	// OutTransactionsRoot stores all outbound transactions produced by transactions of this block. The key of the tree is a
-	// sequential index of the transaction, value is a Transaction struct.
+	// OutTransactionsRoot stores all outbound transactions produced by transactions of this block.
+	// The key of the tree is a sequential index of the transaction, value is a Transaction struct.
 	// It can be considered as an array, where each segment is referred by corresponding receipt.
 	OutTransactionsRoot common.Hash `json:"outTransactionsRoot" ch:"out_transactions_root"`
 	// We cache the size of out transactions, otherwise we should iterate all the tree to get its size

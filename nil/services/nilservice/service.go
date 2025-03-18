@@ -40,7 +40,13 @@ import (
 // syncer will pull blocks actively if no blocks appear for 5 rounds
 const syncTimeoutFactor = 5
 
-func startRpcServer(ctx context.Context, cfg *Config, rawApi rawapi.NodeApi, db db.ReadOnlyDB, client client.Client) error {
+func startRpcServer(
+	ctx context.Context,
+	cfg *Config,
+	rawApi rawapi.NodeApi,
+	db db.ReadOnlyDB,
+	client client.Client,
+) error {
 	logger := logging.NewLogger("RPC")
 
 	addr := cfg.HttpUrl
@@ -141,7 +147,12 @@ type ServiceInterop struct {
 	TxnPools map[types.ShardId]txnpool.Pool
 }
 
-func getRawApi(cfg *Config, networkManager *network.Manager, database db.DB, txnPools map[types.ShardId]txnpool.Pool) (*rawapi.NodeApiOverShardApis, error) {
+func getRawApi(
+	cfg *Config,
+	networkManager *network.Manager,
+	database db.DB,
+	txnPools map[types.ShardId]txnpool.Pool,
+) (*rawapi.NodeApiOverShardApis, error) {
 	var myShards []uint
 	switch cfg.RunMode {
 	case BlockReplayRunMode:
@@ -178,12 +189,20 @@ func getRawApi(cfg *Config, networkManager *network.Manager, database db.DB, txn
 	return rawApi, nil
 }
 
-func setP2pRequestHandlers(ctx context.Context, rawApi *rawapi.NodeApiOverShardApis, networkManager *network.Manager, readonly bool, logger zerolog.Logger) error {
+func setP2pRequestHandlers(
+	ctx context.Context,
+	rawApi *rawapi.NodeApiOverShardApis,
+	networkManager *network.Manager,
+	readonly bool,
+	logger zerolog.Logger,
+) error {
 	if networkManager == nil {
 		return nil
 	}
 	for shardId, api := range rawApi.Apis {
-		if err := rawapi.SetShardApiAsP2pRequestHandlersIfAllowed(api, ctx, networkManager, readonly, logger); err != nil {
+		if err := rawapi.SetShardApiAsP2pRequestHandlersIfAllowed(
+			api, ctx, networkManager, readonly, logger,
+		); err != nil {
 			logger.Error().Err(err).Stringer(logging.FieldShardId, shardId).Msg("Failed to set raw API request handler")
 			return err
 		}
@@ -235,7 +254,12 @@ func (s *syncersResult) Wait() {
 }
 
 func createSyncers(
-	name string, cfg *Config, validators []*collate.Validator, nm *network.Manager, database db.DB, logger zerolog.Logger,
+	name string,
+	cfg *Config,
+	validators []*collate.Validator,
+	nm *network.Manager,
+	database db.DB,
+	logger zerolog.Logger,
 ) (*syncersResult, error) {
 	res := &syncersResult{
 		funcs:   make([]concurrent.Func, 0, cfg.NShards+2),
@@ -304,7 +328,14 @@ func (i *Node) Close(ctx context.Context) {
 	telemetry.Shutdown(ctx)
 }
 
-func runNormalOrCollatorsOnly(ctx context.Context, funcs []concurrent.Func, cfg *Config, database db.DB, networkManager *network.Manager, logger zerolog.Logger) ([]concurrent.Func, map[types.ShardId]txnpool.Pool, error) {
+func runNormalOrCollatorsOnly(
+	ctx context.Context,
+	funcs []concurrent.Func,
+	cfg *Config,
+	database db.DB,
+	networkManager *network.Manager,
+	logger zerolog.Logger,
+) ([]concurrent.Func, map[types.ShardId]txnpool.Pool, error) {
 	if err := cfg.LoadValidatorKeys(); err != nil {
 		return nil, nil, err
 	}
@@ -345,7 +376,14 @@ func runNormalOrCollatorsOnly(ctx context.Context, funcs []concurrent.Func, cfg 
 	return funcs, txPools, nil
 }
 
-func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, interop chan<- ServiceInterop, workers ...concurrent.Func) (*Node, error) {
+func CreateNode(
+	ctx context.Context,
+	name string,
+	cfg *Config,
+	database db.DB,
+	interop chan<- ServiceInterop,
+	workers ...concurrent.Func,
+) (*Node, error) {
 	logger := logging.NewLogger(name)
 
 	if err := cfg.Validate(); err != nil {
@@ -514,7 +552,13 @@ func CreateNode(ctx context.Context, name string, cfg *Config, database db.DB, i
 //   - SIGTERM or SIGINT is caught.
 //
 // It returns a value suitable for os.Exit().
-func Run(ctx context.Context, cfg *Config, database db.DB, interop chan<- ServiceInterop, workers ...concurrent.Func) int {
+func Run(
+	ctx context.Context,
+	cfg *Config,
+	database db.DB,
+	interop chan<- ServiceInterop,
+	workers ...concurrent.Func,
+) int {
 	if cfg.GracefulShutdown {
 		signalCtx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 		defer cancel()
@@ -560,7 +604,12 @@ func initDefaultValidator(cfg *Config) error {
 	return nil
 }
 
-func createValidators(ctx context.Context, cfg *Config, database db.DB, networkManager *network.Manager) ([]*collate.Validator, error) {
+func createValidators(
+	ctx context.Context,
+	cfg *Config,
+	database db.DB,
+	networkManager *network.Manager,
+) ([]*collate.Validator, error) {
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
 
 	list := make([]*collate.Validator, cfg.NShards)

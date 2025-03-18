@@ -227,7 +227,8 @@ func (agg *aggregator) processShardBlocks(ctx context.Context, actualLatest type
 	return nil
 }
 
-// getLatestHandledBlockRef retrieves the latest handled block reference, prioritizing the latest fetched block if available.
+// getLatestHandledBlockRef retrieves the latest handled block reference,
+// prioritizing the latest fetched block if available.
 // If `latestFetched` value is not defined, method uses `latestProvedStateRoot`.
 func (agg *aggregator) getLatestHandledBlockRef(ctx context.Context) (*types.MainBlockRef, error) {
 	latestFetched, err := agg.blockStorage.TryGetLatestFetched(ctx)
@@ -265,7 +266,8 @@ func (agg *aggregator) getLatestHandledBlockRef(ctx context.Context) (*types.Mai
 func (agg *aggregator) fetchAndProcessBlocks(ctx context.Context, blocksRange types.BlocksRange) error {
 	shardId := coreTypes.MainShardId
 	const requestBatchSize = 20
-	results, err := agg.rpcClient.GetBlocksRange(ctx, shardId, blocksRange.Start, blocksRange.End+1, true, requestBatchSize)
+	results, err := agg.rpcClient.GetBlocksRange(
+		ctx, shardId, blocksRange.Start, blocksRange.End+1, true, requestBatchSize)
 	if err != nil {
 		return fmt.Errorf("error fetching blocks from shard %d: %w", shardId, err)
 	}
@@ -282,12 +284,18 @@ func (agg *aggregator) fetchAndProcessBlocks(ctx context.Context, blocksRange ty
 	}
 
 	fetchedLen := int64(len(results))
-	agg.logger.Debug().Int64("blkCount", fetchedLen).Stringer(logging.FieldShardId, shardId).Msg("fetched main shard blocks")
+	agg.logger.Debug().
+		Int64("blkCount", fetchedLen).
+		Stringer(logging.FieldShardId, shardId).
+		Msg("fetched main shard blocks")
 	agg.metrics.RecordBlockBatchSize(ctx, fetchedLen)
 	return nil
 }
 
-func (agg *aggregator) createBlockBatch(ctx context.Context, mainShardBlock *jsonrpc.RPCBlock) (*types.BlockBatch, error) {
+func (agg *aggregator) createBlockBatch(
+	ctx context.Context,
+	mainShardBlock *jsonrpc.RPCBlock,
+) (*types.BlockBatch, error) {
 	childIds, err := types.ChildBlockIds(mainShardBlock)
 	if err != nil {
 		return nil, err

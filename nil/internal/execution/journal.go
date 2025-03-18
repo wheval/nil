@@ -210,7 +210,11 @@ func (w *ExecutionStateRevertableWrapper) deleteContractChange(addr types.Addres
 	}
 }
 
-func (w *ExecutionStateRevertableWrapper) revertSelfDestructChange(addr types.Address, prev bool, prevBalance types.Value) {
+func (w *ExecutionStateRevertableWrapper) revertSelfDestructChange(
+	addr types.Address,
+	prev bool,
+	prevBalance types.Value,
+) {
 	account, err := w.es.GetAccount(addr)
 	check.PanicIfErr(err)
 	if account != nil {
@@ -227,7 +231,11 @@ func (w *ExecutionStateRevertableWrapper) revertBalanceChange(addr types.Address
 	}
 }
 
-func (w *ExecutionStateRevertableWrapper) revertTokenChange(addr types.Address, tokenId types.TokenId, prevValue types.Value) {
+func (w *ExecutionStateRevertableWrapper) revertTokenChange(
+	addr types.Address,
+	tokenId types.TokenId,
+	prevValue types.Value,
+) {
 	account, err := w.es.GetAccount(addr)
 	check.PanicIfErr(err)
 	if account != nil {
@@ -251,7 +259,11 @@ func (w *ExecutionStateRevertableWrapper) revertExtSeqnoChange(addr types.Addres
 	}
 }
 
-func (w *ExecutionStateRevertableWrapper) revertCodeChange(addr types.Address, prevCodeHash common.Hash, prevCode []byte) {
+func (w *ExecutionStateRevertableWrapper) revertCodeChange(
+	addr types.Address,
+	prevCodeHash common.Hash,
+	prevCode []byte,
+) {
 	account, err := w.es.GetAccount(addr)
 	check.PanicIfErr(err)
 	if account != nil {
@@ -259,7 +271,11 @@ func (w *ExecutionStateRevertableWrapper) revertCodeChange(addr types.Address, p
 	}
 }
 
-func (w *ExecutionStateRevertableWrapper) revertStorageChange(addr types.Address, key common.Hash, prevValue common.Hash) {
+func (w *ExecutionStateRevertableWrapper) revertStorageChange(
+	addr types.Address,
+	key common.Hash,
+	prevValue common.Hash,
+) {
 	account, err := w.es.GetAccount(addr)
 	check.PanicIfErr(err)
 	if account != nil {
@@ -283,7 +299,11 @@ func (w *ExecutionStateRevertableWrapper) deleteLog(txHash common.Hash) {
 	}
 }
 
-func (w *ExecutionStateRevertableWrapper) revertTransientStorageChange(addr types.Address, key common.Hash, prevValue common.Hash) {
+func (w *ExecutionStateRevertableWrapper) revertTransientStorageChange(
+	addr types.Address,
+	key common.Hash,
+	prevValue common.Hash,
+) {
 	w.es.setTransientState(addr, key, prevValue)
 }
 
@@ -298,7 +318,10 @@ func (w *ExecutionStateRevertableWrapper) revertOutTransactionsChange(index int,
 	w.es.OutTransactions[txnHash] = outTransactions[:index]
 }
 
-func (w *ExecutionStateRevertableWrapper) revertAsyncContextChange(addr types.Address, requestId types.TransactionIndex) {
+func (w *ExecutionStateRevertableWrapper) revertAsyncContextChange(
+	addr types.Address,
+	requestId types.TransactionIndex,
+) {
 	account, err := w.es.GetAccount(addr)
 	check.PanicIfErr(err)
 	if account != nil {

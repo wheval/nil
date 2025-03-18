@@ -80,7 +80,8 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 	}
 
 	if block.PatchLevel > validatorPatchLevel {
-		return nil, fmt.Errorf("block patch level %d is higher than supported %d", block.PatchLevel, validatorPatchLevel)
+		return nil, fmt.Errorf(
+			"block patch level %d is higher than supported %d", block.PatchLevel, validatorPatchLevel)
 	}
 
 	p.proposal.PatchLevel = block.PatchLevel
@@ -125,11 +126,15 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 		p.proposal.RollbackCounter = rollback.Counter + 1
 	}
 
-	if len(p.proposal.InternalTxnRefs) == 0 && len(p.proposal.ExternalTxns) == 0 && len(p.proposal.ForwardTxnRefs) == 0 {
+	if len(
+		p.proposal.InternalTxnRefs) == 0 && len(p.proposal.ExternalTxns) == 0 && len(p.proposal.ForwardTxnRefs) == 0 {
 		p.logger.Trace().Msg("No transactions collected")
 	} else {
 		p.logger.Debug().Msgf("Collected %d internal, %d external (%d gas) and %d forward transactions",
-			len(p.proposal.InternalTxnRefs), len(p.proposal.ExternalTxns), p.executionState.GasUsed, len(p.proposal.ForwardTxnRefs))
+			len(p.proposal.InternalTxnRefs),
+			len(p.proposal.ExternalTxns),
+			p.executionState.GasUsed,
+			len(p.proposal.ForwardTxnRefs))
 	}
 
 	return p.proposal, nil
@@ -381,7 +386,8 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 
 		for checkLimits() {
 			// We will break the loop when lastBlockNumber is reached anyway,
-			// but in case of read-through mode, we will make unnecessary requests to the server if we don't check it here.
+			// but in case of read-through mode, we will make unnecessary requests to the server
+			// if we don't check it here.
 			if lastBlockNumber < neighbor.BlockNumber {
 				break
 			}
@@ -431,7 +437,9 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 							Stringer(logging.FieldTransactionHash, txnHash).
 							Msg("Invalid internal transaction")
 					} else {
-						if err := p.handleTransaction(txn, txnHash, execution.NewTransactionPayer(txn, p.executionState)); err != nil {
+						if err := p.handleTransaction(
+							txn, txnHash, execution.NewTransactionPayer(txn, p.executionState),
+						); err != nil {
 							return err
 						}
 					}

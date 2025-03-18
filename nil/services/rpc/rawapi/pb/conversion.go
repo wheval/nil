@@ -624,13 +624,17 @@ func (o *StateOverrides) PackProtoMessage(overrides *rpctypes.StateOverrides) *S
 	return o
 }
 
-func (brd *BlockReferenceOrHashWithChildren) PackProtoMessage(blockReferenceOrHashWithChildren rawapitypes.BlockReferenceOrHashWithChildren) error {
+func (brd *BlockReferenceOrHashWithChildren) PackProtoMessage(
+	blockReferenceOrHashWithChildren rawapitypes.BlockReferenceOrHashWithChildren,
+) error {
 	if blockReferenceOrHashWithChildren.IsReference() {
 		blockReference := new(BlockReference)
 		if err := blockReference.PackProtoMessage(blockReferenceOrHashWithChildren.Reference()); err != nil {
 			return err
 		}
-		brd.BlockReferenceOrHashWithChildren = &BlockReferenceOrHashWithChildren_BlockReference{BlockReference: blockReference}
+		brd.BlockReferenceOrHashWithChildren = &BlockReferenceOrHashWithChildren_BlockReference{
+			BlockReference: blockReference,
+		}
 	} else {
 		hash, childBlocks := blockReferenceOrHashWithChildren.HashAndChildren()
 		blockHashWithChildren := new(BlockHashWithChildren)
@@ -647,12 +651,16 @@ func (brd *BlockReferenceOrHashWithChildren) PackProtoMessage(blockReferenceOrHa
 			}
 			blockHashWithChildren.Children = append(blockHashWithChildren.Children, childBlockHash)
 		}
-		brd.BlockReferenceOrHashWithChildren = &BlockReferenceOrHashWithChildren_BlockHashWithChildren{BlockHashWithChildren: blockHashWithChildren}
+		brd.BlockReferenceOrHashWithChildren = &BlockReferenceOrHashWithChildren_BlockHashWithChildren{
+			BlockHashWithChildren: blockHashWithChildren,
+		}
 	}
 	return nil
 }
 
-func (brd *BlockReferenceOrHashWithChildren) UnpackProtoMessage() (rawapitypes.BlockReferenceOrHashWithChildren, error) {
+func (brd *BlockReferenceOrHashWithChildren) UnpackProtoMessage() (
+	rawapitypes.BlockReferenceOrHashWithChildren, error,
+) {
 	switch brd.BlockReferenceOrHashWithChildren.(type) {
 	case *BlockReferenceOrHashWithChildren_BlockReference:
 		blockReference, err := brd.GetBlockReference().UnpackProtoMessage()
@@ -677,12 +685,15 @@ func (brd *BlockReferenceOrHashWithChildren) UnpackProtoMessage() (rawapitypes.B
 }
 
 func (cr *CallRequest) PackProtoMessage(
-	args rpctypes.CallArgs, mainBlockReferenceOrHashWithChildren rawapitypes.BlockReferenceOrHashWithChildren, overrides *rpctypes.StateOverrides,
+	args rpctypes.CallArgs,
+	mainBlockReferenceOrHashWithChildren rawapitypes.BlockReferenceOrHashWithChildren,
+	overrides *rpctypes.StateOverrides,
 ) error {
 	cr.Args = new(CallArgs).PackProtoMessage(args)
 
 	cr.MainBlockReferenceOrHashWithChildren = &BlockReferenceOrHashWithChildren{}
-	if err := cr.MainBlockReferenceOrHashWithChildren.PackProtoMessage(mainBlockReferenceOrHashWithChildren); err != nil {
+	err := cr.MainBlockReferenceOrHashWithChildren.PackProtoMessage(mainBlockReferenceOrHashWithChildren)
+	if err != nil {
 		return err
 	}
 
@@ -770,7 +781,12 @@ func (cr *StateOverrides) UnpackProtoMessage() *rpctypes.StateOverrides {
 	return &args
 }
 
-func (cr *CallRequest) UnpackProtoMessage() (rpctypes.CallArgs, rawapitypes.BlockReferenceOrHashWithChildren, *rpctypes.StateOverrides, error) {
+func (cr *CallRequest) UnpackProtoMessage() (
+	rpctypes.CallArgs,
+	rawapitypes.BlockReferenceOrHashWithChildren,
+	*rpctypes.StateOverrides,
+	error,
+) {
 	br, err := cr.MainBlockReferenceOrHashWithChildren.UnpackProtoMessage()
 	if err != nil {
 		return rpctypes.CallArgs{}, rawapitypes.BlockReferenceOrHashWithChildren{}, nil, err
@@ -1027,7 +1043,9 @@ func (r *TransactionResponse) UnpackProtoMessage() (*rawapitypes.TransactionInfo
 	return nil, errors.New("unexpected response type")
 }
 
-func (r *TransactionRequestByBlockRefAndIndex) PackProtoMessage(ref rawapitypes.BlockReference, index types.TransactionIndex) error {
+func (r *TransactionRequestByBlockRefAndIndex) PackProtoMessage(
+	ref rawapitypes.BlockReference, index types.TransactionIndex,
+) error {
 	r.BlockRef = &BlockReference{}
 	if err := r.BlockRef.PackProtoMessage(ref); err != nil {
 		return err
@@ -1036,7 +1054,9 @@ func (r *TransactionRequestByBlockRefAndIndex) PackProtoMessage(ref rawapitypes.
 	return nil
 }
 
-func (r *TransactionRequestByBlockRefAndIndex) UnpackProtoMessage() (rawapitypes.BlockReference, types.TransactionIndex, error) {
+func (r *TransactionRequestByBlockRefAndIndex) UnpackProtoMessage() (
+	rawapitypes.BlockReference, types.TransactionIndex, error,
+) {
 	ref, err := r.BlockRef.UnpackProtoMessage()
 	if err != nil {
 		return rawapitypes.BlockReference{}, 0, err

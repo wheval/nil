@@ -59,7 +59,11 @@ func (c *callContractMock) AddExpectedCall(methodName string, returnValues ...in
 	c.methodsReturnValue[methodName] = append(c.methodsReturnValue[methodName], returnValues)
 }
 
-func (c *callContractMock) CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (c *callContractMock) CallContract(
+	ctx context.Context,
+	call ethereum.CallMsg,
+	blockNumber *big.Int,
+) ([]byte, error) {
 	abi, err := rollupcontract.RollupcontractMetaData.GetAbi()
 	if err != nil {
 		return nil, err
@@ -128,7 +132,9 @@ func (s *ProposerTestSuite) SetupSuite() {
 			excessBlobGas := uint64(123)
 			return &ethtypes.Header{BaseFee: big.NewInt(123), ExcessBlobGas: &excessBlobGas}, nil
 		},
-		PendingCodeAtFunc:    func(ctx context.Context, account ethcommon.Address) ([]byte, error) { return []byte{123}, nil },
+		PendingCodeAtFunc: func(ctx context.Context, account ethcommon.Address) ([]byte, error) {
+			return []byte{123}, nil
+		},
 		PendingNonceAtFunc:   func(ctx context.Context, account ethcommon.Address) (uint64, error) { return 123, nil },
 		ChainIDFunc:          func(ctx context.Context) (*big.Int, error) { return big.NewInt(0), nil },
 		SuggestGasTipCapFunc: func(ctx context.Context) (*big.Int, error) { return big.NewInt(123), nil },

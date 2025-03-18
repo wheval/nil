@@ -78,9 +78,14 @@ func HandleError(err error, stream *jsoniter.Stream) {
 }
 
 func newHandler(
-	connCtx context.Context, conn JsonWriter, reg *serviceRegistry,
-	maxBatchConcurrency uint, traceRequests bool, logger zerolog.Logger,
-	rpcSlowLogThreshold time.Duration, mh *metricsHandler,
+	connCtx context.Context,
+	conn JsonWriter,
+	reg *serviceRegistry,
+	maxBatchConcurrency uint,
+	traceRequests bool,
+	logger zerolog.Logger,
+	rpcSlowLogThreshold time.Duration,
+	mh *metricsHandler,
 ) *handler {
 	rootCtx, cancelRoot := context.WithCancel(connCtx)
 
@@ -273,7 +278,13 @@ func (h *handler) handleCall(ctx context.Context, msg *Message, stream *jsoniter
 }
 
 // runMethod runs the Go callback for an RPC method.
-func (h *handler) runMethod(ctx context.Context, msg *Message, callb *callback, args []reflect.Value, stream *jsoniter.Stream) *Message {
+func (h *handler) runMethod(
+	ctx context.Context,
+	msg *Message,
+	callb *callback,
+	args []reflect.Value,
+	stream *jsoniter.Stream,
+) *Message {
 	if !callb.streamable {
 		result, err := callb.call(ctx, msg.Method, args, stream)
 		if err != nil {

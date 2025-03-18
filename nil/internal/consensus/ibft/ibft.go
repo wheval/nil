@@ -83,7 +83,11 @@ func (i *backendIBFT) BuildProposal(view *protoIBFT.View) []byte {
 	return data
 }
 
-func (i *backendIBFT) buildSignature(committedSeals []*messages.CommittedSeal, height uint64, logger zerolog.Logger) (*types.BlsAggregateSignature, error) {
+func (i *backendIBFT) buildSignature(
+	committedSeals []*messages.CommittedSeal,
+	height uint64,
+	logger zerolog.Logger,
+) (*types.BlsAggregateSignature, error) {
 	params, err := config.GetConfigParams(i.ctx, i.txFabric, i.shardId, height)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to get validators' params")

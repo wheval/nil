@@ -320,7 +320,12 @@ func (as *AccountState) GetCommittedState(key common.Hash) (common.Hash, error) 
 }
 
 func (as *AccountState) Commit() (*types.SmartContract, error) {
-	if err := UpdateFromMap(as.StorageTree, as.State, func(v common.Hash) *types.Uint256 { return (*types.Uint256)(v.Uint256()) }); err != nil {
+	if err := UpdateFromMap(
+		as.StorageTree,
+		as.State,
+		func(v common.Hash) *types.Uint256 {
+			return (*types.Uint256)(v.Uint256())
+		}); err != nil {
 		return nil, err
 	}
 

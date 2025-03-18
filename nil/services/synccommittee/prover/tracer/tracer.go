@@ -18,7 +18,8 @@ import (
 )
 
 type RemoteTracer interface {
-	GetBlockTraces(ctx context.Context, aggTraces ExecutionTraces, shardId types.ShardId, blockRef transport.BlockReference) error
+	GetBlockTraces(
+		ctx context.Context, aggTraces ExecutionTraces, shardId types.ShardId, blockRef transport.BlockReference) error
 }
 
 type RemoteTracerImpl struct {
@@ -130,7 +131,9 @@ func (rt *RemoteTracerImpl) GetBlockTraces(
 		}
 
 		stateDB.AddInTransaction(inTxn)
-		if err := stateDB.HandleInTransaction(inTxn, execution.NewTransactionPayer(inTxn, stateDB)); err != nil { //nolint:contextcheck
+		if err := stateDB.HandleInTransaction( //nolint:contextcheck
+			inTxn, execution.NewTransactionPayer(inTxn, stateDB),
+		); err != nil {
 			return err
 		}
 	}
@@ -174,7 +177,11 @@ func GenerateTrace(ctx context.Context, rpcClient api.RpcClient, cfg *TraceConfi
 	return SerializeToFile(aggTraces, cfg.MarshalMode, cfg.BaseFileName)
 }
 
-func (rt *RemoteTracerImpl) getConfigForBlock(ctx context.Context, block *types.Block, shardId types.ShardId) (*jsonrpc.ChainConfig, error) {
+func (rt *RemoteTracerImpl) getConfigForBlock(
+	ctx context.Context,
+	block *types.Block,
+	shardId types.ShardId,
+) (*jsonrpc.ChainConfig, error) {
 	blockWithConfig := block.GetMainShardHash(shardId)
 	dbgBlock, err := rt.client.GetDebugBlock(ctx, shardId, blockWithConfig, true)
 	if err != nil {

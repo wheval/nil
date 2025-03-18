@@ -52,8 +52,10 @@ func CreateDefaultZeroStateConfig(mainPublicKey []byte) (*ZeroStateConfig, error
 	zeroStateConfig := &ZeroStateConfig{
 		Contracts: []*ContractDescr{
 			{
-				Name: "MainSmartAccount", Contract: "SmartAccount",
-				Address: types.MainSmartAccountAddress, Value: smartAccountValue,
+				Name:     "MainSmartAccount",
+				Contract: "SmartAccount",
+				Address:  types.MainSmartAccountAddress,
+				Value:    smartAccountValue,
 				CtorArgs: []any{hexutil.Encode(mainPublicKey)},
 			},
 			{Name: "Faucet", Contract: "Faucet", Address: types.FaucetAddress, Value: faucetValue},
@@ -61,8 +63,19 @@ func CreateDefaultZeroStateConfig(mainPublicKey []byte) (*ZeroStateConfig, error
 			{Name: "UsdtFaucet", Contract: "FaucetToken", Address: types.UsdtFaucetAddress, Value: tokenValue},
 			{Name: "BtcFaucet", Contract: "FaucetToken", Address: types.BtcFaucetAddress, Value: tokenValue},
 			{Name: "UsdcFaucet", Contract: "FaucetToken", Address: types.UsdcFaucetAddress, Value: tokenValue},
-			{Name: "L1BlockInfo", Contract: "system/L1BlockInfo", Address: types.L1BlockInfoAddress, Value: types.Value0},
-			{Name: "Governance", Contract: "system/Governance", Address: types.GovernanceAddress, Value: smartAccountValue, CtorArgs: []any{hexutil.Encode(mainPublicKey)}},
+			{
+				Name:     "L1BlockInfo",
+				Contract: "system/L1BlockInfo",
+				Address:  types.L1BlockInfoAddress,
+				Value:    types.Value0,
+			},
+			{
+				Name:     "Governance",
+				Contract: "system/Governance",
+				Address:  types.GovernanceAddress,
+				Value:    smartAccountValue,
+				CtorArgs: []any{hexutil.Encode(mainPublicKey)},
+			},
 		},
 	}
 	return zeroStateConfig, nil

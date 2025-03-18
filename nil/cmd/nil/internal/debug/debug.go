@@ -102,7 +102,10 @@ func (d *DebugHandler) CollectReceipts(rootReceipt *jsonrpc.RPCReceipt) error {
 	return nil
 }
 
-func (d *DebugHandler) CollectReceiptsRec(parentReceipt *ReceiptInfo, receipt *jsonrpc.RPCReceipt) (*ReceiptInfo, error) {
+func (d *DebugHandler) CollectReceiptsRec(
+	parentReceipt *ReceiptInfo,
+	receipt *jsonrpc.RPCReceipt,
+) (*ReceiptInfo, error) {
 	contract, err := d.GetContract(receipt.ContractAddress)
 	if err != nil {
 		contract = nil
@@ -302,7 +305,8 @@ func (d *DebugHandler) PrintReceipt(receipt *ReceiptInfo, indentEntry, indent st
 		fmt.Printf("%s%d\n", makeKey("GasUsed"), receipt.Receipt.GasUsed)
 	}
 	fmt.Printf("%s%d\n", makeKey("RequestId"), receipt.Transaction.RequestId)
-	fmt.Printf("%s%d:%d\n", makeKey("Block"), receipt.Receipt.ContractAddress.ShardId(), receipt.Transaction.BlockNumber)
+	fmt.Printf(
+		"%s%d:%d\n", makeKey("Block"), receipt.Receipt.ContractAddress.ShardId(), receipt.Transaction.BlockNumber)
 
 	if len(receipt.OutReceipts) > 0 {
 		for i, outReceipt := range receipt.OutReceipts {

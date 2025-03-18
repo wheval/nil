@@ -115,7 +115,9 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 		localShardApis := make(map[types.ShardId]rawapi.ShardApi)
 		for shardId := range types.ShardId(s.ShardsNum) {
 			var err error
-			localShardApis[shardId], err = rawapi.NewLocalRawApiAccessor(shardId, rawapi.NewLocalShardApi(shardId, s.Db, service.TxnPools[shardId]))
+			localShardApis[shardId], err = rawapi.NewLocalRawApiAccessor(
+				shardId,
+				rawapi.NewLocalShardApi(shardId, s.Db, service.TxnPools[shardId]))
 			s.Require().NoError(err)
 		}
 		localApi := rawapi.NewNodeApiOverShardApis(localShardApis)
@@ -184,13 +186,28 @@ func (s *RpcSuite) waitZerostateFunc(fun func(i uint32) bool) {
 	}
 }
 
-func (s *RpcSuite) DeployContractViaMainSmartAccount(shardId types.ShardId, payload types.DeployPayload, initialAmount types.Value) (types.Address, *jsonrpc.RPCReceipt) {
+func (s *RpcSuite) DeployContractViaMainSmartAccount(
+	shardId types.ShardId,
+	payload types.DeployPayload,
+	initialAmount types.Value,
+) (types.Address, *jsonrpc.RPCReceipt) {
 	s.T().Helper()
 
-	return DeployContractViaSmartAccount(s.T(), s.Context, s.Client, types.MainSmartAccountAddress, execution.MainPrivateKey, shardId, payload, initialAmount)
+	return DeployContractViaSmartAccount(
+		s.T(),
+		s.Context,
+		s.Client,
+		types.MainSmartAccountAddress,
+		execution.MainPrivateKey,
+		shardId,
+		payload,
+		initialAmount)
 }
 
-func (s *RpcSuite) SendTransactionViaSmartAccount(addrFrom types.Address, addrTo types.Address, key *ecdsa.PrivateKey,
+func (s *RpcSuite) SendTransactionViaSmartAccount(
+	addrFrom types.Address,
+	addrTo types.Address,
+	key *ecdsa.PrivateKey,
 	calldata []byte,
 ) *jsonrpc.RPCReceipt {
 	s.T().Helper()
@@ -208,19 +225,30 @@ func (s *RpcSuite) SendExternalTransaction(bytecode types.Code, contractAddress 
 	return receipt
 }
 
-func (s *RpcSuite) SendExternalTransactionNoCheck(bytecode types.Code, contractAddress types.Address) *jsonrpc.RPCReceipt {
+func (s *RpcSuite) SendExternalTransactionNoCheck(
+	bytecode types.Code,
+	contractAddress types.Address,
+) *jsonrpc.RPCReceipt {
 	s.T().Helper()
 	return SendExternalTransactionNoCheck(s.T(), s.Context, s.Client, bytecode, contractAddress)
 }
 
-// SendTransactionViaSmartAccountNoCheck sends a transaction via a smart account contract. Doesn't require the receipt be successful.
-func (s *RpcSuite) SendTransactionViaSmartAccountNoCheck(addrSmartAccount types.Address, addrTo types.Address, key *ecdsa.PrivateKey,
-	calldata []byte, fee types.FeePack, value types.Value, tokens []types.TokenBalance,
+// SendTransactionViaSmartAccountNoCheck sends a transaction via a smart account contract.
+// Doesn't require the receipt be successful.
+func (s *RpcSuite) SendTransactionViaSmartAccountNoCheck(
+	addrSmartAccount types.Address,
+	addrTo types.Address,
+	key *ecdsa.PrivateKey,
+	calldata []byte,
+	fee types.FeePack,
+	value types.Value,
+	tokens []types.TokenBalance,
 ) *jsonrpc.RPCReceipt {
 	s.T().Helper()
 
 	// Send the raw transaction
-	txHash, err := s.Client.SendTransactionViaSmartAccount(s.Context, addrSmartAccount, calldata, fee, value, tokens, addrTo, key)
+	txHash, err := s.Client.SendTransactionViaSmartAccount(
+		s.Context, addrSmartAccount, calldata, fee, value, tokens, addrTo, key)
 	s.Require().NoError(err)
 
 	receipt := s.WaitIncludedInMain(txHash)
@@ -235,7 +263,12 @@ func (s *RpcSuite) SendTransactionViaSmartAccountNoCheck(addrSmartAccount types.
 	return receipt
 }
 
-func (s *RpcSuite) CallGetter(addr types.Address, calldata []byte, blockId any, overrides *jsonrpc.StateOverrides) []byte {
+func (s *RpcSuite) CallGetter(
+	addr types.Address,
+	calldata []byte,
+	blockId any,
+	overrides *jsonrpc.StateOverrides,
+) []byte {
 	s.T().Helper()
 	return CallGetter(s.T(), s.Context, s.Client, addr, calldata, blockId, overrides)
 }

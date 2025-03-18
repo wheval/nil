@@ -2,11 +2,12 @@ package clickhouse
 
 import (
 	"context"
-	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/stretchr/testify/suite"
 	"os/exec"
 	"testing"
 	"time"
+
+	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/stretchr/testify/suite"
 )
 
 type SuiteClickhouse struct {

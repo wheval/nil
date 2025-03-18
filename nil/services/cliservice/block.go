@@ -30,7 +30,13 @@ func (s *Service) FetchBlock(shardId types.ShardId, blockId any) ([]byte, error)
 }
 
 // FetchDebugBlock fetches the block by number or hash with transactions related data.
-func (s *Service) FetchDebugBlock(shardId types.ShardId, blockId any, jsonOutput bool, fullOutput bool, noColor bool) ([]byte, error) {
+func (s *Service) FetchDebugBlock(
+	shardId types.ShardId,
+	blockId any,
+	jsonOutput bool,
+	fullOutput bool,
+	noColor bool,
+) ([]byte, error) {
 	hexedBlock, err := s.client.GetDebugBlock(s.ctx, shardId, blockId, true)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to fetch block")
@@ -50,7 +56,8 @@ func (s *Service) FetchDebugBlock(shardId types.ShardId, blockId any, jsonOutput
 	}
 }
 
-// We cannot make it generic because of https://stackoverflow.com/questions/78250015/go-embedded-type-cannot-be-a-type-parameter
+// We cannot make it generic because of
+// https://stackoverflow.com/questions/78250015/go-embedded-type-cannot-be-a-type-parameter
 type transactionWithHash struct {
 	types.Transaction
 }
@@ -100,7 +107,12 @@ func (s *Service) debugBlockToJson(shardId types.ShardId, block *types.BlockWith
 	return blockDataJSON, nil
 }
 
-func (s *Service) debugBlockToText(shardId types.ShardId, block *types.BlockWithExtractedData, useColor bool, full bool) ([]byte, error) {
+func (s *Service) debugBlockToText(
+	shardId types.ShardId,
+	block *types.BlockWithExtractedData,
+	useColor bool,
+	full bool,
+) ([]byte, error) {
 	colors := map[string]string{
 		"blue":    "\033[94m",
 		"green":   "\033[32m",

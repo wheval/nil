@@ -52,7 +52,13 @@ type Server struct {
 }
 
 // NewServer creates a new server instance with no registered handlers.
-func NewServer(traceRequests, debugSingleRequest bool, logger zerolog.Logger, rpcSlowLogThreshold time.Duration, keepHeaders []string) *Server {
+func NewServer(
+	traceRequests bool,
+	debugSingleRequest bool,
+	logger zerolog.Logger,
+	rpcSlowLogThreshold time.Duration,
+	keepHeaders []string,
+) *Server {
 	meter := telemetry.NewMeter("github.com/NilFoundation/nil/nil/services/rpc/transport")
 	failedCounter, err := meter.Int64Counter("failed")
 	check.PanicIfErr(err)
@@ -128,7 +134,7 @@ func newHTTPServerConn(r *http.Request, w http.ResponseWriter) ServerCodec {
 
 // ServeSingleRequest reads and processes a single RPC request from the given codec. This
 // is used to serve HTTP connections.
-func (s *Server) ServeSingleRequest(ctx context.Context, r *http.Request, w http.ResponseWriter) { // codec ServerCodec) {
+func (s *Server) ServeSingleRequest(ctx context.Context, r *http.Request, w http.ResponseWriter) {
 	codec := newHTTPServerConn(r, w)
 	defer codec.Close()
 
@@ -143,8 +149,15 @@ func (s *Server) ServeSingleRequest(ctx context.Context, r *http.Request, w http
 	}
 	ctx = context.WithValue(ctx, HeadersContextKey, headers)
 
-	h := newHandler(ctx, codec, &s.services, s.batchConcurrency,
-		s.traceRequests, s.logger, s.rpcSlowLogThreshold, s.mh)
+	h := newHandler(
+		ctx,
+		codec,
+		&s.services,
+		s.batchConcurrency,
+		s.traceRequests,
+		s.logger,
+		s.rpcSlowLogThreshold,
+		s.mh)
 
 	reqs, batch, err := codec.Read()
 	if err != nil {
@@ -155,7 +168,8 @@ func (s *Server) ServeSingleRequest(ctx context.Context, r *http.Request, w http
 	}
 	if batch {
 		if s.batchLimit > 0 && len(reqs) > s.batchLimit {
-			_ = codec.WriteJSON(ctx, errorMessage(fmt.Errorf("batch limit %d exceeded. Requested batch of size: %d", s.batchLimit, len(reqs))))
+			_ = codec.WriteJSON(ctx, errorMessage(fmt.Errorf(
+				"batch limit %d exceeded. Requested batch of size: %d", s.batchLimit, len(reqs))))
 		} else {
 			h.handleBatch(reqs)
 		}

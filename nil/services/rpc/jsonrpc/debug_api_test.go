@@ -172,7 +172,10 @@ func (suite *SuiteDbgContracts) TearDownSuite() {
 
 func (suite *SuiteDbgContracts) TestGetContract() {
 	ctx := context.Background()
-	res, err := suite.debugApi.GetContract(ctx, suite.smcAddr, transport.BlockNumberOrHash{BlockNumber: transport.LatestBlock.BlockNumber})
+	res, err := suite.debugApi.GetContract(
+		ctx,
+		suite.smcAddr,
+		transport.BlockNumberOrHash{BlockNumber: transport.LatestBlock.BlockNumber})
 	suite.Require().NoError(err)
 
 	suite.Run("storage", func() {

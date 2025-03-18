@@ -133,7 +133,9 @@ func TestZerostateFromConfig(t *testing.T) {
 
 	zeroState := &ZeroStateConfig{
 		ConfigParams: ConfigParams{
-			GasPrice: config.ParamGasPrice{Shards: []types.Uint256{*types.NewUint256(1), *types.NewUint256(2), *types.NewUint256(3)}},
+			GasPrice: config.ParamGasPrice{
+				Shards: []types.Uint256{*types.NewUint256(1), *types.NewUint256(2), *types.NewUint256(3)},
+			},
 		},
 	}
 	err = state.GenerateZeroState(zeroState)
@@ -146,7 +148,9 @@ func TestZerostateFromConfig(t *testing.T) {
 	require.NoError(t, err)
 	zeroState = &ZeroStateConfig{
 		ConfigParams: ConfigParams{
-			GasPrice: config.ParamGasPrice{Shards: []types.Uint256{*types.NewUint256(1), *types.NewUint256(2), *types.NewUint256(3)}},
+			GasPrice: config.ParamGasPrice{
+				Shards: []types.Uint256{*types.NewUint256(1), *types.NewUint256(2), *types.NewUint256(3)},
+			},
 		},
 	}
 
@@ -160,7 +164,9 @@ func TestZerostateFromConfig(t *testing.T) {
 	require.NoError(t, err)
 	zeroState = &ZeroStateConfig{
 		ConfigParams: ConfigParams{
-			GasPrice: config.ParamGasPrice{Shards: []types.Uint256{*types.NewUint256(1), *types.NewUint256(2), *types.NewUint256(3)}},
+			GasPrice: config.ParamGasPrice{
+				Shards: []types.Uint256{*types.NewUint256(1), *types.NewUint256(2), *types.NewUint256(3)},
+			},
 		},
 	}
 
@@ -175,7 +181,13 @@ func TestZerostateFromConfig(t *testing.T) {
 	zeroState = &ZeroStateConfig{
 		Contracts: []*ContractDescr{
 			{Name: "Faucet", Value: types.NewValueFromUint64(87654321), Contract: "Faucet"},
-			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: smartAccountAddr, Value: types.NewValueFromUint64(12345678), CtorArgs: []any{MainPublicKey}},
+			{
+				Name:     "MainSmartAccount",
+				Contract: "SmartAccount",
+				Address:  smartAccountAddr,
+				Value:    types.NewValueFromUint64(12345678),
+				CtorArgs: []any{MainPublicKey},
+			},
 		},
 	}
 	err = state.GenerateZeroState(zeroState)
@@ -217,7 +229,10 @@ func TestZerostateFromConfig(t *testing.T) {
 	zeroState = &ZeroStateConfig{
 		Contracts: []*ContractDescr{
 			{Name: "Faucet", Value: types.NewValueFromUint64(87654321), Contract: "Faucet", Shard: 1},
-			{Name: "MainSmartAccount", Contract: "SmartAccount", Address: smartAccountAddr, Value: types.NewValueFromUint64(12345678), CtorArgs: []any{MainPublicKey}},
+			{
+				Name: "MainSmartAccount", Contract: "SmartAccount", Address: smartAccountAddr,
+				Value: types.NewValueFromUint64(12345678), CtorArgs: []any{MainPublicKey},
+			},
 		},
 	}
 

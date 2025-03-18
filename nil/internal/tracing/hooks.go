@@ -86,7 +86,8 @@ type (
 	// Take note that EnterHook, when in the context of a live tracer, can be invoked
 	// outside of the `OnTxStart` and `OnTxEnd` hooks when dealing with system calls,
 	// see [OnSystemCallStartHook] and [OnSystemCallEndHook] for more information.
-	EnterHook = func(depth int, typ byte, from types.Address, to types.Address, input []byte, gas uint64, value *big.Int)
+	EnterHook = func(
+		depth int, typ byte, from types.Address, to types.Address, input []byte, gas uint64, value *big.Int)
 
 	// ExitHook is invoked when the processing of a transaction ends.
 	// `revert` is true when there was an error during the execution.
@@ -161,7 +162,8 @@ type (
 	NonceChangeHook = func(addr types.Address, prev, next uint64)
 
 	// CodeChangeHook is called when the code of an account changes.
-	CodeChangeHook = func(addr types.Address, prevCodeHash common.Hash, prevCode []byte, codeHash common.Hash, code []byte)
+	CodeChangeHook = func(
+		addr types.Address, prevCodeHash common.Hash, prevCode []byte, codeHash common.Hash, code []byte)
 
 	// StorageChangeHook is called when the storage of an account changes.
 	StorageChangeHook = func(addr types.Address, slot common.Hash, prev, next common.Hash)
@@ -316,31 +318,32 @@ type GasChangeReason byte
 const (
 	GasChangeUnspecified GasChangeReason = 0
 
-	// GasChangeTxInitialBalance is the initial balance for the call which will be equal to the gasLimit of the call. There is only
-	// one such gas change per transaction.
+	// GasChangeTxInitialBalance is the initial balance for the call which will be equal to the gasLimit of the call.
+	// There is only one such gas change per transaction.
 	GasChangeTxInitialBalance GasChangeReason = 1
-	// GasChangeTxIntrinsicGas is the amount of gas that will be charged for the intrinsic cost of the transaction, there is
-	// always exactly one of those per transaction.
+	// GasChangeTxIntrinsicGas is the amount of gas that will be charged for the intrinsic cost of the transaction,
+	// there is always exactly one of those per transaction.
 	GasChangeTxIntrinsicGas GasChangeReason = 2
-	// GasChangeTxRefunds is the sum of all refunds which happened during the tx execution (e.g. storage slot being cleared)
-	// this generates an increase in gas. There is at most one of such gas change per transaction.
-	GasChangeTxRefunds GasChangeReason = 3
-	// GasChangeTxLeftOverReturned is the amount of gas left over at the end of transaction's execution that will be returned
-	// to the chain. This change will always be a negative change as we "drain" left over gas towards 0. If there was no gas
-	// left at the end of execution, no such even will be emitted. The returned gas's value in Wei is returned to caller.
+	// GasChangeTxRefunds is the sum of all refunds which happened during the tx execution
+	// (e.g. storage slot being cleared) this generates an increase in gas.
 	// There is at most one of such gas change per transaction.
+	GasChangeTxRefunds GasChangeReason = 3
+	// GasChangeTxLeftOverReturned is the amount of gas left over at the end of transaction's execution that will be
+	// returned to the chain. This change will always be a negative change as we "drain" left over gas towards 0.
+	// If there was no gas left at the end of execution, no such even will be emitted.
+	// The returned gas's value in Wei is returned to caller. There is at most one of such gas change per transaction.
 	GasChangeTxLeftOverReturned GasChangeReason = 4
 
-	// GasChangeCallInitialBalance is the initial balance for the call which will be equal to the gasLimit of the call. There is only
-	// one such gas change per call.
+	// GasChangeCallInitialBalance is the initial balance for the call which will be equal to the gasLimit of the call.
+	// There is only one such gas change per call.
 	GasChangeCallInitialBalance GasChangeReason = 5
-	// GasChangeCallLeftOverReturned is the amount of gas left over that will be returned to the caller, this change will always
-	// be a negative change as we "drain" left over gas towards 0. If there was no gas left at the end of execution, no such even
-	// will be emitted.
+	// GasChangeCallLeftOverReturned is the amount of gas left over that will be returned to the caller,
+	// this change will always be a negative change as we "drain" left over gas towards 0.
+	// If there was no gas left at the end of execution, no such even will be emitted.
 	GasChangeCallLeftOverReturned GasChangeReason = 6
-	// GasChangeCallLeftOverRefunded is the amount of gas that will be refunded to the call after the child call execution it
-	// executed completed. This value is always positive as we are giving gas back to the you, the left over gas of the child.
-	// If there was no gas left to be refunded, no such even will be emitted.
+	// GasChangeCallLeftOverRefunded is the amount of gas that will be refunded to the call after the child call
+	// execution it executed completed. This value is always positive as we are giving gas back to the you,
+	// the left over gas of the child. If there was no gas left to be refunded, no such even will be emitted.
 	GasChangeCallLeftOverRefunded GasChangeReason = 7
 	// GasChangeCallContractCreation is the amount of gas that will be burned for a CREATE.
 	GasChangeCallContractCreation GasChangeReason = 8
@@ -348,12 +351,13 @@ const (
 	GasChangeCallContractCreation2 GasChangeReason = 9
 	// GasChangeCallCodeStorage is the amount of gas that will be charged for code storage.
 	GasChangeCallCodeStorage GasChangeReason = 10
-	// GasChangeCallOpCode is the amount of gas that will be charged for an opcode executed by the EVM, exact opcode that was
-	// performed can be check by `OnOpcode` handling.
+	// GasChangeCallOpCode is the amount of gas that will be charged for an opcode executed by the EVM,
+	// exact opcode that was performed can be check by `OnOpcode` handling.
 	GasChangeCallOpCode GasChangeReason = 11
 	// GasChangeCallPrecompiledContract is the amount of gas that will be charged for a precompiled contract execution.
 	GasChangeCallPrecompiledContract GasChangeReason = 12
-	// GasChangeCallStorageColdAccess is the amount of gas that will be charged for a cold storage access as controlled by EIP2929 rules.
+	// GasChangeCallStorageColdAccess is the amount of gas that will be charged for a cold storage access as controlled
+	// by EIP2929 rules.
 	GasChangeCallStorageColdAccess GasChangeReason = 13
 	// GasChangeCallFailedExecution is the burning of the remaining gas when the execution failed without a revert.
 	GasChangeCallFailedExecution GasChangeReason = 14

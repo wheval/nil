@@ -125,7 +125,11 @@ func buildDecodeBatchCmd(_ *commands.ExecutorParams, logger zerolog.Logger) *cob
 	}
 
 	cmd.Flags().Var(&params.BatchId, "batch-id", "unique ID of L1-stored batch")
-	cmd.Flags().StringVar(&params.BatchFile, "batch-file", "", "file with binary content of concatenated blobs of the batch")
+	cmd.Flags().StringVar(
+		&params.BatchFile,
+		"batch-file",
+		"",
+		"file with binary content of concatenated blobs of the batch")
 	cmd.Flags().StringVar(&params.OutputFile, "output-file", "", "target file to keep decoded batch data")
 
 	return cmd

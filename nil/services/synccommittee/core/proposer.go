@@ -137,7 +137,13 @@ func (p *proposer) initRollupContractWrapper(ctx context.Context) error {
 	}
 
 	var err error
-	p.rollupContractWrapper, err = rollupcontract.NewWrapper(ctx, p.params.ContractAddress, p.params.PrivateKey, p.ethClient, p.params.EthClientTimeout, p.logger)
+	p.rollupContractWrapper, err = rollupcontract.NewWrapper(
+		ctx,
+		p.params.ContractAddress,
+		p.params.PrivateKey,
+		p.ethClient,
+		p.params.EthClientTimeout,
+		p.logger)
 	if err != nil {
 		return fmt.Errorf("failed create rollup contract wrapper: %w", err)
 	}
@@ -238,7 +244,11 @@ func (p *proposer) getLatestProvedStateRoot(ctx context.Context) (common.Hash, e
 	return latestProvedState, err
 }
 
-func (p *proposer) commitBatch(ctx context.Context, blobs []kzg4844.Blob, batchIndexInBlobStorage string) (*ethtypes.Transaction, bool, error) {
+func (p *proposer) commitBatch(
+	ctx context.Context,
+	blobs []kzg4844.Blob,
+	batchIndexInBlobStorage string,
+) (*ethtypes.Transaction, bool, error) {
 	var tx *ethtypes.Transaction
 	batchTxSkipped := false
 	err := p.retryRunner.Do(ctx, func(context.Context) error {
@@ -279,7 +289,12 @@ func (p *proposer) commitBatch(ctx context.Context, blobs []kzg4844.Blob, batchI
 	return tx, batchTxSkipped, nil
 }
 
-func (p *proposer) updateState(ctx context.Context, tx *ethtypes.Transaction, data *scTypes.ProposalData, batchIndexInBlobStorage string) error {
+func (p *proposer) updateState(
+	ctx context.Context,
+	tx *ethtypes.Transaction,
+	data *scTypes.ProposalData,
+	batchIndexInBlobStorage string,
+) error {
 	blobTxSidecar := tx.BlobTxSidecar()
 	dataProofs, err := rollupcontract.ComputeDataProofs(blobTxSidecar)
 	if err != nil {

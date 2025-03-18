@@ -100,13 +100,18 @@ func parseArgs() *config {
 
 	cobrax.AddConfigFlag(rootCmd.PersistentFlags())
 	rootCmd.PersistentFlags().BoolVar(&cfg.cometaCfg.UseBadger, "use-badger", cfg.cometaCfg.UseBadger, "use badger db")
-	rootCmd.PersistentFlags().StringVar(&cfg.cometaCfg.OwnEndpoint, "own-endpoint", cfg.cometaCfg.OwnEndpoint, "cometa's rpc server endpoint")
-	rootCmd.PersistentFlags().StringVar(&cfg.cometaCfg.NodeEndpoint, "node-endpoint", cfg.cometaCfg.NodeEndpoint, "nil node endpoint")
-	rootCmd.PersistentFlags().StringVar(&cfg.cometaCfg.DbEndpoint, "db-endpoint", cfg.cometaCfg.DbEndpoint, "database endpoint")
-	rootCmd.PersistentFlags().StringVar(&cfg.cometaCfg.DbPath, "db-path", cfg.cometaCfg.DbPath, "path where to store database")
+	rootCmd.PersistentFlags().StringVar(
+		&cfg.cometaCfg.OwnEndpoint, "own-endpoint", cfg.cometaCfg.OwnEndpoint, "cometa's rpc server endpoint")
+	rootCmd.PersistentFlags().StringVar(
+		&cfg.cometaCfg.NodeEndpoint, "node-endpoint", cfg.cometaCfg.NodeEndpoint, "nil node endpoint")
+	rootCmd.PersistentFlags().StringVar(
+		&cfg.cometaCfg.DbEndpoint, "db-endpoint", cfg.cometaCfg.DbEndpoint, "database endpoint")
+	rootCmd.PersistentFlags().StringVar(
+		&cfg.cometaCfg.DbPath, "db-path", cfg.cometaCfg.DbPath, "path where to store database")
 	rootCmd.PersistentFlags().StringVar(&cfg.cometaCfg.DbName, "db-name", cfg.cometaCfg.DbName, "database name")
 	rootCmd.PersistentFlags().StringVar(&cfg.cometaCfg.DbUser, "db-user", cfg.cometaCfg.DbUser, "database user")
-	rootCmd.PersistentFlags().StringVar(&cfg.cometaCfg.DbPassword, "db-password", cfg.cometaCfg.DbPassword, "database password")
+	rootCmd.PersistentFlags().StringVar(
+		&cfg.cometaCfg.DbPassword, "db-password", cfg.cometaCfg.DbPassword, "database password")
 
 	if err := viper.BindPFlags(rootCmd.Flags()); err != nil {
 		fmt.Printf("failed to bind flags: %s\n", err.Error())

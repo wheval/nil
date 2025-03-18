@@ -23,7 +23,8 @@ func StartRpcServer(
 	started chan<- struct{},
 ) error {
 	// register apis and create handler stack
-	srv := transport.NewServer(cfg.TraceRequests, cfg.DebugSingleRequest, logger, cfg.RPCSlowLogThreshold, cfg.KeepHeaders)
+	srv := transport.NewServer(
+		cfg.TraceRequests, cfg.DebugSingleRequest, logger, cfg.RPCSlowLogThreshold, cfg.KeepHeaders)
 
 	defer srv.Stop()
 

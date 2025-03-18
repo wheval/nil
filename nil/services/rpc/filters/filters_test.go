@@ -77,7 +77,8 @@ func (s *SuiteFilters) TestMatcherOneReceipt() {
 	filters.RemoveFilter(id)
 
 	// Only logs with [1, 2] topics
-	id, f = filters.NewFilter(&FilterQuery{Addresses: []types.Address{address1}, Topics: [][]common.Hash{{{0x01}}, {{0x02}}}})
+	id, f = filters.NewFilter(
+		&FilterQuery{Addresses: []types.Address{address1}, Topics: [][]common.Hash{{{0x01}}, {{0x02}}}})
 	s.NotEmpty(id)
 	s.NotNil(f)
 	s.Require().NoError(filters.process(&block, receipts))

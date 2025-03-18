@@ -43,10 +43,12 @@ func (s *SuiteFaucet) createSmartAccountViaFaucet(ownerPrivateKey *ecdsa.Private
 	ownerPublicKey := crypto.CompressPubkey(&ownerPrivateKey.PublicKey)
 
 	salt := uint256.NewInt(123).Bytes32()
-	callData, err := contracts.NewCallData(contracts.NameFaucet, "createSmartAccount", ownerPublicKey, salt, big.NewInt(value))
+	callData, err := contracts.NewCallData(
+		contracts.NameFaucet, "createSmartAccount", ownerPublicKey, salt, big.NewInt(value))
 	s.Require().NoError(err)
 
-	resHash, err := s.DefaultClient.SendExternalTransaction(s.Context, callData, types.FaucetAddress, nil, types.FeePack{})
+	resHash, err := s.DefaultClient.SendExternalTransaction(
+		s.Context, callData, types.FaucetAddress, nil, types.FeePack{})
 	s.Require().NoError(err)
 
 	res := s.WaitForReceipt(resHash)
@@ -93,8 +95,8 @@ func (s *SuiteFaucet) TestDeployContractViaFaucet() {
 		s.Require().True(r.Success)
 	}
 
-	txnHash, receiptContractAddress, err := s.DefaultClient.DeployExternal(s.Context, smartAccountAddr.ShardId(), code,
-		types.NewFeePackFromGas(10_000_000))
+	txnHash, receiptContractAddress, err := s.DefaultClient.DeployExternal(
+		s.Context, smartAccountAddr.ShardId(), code, types.NewFeePackFromGas(10_000_000))
 	s.Require().NoError(err)
 	s.Require().Equal(smartAccountAddr, receiptContractAddress)
 	receipt = s.WaitForReceipt(txnHash)
@@ -116,7 +118,10 @@ func (s *SuiteFaucet) TestTopUpViaFaucet() {
 	pubKey := crypto.CompressPubkey(&pk.PublicKey)
 	smartAccountCode := contracts.PrepareDefaultSmartAccountForOwnerCode(pubKey)
 
-	address, receipt := s.DeployContractViaMainSmartAccount(types.BaseShardId, types.BuildDeployPayload(smartAccountCode, common.EmptyHash), types.Value{})
+	address, receipt := s.DeployContractViaMainSmartAccount(
+		types.BaseShardId,
+		types.BuildDeployPayload(smartAccountCode, common.EmptyHash),
+		types.Value{})
 	receipt = s.WaitForReceipt(receipt.TxnHash)
 	s.Require().NotNil(receipt)
 	s.Require().True(receipt.Success)
@@ -174,13 +179,21 @@ func (s *SuiteFaucet) TestTopUpTokenViaFaucet() {
 	pubKey := crypto.CompressPubkey(&pk.PublicKey)
 	smartAccountCode := contracts.PrepareDefaultSmartAccountForOwnerCode(pubKey)
 
-	address, receipt := s.DeployContractViaMainSmartAccount(types.BaseShardId, types.BuildDeployPayload(smartAccountCode, common.EmptyHash), types.Value{})
+	address, receipt := s.DeployContractViaMainSmartAccount(
+		types.BaseShardId,
+		types.BuildDeployPayload(smartAccountCode, common.EmptyHash),
+		types.Value{})
 	receipt = s.WaitForReceipt(receipt.TxnHash)
 	s.Require().NotNil(receipt)
 	s.Require().True(receipt.Success)
 
 	value := types.NewValueFromUint64(1000)
-	faucetsAddr := []types.Address{types.EthFaucetAddress, types.UsdtFaucetAddress, types.BtcFaucetAddress, types.UsdcFaucetAddress}
+	faucetsAddr := []types.Address{
+		types.EthFaucetAddress,
+		types.UsdtFaucetAddress,
+		types.BtcFaucetAddress,
+		types.UsdcFaucetAddress,
+	}
 	for _, faucet := range faucetsAddr {
 		mshHash, err := s.faucetClient.TopUpViaFaucet(faucet, address, value)
 		s.Require().NoError(err)

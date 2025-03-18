@@ -105,9 +105,13 @@ func (e *exporter) startFetchers(ctx context.Context, shardId types.ShardId) err
 
 	// If the db is empty, add the top block to the queue.
 	if lastProcessedBlock == types.InvalidBlockNumber {
-		topBlock, err := concurrent.RunWithRetries(ctx, 1*time.Second, 10, func() (*types.BlockWithExtractedData, error) {
-			return e.FetchBlock(ctx, shardId, "latest")
-		})
+		topBlock, err := concurrent.RunWithRetries(
+			ctx,
+			1*time.Second,
+			10,
+			func() (*types.BlockWithExtractedData, error) {
+				return e.FetchBlock(ctx, shardId, "latest")
+			})
 		if err != nil {
 			return fmt.Errorf("failed to fetch last block: %w", err)
 		}
@@ -127,7 +131,12 @@ func (e *exporter) startFetchers(ctx context.Context, shardId types.ShardId) err
 	)
 }
 
-func (e *exporter) pushBlocks(ctx context.Context, shardId types.ShardId, fromId, toId types.BlockNumber) (types.BlockNumber, error) {
+func (e *exporter) pushBlocks(
+	ctx context.Context,
+	shardId types.ShardId,
+	fromId types.BlockNumber,
+	toId types.BlockNumber,
+) (types.BlockNumber, error) {
 	const batchSize = 10
 	for id := fromId; id < toId; id += batchSize {
 		batchEndId := id + batchSize

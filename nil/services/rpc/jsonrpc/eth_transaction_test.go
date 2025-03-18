@@ -45,7 +45,13 @@ func (s *SuiteEthTransaction) SetupSuite() {
 	receipt := types.Receipt{TxnHash: s.transaction.Hash()}
 
 	blockRes := writeTestBlock(
-		s.T(), tx, types.BaseShardId, types.BlockNumber(0), []*types.Transaction{s.transaction}, []*types.Receipt{&receipt}, []*types.Transaction{})
+		s.T(),
+		tx,
+		types.BaseShardId,
+		types.BlockNumber(0),
+		[]*types.Transaction{s.transaction},
+		[]*types.Receipt{&receipt},
+		[]*types.Transaction{})
 	err = execution.PostprocessBlock(tx, types.BaseShardId, blockRes)
 	s.Require().NoError(err)
 	s.lastBlockHash = blockRes.BlockHash

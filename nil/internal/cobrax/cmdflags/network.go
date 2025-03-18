@@ -18,5 +18,6 @@ func AddNetwork(fset *pflag.FlagSet, cfg *network.Config) {
 
 	fset.BoolVar(&cfg.DHTEnabled, "with-discovery", cfg.DHTEnabled, "enable discovery (with Kademlia DHT)")
 	fset.Var(&cfg.DHTBootstrapPeers, "discovery-bootstrap-peers", "bootstrap peers for discovery")
-	check.PanicIfErr(fset.SetAnnotation("discovery-bootstrap-peers", cobra.BashCompOneRequiredFlag, []string{"with-discovery"}))
+	check.PanicIfErr(
+		fset.SetAnnotation("discovery-bootstrap-peers", cobra.BashCompOneRequiredFlag, []string{"with-discovery"}))
 }

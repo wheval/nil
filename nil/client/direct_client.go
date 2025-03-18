@@ -27,7 +27,12 @@ type DirectClient struct {
 
 var _ Client = (*DirectClient)(nil)
 
-func NewEthClient(ctx context.Context, db db.ReadOnlyDB, localApi *rawapi.NodeApiOverShardApis, logger zerolog.Logger) (*DirectClient, error) {
+func NewEthClient(
+	ctx context.Context,
+	db db.ReadOnlyDB,
+	localApi *rawapi.NodeApiOverShardApis,
+	logger zerolog.Logger,
+) (*DirectClient, error) {
 	ethApi := jsonrpc.NewEthAPI(ctx, localApi, db, true, false)
 	debugApi := jsonrpc.NewDebugAPI(localApi, logger)
 	dbApi := jsonrpc.NewDbAPI(db, logger)
@@ -52,7 +57,12 @@ func (c *DirectClient) GetCode(ctx context.Context, addr types.Address, blockId 
 	return types.Code(raw), err
 }
 
-func (c *DirectClient) GetBlock(ctx context.Context, shardId types.ShardId, blockId any, fullTx bool) (*jsonrpc.RPCBlock, error) {
+func (c *DirectClient) GetBlock(
+	ctx context.Context,
+	shardId types.ShardId,
+	blockId any,
+	fullTx bool,
+) (*jsonrpc.RPCBlock, error) {
 	blockNrOrHash, err := transport.AsBlockReference(blockId)
 	if err != nil {
 		return nil, err
@@ -71,7 +81,12 @@ func (c *DirectClient) GetBlock(ctx context.Context, shardId types.ShardId, bloc
 	return nil, nil
 }
 
-func (c *DirectClient) GetDebugBlock(ctx context.Context, shardId types.ShardId, blockId any, fullTx bool) (*jsonrpc.DebugRPCBlock, error) {
+func (c *DirectClient) GetDebugBlock(
+	ctx context.Context,
+	shardId types.ShardId,
+	blockId any,
+	fullTx bool,
+) (*jsonrpc.DebugRPCBlock, error) {
 	blockNrOrHash, err := transport.AsBlockReference(blockId)
 	if err != nil {
 		return nil, err
@@ -90,11 +105,25 @@ func (c *DirectClient) GetDebugBlock(ctx context.Context, shardId types.ShardId,
 	return nil, nil
 }
 
-func (c *DirectClient) GetDebugBlocksRange(ctx context.Context, shardId types.ShardId, from, to types.BlockNumber, fullTx bool, batchSize int) ([]*jsonrpc.DebugRPCBlock, error) {
+func (c *DirectClient) GetDebugBlocksRange(
+	ctx context.Context,
+	shardId types.ShardId,
+	from types.BlockNumber,
+	to types.BlockNumber,
+	fullTx bool,
+	batchSize int,
+) ([]*jsonrpc.DebugRPCBlock, error) {
 	panic("Not supported")
 }
 
-func (c *DirectClient) GetBlocksRange(ctx context.Context, shardId types.ShardId, from, to types.BlockNumber, fullTx bool, batchSize int) ([]*jsonrpc.RPCBlock, error) {
+func (c *DirectClient) GetBlocksRange(
+	ctx context.Context,
+	shardId types.ShardId,
+	from types.BlockNumber,
+	to types.BlockNumber,
+	fullTx bool,
+	batchSize int,
+) ([]*jsonrpc.RPCBlock, error) {
 	panic("Not supported")
 }
 
@@ -110,7 +139,10 @@ func (c *DirectClient) SendRawTransaction(ctx context.Context, data []byte) (com
 	return c.ethApi.SendRawTransaction(ctx, data)
 }
 
-func (c *DirectClient) GetInTransactionByHash(ctx context.Context, hash common.Hash) (*jsonrpc.RPCInTransaction, error) {
+func (c *DirectClient) GetInTransactionByHash(
+	ctx context.Context,
+	hash common.Hash,
+) (*jsonrpc.RPCInTransaction, error) {
 	return c.ethApi.GetInTransactionByHash(ctx, hash)
 }
 
@@ -118,7 +150,11 @@ func (c *DirectClient) GetInTransactionReceipt(ctx context.Context, hash common.
 	return c.ethApi.GetInTransactionReceipt(ctx, hash)
 }
 
-func (c *DirectClient) GetTransactionCount(ctx context.Context, address types.Address, blockId any) (types.Seqno, error) {
+func (c *DirectClient) GetTransactionCount(
+	ctx context.Context,
+	address types.Address,
+	blockId any,
+) (types.Seqno, error) {
 	blockNrOrHash, err := transport.AsBlockReference(blockId)
 	if err != nil {
 		return 0, err
@@ -132,7 +168,11 @@ func (c *DirectClient) GetTransactionCount(ctx context.Context, address types.Ad
 	return types.Seqno(res), nil
 }
 
-func (c *DirectClient) GetBlockTransactionCount(ctx context.Context, shardId types.ShardId, blockId any) (uint64, error) {
+func (c *DirectClient) GetBlockTransactionCount(
+	ctx context.Context,
+	shardId types.ShardId,
+	blockId any,
+) (uint64, error) {
 	blockNrOrHash, err := transport.AsBlockReference(blockId)
 	if err != nil {
 		return 0, err
@@ -223,7 +263,8 @@ func (c *DirectClient) SendTransactionViaSmartAccount(
 	ctx context.Context, smartAccountAddress types.Address, bytecode types.Code, fee types.FeePack, value types.Value,
 	tokens []types.TokenBalance, contractAddress types.Address, pk *ecdsa.PrivateKey,
 ) (common.Hash, error) {
-	return SendTransactionViaSmartAccount(ctx, c, smartAccountAddress, bytecode, fee, value, tokens, contractAddress, pk, false)
+	return SendTransactionViaSmartAccount(
+		ctx, c, smartAccountAddress, bytecode, fee, value, tokens, contractAddress, pk, false)
 }
 
 func (c *DirectClient) SendExternalTransaction(
@@ -232,7 +273,12 @@ func (c *DirectClient) SendExternalTransaction(
 	return SendExternalTransaction(ctx, c, bytecode, contractAddress, pk, fee, false, false)
 }
 
-func (c *DirectClient) Call(ctx context.Context, args *jsonrpc.CallArgs, blockId any, stateOverride *jsonrpc.StateOverrides) (*jsonrpc.CallRes, error) {
+func (c *DirectClient) Call(
+	ctx context.Context,
+	args *jsonrpc.CallArgs,
+	blockId any,
+	stateOverride *jsonrpc.StateOverrides,
+) (*jsonrpc.CallRes, error) {
 	blockNrOrHash, err := transport.AsBlockReference(blockId)
 	if err != nil {
 		return nil, err
@@ -240,7 +286,11 @@ func (c *DirectClient) Call(ctx context.Context, args *jsonrpc.CallArgs, blockId
 	return c.ethApi.Call(ctx, *args, transport.BlockNumberOrHash(blockNrOrHash), stateOverride)
 }
 
-func (c *DirectClient) EstimateFee(ctx context.Context, args *jsonrpc.CallArgs, blockId any) (*jsonrpc.EstimateFeeRes, error) {
+func (c *DirectClient) EstimateFee(
+	ctx context.Context,
+	args *jsonrpc.CallArgs,
+	blockId any,
+) (*jsonrpc.EstimateFeeRes, error) {
 	blockNrOrHash, err := transport.AsBlockReference(blockId)
 	if err != nil {
 		return nil, err
@@ -252,7 +302,12 @@ func (c *DirectClient) RawCall(_ context.Context, method string, params ...any) 
 	panic("Not supported")
 }
 
-func (c *DirectClient) SetTokenName(ctx context.Context, contractAddr types.Address, name string, pk *ecdsa.PrivateKey) (common.Hash, error) {
+func (c *DirectClient) SetTokenName(
+	ctx context.Context,
+	contractAddr types.Address,
+	name string,
+	pk *ecdsa.PrivateKey,
+) (common.Hash, error) {
 	data, err := contracts.NewCallData(contracts.NameNilTokenBase, "setTokenName", name)
 	if err != nil {
 		return common.EmptyHash, err
@@ -261,7 +316,13 @@ func (c *DirectClient) SetTokenName(ctx context.Context, contractAddr types.Addr
 	return c.SendExternalTransaction(ctx, data, contractAddr, pk, types.NewFeePackFromGas(100_000))
 }
 
-func (c *DirectClient) ChangeTokenAmount(ctx context.Context, contractAddr types.Address, amount types.Value, pk *ecdsa.PrivateKey, mint bool) (common.Hash, error) {
+func (c *DirectClient) ChangeTokenAmount(
+	ctx context.Context,
+	contractAddr types.Address,
+	amount types.Value,
+	pk *ecdsa.PrivateKey,
+	mint bool,
+) (common.Hash, error) {
 	method := "mintToken"
 	if !mint {
 		method = "burnToken"
@@ -282,7 +343,12 @@ func (c *DirectClient) DbGet(ctx context.Context, tableName db.TableName, key []
 	return c.dbApi.Get(ctx, tableName, key)
 }
 
-func (c *DirectClient) DbGetFromShard(ctx context.Context, shardId types.ShardId, tableName db.ShardedTableName, key []byte) ([]byte, error) {
+func (c *DirectClient) DbGetFromShard(
+	ctx context.Context,
+	shardId types.ShardId,
+	tableName db.ShardedTableName,
+	key []byte,
+) ([]byte, error) {
 	return c.dbApi.GetFromShard(ctx, shardId, tableName, key)
 }
 
@@ -290,7 +356,12 @@ func (c *DirectClient) DbExists(ctx context.Context, tableName db.TableName, key
 	return c.dbApi.Exists(ctx, tableName, key)
 }
 
-func (c *DirectClient) DbExistsInShard(ctx context.Context, shardId types.ShardId, tableName db.ShardedTableName, key []byte) (bool, error) {
+func (c *DirectClient) DbExistsInShard(
+	ctx context.Context,
+	shardId types.ShardId,
+	tableName db.ShardedTableName,
+	key []byte,
+) (bool, error) {
 	return c.dbApi.ExistsInShard(ctx, shardId, tableName, key)
 }
 
@@ -306,7 +377,11 @@ func (c *DirectClient) PlainTextCall(_ context.Context, requestBody []byte) (jso
 	panic("Not supported")
 }
 
-func (c *DirectClient) GetDebugContract(ctx context.Context, contractAddr types.Address, blockId any) (*jsonrpc.DebugRPCContract, error) {
+func (c *DirectClient) GetDebugContract(
+	ctx context.Context,
+	contractAddr types.Address,
+	blockId any,
+) (*jsonrpc.DebugRPCContract, error) {
 	panic("Not supported")
 }
 

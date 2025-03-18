@@ -101,7 +101,8 @@ func (p *taskExecutorImpl) fetchAndHandleTask(ctx context.Context) error {
 	err = p.taskHandler.Handle(ctx, p.nonceId, task)
 
 	if err == nil {
-		log.NewTaskEvent(p.logger, zerolog.DebugLevel, task).Msg("Execution of task with is successfully completed")
+		log.NewTaskEvent(p.logger, zerolog.DebugLevel, task).
+			Msg("Execution of task with is successfully completed")
 	} else {
 		log.NewTaskEvent(p.logger, zerolog.ErrorLevel, task).Err(err).Msg("Error handling task")
 	}

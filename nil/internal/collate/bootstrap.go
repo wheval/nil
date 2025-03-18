@@ -79,7 +79,13 @@ func SetVersionHandler(ctx context.Context, nm *network.Manager, fabric db.DB) e
 	return nil
 }
 
-func fetchShardSnap(ctx context.Context, nm *network.Manager, peerId network.PeerID, db db.DB, logger zerolog.Logger) error {
+func fetchShardSnap(
+	ctx context.Context,
+	nm *network.Manager,
+	peerId network.PeerID,
+	db db.DB,
+	logger zerolog.Logger,
+) error {
 	stream, err := nm.NewStream(ctx, peerId, topicBootstrapShard())
 	if err != nil {
 		logger.Error().Err(err).Msgf("Failed to open stream to %s", peerId)
@@ -88,7 +94,8 @@ func fetchShardSnap(ctx context.Context, nm *network.Manager, peerId network.Pee
 	defer stream.Close()
 
 	logger.Info().Msgf("Start to fetch data snapshot from %s", peerId)
-	// TODO: Here we need to check signatures of fetched blocks, this would require checking every block in the stream, which can be slow.
+	// TODO: Here we need to check signatures of fetched blocks,
+	//  this would require checking every block in the stream, which can be slow.
 	if err := db.Fetch(ctx, stream); err != nil {
 		logger.Error().Err(err).Msgf("Failed to fetch snapshot from %s", peerId)
 		return err
@@ -98,7 +105,13 @@ func fetchShardSnap(ctx context.Context, nm *network.Manager, peerId network.Pee
 }
 
 // Fetch DB snapshot via libp2p.
-func fetchSnapshot(ctx context.Context, nm *network.Manager, peerAddr network.AddrInfo, db db.DB, logger zerolog.Logger) error {
+func fetchSnapshot(
+	ctx context.Context,
+	nm *network.Manager,
+	peerAddr network.AddrInfo,
+	db db.DB,
+	logger zerolog.Logger,
+) error {
 	peerId, err := nm.Connect(ctx, peerAddr)
 	if err != nil {
 		logger.Error().Err(err).Msgf("Failed to connect to %s to fetch snapshot", peerAddr)

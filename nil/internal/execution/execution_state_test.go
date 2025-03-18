@@ -111,7 +111,9 @@ func (s *SuiteExecutionState) TestExecState() {
 			}
 			s.Require().NoError(err)
 
-			deploy := types.BuildDeployPayload(hexutil.FromHex(code), common.BytesToHash([]byte{byte(transactionIndex)}))
+			deploy := types.BuildDeployPayload(
+				hexutil.FromHex(code),
+				common.BytesToHash([]byte{byte(transactionIndex)}))
 			s.Equal(types.Code(deploy.Bytes()), m.Data)
 
 			_, err = receiptsRoot.Fetch(transactionIndex)
@@ -476,7 +478,8 @@ func (s *SuiteExecutionState) TestPrecompiles() {
 	s.Run("Deploy", func() {
 		code, err := contracts.GetCode(contracts.NamePrecompilesTest)
 		s.Require().NoError(err)
-		testAddr = Deploy(s.T(), s.ctx, es, types.BuildDeployPayload(code, common.EmptyHash), shardId, types.Address{}, 0)
+		testAddr = Deploy(
+			s.T(), s.ctx, es, types.BuildDeployPayload(code, common.EmptyHash), shardId, types.Address{}, 0)
 	})
 
 	abi, err := contracts.GetAbi(contracts.NamePrecompilesTest)
@@ -492,16 +495,30 @@ func (s *SuiteExecutionState) TestPrecompiles() {
 	txn.From = testAddr
 
 	s.Run("testAsyncCall: success", func() {
-		txn.Data, err = abi.Pack("testAsyncCall", testAddr, types.EmptyAddress, types.EmptyAddress, big.NewInt(0),
-			uint8(types.ForwardKindNone), big.NewInt(0), []byte{})
+		txn.Data, err = abi.Pack(
+			"testAsyncCall",
+			testAddr,
+			types.EmptyAddress,
+			types.EmptyAddress,
+			big.NewInt(0),
+			uint8(types.ForwardKindNone),
+			big.NewInt(0),
+			[]byte{})
 		s.Require().NoError(err)
 		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})
 		s.False(res.Failed())
 	})
 
 	s.Run("testAsyncCall: Send to main shard", func() {
-		txn.Data, err = abi.Pack("testAsyncCall", types.EmptyAddress, types.EmptyAddress, types.EmptyAddress, big.NewInt(0),
-			uint8(types.ForwardKindNone), big.NewInt(0), []byte{1, 2, 3, 4})
+		txn.Data, err = abi.Pack(
+			"testAsyncCall",
+			types.EmptyAddress,
+			types.EmptyAddress,
+			types.EmptyAddress,
+			big.NewInt(0),
+			uint8(types.ForwardKindNone),
+			big.NewInt(0),
+			[]byte{1, 2, 3, 4})
 		s.Require().NoError(err)
 
 		res := es.HandleTransaction(s.ctx, txn, dummyPayer{})

@@ -43,7 +43,8 @@ func NewReplayScheduler(txFabric db.DB, params ReplayParams) *ReplayScheduler {
 }
 
 func (s *ReplayScheduler) Run(ctx context.Context) error {
-	s.logger.Info().Msgf("Starting block replay for blocks [%d - %d]...", s.params.ReplayFirstBlock, s.params.ReplayLastBlock)
+	s.logger.Info().Msgf(
+		"Starting block replay for blocks [%d - %d]...", s.params.ReplayFirstBlock, s.params.ReplayLastBlock)
 
 runloop:
 	for blockId := s.params.ReplayFirstBlock; blockId <= s.params.ReplayLastBlock; blockId++ {

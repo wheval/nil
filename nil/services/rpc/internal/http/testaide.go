@@ -25,7 +25,10 @@ type StoppableSingleRequestServer interface {
 	ServerStopper
 }
 
-func DoTestServer(t *testing.T, createServerAndLogger func(t *testing.T, conf *HttpConfig) (*StoppableSingleRequestServer, zerolog.Logger)) {
+func DoTestServer(
+	t *testing.T,
+	createServerAndLogger func(t *testing.T, conf *HttpConfig) (*StoppableSingleRequestServer, zerolog.Logger),
+) {
 	t.Helper()
 
 	launchServer := func(t *testing.T, conf *HttpConfig) *httpServer {
@@ -86,7 +89,12 @@ func DoTestServer(t *testing.T, createServerAndLogger func(t *testing.T, conf *H
 	})
 }
 
-func createAndStartServer(t *testing.T, server StoppableSingleRequestServer, conf *HttpConfig, logger zerolog.Logger) *httpServer {
+func createAndStartServer(
+	t *testing.T,
+	server StoppableSingleRequestServer,
+	conf *HttpConfig,
+	logger zerolog.Logger,
+) *httpServer {
 	t.Helper()
 
 	srv := newHTTPServer(logger, httpcfg.DefaultHTTPTimeouts)

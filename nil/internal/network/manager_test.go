@@ -125,8 +125,10 @@ func (s *ManagerSuite) CheckConnectionManager(params ConnectionManagerCheckParam
 	clock := clockwork.NewFakeClock()
 	config := NewDefaultConfig()
 	config.ConnectionManagerConfig.ForgetAfterTime = params.forgetAfterTime
-	config.ConnectionManagerConfig.ReputationBanThreshold = config.ConnectionManagerConfig.ReputationChangeSettings[cm.ReputationChangeInvalidBlockSignature] / 2
-	config.ConnectionManagerConfig.DecayReputationPerSecondPercent = cm.CalculateDecayPercent(params.halfDecayTimeSeconds, 0.5)
+	config.ConnectionManagerConfig.ReputationBanThreshold = //
+		config.ConnectionManagerConfig.ReputationChangeSettings[cm.ReputationChangeInvalidBlockSignature] / 2
+	config.ConnectionManagerConfig.DecayReputationPerSecondPercent = //
+		cm.CalculateDecayPercent(params.halfDecayTimeSeconds, 0.5)
 	cm.SetClock(config.ConnectionManagerConfig, clock)
 	m1 := s.newManagerWithBaseConfig(config)
 
