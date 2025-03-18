@@ -14,7 +14,8 @@ import (
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/encoding/ini"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
@@ -58,6 +59,10 @@ func init() {
 	check.PanicIfErr(err)
 
 	DefaultConfigPath = filepath.Join(homeDir, ".config/nil/config.ini")
+
+	codecRegistry := viper.NewCodecRegistry()
+	check.PanicIfErr(codecRegistry.RegisterCodec("ini", ini.Codec{}))
+	viper.SetOptions(viper.WithCodecRegistry(codecRegistry))
 }
 
 func InitDefaultConfig(configPath string) (string, error) {
