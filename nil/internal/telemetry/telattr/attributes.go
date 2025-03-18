@@ -31,3 +31,7 @@ func Topic(topic string) attribute.KeyValue {
 func Type(t string) attribute.KeyValue {
 	return attribute.String(logging.FieldType, t)
 }
+
+func RpcMethod(method string) attribute.KeyValue {
+	return attribute.String(logging.FieldRpcMethod, method)
+}

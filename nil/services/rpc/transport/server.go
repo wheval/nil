@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common/check"
+	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	nil_http "github.com/NilFoundation/nil/nil/services/rpc/internal/http"
 	mapset "github.com/deckarep/golang-set"
 	"github.com/rs/zerolog"
@@ -29,6 +30,11 @@ type ContextKey string
 
 var HeadersContextKey ContextKey = "headers"
 
+type metricsHandler struct {
+	meter  telemetry.Meter
+	failed telemetry.Counter
+}
+
 // Server is an RPC server.
 type Server struct {
 	services serviceRegistry
@@ -42,10 +48,15 @@ type Server struct {
 	keepHeaders         []string // headers to pass to request handler
 	logger              zerolog.Logger
 	rpcSlowLogThreshold time.Duration
+	mh                  *metricsHandler
 }
 
 // NewServer creates a new server instance with no registered handlers.
 func NewServer(traceRequests, debugSingleRequest bool, logger zerolog.Logger, rpcSlowLogThreshold time.Duration, keepHeaders []string) *Server {
+	meter := telemetry.NewMeter("github.com/NilFoundation/nil/nil/services/rpc/transport")
+	failedCounter, err := meter.Int64Counter("failed")
+	check.PanicIfErr(err)
+
 	server := &Server{
 		services:            serviceRegistry{logger: logger},
 		run:                 1,
@@ -57,6 +68,10 @@ func NewServer(traceRequests, debugSingleRequest bool, logger zerolog.Logger, rp
 		keepHeaders:         keepHeaders,
 		logger:              logger,
 		rpcSlowLogThreshold: rpcSlowLogThreshold,
+		mh: &metricsHandler{
+			meter:  meter,
+			failed: failedCounter,
+		},
 	}
 
 	// Register the default service providing meta-information about the RPC service such
@@ -128,7 +143,8 @@ func (s *Server) ServeSingleRequest(ctx context.Context, r *http.Request, w http
 	}
 	ctx = context.WithValue(ctx, HeadersContextKey, headers)
 
-	h := newHandler(ctx, codec, &s.services, s.batchConcurrency, s.traceRequests, s.logger, s.rpcSlowLogThreshold)
+	h := newHandler(ctx, codec, &s.services, s.batchConcurrency,
+		s.traceRequests, s.logger, s.rpcSlowLogThreshold, s.mh)
 
 	reqs, batch, err := codec.Read()
 	if err != nil {
