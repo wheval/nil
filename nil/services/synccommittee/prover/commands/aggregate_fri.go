@@ -41,7 +41,7 @@ func (cmd *aggregateFRICmd) MakeCommandDefinition(task *types.Task) (*CommandDef
 	combinedQ := append([]string{"--input-combined-Q-polynomial-files"}, combinedQFiles...)
 
 	resFiles := make(types.TaskOutputArtifacts)
-	filePostfix := fmt.Sprintf(".%v.%v", task.ShardId, task.BlockHash.String())
+	filePostfix := fmt.Sprintf(".%v", task.BatchId)
 	resFiles[types.AggregatedFRIProof] = filepath.Join(cmd.outDir, "aggregated_FRI_proof"+filePostfix)
 	resFiles[types.ProofOfWork] = filepath.Join(cmd.outDir, "POW"+filePostfix)
 	resFiles[types.ConsistencyCheckChallenges] = filepath.Join(cmd.outDir, "challenges"+filePostfix)

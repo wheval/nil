@@ -117,38 +117,23 @@ func (s *BlockBatchTestSuite) TestNewBlockBatch() {
 	}
 }
 
-/* TODO update with respect new task policy
-func (s *BlockBatchTestSuite) TestCreateProofTasks() {
+func (s *BlockBatchTestSuite) TestCreateProofTask() {
 	const childBLockCount = 4
 	batch := testaide.NewBlockBatch(childBLockCount)
 
-	taskEntries, err := batch.CreateProofTasks(testaide.Now)
+	taskEntry, err := batch.CreateProofTask(testaide.Now)
 	s.Require().NoError(err)
 
-	s.Require().Len(taskEntries, childBLockCount+1)
+	task := taskEntry.Task
+	s.Require().Equal(types.ProofBatch, task.TaskType)
+	s.Require().Equal(batch.Id, task.BatchId)
+	s.Require().Equal(batch.MainShardBlock.Hash, task.BlockIds[0].Hash)
+	s.Require().Nil(task.ParentTaskId)
 
-	shardTasks := make(map[coreTypes.ShardId]types.Task)
-	for _, entry := range taskEntries {
-		shardTasks[entry.Task.ShardId] = entry.Task
+	for i, childBlock := range batch.ChildBlocks {
+		// `testaide.NewBlockBatch(n)` creates one main shard block and `n` child blocks, each for different shard
+		taskChildBlock := task.BlockIds[i+1]
+
+		s.Require().Equal(childBlock.Hash, taskChildBlock.Hash)
 	}
-
-	mainShardTask, ok := shardTasks[coreTypes.MainShardId]
-	s.Require().True(ok)
-
-	s.Require().Equal(types.AggregateProofs, mainShardTask.TaskType)
-	s.Require().Equal(batch.Id, mainShardTask.BatchId)
-	s.Require().Equal(batch.MainShardBlock.Hash, mainShardTask.BlockHash)
-	s.Require().Equal(batch.MainShardBlock.Number, mainShardTask.BlockNum)
-	s.Require().Nil(mainShardTask.ParentTaskId)
-
-	for _, childBlock := range batch.ChildBlocks {
-		childTask, ok := shardTasks[childBlock.ShardId]
-		s.Require().True(ok)
-
-		s.Require().Equal(types.ProofBlock, childTask.TaskType)
-		s.Require().Equal(batch.Id, childTask.BatchId)
-		s.Require().Equal(childBlock.Hash, childTask.BlockHash)
-		s.Require().Equal(childBlock.Number, childTask.BlockNum)
-		s.Require().Equal(mainShardTask.Id, *childTask.ParentTaskId)
-	}
-}*/
+}

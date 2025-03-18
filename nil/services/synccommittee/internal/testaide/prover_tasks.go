@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common/check"
-	coreTypes "github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 )
 
@@ -56,12 +55,9 @@ func NewTask() *types.Task {
 
 func NewTaskOfType(taskType types.TaskType) *types.Task {
 	return &types.Task{
-		Id:        types.NewTaskId(),
-		BatchId:   types.NewBatchId(),
-		ShardId:   coreTypes.MainShardId,
-		BlockNum:  1,
-		BlockHash: RandomHash(),
-		TaskType:  taskType,
+		Id:       types.NewTaskId(),
+		BatchId:  types.NewBatchId(),
+		TaskType: taskType,
 	}
 }
 

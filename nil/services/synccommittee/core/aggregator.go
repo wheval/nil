@@ -348,21 +348,21 @@ func (agg *aggregator) handleBlockBatch(ctx context.Context, batch *types.BlockB
 	return nil
 }
 
-// createProofTask generates proof tasks for block batch
+// createProofTask generates proof task for block batch
 func (agg *aggregator) createProofTasks(ctx context.Context, batch *types.BlockBatch) error {
 	currentTime := agg.clock.Now()
-	proofTasks, err := batch.CreateProofTasks(currentTime)
+	proofTask, err := batch.CreateProofTask(currentTime)
 	if err != nil {
 		return fmt.Errorf("error creating proof tasks, mainHash=%s: %w", batch.MainShardBlock.Hash, err)
 	}
 
-	if err := agg.taskStorage.AddTaskEntries(ctx, proofTasks...); err != nil {
+	if err := agg.taskStorage.AddTaskEntries(ctx, proofTask); err != nil {
 		return fmt.Errorf("error adding task entries, mainHash=%s: %w", batch.MainShardBlock.Hash, err)
 	}
 
 	agg.logger.Debug().
 		Stringer(logging.FieldBatchId, batch.Id).
-		Msgf("created %d proof tasks, mainHash=%s", len(proofTasks), batch.MainShardBlock.Hash)
+		Msgf("created proof task, mainHash=%s", batch.MainShardBlock.Hash)
 
 	return nil
 }

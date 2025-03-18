@@ -6,6 +6,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/scheduler"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
@@ -70,54 +71,37 @@ func (s *BlockTasksIntegrationTestSuite) SetupTest() {
 	s.Require().NoError(err, "failed to set proved root in SetUpTest")
 }
 
-/* TODO update with respect new task policy
 func (s *BlockTasksIntegrationTestSuite) Test_Provide_Tasks_And_Handle_Success_Result() {
 	batch := testaide.NewBlockBatch(1)
 	err := s.blockStorage.SetBlockBatch(s.ctx, batch)
 	s.Require().NoError(err)
 
-	proofTasks, err := batch.CreateProofTasks(s.clock.Now())
+	proofTask, err := batch.CreateProofTask(s.clock.Now())
 	s.Require().NoError(err)
 
-	err = s.taskStorage.AddTaskEntries(s.ctx, proofTasks...)
+	err = s.taskStorage.AddTaskEntries(s.ctx, proofTask)
 	s.Require().NoError(err)
 
 	executorId := testaide.RandomExecutorId()
 
-	// requesting next task for execution
+	// requesting batch proof task for execution
 	taskToExecute, err := s.scheduler.GetTask(s.ctx, api.NewTaskRequest(executorId))
 	s.Require().NoError(err)
 	s.Require().NotNil(taskToExecute)
-	s.Require().Equal(types.ProofBlock, taskToExecute.TaskType)
+	s.Require().Equal(types.ProofBatch, taskToExecute.TaskType)
 
 	// no new tasks available yet
 	nonAvailableTask, err := s.scheduler.GetTask(s.ctx, api.NewTaskRequest(executorId))
 	s.Require().NoError(err)
 	s.Require().Nil(nonAvailableTask)
 
-	// successfully completing child block proof
-	blockProofResult := newTestSuccessProviderResult(taskToExecute, executorId)
-	err = s.scheduler.SetTaskResult(s.ctx, blockProofResult)
-	s.Require().NoError(err)
-
-	// proposal data should not be available yet
-	proposalData, err := s.blockStorage.TryGetNextProposalData(s.ctx)
-	s.Require().NoError(err)
-	s.Require().Nil(proposalData)
-
-	// requesting next task for execution
-	taskToExecute, err = s.scheduler.GetTask(s.ctx, api.NewTaskRequest(executorId))
-	s.Require().NoError(err)
-	s.Require().NotNil(taskToExecute)
-	s.Require().Equal(types.AggregateProofs, taskToExecute.TaskType)
-
-	// completing top-level aggregate proofs task
-	aggregateProofsResult := newTestSuccessProviderResult(taskToExecute, executorId)
-	err = s.scheduler.SetTaskResult(s.ctx, aggregateProofsResult)
+	// successfully completing batch proof task
+	batchProofResult := newTestSuccessProviderResult(taskToExecute, executorId)
+	err = s.scheduler.SetTaskResult(s.ctx, batchProofResult)
 	s.Require().NoError(err)
 
 	// once top-level task is completed, proposal data for the main block should become available
-	proposalData, err = s.blockStorage.TryGetNextProposalData(s.ctx)
+	proposalData, err := s.blockStorage.TryGetNextProposalData(s.ctx)
 	s.Require().NoError(err)
 	s.Require().NotNil(proposalData)
 	s.Require().Equal(batch.MainShardBlock.Hash, proposalData.MainShardBlockHash)
@@ -128,39 +112,28 @@ func (s *BlockTasksIntegrationTestSuite) Test_Provide_Tasks_And_Handle_Failure_R
 	err := s.blockStorage.SetBlockBatch(s.ctx, batch)
 	s.Require().NoError(err)
 
-	proofTasks, err := batch.CreateProofTasks(s.clock.Now())
+	proofTask, err := batch.CreateProofTask(s.clock.Now())
 	s.Require().NoError(err)
 
-	err = s.taskStorage.AddTaskEntries(s.ctx, proofTasks...)
+	err = s.taskStorage.AddTaskEntries(s.ctx, proofTask)
 	s.Require().NoError(err)
 
 	executorId := testaide.RandomExecutorId()
 
-	// requesting next task for execution
+	// requesting batch proof task
 	taskToExecute, err := s.scheduler.GetTask(s.ctx, api.NewTaskRequest(executorId))
 	s.Require().NoError(err)
 	s.Require().NotNil(taskToExecute)
-	s.Require().Equal(types.ProofBlock, taskToExecute.TaskType)
+	s.Require().Equal(types.ProofBatch, taskToExecute.TaskType)
 
-	// successfully completing child block proof
-	blockProofResult := newTestSuccessProviderResult(taskToExecute, executorId)
-	err = s.scheduler.SetTaskResult(s.ctx, blockProofResult)
-	s.Require().NoError(err)
-
-	// requesting next task for execution
-	taskToExecute, err = s.scheduler.GetTask(s.ctx, api.NewTaskRequest(executorId))
-	s.Require().NoError(err)
-	s.Require().NotNil(taskToExecute)
-	s.Require().Equal(types.AggregateProofs, taskToExecute.TaskType)
-
-	// setting top-level task as failed
-	aggregateProofsFailed := types.NewFailureProviderTaskResult(
+	// setting batch proof task as failed
+	batchProofFailed := types.NewFailureProviderTaskResult(
 		taskToExecute.Id,
 		executorId,
-		types.NewTaskExecError(types.TaskErrProofGenerationFailed, "block proof generation failed"),
+		types.NewTaskExecError(types.TaskErrProofGenerationFailed, "batch proof generation failed"),
 	)
 
-	err = s.scheduler.SetTaskResult(s.ctx, aggregateProofsFailed)
+	err = s.scheduler.SetTaskResult(s.ctx, batchProofFailed)
 	s.Require().NoError(err)
 
 	// proposal data should not become available
@@ -182,7 +155,7 @@ func newTestSuccessProviderResult(taskToExecute *types.Task, executorId types.Ta
 		types.TaskOutputArtifacts{},
 		types.TaskResultData{},
 	)
-}*/
+}
 
 type noopStateResetLauncher struct{}
 
