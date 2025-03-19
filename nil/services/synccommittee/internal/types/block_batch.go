@@ -50,9 +50,10 @@ func (id *BatchId) Set(val string) error {
 }
 
 type BlockBatch struct {
-	Id        BatchId    `json:"id"`
-	ParentId  *BatchId   `json:"parentId"`
-	Subgraphs []Subgraph `json:"subgraphs"`
+	Id         BatchId    `json:"id"`
+	ParentId   *BatchId   `json:"parentId"`
+	Subgraphs  []Subgraph `json:"subgraphs"`
+	DataProofs DataProofs `json:"dataProofs"`
 }
 
 func NewBlockBatch(parentId *BatchId, subgraphs ...Subgraph) (*BlockBatch, error) {
@@ -215,6 +216,10 @@ func (b *BlockBatch) sortedExecShards() []types.ShardId {
 func (b *BlockBatch) CreateProofTask(currentTime time.Time) (*TaskEntry, error) {
 	blockIds := b.BlockIds()
 	return NewBatchProofTaskEntry(b.Id, blockIds, currentTime)
+}
+
+func (b *BlockBatch) SetDataProofs(dataProofs DataProofs) {
+	b.DataProofs = dataProofs
 }
 
 type PrunedBatch struct {

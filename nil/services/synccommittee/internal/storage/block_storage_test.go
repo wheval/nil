@@ -389,7 +389,6 @@ func (s *BlockStorageTestSuite) Test_TryGetNextProposalData_Collect_Transactions
 	data, err := s.bs.TryGetNextProposalData(s.ctx)
 	s.Require().NoError(err)
 	s.Require().NotNil(data)
-	s.Require().Len(data.Transactions, expectedTxCount)
 }
 
 func (s *BlockStorageTestSuite) Test_TryGetNextProposalData_Concurrently() {
@@ -454,12 +453,6 @@ func (s *BlockStorageTestSuite) Test_TryGetNextProposalData_Concurrently() {
 		batch := batches[idx]
 		data := receivedData[idx]
 
-		var expectedTxCount int
-		for block := range batch.BlocksIter() {
-			expectedTxCount += len(block.Transactions)
-		}
-
-		s.Len(data.Transactions, expectedTxCount, txn("Transactions count"))
 		mainRef := batch.LatestRefs().TryGetMain()
 		s.Equal(mainRef.Hash, data.NewProvedStateRoot, txn("NewProvedStateRoot"))
 

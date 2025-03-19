@@ -155,15 +155,9 @@ func NewExecutionShardBlock() *scTypes.Block {
 }
 
 func NewProposalData(txCount int, currentTime time.Time) *scTypes.ProposalData {
-	transactions := make([]scTypes.PrunedTransaction, 0, txCount)
-	for range txCount {
-		tx := scTypes.NewTransaction(NewRpcInTransaction())
-		transactions = append(transactions, tx)
-	}
-
 	return scTypes.NewProposalData(
 		scTypes.NewBatchId(),
-		transactions,
+		scTypes.DataProofs{},
 		RandomHash(),
 		RandomHash(),
 		currentTime.Add(-time.Hour),
