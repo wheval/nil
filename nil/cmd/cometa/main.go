@@ -125,7 +125,6 @@ func parseArgs() *config {
 			cfg.command = CommandRun
 		},
 	}
-	rootCmd.AddCommand(runCmd)
 
 	createConfigCmd := &cobra.Command{
 		Use:   "create-config",
@@ -135,10 +134,10 @@ func parseArgs() *config {
 			cfg.command = CommandCreateConfig
 		},
 	}
-	rootCmd.AddCommand(createConfigCmd)
+	rootCmd.AddCommand(createConfigCmd, runCmd)
 
 	var logLevel string
-	cobrax.AddLogLevelFlag(rootCmd.Flags(), &logLevel)
+	cobrax.AddLogLevelFlag(rootCmd.PersistentFlags(), &logLevel)
 
 	check.PanicIfErr(rootCmd.Execute())
 
