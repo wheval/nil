@@ -121,7 +121,7 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 			s.Require().NoError(err)
 		}
 		localApi := rawapi.NewNodeApiOverShardApis(localShardApis)
-		c, err := client.NewEthClient(s.Context, s.Db, localApi, zerolog.New(os.Stderr))
+		c, err := client.NewEthClient(s.Context, s.Db, localApi, logging.NewFromZerolog(zerolog.New(os.Stderr)))
 		s.Require().NoError(err)
 		s.Client = c
 	} else {
@@ -130,7 +130,7 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 		} else {
 			s.Endpoint = strings.Replace(cfg.HttpUrl, "tcp://", "http://", 1)
 		}
-		s.Client = rpc_client.NewClient(s.Endpoint, zerolog.New(os.Stderr))
+		s.Client = rpc_client.NewClient(s.Endpoint, logging.NewFromZerolog(zerolog.New(os.Stderr)))
 	}
 
 	if cfg.RunMode == nilservice.BlockReplayRunMode {

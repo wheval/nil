@@ -8,6 +8,7 @@ import (
 
 	rpc_client "github.com/NilFoundation/nil/nil/client/rpc"
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc"
@@ -130,7 +131,7 @@ func (s *SuiteRpcService) TestRpcApiModules() {
 }
 
 func (s *SuiteRpcService) TestUnsupportedCliVersion() {
-	logger := zerolog.New(os.Stderr)
+	logger := logging.NewFromZerolog(zerolog.New(os.Stderr))
 	s.Run("Unsupported version", func() {
 		client := rpc_client.NewClientWithDefaultHeaders(
 			s.Endpoint, logger, map[string]string{"User-Agent": "nil-cli/12"})
@@ -156,7 +157,7 @@ func (s *SuiteRpcService) TestUnsupportedCliVersion() {
 }
 
 func (s *SuiteRpcService) TestUnsupportedNiljsVersion() {
-	logger := zerolog.New(os.Stderr)
+	logger := logging.NewFromZerolog(zerolog.New(os.Stderr))
 
 	s.Run("Invalid version", func() {
 		client := rpc_client.NewClientWithDefaultHeaders(

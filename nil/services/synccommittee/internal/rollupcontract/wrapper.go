@@ -11,12 +11,12 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/concurrent"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/rs/zerolog"
 )
 
 type Wrapper struct {
@@ -26,7 +26,7 @@ type Wrapper struct {
 	privateKey      *ecdsa.PrivateKey
 	chainID         *big.Int
 	ethClient       EthClient
-	logger          zerolog.Logger
+	logger          logging.Logger
 }
 
 func NewWrapper(
@@ -35,7 +35,7 @@ func NewWrapper(
 	privateKeyHex string,
 	ethClient EthClient,
 	requestTimeout time.Duration,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (*Wrapper, error) {
 	contactAddress := ethcommon.HexToAddress(contractAddressHex)
 	rollupContract, err := NewRollupcontract(contactAddress, ethClient)

@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/rs/zerolog"
 )
 
 type notifiee struct {
@@ -21,7 +20,7 @@ type notifiee struct {
 	lastUpdateSecond int64                 // +checklocks:mu
 	mu               sync.Mutex
 
-	logger zerolog.Logger // +checklocksignore: thread safe
+	logger logging.Logger // +checklocksignore: thread safe
 }
 
 var (
@@ -32,7 +31,7 @@ var (
 func newNotifiee(
 	basicNotifee network.Notifiee,
 	config *Config,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) *notifiee {
 	if config == nil {
 		config = NewDefaultConfig()

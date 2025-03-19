@@ -11,9 +11,9 @@ import (
 	"unicode"
 
 	"github.com/NilFoundation/nil/nil/common/check"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/rs/zerolog"
 )
 
 var (
@@ -25,7 +25,7 @@ var (
 type serviceRegistry struct {
 	mu       sync.Mutex
 	services map[string]service
-	logger   zerolog.Logger
+	logger   logging.Logger
 }
 
 // service represents a registered object.
@@ -42,7 +42,7 @@ type callback struct {
 	hasCtx     bool           // method's first argument is a context (not included in argTypes)
 	errPos     int            // err return idx, of -1 when method cannot return error
 	streamable bool           // support JSON streaming (more efficient for large responses)
-	logger     zerolog.Logger
+	logger     logging.Logger
 }
 
 func (r *serviceRegistry) registerName(name string, rcvr interface{}) error {
@@ -88,7 +88,7 @@ func (r *serviceRegistry) callback(method string) *callback {
 // suitableCallbacks iterates over the methods of the given type. It determines if a method
 // satisfies the criteria for a RPC callback and adds it to the collection of callbacks.
 // See server documentation for a summary of these criteria.
-func suitableCallbacks(receiver reflect.Value, logger zerolog.Logger) map[string]*callback {
+func suitableCallbacks(receiver reflect.Value, logger logging.Logger) map[string]*callback {
 	typ := receiver.Type()
 	callbacks := make(map[string]*callback)
 	for m := range typ.NumMethod() {
@@ -108,7 +108,7 @@ func suitableCallbacks(receiver reflect.Value, logger zerolog.Logger) map[string
 
 // newCallback turns fn (a function) into a callback object. It returns nil if the function
 // is unsuitable as an RPC callback.
-func newCallback(receiver, fn reflect.Value, name string, logger zerolog.Logger) *callback {
+func newCallback(receiver, fn reflect.Value, name string, logger logging.Logger) *callback {
 	fntype := fn.Type()
 	c := &callback{fn: fn, rcvr: receiver, errPos: -1, logger: logger}
 	// Determine parameter types. They must all be exported or builtin types.

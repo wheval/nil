@@ -18,7 +18,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/signer"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/rs/zerolog"
 )
 
 var (
@@ -56,7 +55,7 @@ type Validator struct {
 	subsId    uint64
 	subs      map[uint64]chan types.BlockNumber
 
-	logger zerolog.Logger
+	logger logging.Logger
 }
 
 func NewValidator(

@@ -12,7 +12,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/rs/zerolog"
 )
 
 type ReplayParams struct {
@@ -29,7 +28,7 @@ type ReplayScheduler struct {
 
 	params ReplayParams
 
-	logger zerolog.Logger
+	logger logging.Logger
 }
 
 func NewReplayScheduler(txFabric db.DB, params ReplayParams) *ReplayScheduler {

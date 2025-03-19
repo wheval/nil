@@ -12,7 +12,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/rs/zerolog"
 )
 
 type BlockGeneratorParams struct {
@@ -39,7 +38,7 @@ type BlockGenerator struct {
 	rwTx           db.RwTx
 	executionState *ExecutionState
 
-	logger   zerolog.Logger
+	logger   logging.Logger
 	mh       *MetricsHandler
 	counters *BlockGeneratorCounters
 }

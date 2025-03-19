@@ -10,7 +10,6 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -160,7 +159,7 @@ func (batchOp) putBatchParentIndexEntry(tx db.RwTx, batch *scTypes.BlockBatch) e
 	return nil
 }
 
-func (t batchOp) deleteBatch(tx db.RwTx, batch *batchEntry, logger zerolog.Logger) error {
+func (t batchOp) deleteBatch(tx db.RwTx, batch *batchEntry, logger logging.Logger) error {
 	if err := tx.Delete(batchesTable, batch.Id.Bytes()); err != nil {
 		return fmt.Errorf("failed to delete batch with id=%s: %w", batch.Id, err)
 	}
@@ -172,7 +171,7 @@ func (t batchOp) deleteBatch(tx db.RwTx, batch *batchEntry, logger zerolog.Logge
 	return nil
 }
 
-func (batchOp) deleteBatchParentIndexEntry(tx db.RwTx, batch *batchEntry, logger zerolog.Logger) error {
+func (batchOp) deleteBatchParentIndexEntry(tx db.RwTx, batch *batchEntry, logger logging.Logger) error {
 	if batch.ParentId == nil {
 		return nil
 	}

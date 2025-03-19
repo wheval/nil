@@ -55,4 +55,9 @@ const (
 	FieldClientType    = "clientType"
 	FieldClientVersion = "clientVersion"
 	FieldUid           = "uid"
+
+	FieldStoreToClickhouse = "storeToClickhouse"
+
+	FieldHostName    = "_HOSTNAME"
+	FieldSystemdUnit = "_SYSTEMD_UNIT"
 )

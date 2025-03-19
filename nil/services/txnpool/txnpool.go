@@ -12,7 +12,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/rs/zerolog"
 )
 
 // FeeBumpPercentage is the percentage of the priorityFee that a transaction must exceed to replace another transaction.
@@ -45,7 +44,7 @@ type TxnPool struct {
 	byHash map[string]*metaTxn // hash => txn : only those records not committed to db yet
 	all    *ByReceiverAndSeqno // from => (sorted map of txn seqno => *txn)
 	queue  *TxnQueue
-	logger zerolog.Logger
+	logger logging.Logger
 }
 
 func New(ctx context.Context, cfg Config, networkManager *network.Manager) (*TxnPool, error) {

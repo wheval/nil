@@ -3,6 +3,7 @@ package proofprovider
 import (
 	"context"
 
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/log"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
@@ -20,7 +21,7 @@ type taskHandler struct {
 	skipRate    int
 	taskNum     int
 	clock       clockwork.Clock
-	logger      zerolog.Logger
+	logger      logging.Logger
 }
 
 func newTaskHandler(
@@ -28,7 +29,7 @@ func newTaskHandler(
 	resultSaver TaskResultSaver,
 	skipRate int,
 	clock clockwork.Clock,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) api.TaskHandler {
 	return &taskHandler{
 		taskStorage: taskStorage,

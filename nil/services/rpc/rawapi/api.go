@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
 	rpctypes "github.com/NilFoundation/nil/nil/services/rpc/types"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
-	"github.com/rs/zerolog"
 )
 
 type NodeApiRo interface {
@@ -110,7 +110,7 @@ type ShardApiRo interface {
 	ClientVersion(ctx context.Context) (string, error)
 
 	setAsP2pRequestHandlersIfAllowed(
-		ctx context.Context, networkManager *network.Manager, readonly bool, logger zerolog.Logger) error
+		ctx context.Context, networkManager *network.Manager, readonly bool, logger logging.Logger) error
 	setNodeApi(nodeApi NodeApi)
 }
 
@@ -124,7 +124,7 @@ func SetShardApiAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
 	networkManager *network.Manager,
 	readonly bool,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) error {
 	return shardApi.setAsP2pRequestHandlersIfAllowed(ctx, networkManager, readonly, logger)
 }

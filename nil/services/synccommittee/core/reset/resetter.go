@@ -6,7 +6,6 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common/logging"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
-	"github.com/rs/zerolog"
 )
 
 type BatchResetter interface {
@@ -21,10 +20,10 @@ type BatchResetter interface {
 
 type StateResetter struct {
 	batchResetter BatchResetter
-	logger        zerolog.Logger
+	logger        logging.Logger
 }
 
-func NewStateResetter(logger zerolog.Logger, batchResetter BatchResetter) *StateResetter {
+func NewStateResetter(logger logging.Logger, batchResetter BatchResetter) *StateResetter {
 	return &StateResetter{
 		batchResetter: batchResetter,
 		logger:        logger,

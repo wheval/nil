@@ -11,7 +11,6 @@ import (
 	"github.com/NilFoundation/nil/nil/common/version"
 	"github.com/NilFoundation/nil/nil/internal/cobrax"
 	"github.com/NilFoundation/nil/nil/services/cometa"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
@@ -53,7 +52,7 @@ func main() {
 func processRun(cfg *config) error {
 	client := rpc.NewClientWithDefaultHeaders(
 		cfg.cometaCfg.NodeEndpoint,
-		zerolog.Nop(),
+		logging.Nop(),
 		map[string]string{
 			"User-Agent": "cometa/" + version.GetGitRevCount(),
 		},

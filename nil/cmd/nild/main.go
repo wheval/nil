@@ -17,7 +17,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/cometa"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -224,7 +223,7 @@ func parseArgs() *nildconfig.Config {
 	return cfg
 }
 
-func openDb(dbPath string, allowDrop bool, logger zerolog.Logger) (db.DB, error) {
+func openDb(dbPath string, allowDrop bool, logger logging.Logger) (db.DB, error) {
 	dbExists := true
 	if _, err := os.Open(dbPath); err != nil {
 		if !os.IsNotExist(err) {

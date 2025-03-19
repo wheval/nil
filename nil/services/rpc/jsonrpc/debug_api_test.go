@@ -13,7 +13,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -81,7 +80,7 @@ func TestDebugGetBlock(t *testing.T) {
 		types.MainShardId: mainShardApi,
 	}
 	localApi := rawapi.NewNodeApiOverShardApis(localShardApis)
-	api := NewDebugAPI(localApi, log.Logger)
+	api := NewDebugAPI(localApi, logging.GlobalLogger)
 
 	// When: Get the latest block
 	res1, err := api.GetBlockByNumber(ctx, types.MainShardId, transport.LatestBlockNumber, false)

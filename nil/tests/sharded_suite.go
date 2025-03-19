@@ -12,6 +12,7 @@ import (
 	"github.com/NilFoundation/nil/nil/client"
 	rpc_client "github.com/NilFoundation/nil/nil/client/rpc"
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
@@ -217,7 +218,7 @@ func (s *ShardedSuite) start(
 			Db:         s.DbInit(),
 			RpcUrl:     url,
 			P2pAddress: p2pAddresses[index],
-			Client:     rpc_client.NewClient(url, zerolog.New(os.Stderr)),
+			Client:     rpc_client.NewClient(url, logging.NewFromZerolog(zerolog.New(os.Stderr))),
 		}
 	}
 
@@ -337,7 +338,7 @@ func (s *ShardedSuite) StartArchiveNode(params *ArchiveNodeConfig) (client.Clien
 		s.NoError(node.Run())
 	}()
 
-	c := rpc_client.NewClient(cfg.HttpUrl, zerolog.New(os.Stderr))
+	c := rpc_client.NewClient(cfg.HttpUrl, logging.NewFromZerolog(zerolog.New(os.Stderr)))
 	s.checkNodeStart(cfg.NShards, c)
 	return c, addr
 }
@@ -378,7 +379,7 @@ func (s *ShardedSuite) StartRPCNode(
 		s.NoError(node.Run())
 	}()
 
-	c := rpc_client.NewClient(cfg.HttpUrl, zerolog.New(os.Stderr))
+	c := rpc_client.NewClient(cfg.HttpUrl, logging.NewFromZerolog(zerolog.New(os.Stderr)))
 	s.checkNodeStart(cfg.NShards, c)
 	return c, cfg.HttpUrl
 }

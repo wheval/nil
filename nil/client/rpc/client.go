@@ -19,12 +19,12 @@ import (
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
-	"github.com/rs/zerolog"
 )
 
 // CallError represents an error that occurs during a remote procedure call,
@@ -95,7 +95,7 @@ type Client struct {
 	seqno    atomic.Uint64
 	client   http.Client
 	headers  map[string]string
-	logger   zerolog.Logger
+	logger   logging.Logger
 	retrier  *common.RetryRunner
 }
 
@@ -201,11 +201,11 @@ func RunContractBatch(ctx context.Context, client *Client, smartAccount types.Ad
 	return txHash, nil
 }
 
-func NewClient(endpoint string, logger zerolog.Logger, opts ...Option) *Client {
+func NewClient(endpoint string, logger logging.Logger, opts ...Option) *Client {
 	return NewClientWithDefaultHeaders(endpoint, logger, nil, opts...)
 }
 
-func NewRawClient(endpoint string, logger zerolog.Logger, opts ...Option) client.RawClient {
+func NewRawClient(endpoint string, logger logging.Logger, opts ...Option) client.RawClient {
 	return NewClient(endpoint, logger, opts...)
 }
 
@@ -228,7 +228,7 @@ func NewHttpClient(url string) (http.Client, string) {
 }
 
 func NewClientWithDefaultHeaders(
-	url string, logger zerolog.Logger, headers map[string]string, opts ...Option,
+	url string, logger logging.Logger, headers map[string]string, opts ...Option,
 ) *Client {
 	var cfg config
 	for _, opt := range opts {

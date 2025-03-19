@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/jonboulle/clockwork"
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -46,7 +46,7 @@ func NewEventStorage(
 	database db.DB,
 	clock clockwork.Clock,
 	metrics EventStorageMetrics,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (*EventStorage, error) {
 	es := &EventStorage{
 		database: database,

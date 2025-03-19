@@ -45,7 +45,7 @@ func NewTaskStorage(
 	db db.DB,
 	clock clockwork.Clock,
 	metrics TaskStorageMetrics,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) *TaskStorage {
 	return &TaskStorage{
 		commonStorage: makeCommonStorage(

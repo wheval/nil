@@ -11,6 +11,7 @@ import (
 	cliservice_common "github.com/NilFoundation/nil/nil/cmd/nil/common"
 	"github.com/NilFoundation/nil/nil/cmd/nild/nildconfig"
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/common/version"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -19,7 +20,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/rs/zerolog"
 )
 
 func backgroundNilNode(cfg *nildconfig.Config) {
@@ -43,14 +43,14 @@ func backgroundNilNode(cfg *nildconfig.Config) {
 }
 
 func waitStartNil(rpcEndpoint string) error {
-	client := rpc.NewClient(rpcEndpoint, zerolog.Nop())
+	client := rpc.NewClient(rpcEndpoint, logging.Nop())
 	ctx := context.Background()
 	retryRunner := common.NewRetryRunner(
 		common.RetryConfig{
 			ShouldRetry: common.LimitRetries(5),
 			NextDelay:   common.DelayExponential(100*time.Millisecond, time.Second),
 		},
-		zerolog.Nop(),
+		logging.Nop(),
 	)
 
 	err := retryRunner.Do(ctx, func(context.Context) error {
@@ -74,7 +74,7 @@ func RunNilNode(rpcEndpoint string) error {
 	return waitStartNil(rpcEndpoint) // make sure if service started
 }
 
-func GetRpcClient(rpcEndpoint string, logger zerolog.Logger) *rpc.Client {
+func GetRpcClient(rpcEndpoint string, logger logging.Logger) *rpc.Client {
 	return rpc.NewClientWithDefaultHeaders(
 		rpcEndpoint,
 		logger,
@@ -88,7 +88,7 @@ func GetFaucetRpcClient(faucetEndpoint string) *faucet.Client {
 	return faucet.NewClient(faucetEndpoint)
 }
 
-func CreateCliService(rpcEndpoint, hexKey string, logger zerolog.Logger) (*cliservice.Service, error) {
+func CreateCliService(rpcEndpoint, hexKey string, logger logging.Logger) (*cliservice.Service, error) {
 	faucet := GetFaucetRpcClient(rpcEndpoint)
 	rpc := GetRpcClient(rpcEndpoint, logger)
 	service := cliservice.NewService(context.Background(), rpc, nil, faucet)
@@ -99,7 +99,7 @@ func CreateCliService(rpcEndpoint, hexKey string, logger zerolog.Logger) (*clise
 	return service, nil
 }
 
-func CreateNewSmartAccount(rpcEndpoint string, logger zerolog.Logger) (string, string, error) {
+func CreateNewSmartAccount(rpcEndpoint string, logger logging.Logger) (string, string, error) {
 	keygen := cliservice.NewService(context.Background(), &rpc.Client{}, nil, nil)
 	if err := keygen.GenerateNewKey(); err != nil {
 		return "", "", err
@@ -131,7 +131,7 @@ func DeployContract(
 	path string,
 	hexKey string,
 	args []string,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (string, error) {
 	binPath := path + ".bin"
 	abiPath := path + ".abi"
@@ -168,7 +168,7 @@ func DeployContract(
 	return addr.Hex(), nil
 }
 
-func CallContract(rpcEndpoint, smartAccountAdr, hexKey string, calls []Call, logger zerolog.Logger) (string, error) {
+func CallContract(rpcEndpoint, smartAccountAdr, hexKey string, calls []Call, logger logging.Logger) (string, error) {
 	srv, err := CreateCliService(rpcEndpoint, hexKey, logger)
 	if err != nil {
 		return "", err

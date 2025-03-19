@@ -18,7 +18,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi/pb"
 	"github.com/multiformats/go-multistream"
-	"github.com/rs/zerolog"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -43,7 +42,7 @@ type Syncer struct {
 	db             db.DB
 	networkManager *network.Manager
 
-	logger zerolog.Logger
+	logger logging.Logger
 
 	waitForSync *sync.WaitGroup
 

@@ -12,7 +12,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi/pb"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/protobuf/proto"
 )
@@ -23,7 +22,7 @@ type RawApiTestSuite struct {
 	suite.Suite
 
 	ctx                  context.Context
-	logger               zerolog.Logger
+	logger               logging.Logger
 	serverNetworkManager *network.Manager
 	clientNetworkManager *network.Manager
 	serverPeerId         network.PeerID

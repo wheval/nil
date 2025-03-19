@@ -8,6 +8,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -18,7 +19,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/prover/tracer/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/prover/tracer/internal/mpttracer"
-	"github.com/rs/zerolog"
 )
 
 type TracerStateDB struct {
@@ -30,7 +30,7 @@ type TracerStateDB struct {
 	RwCounter        RwCounter
 	Stats            Stats
 	AccountSparseMpt mpt.MerklePatriciaTrie
-	logger           zerolog.Logger
+	logger           logging.Logger
 	mptTracer        *mpttracer.MPTTracer // unlike others MPT tracer keeps its state between transactions
 	gasPrice         types.Value
 	refund           uint64
@@ -180,7 +180,7 @@ func NewTracerStateDB(
 	blkContext *vm.BlockContext,
 	db db.DB,
 	chainConfig *jsonrpc.ChainConfig,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (*TracerStateDB, error) {
 	rwTx, err := db.CreateRwTx(ctx)
 	if err != nil {

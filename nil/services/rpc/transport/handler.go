@@ -31,7 +31,7 @@ type handler struct {
 	rootCtx    context.Context // canceled by close()
 	cancelRoot func()          // cancel function for rootCtx
 	conn       JsonWriter      // where responses will be sent
-	logger     zerolog.Logger
+	logger     logging.Logger
 	mh         *metricsHandler
 
 	maxBatchConcurrency uint
@@ -83,7 +83,7 @@ func newHandler(
 	reg *serviceRegistry,
 	maxBatchConcurrency uint,
 	traceRequests bool,
-	logger zerolog.Logger,
+	logger logging.Logger,
 	rpcSlowLogThreshold time.Duration,
 	mh *metricsHandler,
 ) *handler {

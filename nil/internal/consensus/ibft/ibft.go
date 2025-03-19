@@ -17,7 +17,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/telemetry/telattr"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/rs/zerolog"
 )
 
 const ibftProto = "/ibft/0.2"
@@ -46,7 +45,7 @@ type backendIBFT struct {
 	consensus    *core.IBFT
 	shardId      types.ShardId
 	validator    validator
-	logger       zerolog.Logger
+	logger       logging.Logger
 	nm           *network.Manager
 	transport    transport
 	signer       *Signer
@@ -86,7 +85,7 @@ func (i *backendIBFT) BuildProposal(view *protoIBFT.View) []byte {
 func (i *backendIBFT) buildSignature(
 	committedSeals []*messages.CommittedSeal,
 	height uint64,
-	logger zerolog.Logger,
+	logger logging.Logger,
 ) (*types.BlsAggregateSignature, error) {
 	params, err := config.GetConfigParams(i.ctx, i.txFabric, i.shardId, height)
 	if err != nil {

@@ -14,7 +14,6 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/prover/tracer/api"
-	"github.com/rs/zerolog"
 )
 
 type RemoteTracer interface {
@@ -24,7 +23,7 @@ type RemoteTracer interface {
 
 type RemoteTracerImpl struct {
 	client api.RpcClient
-	logger zerolog.Logger
+	logger logging.Logger
 }
 
 var _ RemoteTracer = new(RemoteTracerImpl)
@@ -40,7 +39,7 @@ type TraceConfig struct {
 	MarshalMode  MarshalMode
 }
 
-func NewRemoteTracer(client api.RpcClient, logger zerolog.Logger) (*RemoteTracerImpl, error) {
+func NewRemoteTracer(client api.RpcClient, logger logging.Logger) (*RemoteTracerImpl, error) {
 	return &RemoteTracerImpl{
 		client: client,
 		logger: logger,

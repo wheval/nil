@@ -12,14 +12,13 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/internal/http"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport/rpccfg"
-	"github.com/rs/zerolog"
 )
 
 func StartRpcServer(
 	ctx context.Context,
 	cfg *httpcfg.HttpCfg,
 	rpcAPI []transport.API,
-	logger zerolog.Logger,
+	logger logging.Logger,
 	started chan<- struct{},
 ) error {
 	// register apis and create handler stack
