@@ -93,6 +93,8 @@ async function runTutorialCheckTwo() {
     return;
   }
 
+  const gasPrice = await client.getGasPrice(1);
+
   tutorialContractStepPassedEvent("CustomToken has minted tokens successfully!");
 
   const hashSending = await smartAccount.sendTransaction({
@@ -100,6 +102,7 @@ async function runTutorialCheckTwo() {
     abi: operatorContract.abi,
     functionName: "checkSendToken",
     args: [resultCustomToken.address, CUSTOM_TOKEN_AMOUNT],
+    feeCredit: gasPrice * 5_000_000n,
   });
 
   const resSending = await waitTillCompleted(client, hashSending);

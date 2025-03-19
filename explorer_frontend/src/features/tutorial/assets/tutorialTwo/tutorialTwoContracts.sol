@@ -11,6 +11,11 @@ import "@nilfoundation/smart-contracts/contracts/NilTokenBase.sol";
  */
 contract Operator is NilBase {
     /**
+     * The default function for receiving calls with empty call data.
+     */
+    receive() external payable {}
+
+    /**
      * The function calling mintTokenCustom() on CustomToken.
      * @param dst The address of CustomToken.
      * @param amount The amount of the custom token to mint.
