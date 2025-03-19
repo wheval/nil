@@ -88,6 +88,7 @@ async function runTutorialCheckFive() {
     abi: NFTContract.abi,
     functionName: "mintNFT",
     args: [],
+    feeCredit: gasPrice * 500_000n,
   });
 
   const resSecondMinting = await waitTillCompleted(client, secondMintRequest);
@@ -108,7 +109,6 @@ async function runTutorialCheckFive() {
     abi: NFTContract.abi,
     functionName: "sendNFT",
     args: [resultReceiver.address],
-    feeCredit: gasPrice * 500_000n,
   });
 
   const resSending = await waitTillCompleted(client, sendRequest);
