@@ -14,10 +14,7 @@ func NewTaskEvent(
 	//nolint:zerologlint // 'must be dispatched by Msg or Send method' error is ignored
 	return logger.WithLevel(level).
 		Stringer(logging.FieldTaskId, task.Id).
-		Stringer(logging.FieldShardId, task.ShardId).
 		Stringer(logging.FieldBatchId, task.BatchId).
-		Stringer(logging.FieldBlockHash, task.BlockHash).
-		Stringer(logging.FieldBlockNumber, task.BlockNum).
 		Stringer(logging.FieldTaskType, task.TaskType).
 		Interface(logging.FieldTaskParentId, task.ParentTaskId)
 }

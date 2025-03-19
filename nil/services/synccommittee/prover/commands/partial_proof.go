@@ -37,7 +37,7 @@ func (cmd *partialProofCmd) MakeCommandDefinition(task *types.Task) (*CommandDef
 	resultFiles := make(types.TaskOutputArtifacts)
 	proofProducerBinary := cmd.binary
 	stage := []string{"--stage", "fast-generate-partial-proof"}
-	filePostfix := fmt.Sprintf(".%v.%v.%v", circuitIdx(task.CircuitType), task.ShardId, task.BlockHash.String())
+	filePostfix := fmt.Sprintf(".%v.%v", circuitIdx(task.CircuitType), task.BatchId)
 	circuitName := []string{"--circuit-name", circuitTypeToArg(task.CircuitType)}
 
 	assignmentDescFile := filepath.Join(cmd.outDir, "assignment_table_description"+filePostfix)
@@ -105,7 +105,7 @@ func (cmd *partialProofCmd) BeforeCommandExecuted(
 		shardIdsStr += blockId.ShardId.String() + " "
 		blockRef := transport.HashBlockReference(blockId.Hash)
 		blockIds[i].Id = blockRef
-		blockIdsStr += blockId.Hash.String() + " "
+		blockIdsStr += blockId.Hash.String()
 	}
 	cmd.logger.Info().Msgf(
 		"Tracer arguments: trace --nil-endpoint %v %v %v %v",

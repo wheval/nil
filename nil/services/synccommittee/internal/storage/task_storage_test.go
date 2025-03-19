@@ -59,10 +59,8 @@ func (s *TaskStorageSuite) Test_Request_And_Process_Result() {
 
 	// Initialize two tasks waiting for input
 	lowerPriorityEntry := testaide.NewTaskEntry(now, types.WaitingForInput, types.UnknownExecutorId)
-	lowerPriorityEntry.Task.BlockNum = 222
 
 	higherPriorityEntry := testaide.NewTaskEntry(now, types.WaitingForInput, types.UnknownExecutorId)
-	higherPriorityEntry.Task.BlockNum = 14
 
 	// Initialize two corresponding dependencies for them which are running
 	dependency1 := testaide.NewTaskEntry(now, types.Running, testaide.RandomExecutorId())

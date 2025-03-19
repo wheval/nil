@@ -42,7 +42,7 @@ var (
 	someExecutor   = testaide.RandomExecutorId()
 	running        = types.Running
 	failed         = types.Failed
-	proofBlockType = types.ProofBlock
+	proofBatchType = types.ProofBatch
 	sortExecTime   = public.OrderByExecutionTime
 	sortCreatedAt  = public.OrderByCreatedAt
 	outputLimit    = 4
@@ -53,9 +53,9 @@ func newTaskEntries(now time.Time) []*types.TaskEntry {
 		testaide.NewTaskEntry(now.Add(-6*time.Minute), running, testaide.RandomExecutorId()),
 		testaide.NewTaskEntry(now.Add(-4*time.Minute), running, someExecutor),
 		testaide.NewTaskEntry(now.Add(-8*time.Minute), running, someExecutor),
-		testaide.NewTaskEntryOfType(proofBlockType, now.Add(-2*time.Minute), failed, someExecutor),
+		testaide.NewTaskEntryOfType(proofBatchType, now.Add(-2*time.Minute), failed, someExecutor),
 		testaide.NewTaskEntryOfType(
-			proofBlockType, now.Add(-10*time.Minute), types.WaitingForInput, testaide.RandomExecutorId()),
+			proofBatchType, now.Add(-10*time.Minute), types.WaitingForInput, testaide.RandomExecutorId()),
 		testaide.NewTaskEntry(now, types.WaitingForExecutor, testaide.RandomExecutorId()),
 	}
 }
@@ -154,7 +154,7 @@ func (s *TaskSchedulerDebugRpcTestSuite) Test_Get_Tasks() {
 		},
 		{
 			name:            "FilterByTaskType",
-			request:         public.NewTaskDebugRequest(nil, &proofBlockType, nil, nil, false, nil),
+			request:         public.NewTaskDebugRequest(nil, &proofBatchType, nil, nil, false, nil),
 			expectedResults: []*types.TaskEntry{entries[3], entries[4]},
 			ignoreOrder:     true,
 		},
@@ -408,9 +408,6 @@ func (s *TaskSchedulerDebugRpcTestSuite) requireTaskViewEqual(expected *types.Ta
 
 	assertions = append(assertions, []bool{
 		s.Equal(expected.Task.BatchId, actual.BatchId),
-		s.Equal(expected.Task.ShardId, actual.ShardId),
-		s.Equal(expected.Task.BlockNum, actual.BlockNumber),
-		s.Equal(expected.Task.BlockHash, actual.BlockHash),
 
 		s.Equal(expected.Created, actual.CreatedAt),
 		s.Equal(expected.Started, actual.StartedAt),

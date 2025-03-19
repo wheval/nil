@@ -60,9 +60,7 @@ func (cmd *aggregateChallengesCmd) BeforeCommandExecuted(
 	if err != nil {
 		return err
 	}
-	aggregateFileName := filepath.Join(
-		cmd.outDir,
-		fmt.Sprintf("aggregated_thetas.%v.%v", task.ShardId, task.BlockHash.String()))
+	aggregateFileName := filepath.Join(cmd.outDir, fmt.Sprintf("aggregated_thetas.%v", task.BatchId))
 	results[types.AggregatedThetaPowers] = aggregateFileName
 	return os.WriteFile(aggregateFileName, bytes, 0o644) //nolint:gosec
 }
@@ -76,7 +74,7 @@ func (cmd *aggregateChallengesCmd) MakeCommandDefinition(task *types.Task) (*Com
 	}
 	inputs := append([]string{"--input-challenge-files"}, inputFiles...)
 	outFile := filepath.Join(cmd.outDir,
-		fmt.Sprintf("aggregated_challenges.%v.%v", task.ShardId, task.BlockHash.String()))
+		fmt.Sprintf("aggregated_challenges.%v", task.BatchId))
 	outArg := []string{"--aggregated-challenge-file", outFile}
 	allArgs := slices.Concat(stage, inputs, outArg)
 	execCmd := exec.Command(binary, allArgs...)

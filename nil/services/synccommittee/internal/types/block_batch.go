@@ -124,18 +124,8 @@ func (b *BlockBatch) AllBlocks() []*jsonrpc.RPCBlock {
 	return blocks
 }
 
-// TODO: update signature CreateProofTask(currentTime time.Time) (*TaskEntry, error)
-func (b *BlockBatch) CreateProofTasks(currentTime time.Time) ([]*TaskEntry, error) {
-	taskEntries := make([]*TaskEntry, 0, 1)
-
-	batchProofTask, err := NewBatchProofTaskEntry(b.Id, b.AllBlocks(), currentTime)
-	if err != nil {
-		return nil, err
-	}
-
-	taskEntries = append(taskEntries, batchProofTask)
-
-	return taskEntries, nil
+func (b *BlockBatch) CreateProofTask(currentTime time.Time) (*TaskEntry, error) {
+	return NewBatchProofTaskEntry(b.Id, b.AllBlocks(), currentTime)
 }
 
 type PrunedBatch struct {

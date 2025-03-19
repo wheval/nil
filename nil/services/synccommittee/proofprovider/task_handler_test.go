@@ -63,9 +63,12 @@ func (s *TaskHandlerTestSuite) TestReturnErrorOnUnexpectedTaskType() {
 		taskType types.TaskType
 	}{
 		{name: "PartialProve", taskType: types.PartialProve},
+		{name: "AggregatedChallenge", taskType: types.AggregatedChallenge},
+		{name: "CombinedQ", taskType: types.CombinedQ},
+		{name: "AggregatedFRI", taskType: types.AggregatedFRI},
 		{name: "FRIConsistencyChecks", taskType: types.FRIConsistencyChecks},
 		{name: "MergeProof", taskType: types.MergeProof},
-		{name: "AggregatedFRI", taskType: types.AggregatedFRI},
+		{name: "TaskTypeNone", taskType: types.TaskTypeNone},
 	}
 
 	executorId := testaide.RandomExecutorId()

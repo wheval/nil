@@ -4,9 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/logging"
-	coreTypes "github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/api"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/scheduler"
@@ -97,16 +95,12 @@ var tasksForExecutors = map[types.TaskExecutorId]*types.Task{
 	firstExecutorId: {
 		Id:          types.NewTaskId(),
 		BatchId:     types.NewBatchId(),
-		ShardId:     coreTypes.MainShardId,
-		BlockNum:    1,
-		BlockHash:   common.EmptyHash,
 		TaskType:    types.PartialProve,
 		CircuitType: types.CircuitBytecode,
 	},
 	secondExecutorId: {
 		Id:          types.NewTaskId(),
 		BatchId:     types.NewBatchId(),
-		BlockNum:    10,
 		TaskType:    types.AggregatedFRI,
 		CircuitType: types.CircuitReadWrite,
 		DependencyResults: map[types.TaskId]types.TaskResultDetails{

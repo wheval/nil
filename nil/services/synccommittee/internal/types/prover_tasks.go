@@ -9,7 +9,6 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
-	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/google/uuid"
 )
@@ -110,15 +109,12 @@ func (s TaskIdSet) Put(id TaskId) {
 
 // Task contains all the necessary data for either Prover or ProofProvider to perform computation
 type Task struct {
-	Id           TaskId            `json:"id"`
-	BatchId      BatchId           `json:"batchId"`
-	ShardId      types.ShardId     `json:"shardId"`
-	BlockNum     types.BlockNumber `json:"blockNum"`
-	BlockHash    common.Hash       `json:"blockHash"`
-	BlockIds     []BlockId         `json:"blockIds"`
-	TaskType     TaskType          `json:"taskType"`
-	CircuitType  CircuitType       `json:"circuitType"`
-	ParentTaskId *TaskId           `json:"parentTaskId"`
+	Id           TaskId      `json:"id"`
+	BatchId      BatchId     `json:"batchId"`
+	BlockIds     []BlockId   `json:"blockIds"`
+	TaskType     TaskType    `json:"taskType"`
+	CircuitType  CircuitType `json:"circuitType"`
+	ParentTaskId *TaskId     `json:"parentTaskId"`
 
 	// DependencyResults tracks the set of task results on which current task depends
 	DependencyResults map[TaskId]TaskResultDetails `json:"dependencyResults"`
@@ -264,10 +260,6 @@ func (t *TaskEntry) HasHigherPriorityThan(other *TaskEntry) bool {
 		return true
 	}
 
-	// AggregateProofs task can be created later thant DFRI step tasks for the next batch
-	if t.Task.TaskType != other.Task.TaskType && other.Task.TaskType == AggregateProofs {
-		return true
-	}
 	if t.Created != other.Created {
 		return t.Created.Before(other.Created)
 	}
@@ -287,24 +279,6 @@ func (t *Task) AsNewChildEntry(currentTime time.Time) *TaskEntry {
 	}
 }
 
-func NewAggregateProofsTaskEntry(
-	batchId BatchId, mainShardBlock *jsonrpc.RPCBlock, currentTime time.Time,
-) *TaskEntry {
-	task := Task{
-		Id:        NewTaskId(),
-		BatchId:   batchId,
-		ShardId:   mainShardBlock.ShardId,
-		BlockNum:  mainShardBlock.Number,
-		BlockHash: mainShardBlock.Hash,
-		TaskType:  AggregateProofs,
-	}
-	return &TaskEntry{
-		Task:    task,
-		Created: currentTime,
-		Status:  WaitingForInput,
-	}
-}
-
 func NewBatchProofTaskEntry(
 	batchId BatchId, orderedBlocks []*jsonrpc.RPCBlock, currentTime time.Time,
 ) (*TaskEntry, error) {
@@ -319,13 +293,10 @@ func NewBatchProofTaskEntry(
 	}
 
 	task := Task{
-		Id:        NewTaskId(),
-		BatchId:   batchId,
-		ShardId:   types.MainShardId,       // TODO remove
-		BlockNum:  orderedBlocks[0].Number, // TODO remove
-		BlockHash: orderedBlocks[0].Hash,   // TODO remove
-		BlockIds:  blockIds,
-		TaskType:  ProofBatch,
+		Id:       NewTaskId(),
+		BatchId:  batchId,
+		BlockIds: blockIds,
+		TaskType: ProofBatch,
 	}
 
 	batchProofEntry := &TaskEntry{
@@ -337,43 +308,8 @@ func NewBatchProofTaskEntry(
 	return batchProofEntry, nil
 }
 
-func NewBlockProofTaskEntry(
-	batchId BatchId, aggregateProofsTask *TaskEntry, execShardBlock *jsonrpc.RPCBlock, currentTime time.Time,
-) (*TaskEntry, error) {
-	if aggregateProofsTask == nil {
-		return nil, errors.New("aggregateProofsTask cannot be nil")
-	}
-	if aggregateProofsTask.Task.TaskType != AggregateProofs {
-		return nil, fmt.Errorf("aggregateProofsTask has invalid type: %s", aggregateProofsTask.Task.TaskType)
-	}
-	if execShardBlock == nil {
-		return nil, errors.New("execShardBlock cannot be nil")
-	}
-
-	task := Task{
-		Id:           NewTaskId(),
-		BatchId:      batchId,
-		ShardId:      execShardBlock.ShardId,
-		BlockNum:     execShardBlock.Number,
-		BlockHash:    execShardBlock.Hash,
-		TaskType:     ProofBlock,
-		ParentTaskId: &aggregateProofsTask.Task.Id,
-	}
-	blockProofEntry := &TaskEntry{
-		Task:    task,
-		Created: currentTime,
-		Status:  WaitingForExecutor,
-	}
-
-	aggregateProofsTask.AddDependency(blockProofEntry)
-	return blockProofEntry, nil
-}
-
 func NewPartialProveTaskEntry(
 	batchId BatchId,
-	shardId types.ShardId,
-	blockNum types.BlockNumber,
-	blockHash common.Hash,
 	blockIds []BlockId,
 	circuitType CircuitType,
 	currentTime time.Time,
@@ -381,9 +317,6 @@ func NewPartialProveTaskEntry(
 	task := Task{
 		Id:          NewTaskId(),
 		BatchId:     batchId,
-		ShardId:     shardId,
-		BlockNum:    blockNum,
-		BlockHash:   blockHash,
 		BlockIds:    blockIds,
 		TaskType:    PartialProve,
 		CircuitType: circuitType,
@@ -397,18 +330,12 @@ func NewPartialProveTaskEntry(
 
 func NewAggregateChallengeTaskEntry(
 	batchId BatchId,
-	shardId types.ShardId,
-	blockNum types.BlockNumber,
-	blockHash common.Hash,
 	currentTime time.Time,
 ) *TaskEntry {
 	aggChallengeTask := Task{
-		Id:        NewTaskId(),
-		BatchId:   batchId,
-		ShardId:   shardId,
-		BlockNum:  blockNum,
-		BlockHash: blockHash,
-		TaskType:  AggregatedChallenge,
+		Id:       NewTaskId(),
+		BatchId:  batchId,
+		TaskType: AggregatedChallenge,
 	}
 
 	return &TaskEntry{
@@ -420,18 +347,12 @@ func NewAggregateChallengeTaskEntry(
 
 func NewCombinedQTaskEntry(
 	batchId BatchId,
-	shardId types.ShardId,
-	blockNum types.BlockNumber,
-	blockHash common.Hash,
 	circuitType CircuitType,
 	currentTime time.Time,
 ) *TaskEntry {
 	combinedQTask := Task{
 		Id:          NewTaskId(),
 		BatchId:     batchId,
-		ShardId:     shardId,
-		BlockNum:    blockNum,
-		BlockHash:   blockHash,
 		CircuitType: circuitType,
 		TaskType:    CombinedQ,
 	}
@@ -445,18 +366,12 @@ func NewCombinedQTaskEntry(
 
 func NewAggregateFRITaskEntry(
 	batchId BatchId,
-	shardId types.ShardId,
-	blockNum types.BlockNumber,
-	blockHash common.Hash,
 	currentTime time.Time,
 ) *TaskEntry {
 	aggFRITask := Task{
-		Id:        NewTaskId(),
-		BatchId:   batchId,
-		ShardId:   shardId,
-		BlockNum:  blockNum,
-		BlockHash: blockHash,
-		TaskType:  AggregatedFRI,
+		Id:       NewTaskId(),
+		BatchId:  batchId,
+		TaskType: AggregatedFRI,
 	}
 
 	return &TaskEntry{
@@ -468,18 +383,12 @@ func NewAggregateFRITaskEntry(
 
 func NewFRIConsistencyCheckTaskEntry(
 	batchId BatchId,
-	shardId types.ShardId,
-	blockNum types.BlockNumber,
-	blockHash common.Hash,
 	circuitType CircuitType,
 	currentTime time.Time,
 ) *TaskEntry {
 	task := Task{
 		Id:          NewTaskId(),
 		BatchId:     batchId,
-		ShardId:     shardId,
-		BlockNum:    blockNum,
-		BlockHash:   blockHash,
 		TaskType:    FRIConsistencyChecks,
 		CircuitType: circuitType,
 	}
@@ -492,18 +401,12 @@ func NewFRIConsistencyCheckTaskEntry(
 
 func NewMergeProofTaskEntry(
 	batchId BatchId,
-	shardId types.ShardId,
-	blockNum types.BlockNumber,
-	blockHash common.Hash,
 	currentTime time.Time,
 ) *TaskEntry {
 	mergeProofTask := Task{
-		Id:        NewTaskId(),
-		BatchId:   batchId,
-		ShardId:   shardId,
-		BlockNum:  blockNum,
-		BlockHash: blockHash,
-		TaskType:  MergeProof,
+		Id:       NewTaskId(),
+		BatchId:  batchId,
+		TaskType: MergeProof,
 	}
 
 	return &TaskEntry{
