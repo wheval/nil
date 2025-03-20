@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
@@ -103,7 +104,7 @@ type Client interface {
 	) (common.Hash, error)
 	SendExternalTransaction(
 		ctx context.Context,
-		bytecode types.Code,
+		calldata types.Code,
 		contractAddress types.Address,
 		pk *ecdsa.PrivateKey,
 		fee types.FeePack,
@@ -195,10 +196,10 @@ func CreateExternalTransaction(
 }
 
 func SendExternalTransaction(
-	ctx context.Context, c Client, bytecode types.Code, contractAddress types.Address,
+	ctx context.Context, c Client, calldata types.Code, contractAddress types.Address,
 	pk *ecdsa.PrivateKey, fee types.FeePack, isDeploy bool, withRetry bool,
 ) (common.Hash, error) {
-	extTxn, err := CreateExternalTransaction(ctx, c, bytecode, contractAddress, fee, isDeploy, 0)
+	extTxn, err := CreateExternalTransaction(ctx, c, calldata, contractAddress, fee, isDeploy, 0)
 	if err != nil {
 		return common.EmptyHash, err
 	}
@@ -297,4 +298,20 @@ func SendTransactionViaSmartAccount(
 		return common.EmptyHash, err
 	}
 	return c.SendExternalTransaction(ctx, calldataExt, smartAccountAddress, pk, fee)
+}
+
+func WaitForReceipt(
+	ctx context.Context,
+	client Client,
+	hash common.Hash,
+	timeout time.Duration,
+) (*jsonrpc.RPCReceipt, error) {
+	var receipt *jsonrpc.RPCReceipt
+	var err error
+	err = common.WaitFor(ctx, timeout, 500*time.Millisecond, func(ctx context.Context) bool {
+		receipt, err = client.GetInTransactionReceipt(ctx, hash)
+		return err == nil && receipt.IsComplete()
+	})
+
+	return receipt, err
 }

@@ -21,6 +21,7 @@ type BlockGeneratorParams struct {
 	MainKeysPath     string
 	DisableConsensus bool
 	FeeCalculator    FeeCalculator
+	ExecutionMode    string
 }
 
 func NewBlockGeneratorParams(shardId types.ShardId, nShards uint32) BlockGeneratorParams {
@@ -73,6 +74,7 @@ func NewBlockGenerator(
 		Block:          block,
 		ConfigAccessor: configAccessor,
 		FeeCalculator:  params.FeeCalculator,
+		Mode:           params.ExecutionMode,
 	})
 	if err != nil {
 		return nil, err

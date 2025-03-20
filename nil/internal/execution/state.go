@@ -26,13 +26,18 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/holiman/uint256"
+	zerolog "github.com/rs/zerolog"
 )
 
-var logger = logging.NewLogger("execution")
+const (
+	TraceBlocksEnabled                    = false
+	ExternalTransactionVerificationMaxGas = types.Gas(100_000)
 
-const TraceBlocksEnabled = false
-
-const ExternalTransactionVerificationMaxGas = types.Gas(100_000)
+	ModeReadOnly = "read-only"
+	ModeProposal = "proposal"
+	ModeReplay   = "replay"
+	ModeVerify   = "verify"
+)
 
 var blocksTracer *BlocksTracer
 
@@ -129,6 +134,8 @@ type ExecutionState struct {
 
 	// filled in if a rollback was requested by a transaction
 	rollback *RollbackParams
+
+	logger logging.Logger
 }
 
 type ExecutionResult struct {
@@ -218,6 +225,16 @@ func (e *ExecutionResult) GetError() error {
 	return nil
 }
 
+func (e *ExecutionResult) String() string {
+	if e.Error != nil {
+		return fmt.Errorf("error: %w", e.Error).Error()
+	}
+	if e.FatalError != nil {
+		return fmt.Errorf("fatal: %w", e.FatalError).Error()
+	}
+	return "success"
+}
+
 type revision struct {
 	id           int
 	journalIndex int
@@ -260,6 +277,7 @@ type StateParams struct {
 	Block          *types.Block
 	ConfigAccessor config.ConfigAccessor
 	FeeCalculator  FeeCalculator
+	Mode           string
 }
 
 func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*ExecutionState, error) {
@@ -274,6 +292,11 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 		return nil, errors.New("invalid tx type")
 	}
 
+	logger := logging.NewLogger("execution")
+	if params.Mode != "" {
+		logger = logger.With().Str("mode", params.Mode).Logger()
+	}
+
 	feeCalculator := params.FeeCalculator
 	if feeCalculator == nil {
 		feeCalculator = &MainFeeCalculator{}
@@ -283,6 +306,12 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 	var prevBlockHash common.Hash
 	if params.Block != nil {
 		baseFeePerGas = feeCalculator.CalculateBaseFee(params.Block)
+		if baseFeePerGas.Cmp(params.Block.BaseFee) != 0 {
+			logger.Debug().
+				Stringer("Old", params.Block.BaseFee).
+				Stringer("New", baseFeePerGas).
+				Msg("BaseFee changed")
+		}
 		prevBlockHash = params.Block.Hash(shardId)
 	}
 
@@ -309,6 +338,8 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 		isReadOnly: isReadOnly,
 
 		FeeCalculator: feeCalculator,
+
+		logger: logger,
 	}
 
 	return res, res.initTries()
@@ -364,10 +395,11 @@ func (es *ExecutionState) GetAccount(addr types.Address) (*AccountState, error) 
 		return nil, fmt.Errorf("GetAccount failed: %w", err)
 	}
 
-	acc, err = NewAccountState(es, addr, data)
+	acc, err = NewAccountState(es, addr, data, es.logger)
 	if err != nil {
 		return nil, fmt.Errorf("NewAccountState failed: %w", err)
 	}
+
 	es.Accounts[addr] = acc
 	return acc, nil
 }
@@ -562,9 +594,9 @@ func (es *ExecutionState) EnableVmTracing() {
 			pc uint64, op byte, gas, cost uint64, scope tracing.OpContext, rData []byte, depth int, err error,
 		) {
 			for i, item := range scope.StackData() {
-				logger.Debug().Msgf("     %d: %s", i, item.String())
+				es.logger.Debug().Msgf("     %d: %s", i, item.String())
 			}
-			logger.Debug().Msgf("%04x: %s", pc, vm.OpCode(op).String())
+			es.logger.Debug().Msgf("%04x: %s", pc, vm.OpCode(op).String())
 		},
 	}
 }
@@ -715,7 +747,7 @@ func (es *ExecutionState) createAccount(addr types.Address) (*AccountState, erro
 
 	es.journal.append(createObjectChange{account: &addr})
 
-	accountState, err := NewAccountState(es, addr, nil)
+	accountState, err := NewAccountState(es, addr, nil, es.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -793,7 +825,7 @@ func (es *ExecutionState) updateGasPrice(txn *types.Transaction) error {
 	if !es.isReadOnly && es.GasPrice.Cmp(txn.MaxFeePerGas) > 0 {
 		if es.BaseFee.Cmp(txn.MaxFeePerGas) > 0 {
 			es.GasPrice = types.Value0
-			logger.Error().
+			es.logger.Error().
 				Stringer("MaxFeePerGas", txn.MaxFeePerGas).
 				Stringer("BaseFee", es.BaseFee).
 				Msg("MaxFeePerGas is less than BaseFee")
@@ -911,7 +943,7 @@ func (es *ExecutionState) AddOutTransaction(
 		}
 	}
 
-	logger.Trace().
+	es.logger.Trace().
 		Stringer(logging.FieldTransactionHash, txnHash).
 		Stringer(logging.FieldTransactionFrom, txn.From).
 		Stringer(logging.FieldTransactionTo, txn.To).
@@ -933,7 +965,7 @@ func (es *ExecutionState) sendBounceTransaction(txn *types.Transaction, execResu
 		return false, nil
 	}
 	if txn.BounceTo == types.EmptyAddress {
-		logger.Debug().Msg("Bounce transaction not sent, no bounce address")
+		es.logger.Debug().Msg("Bounce transaction not sent, no bounce address")
 		return false, nil
 	}
 
@@ -959,7 +991,7 @@ func (es *ExecutionState) sendBounceTransaction(txn *types.Transaction, execResu
 	if _, err = es.AddOutTransaction(txn.To, bounceTxn); err != nil {
 		return false, err
 	}
-	logger.Debug().
+	es.logger.Debug().
 		Stringer(logging.FieldTransactionFrom, txn.To).
 		Stringer(logging.FieldTransactionTo, txn.BounceTo).
 		Msg("Bounce transaction sent")
@@ -1014,6 +1046,36 @@ func (es *ExecutionState) HandleTransaction(
 	txn *types.Transaction,
 	payer Payer,
 ) (retError *ExecutionResult) {
+	defer func() {
+		var ev *logging.Event
+		if retError.Failed() {
+			ev = es.logger.Info()
+		} else {
+			if es.logger.GetLevel() > zerolog.DebugLevel {
+				return
+			}
+			ev = es.logger.Debug()
+		}
+
+		ev.Stringer("result", retError).Int(logging.FieldTransactionSeqno, int(txn.Seqno))
+		if !txn.IsRefund() && !txn.IsBounce() {
+			ev.Stringer("gasUsed", retError.GasUsed).
+				Stringer("gasPrice", retError.GasPrice)
+		}
+		if retError.Failed() {
+			failedPc := uint64(0)
+			if retError.DebugInfo != nil {
+				failedPc = retError.DebugInfo.Pc
+			}
+			ev.Int("failedPc", int(failedPc))
+		}
+		if retError.Failed() {
+			ev.Msg("Transaction completed with error")
+		} else {
+			ev.Msg("Transaction completed successfully")
+		}
+	}()
+
 	// Catch panic during execution and return it as an error
 	defer func() {
 		if recResult := recover(); recResult != nil {
@@ -1085,13 +1147,13 @@ func (es *ExecutionState) HandleTransaction(
 			}
 		}
 		if txn.IsBounce() {
-			logger.Error().Err(res.Error).Msg("VM returns error during bounce transaction processing")
+			es.logger.Error().Err(res.Error).Msg("VM returns error during bounce transaction processing")
 		} else {
-			logger.Debug().Err(res.Error).Msg("execution txn failed")
+			es.logger.Debug().Err(res.Error).Msg("execution txn failed")
 			if txn.IsInternal() {
 				var bounceErr error
 				if bounced, bounceErr = es.sendBounceTransaction(txn, res); bounceErr != nil {
-					logger.Error().Err(bounceErr).Msg("Bounce transaction sent failed")
+					es.logger.Error().Err(bounceErr).Msg("Bounce transaction sent failed")
 					return res.SetFatal(bounceErr)
 				}
 			}
@@ -1123,11 +1185,13 @@ func (es *ExecutionState) HandleTransaction(
 	return res
 }
 
-func (es *ExecutionState) handleDeployTransaction(_ context.Context, transaction *types.Transaction) *ExecutionResult {
+func (es *ExecutionState) handleDeployTransaction(_ context.Context, transaction *types.Transaction) (
+	result *ExecutionResult,
+) {
 	addr := transaction.To
 	deployTxn := types.ParseDeployPayload(transaction.Data)
 
-	logger.Debug().
+	es.logger.Debug().
 		Stringer(logging.FieldTransactionTo, addr).
 		Stringer(logging.FieldShardId, es.ShardId).
 		Msg("Handling deploy transaction...")
@@ -1141,7 +1205,7 @@ func (es *ExecutionState) handleDeployTransaction(_ context.Context, transaction
 	ret, addr, leftOver, err := es.evm.Deploy(
 		addr, (vm.AccountRef)(transaction.From), deployTxn.Code(), gas.Uint64(), transaction.Value.Int())
 
-	event := logger.Debug().Stringer(logging.FieldTransactionTo, addr)
+	event := es.logger.Debug().Stringer(logging.FieldTransactionTo, addr)
 	if err != nil {
 		event.Err(err).Msg("Contract deployment failed.")
 	} else {
@@ -1220,9 +1284,13 @@ func (es *ExecutionState) handleExecutionTransaction(
 ) *ExecutionResult {
 	check.PanicIfNot(transaction.IsExecution())
 	addr := transaction.To
-	logger.Debug().
+	es.logger.Debug().
+		Stringer(logging.FieldTransactionFrom, transaction.From).
 		Stringer(logging.FieldTransactionTo, addr).
 		Stringer(logging.FieldTransactionFlags, transaction.Flags).
+		Stringer(logging.FieldTransactionHash, transaction.Hash()).
+		Stringer("value", transaction.Value).
+		Stringer("feeCredit", transaction.FeeCredit).
 		Msg("Handling execution transaction...")
 
 	caller := (vm.AccountRef)(transaction.From)
@@ -1282,7 +1350,7 @@ func decodeRevertTransaction(data []byte) string {
 
 func (es *ExecutionState) handleRefundTransaction(_ context.Context, transaction *types.Transaction) error {
 	err := es.AddBalance(transaction.To, transaction.Value, tracing.BalanceIncreaseRefund)
-	logger.Debug().Err(err).Msgf("Refunded %s to %v", transaction.Value, transaction.To)
+	es.logger.Debug().Err(err).Msgf("Refunded %s to %v", transaction.Value, transaction.To)
 	return err
 }
 
@@ -1520,7 +1588,7 @@ func (es *ExecutionState) CommitBlock(src *BlockGenerationResult, params *types.
 		return err
 	}
 
-	logger.Trace().
+	es.logger.Trace().
 		Stringer(logging.FieldShardId, es.ShardId).
 		Stringer(logging.FieldBlockNumber, block.Id).
 		Stringer(logging.FieldBlockHash, blockHash).
@@ -1624,7 +1692,7 @@ func (es *ExecutionState) CallVerifyExternal(transaction *types.Transaction, acc
 	}
 	argData, err := argSpec.Pack(hash.Big(), ([]byte)(transaction.Signature))
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to pack arguments")
+		es.logger.Error().Err(err).Msg("failed to pack arguments")
 		return NewExecutionResult().SetFatal(err)
 	}
 
@@ -1669,7 +1737,7 @@ func (es *ExecutionState) CallVerifyExternal(transaction *types.Transaction, acc
 }
 
 func (es *ExecutionState) AddToken(addr types.Address, tokenId types.TokenId, amount types.Value) error {
-	logger.Debug().
+	es.logger.Debug().
 		Stringer("addr", addr).
 		Stringer("amount", amount).
 		Stringer("id", tokenId).
@@ -1698,7 +1766,7 @@ func (es *ExecutionState) AddToken(addr types.Address, tokenId types.TokenId, am
 }
 
 func (es *ExecutionState) SubToken(addr types.Address, tokenId types.TokenId, amount types.Value) error {
-	logger.Debug().
+	es.logger.Debug().
 		Stringer("addr", addr).
 		Stringer("amount", amount).
 		Stringer("id", tokenId).
@@ -1728,7 +1796,7 @@ func (es *ExecutionState) SubToken(addr types.Address, tokenId types.TokenId, am
 func (es *ExecutionState) GetTokens(addr types.Address) map[types.TokenId]types.Value {
 	acc, err := es.GetAccountReader(addr)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to get account")
+		es.logger.Error().Err(err).Msg("failed to get account")
 		return nil
 	}
 	if acc == nil {
@@ -1740,7 +1808,7 @@ func (es *ExecutionState) GetTokens(addr types.Address) map[types.TokenId]types.
 		var c types.TokenBalance
 		c.Token = types.TokenId(k)
 		if err := c.Balance.UnmarshalSSZ(v); err != nil {
-			logger.Error().Err(err).Msg("failed to unmarshal token balance")
+			es.logger.Error().Err(err).Msg("failed to unmarshal token balance")
 			continue
 		}
 		res[c.Token] = c.Balance
@@ -1758,6 +1826,9 @@ func (es *ExecutionState) GetGasPrice(shardId types.ShardId) (types.Value, error
 	prices, err := config.GetParamGasPrice(es.GetConfigAccessor())
 	if err != nil {
 		return types.Value{}, err
+	}
+	if int(shardId) >= len(prices.Shards) {
+		return types.Value{}, fmt.Errorf("shard %d is not found in gas prices", shardId)
 	}
 	return types.Value{Uint256: &prices.Shards[shardId]}, nil
 }
@@ -1794,7 +1865,7 @@ func (es *ExecutionState) SaveVmState(state *types.EvmState, continuationGasCred
 	acc, err := es.GetAccount(es.GetInTransaction().To)
 	check.PanicIfErr(err)
 
-	logger.Debug().Int("size", len(data)).Msg("Save vm state")
+	es.logger.Debug().Int("size", len(data)).Msg("Save vm state")
 
 	acc.SetAsyncContext(types.TransactionIndex(outTxn.RequestId), &types.AsyncContext{
 		IsAwait:               true,

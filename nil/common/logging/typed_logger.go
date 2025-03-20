@@ -509,6 +509,10 @@ func (l Logger) With() Context {
 	return Context{ctx: l.logger.With()}
 }
 
+func (l *Logger) GetLevel() zerolog.Level {
+	return l.logger.GetLevel()
+}
+
 // Trace
 func (l *Logger) Trace() *Event {
 	return &Event{event: l.logger.Trace()} //nolint:zerologlint

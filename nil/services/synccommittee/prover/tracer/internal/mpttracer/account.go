@@ -2,6 +2,7 @@ package mpttracer
 
 import (
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/mpt"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -18,7 +19,7 @@ func NewTracerAccount(
 	addr types.Address,
 	account *types.SmartContract,
 ) (*TracerAccount, error) {
-	as, err := execution.NewAccountState(es, addr, account)
+	as, err := execution.NewAccountState(es, addr, account, logging.NewLogger("mpttracer"))
 	if err != nil {
 		return nil, err
 	}

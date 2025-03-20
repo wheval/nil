@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -131,7 +130,7 @@ func (r *Wrapper) WaitForReceipt(ctx context.Context, txnHash ethcommon.Hash) (*
 		ReceiptWaitFor  = 30 * time.Second
 		ReceiptWaitTick = 500 * time.Millisecond
 	)
-	return concurrent.WaitFor(
+	return common.WaitForValue(
 		ctx,
 		ReceiptWaitFor,
 		ReceiptWaitTick,

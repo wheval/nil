@@ -6,6 +6,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/tracing"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -68,6 +69,8 @@ type AccountState struct {
 	// object was previously existent and is being deployed as a contract within
 	// the current transaction.
 	NewContract bool
+
+	logger logging.Logger
 }
 
 // FetchRequestId returns unique request id.
@@ -83,7 +86,12 @@ func NewAccountStateReader(account *AccountState) *AccountStateReader {
 	}
 }
 
-func NewAccountState(es IExecutionState, addr types.Address, account *types.SmartContract) (*AccountState, error) {
+func NewAccountState(
+	es IExecutionState,
+	addr types.Address,
+	account *types.SmartContract,
+	logger logging.Logger,
+) (*AccountState, error) {
 	shardId := addr.ShardId()
 
 	accountState := &AccountState{
@@ -96,6 +104,7 @@ func NewAccountState(es IExecutionState, addr types.Address, account *types.Smar
 		State:        make(Storage),
 		AsyncContext: make(map[types.TransactionIndex]*types.AsyncContext),
 		Tokens:       make(map[types.TokenId]types.Value),
+		logger:       logger,
 	}
 
 	if account != nil {
@@ -132,7 +141,7 @@ func (as *AccountState) AddBalance(amount types.Value, reason tracing.BalanceCha
 		return fmt.Errorf("balance overflow: %s + %s", as.Balance, amount)
 	}
 
-	logger.Debug().Stringer("address", as.address).Stringer("reason", reason).
+	as.logger.Debug().Stringer("address", as.address).Stringer("reason", reason).
 		Msgf("Balance change: adding balance %s + %s = %s", as.Balance, amount, newBalance)
 	as.SetBalance(newBalance)
 	return nil
@@ -149,7 +158,7 @@ func (as *AccountState) SubBalance(amount types.Value, reason tracing.BalanceCha
 		return fmt.Errorf("balance overflow: %s + %s", as.Balance, amount)
 	}
 
-	logger.Debug().Stringer("address", as.address).Stringer("reason", reason).
+	as.logger.Debug().Stringer("address", as.address).Stringer("reason", reason).
 		Msgf("Balance change: withdrawing balance %s - %s = %s", as.Balance, amount, newBalance)
 	as.SetBalance(newBalance)
 	return nil
@@ -199,7 +208,7 @@ func (as *AccountState) SetTokenBalance(id types.TokenId, amount types.Value) {
 
 func (as *AccountState) setTokenBalance(id types.TokenId, amount types.Value) {
 	as.Tokens[id] = amount
-	logger.Debug().
+	as.logger.Debug().
 		Stringer("address", as.address).
 		Hex("id", id[:]).
 		Stringer("amount", amount).

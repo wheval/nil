@@ -224,7 +224,7 @@ func (es *ExecutionState) GenerateZeroState(stateConfig *ZeroStateConfig) error 
 			return err
 		}
 
-		logger.Debug().Str("name", contract.Name).Stringer("address", addr).Msg("Created zero state contract")
+		es.logger.Debug().Str("name", contract.Name).Stringer("address", addr).Msg("Created zero state contract")
 	}
 	return nil
 }

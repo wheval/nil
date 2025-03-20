@@ -154,6 +154,7 @@ func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.Prop
 		return nil, fmt.Errorf("%w: expected %x, got %x", errHashMismatch, prevBlockHash, proposal.PrevBlockHash)
 	}
 
+	s.params.ExecutionMode = execution.ModeVerify
 	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, prevBlock)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create block generator: %w", err)
@@ -196,6 +197,7 @@ func (s *Validator) insertProposalUnlocked(
 		return err
 	}
 
+	s.params.ExecutionMode = execution.ModeProposal
 	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, prevBlock)
 	if err != nil {
 		return fmt.Errorf("failed to create block generator: %w", err)
@@ -374,6 +376,7 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 		return err
 	}
 
+	s.params.ExecutionMode = execution.ModeReplay
 	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, prevBlock)
 	if err != nil {
 		return err

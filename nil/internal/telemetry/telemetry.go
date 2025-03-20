@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/internal/telemetry/internal"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -35,4 +36,22 @@ func Shutdown(ctx context.Context) {
 
 func NewMeter(name string) Meter {
 	return otel.Meter(name)
+}
+
+func Int64Gauge(meter metric.Meter, name string) metric.Int64Gauge {
+	res, err := meter.Int64Gauge(name)
+	check.PanicIfErr(err)
+	return res
+}
+
+func Int64Counter(meter metric.Meter, name string) metric.Int64Counter {
+	res, err := meter.Int64Counter(name)
+	check.PanicIfErr(err)
+	return res
+}
+
+func Int64UpDownCounter(meter metric.Meter, name string) metric.Int64UpDownCounter {
+	res, err := meter.Int64UpDownCounter(name)
+	check.PanicIfErr(err)
+	return res
 }

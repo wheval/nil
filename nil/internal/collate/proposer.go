@@ -95,6 +95,7 @@ func (p *proposer) GenerateProposal(ctx context.Context, txFabric db.DB) (*execu
 		Block:          block,
 		ConfigAccessor: configAccessor,
 		FeeCalculator:  p.params.FeeCalculator,
+		Mode:           execution.ModeProposal,
 	})
 	if err != nil {
 		return nil, err
@@ -295,6 +296,10 @@ func (p *proposer) handleTransactionsFromPool() error {
 		return err
 	}
 
+	if len(poolTxns) != 0 {
+		p.logger.Debug().Int("txNum", len(poolTxns)).Msg("Start handling transactions from the pool")
+	}
+
 	var unverified []common.Hash
 	handle := func(mt *types.TxnWithHash) (bool, error) {
 		txnHash := mt.Hash()
@@ -342,6 +347,10 @@ func (p *proposer) handleTransactionsFromPool() error {
 			p.logger.Error().Err(err).
 				Msgf("Failed to remove %d unverifiable transactions from the pool", len(unverified))
 		}
+	}
+
+	if len(poolTxns) != 0 {
+		p.logger.Debug().Int("txAdded", len(p.proposal.ExternalTxns)).Msg("Finish transactions handling")
 	}
 
 	return nil
