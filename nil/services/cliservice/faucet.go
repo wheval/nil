@@ -10,7 +10,6 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
-	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -95,7 +94,7 @@ func (s *Service) waitForReceiptCommon(
 	txnHash common.Hash,
 	check func(receipt *jsonrpc.RPCReceipt) bool,
 ) (*jsonrpc.RPCReceipt, error) {
-	receipt, err := concurrent.WaitFor(
+	receipt, err := common.WaitForValue(
 		s.ctx,
 		ReceiptWaitFor,
 		ReceiptWaitTick,

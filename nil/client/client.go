@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
@@ -297,4 +298,20 @@ func SendTransactionViaSmartAccount(
 		return common.EmptyHash, err
 	}
 	return c.SendExternalTransaction(ctx, calldataExt, smartAccountAddress, pk, fee)
+}
+
+func WaitForReceipt(
+	ctx context.Context,
+	client Client,
+	hash common.Hash,
+	timeout time.Duration,
+) (*jsonrpc.RPCReceipt, error) {
+	var receipt *jsonrpc.RPCReceipt
+	var err error
+	err = common.WaitFor(ctx, timeout, 500*time.Millisecond, func(ctx context.Context) bool {
+		receipt, err = client.GetInTransactionReceipt(ctx, hash)
+		return err == nil && receipt.IsComplete()
+	})
+
+	return receipt, err
 }
