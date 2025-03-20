@@ -24,7 +24,7 @@ type Config struct {
 
 	DHTEnabled        bool          `yaml:"dhtEnabled,omitempty"`
 	DHTBootstrapPeers AddrInfoSlice `yaml:"dhtBootstrapPeers,omitempty"`
-	DHTMode           dht.ModeOpt   `yaml:"-,omitempty"`
+	DHTMode           dht.ModeOpt   `yaml:"-"`
 
 	ConnectionManagerConfig *cm.Config `yaml:"connectionManager,omitempty"`
 

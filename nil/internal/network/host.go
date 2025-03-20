@@ -88,6 +88,12 @@ func newHost(ctx context.Context, conf *Config) (Host, logging.Logger, error) {
 
 	if conf.ServeRelay {
 		options = append(options, libp2p.EnableRelayService())
+
+		// todo: remove it after relay is tested
+		// this is to make sure that the relay is not disabled
+		if conf.Reachability == network.ReachabilityUnknown {
+			options = append(options, libp2p.ForceReachabilityPublic())
+		}
 	}
 
 	if len(conf.Relays) > 0 {

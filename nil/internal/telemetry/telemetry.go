@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"os"
 
 	"github.com/NilFoundation/nil/nil/internal/telemetry/internal"
 	"go.opentelemetry.io/otel"
@@ -16,14 +15,7 @@ type (
 )
 
 func NewDefaultConfig() *Config {
-	// https://opentelemetry.io/docs/languages/sdk-configuration/general/#otel_service_name
-	serviceName := os.Getenv("OTEL_SERVICE_NAME")
-	if serviceName == "" {
-		serviceName = os.Args[0]
-	}
-	return &Config{
-		ServiceName: serviceName,
-	}
+	return &Config{}
 }
 
 func Init(ctx context.Context, config *Config) error {
