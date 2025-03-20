@@ -49,7 +49,12 @@ func (api *LocalShardApi) GetInTransactionReceipt(
 		if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
 			return nil, err
 		}
-		gasPrice = block.BaseFee
+
+		priorityFee, ok := execution.GetEffectivePriorityFee(block.BaseFee, transaction)
+		if !ok {
+			return nil, errors.New("critical error: effective priority fee is invalid")
+		}
+		gasPrice = block.BaseFee.Add(priorityFee)
 
 		// Check if the transaction is included in the main chain
 		rawMainBlock, err := api.nodeApi.GetFullBlockData(

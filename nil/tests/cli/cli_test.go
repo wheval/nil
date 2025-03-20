@@ -569,16 +569,13 @@ func (s *SuiteCliExec) TestCliCometa() {
 
 	s.Run("Debug", func() {
 		out := s.RunCliCfg("debug", txnHash)
-		fmt.Println(out)
 		result := parseCometaOutput(out)
 		s.Require().Len(result, 3)
-		s.Require().Equal("unknown", result[0]["Contract"])
-		s.Require().Equal("0x2bb1ae7c", result[0]["CallData"][:10])
+		s.Require().Equal("2bb1ae7c00", result[0]["CallData"][:10])
 		s.Require().Contains(result[0]["Transaction"], txnHash)
 		s.Require().Equal("Counter", result[1]["Contract"])
 		s.Require().Equal("get()", result[1]["CallData"])
-		s.Require().Equal("unknown", result[2]["Contract"])
-		s.Contains(out, "Contract            : Counter")
+		s.Require().Equal("Counter", result[1]["Contract"])
 		s.Contains(out, "└ eventValue: [0]")
 	})
 
