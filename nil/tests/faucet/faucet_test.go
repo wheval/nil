@@ -207,8 +207,17 @@ func (s *SuiteFaucet) TestTopUpTokenViaFaucet() {
 	tokens, err := s.DefaultClient.GetTokens(s.Context, address, transport.LatestBlockNumber)
 	s.Require().NoError(err)
 	s.Require().Len(tokens, 4)
+
+	debugContract, err := s.DefaultClient.GetDebugContract(s.Context, address, "latest")
+	s.Require().NoError(err)
+	s.Require().Len(debugContract.Tokens, 4)
+
 	for _, faucet := range faucetsAddr {
 		curValue, ok := tokens[types.TokenId(faucet)]
+		s.Require().True(ok)
+		s.Require().Equal(value.Uint64(), curValue.Uint64())
+
+		curValue, ok = debugContract.Tokens[types.TokenId(faucet)]
 		s.Require().True(ok)
 		s.Require().Equal(value.Uint64(), curValue.Uint64())
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/abi"
@@ -313,7 +314,16 @@ func (s *SuiteAsyncAwait) TestTwoRequests() {
 	s.Require().True(receipt.AllSuccess())
 
 	data = s.AbiPack(s.abiTest, "makeTwoRequests", s.counterAddress0, s.counterAddress1)
-	receipt = s.SendExternalTransactionNoCheck(data, s.testAddress0)
+	hash, err := s.DefaultClient.SendExternalTransaction(s.T().Context(), data, s.testAddress0, nil, types.FeePack{})
+	s.Require().NoError(err)
+
+	s.Eventually(func() bool {
+		debugContract, err := s.DefaultClient.GetDebugContract(s.Context, s.testAddress0, "latest")
+		s.Require().NoError(err)
+		return len(debugContract.AsyncContext) > 0
+	}, tests.BlockWaitTimeout, time.Duration(s.Instances[0].Config.CollatorTickPeriodMs/5)*time.Millisecond)
+
+	receipt = s.WaitIncludedInMain(hash)
 	s.Require().True(receipt.AllSuccess())
 
 	data = s.AbiPack(s.abiTest, "value")

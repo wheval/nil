@@ -168,7 +168,7 @@ func (api *LocalShardApi) GetContract(
 	}
 
 	asyncContextReader := execution.NewDbAsyncContextTrieReader(tx, address.ShardId())
-	asyncContextReader.SetRootHash(contract.TokenRoot)
+	asyncContextReader.SetRootHash(contract.AsyncContextRoot)
 	asyncContextEntries, err := asyncContextReader.Entries()
 	if err != nil {
 		return nil, err
