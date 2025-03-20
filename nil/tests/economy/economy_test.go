@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/execution"
@@ -87,6 +88,37 @@ func (s *SuiteEconomy) SetupSuite() {
 
 func (s *SuiteEconomy) TearDownSuite() {
 	s.Cancel()
+}
+
+func getNumForGas(gas int) int {
+	return gas / 529
+}
+
+func (s *SuiteEconomy) TestGasConsumer() {
+	abi, err := contracts.GetAbi(contracts.NameStresser)
+	s.Require().NoError(err)
+
+	stresserCode, err := contracts.GetCode(contracts.NameStresser)
+	s.Require().NoError(err)
+
+	addr, receipt := s.DeployContractViaMainSmartAccount(types.BaseShardId,
+		types.BuildDeployPayload(stresserCode, common.EmptyHash), types.GasToValue(500_000_000_000))
+
+	run := func(n int) {
+		calldata := s.AbiPack(abi, "gasConsumer", big.NewInt(int64(n)))
+		txHash, err := s.Client.SendExternalTransaction(s.Context, calldata, addr, nil,
+			types.NewFeePackFromGas(50_000_000))
+		s.Require().NoError(err)
+		receipt = s.WaitForReceipt(txHash)
+		s.Require().True(receipt.AllSuccess())
+
+		calcN := getNumForGas(int(receipt.GasUsed))
+		s.Require().Less(int(math.Abs(float64(n-calcN))), 10)
+	}
+
+	for i := 1_000; i < 5_000; i += 1_000 {
+		run(i)
+	}
 }
 
 func (s *SuiteEconomy) TestSeparateGasAndValue() {

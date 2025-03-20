@@ -196,7 +196,7 @@ func ValidateExternalTransaction(es *ExecutionState, transaction *types.Transact
 	}
 
 	if transaction.MaxFeePerGas.IsZero() {
-		logger.Error().Msg("MaxFeePerGas is zero")
+		es.logger.Error().Msg("MaxFeePerGas is zero")
 		return NewExecutionResult().SetError(types.NewError(types.ErrorMaxFeePerGasIsZero))
 	}
 

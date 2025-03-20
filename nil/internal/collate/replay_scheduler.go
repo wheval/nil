@@ -32,6 +32,7 @@ type ReplayScheduler struct {
 }
 
 func NewReplayScheduler(txFabric db.DB, params ReplayParams) *ReplayScheduler {
+	params.ExecutionMode = execution.ModeReplay
 	return &ReplayScheduler{
 		txFabric: txFabric,
 		params:   params,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/signal"
 	"slices"
 	"sync"
@@ -568,6 +569,7 @@ func Run(
 
 	node, err := CreateNode(ctx, "nil", cfg, database, interop, workers...)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create node: %s", err.Error())
 		return 1
 	}
 	defer node.Close(ctx)
