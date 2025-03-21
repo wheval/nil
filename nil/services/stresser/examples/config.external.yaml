@@ -1,4 +1,4 @@
-mode: external-rpc
+mode: external
 endpoint: http://127.0.0.1:8529
 numShards: 5
 workloadFile: ./workload.yaml
