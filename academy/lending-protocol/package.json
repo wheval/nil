@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@nilfoundation/create-nil-hardhat-project": "^1.0.1",
-    "@nilfoundation/niljs": "0.24.0",
-    "@nilfoundation/smart-contracts": "0.6.0",
+    "@nilfoundation/niljs": "0.25.0",
+    "@nilfoundation/smart-contracts": "0.7.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts-upgradeable": "^5.2.0",
     "viem": "^2.23.4"
