@@ -15,24 +15,11 @@ type BlockErrorParameters = {
  */
 class BlockNotFoundError extends BaseError {
   constructor({ blockNumberOrHash, ...rest }: BlockErrorParameters) {
-    super(`Block not found: ${blockNumberOrHash}`, {
+    super(`Block ${blockNumberOrHash} not found.`, {
       name: "BlockNotFoundError",
       ...rest,
     });
   }
 }
 
-/**
- * The error class for 'block transaction count not found' errors.
- * This error is thrown when the requested block transaction count is not found.
- */
-class BlockTransactionCountNotFoundError extends BaseError {
-  constructor({ blockNumberOrHash, ...rest }: BlockErrorParameters) {
-    super(`Block transaction count not found for block: ${blockNumberOrHash}`, {
-      name: "BlockTransactionCountNotFoundError",
-      ...rest,
-    });
-  }
-}
-
-export { BlockNotFoundError, BlockTransactionCountNotFoundError };
+export { BlockNotFoundError };

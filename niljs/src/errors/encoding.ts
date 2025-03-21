@@ -27,7 +27,7 @@ class IntegerOutOfRangeError extends BaseError {
       `Number "${value}" is not in safe integer range ${
         max ? `(${min} to ${max})` : `(above ${min})`
       }`,
-      { name: "IntegerOutOfRangeError", ...rest }
+      { name: "IntegerOutOfRangeError", ...rest },
     );
   }
 }

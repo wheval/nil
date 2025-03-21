@@ -84,7 +84,7 @@ class BaseError extends Error {
       docsPath,
       name,
       docsBaseUrl: docsBaseUrlCustom,
-    }: IBaseErrorParameters = {}
+    }: IBaseErrorParameters = {},
   ) {
     super();
     this.name = name ?? this.constructor.name ?? "BaseError";
@@ -104,7 +104,7 @@ class BaseError extends Error {
 
     if (version) {
       this.message = `${this.message}
-      Version of the client: ${this.version}`;
+      Version: niljs/${this.version}`;
     }
 
     // This line is needed to make the instanceof operator work correctly with custom errors in TypeScript

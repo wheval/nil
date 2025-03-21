@@ -3,10 +3,7 @@ import { decodeFunctionResult, encodeFunctionData } from "viem";
 import { bytesToHex } from "../encoding/fromBytes.js";
 import { hexToBigInt, hexToBytes, hexToNumber } from "../encoding/fromHex.js";
 import { toHex } from "../encoding/toHex.js";
-import {
-  BlockNotFoundError,
-  BlockTransactionCountNotFoundError,
-} from "../errors/block.js";
+import { BlockNotFoundError } from "../errors/block.js";
 import type { IAddress } from "../signers/types/IAddress.js";
 import type { Block, BlockTag } from "../types/Block.js";
 import type { CallArgs, CallRes, ContractOverride } from "../types/CallArgs.js";
@@ -65,18 +62,19 @@ class PublicClient extends BaseClient {
    * const block = await client.getBlockByHash(HASH);
    */
   public async getBlockByHash(hash: Hex, fullTx = false) {
-    try {
-      return await this.request<Block<typeof fullTx>>({
-        method: "eth_getBlockByHash",
-        params: [hash, fullTx],
-      });
-    } catch (error) {
+    const block = await this.request<Block<typeof fullTx>>({
+      method: "eth_getBlockByHash",
+      params: [hash, fullTx],
+    });
+
+    if (block === null) {
       throw new BlockNotFoundError({
         blockNumberOrHash: hash,
-        cause: error,
         docsPath: "/reference/client/classes/PublicClient#getblockbyhash",
       });
     }
+
+    return block;
   }
 
   /**
@@ -97,22 +95,23 @@ class PublicClient extends BaseClient {
   public async getBlockByNumber(
     blockNumber: Hex | BlockTag,
     fullTx = false,
-    shardId = this.shardId
+    shardId = this.shardId,
   ) {
     assertIsValidShardId(shardId);
 
-    try {
-      return await this.request<Block<typeof fullTx>>({
-        method: "eth_getBlockByNumber",
-        params: [shardId, blockNumber, fullTx],
-      });
-    } catch (error) {
+    const block = await this.request<Block<typeof fullTx>>({
+      method: "eth_getBlockByNumber",
+      params: [shardId, blockNumber, fullTx],
+    });
+
+    if (block === null) {
       throw new BlockNotFoundError({
         blockNumberOrHash: blockNumber,
-        cause: error,
         docsPath: "/reference/client/classes/PublicClient#getblockbynumber",
       });
     }
+
+    return block;
   }
 
   /**
@@ -131,23 +130,14 @@ class PublicClient extends BaseClient {
    */
   public async getBlockTransactionCountByNumber(
     blockNumber: Hex | BlockTag,
-    shardId = this.shardId
+    shardId = this.shardId,
   ) {
     assertIsValidShardId(shardId);
 
-    try {
-      return await this.request<number>({
-        method: "eth_getBlockTransactionCountByNumber",
-        params: [shardId, blockNumber],
-      });
-    } catch (error) {
-      throw new BlockTransactionCountNotFoundError({
-        blockNumberOrHash: blockNumber,
-        cause: error,
-        docsPath:
-          "/reference/client/classes/PublicClient#getblocktransactioncountbynumber",
-      });
-    }
+    return await this.request<number>({
+      method: "eth_getBlockTransactionCountByNumber",
+      params: [shardId, blockNumber],
+    });
   }
 
   /**
@@ -164,19 +154,10 @@ class PublicClient extends BaseClient {
    * const count = await client.getBlockTransactionCountByHash(HASH);
    */
   public async getBlockTransactionCountByHash(hash: Hex) {
-    try {
-      return await this.request<number>({
-        method: "eth_getBlockTransactionCountByHash",
-        params: [hash],
-      });
-    } catch (error) {
-      throw new BlockTransactionCountNotFoundError({
-        blockNumberOrHash: hash,
-        cause: error,
-        docsPath:
-          "/reference/client/classes/PublicClient#getblocktransactioncountbyhash",
-      });
-    }
+    return await this.request<number>({
+      method: "eth_getBlockTransactionCountByHash",
+      params: [hash],
+    });
   }
 
   /**
@@ -217,10 +198,7 @@ class PublicClient extends BaseClient {
    * const count = await client.getTransactionCount(ADDRESS, 'latest');
    *
    */
-  public async getTransactionCount(
-    address: IAddress,
-    blockNumberOrHash?: Hex | BlockTag
-  ) {
+  public async getTransactionCount(address: IAddress, blockNumberOrHash?: Hex | BlockTag) {
     const res = await this.request<Hex>({
       method: "eth_getTransactionCount",
       params: [address, blockNumberOrHash ?? "latest"],
@@ -243,10 +221,7 @@ class PublicClient extends BaseClient {
    *
    * const balance = await client.getBalance(ADDRESS, 'latest');
    */
-  public async getBalance(
-    address: IAddress,
-    blockNumberOrHash?: Hex | BlockTag
-  ) {
+  public async getBalance(address: IAddress, blockNumberOrHash?: Hex | BlockTag) {
     const res = await this.request<`0x${string}`>({
       method: "eth_getBalance",
       params: [addHexPrefix(address), blockNumberOrHash ?? "latest"],
@@ -299,16 +274,10 @@ class PublicClient extends BaseClient {
    *
    * const receipt = await client.getTransactionReceiptByHash(HASH, 1);
    */
-  public async getTransactionReceiptByHash(
-    hash: Hex
-  ): Promise<ProcessedReceipt | null> {
+  public async getTransactionReceiptByHash(hash: Hex): Promise<ProcessedReceipt | null> {
     const res = await this.request<Receipt | null>({
       method: "eth_getInTransactionReceipt",
-      params: [
-        typeof hash === "string"
-          ? addHexPrefix(hash)
-          : addHexPrefix(bytesToHex(hash)),
-      ],
+      params: [typeof hash === "string" ? addHexPrefix(hash) : addHexPrefix(bytesToHex(hash))],
     });
 
     if (res === null) {
@@ -335,9 +304,7 @@ class PublicClient extends BaseClient {
     const res = await this.request<Hex>({
       method: "eth_sendRawTransaction",
       params: [
-        typeof transaction === "string"
-          ? transaction
-          : addHexPrefix(bytesToHex(transaction)),
+        typeof transaction === "string" ? transaction : addHexPrefix(bytesToHex(transaction)),
       ],
     });
 
@@ -427,7 +394,7 @@ class PublicClient extends BaseClient {
   public async call(
     callArgs: CallArgs,
     blockNumberOrHash: Hex | BlockTag,
-    overrides?: Record<Address, ContractOverride>
+    overrides?: Record<Address, ContractOverride>,
   ) {
     let data: Hex;
     if (callArgs.abi) {
@@ -438,9 +405,7 @@ class PublicClient extends BaseClient {
       });
     } else {
       data =
-        typeof callArgs.data === "string"
-          ? callArgs.data
-          : addHexPrefix(bytesToHex(callArgs.data));
+        typeof callArgs.data === "string" ? callArgs.data : addHexPrefix(bytesToHex(callArgs.data));
     }
     const sendData = {
       from: callArgs.from || undefined,
@@ -487,7 +452,7 @@ class PublicClient extends BaseClient {
    */
   public async estimateGas(
     callArgs: CallArgs,
-    blockNumberOrHash: Hex | BlockTag
+    blockNumberOrHash: Hex | BlockTag,
   ): Promise<EstimateFeeResult> {
     let data: Hex;
     if (callArgs.abi) {
@@ -498,9 +463,7 @@ class PublicClient extends BaseClient {
       });
     } else {
       data =
-        typeof callArgs.data === "string"
-          ? callArgs.data
-          : addHexPrefix(bytesToHex(callArgs.data));
+        typeof callArgs.data === "string" ? callArgs.data : addHexPrefix(bytesToHex(callArgs.data));
     }
     const sendData = {
       flags: callArgs.flags || [""],
