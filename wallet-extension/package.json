@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@metamask/rpc-errors": "^7.0.2",
-    "@nilfoundation/niljs": "0.24.0",
+    "@nilfoundation/niljs": "0.25.0",
     "@nilfoundation/ui-kit": "^2.5.28",
     "baseui": "^13.0.0",
     "effector": "^22.8.6",
