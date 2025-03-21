@@ -24,10 +24,10 @@
     "@types/fs-extra": "^11.0.4",
     "@types/ini": "^4.1.1",
     "@types/node": "^18",
+    "execa": "^9.5.2",
     "oclif": "^4",
     "ts-node": "^10",
-    "typescript": "^5",
-    "vitest": "^2.1.6"
+    "typescript": "^5"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -48,8 +48,7 @@
     "bin": "clijs",
     "dirname": "nil",
     "commands": "./dist/src/commands",
-    "plugins": [
-    ],
+    "plugins": [],
     "topicSeparator": " ",
     "topics": {
       "hello": {

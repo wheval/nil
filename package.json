@@ -13,7 +13,8 @@
     "clijs",
     "wallet-extension",
     "docs_ai_backend",
-    "rollup-bridge-contracts"
+    "rollup-bridge-contracts",
+    "academy/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -28,7 +29,9 @@
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "fs-extra": "^11.3.0",
-    "hardhat": "^2.22.19"
+    "hardhat": "^2.22.19",
+    "rimraf": "^6.0.1",
+    "vitest": "^2.1.6"
   },
   "optionalDependencies": {
     "@biomejs/cli-linux-x64": "1.9.4",
