@@ -3,7 +3,6 @@ package execution
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1232,8 +1231,6 @@ func (es *ExecutionState) TryProcessResponse(
 	if err != nil {
 		return nil, nil, NewExecutionResult().SetFatal(err)
 	}
-	key := make([]byte, 8)
-	binary.BigEndian.PutUint64(key, transaction.RequestId)
 	asyncContext, err := acc.GetAndRemoveAsyncContext(types.TransactionIndex(transaction.RequestId))
 	if err != nil {
 		return nil, nil, NewExecutionResult().SetFatal(fmt.Errorf("failed to get async context: %w", err))
