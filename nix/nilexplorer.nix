@@ -3,11 +3,12 @@
 , biome
 , python3
 , callPackage
-, npmHooks
+, pnpm_10
 , nodejs
 , enableTesting ? false
 , cypress
 , nil
+, jq
 }:
 
 stdenv.mkDerivation rec {
@@ -15,7 +16,9 @@ stdenv.mkDerivation rec {
   pname = "nilexplorer";
   src = lib.sourceByRegex ./.. [
     "package.json"
-    "package-lock.json"
+    "pnpm-lock.yaml"
+    "pnpm-workspace.yaml"
+    ".npmrc"
     "^niljs(/.*)?$"
     "^smart-contracts(/.*)?$"
     "biome.json"
@@ -23,19 +26,19 @@ stdenv.mkDerivation rec {
     "^explorer_backend(/.*)?$"
   ];
 
-  npmDeps = (callPackage ./npmdeps.nix { });
+  pnpmDeps = (callPackage ./npmdeps.nix { });
 
-  NODE_PATH = "$npmDeps";
 
   nativeBuildInputs = [
     nodejs
-    npmHooks.npmConfigHook
+    pnpm_10.configHook
+    pnpm_10
     biome
     python3
     nil
+    jq
   ] ++ (if enableTesting then [ nil ] else [ ]);
 
-  dontConfigure = true;
 
   preUnpack = ''
     echo "Setting UV_USE_IO_URING=0 to work around the io_uring kernel bug"
@@ -47,14 +50,12 @@ stdenv.mkDerivation rec {
 
   buildPhase = ''
     export NIL=${nil}
-    patchShebangs explorer_frontend/node_modules
-    patchShebangs node_modules
 
-    (cd smart-contracts; npm run build)
-    (cd niljs; npm run build)
+    (cd smart-contracts; pnpm run build)
+    (cd niljs; pnpm run build)
 
-    (cd explorer_frontend; npm run build)
-    (cd explorer_backend; npm run build)
+    (cd explorer_frontend; pnpm run build)
+    (cd explorer_backend; pnpm run build)
   '';
 
   doCheck = enableTesting;
@@ -63,17 +64,17 @@ stdenv.mkDerivation rec {
     export BIOME_BINARY=${biome}/bin/biome
 
     echo "Checking explorer frontend"
-    (cd explorer_frontend; npm run lint; bash run_tutorial_tests.sh;)
+    (cd explorer_frontend; pnpm run lint; bash run_tutorial_tests.sh;)
 
     echo "Checking explorer backend"
-    (cd explorer_backend; npm run lint;)
+    (cd explorer_backend; pnpm run lint;)
 
     echo "Checking if explorer backend starts up without errors"
     cd explorer_backend
-    npm run start & NPM_PID=$!
+    pnpm run start & NPM_PID=$!
     sleep 7
 
-    
+
 
     if kill -0 $NPM_PID 2>/dev/null; then
       echo "Explorer backend is running successfully"

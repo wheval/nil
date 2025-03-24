@@ -2,7 +2,7 @@
 , stdenv
 , biome
 , callPackage
-, npmHooks
+, pnpm_10
 , nodejs
 , nil
 , pkgs
@@ -14,21 +14,24 @@ stdenv.mkDerivation rec {
   pname = "rollup-bridge-contracts";
   src = lib.sourceByRegex ./.. [
     "package.json"
-    "package-lock.json"
+    "pnpm-lock.yaml"
+    "pnpm-workspace.yaml"
+    ".npmrc"
     "^niljs(/.*)?$"
     "^rollup-bridge-contracts(/.*)?$"
     "biome.json"
     "^create-nil-hardhat-project(/.*)?$"
   ];
 
-  npmDeps = (callPackage ./npmdeps.nix { });
+  pnpmDeps = (callPackage ./npmdeps.nix { });
 
   nativeBuildInputs = [
     nodejs
-    npmHooks.npmConfigHook
     pkgs.foundry
     pkgs.solc
     pkgs.bash
+    pnpm_10.configHook
+    pnpm_10
   ];
 
   soljson26 = builtins.fetchurl {

@@ -9,7 +9,7 @@
   "bugs": "https://github.com/nil-blockchain/issues",
   "dependencies": {
     "@libp2p/peer-id": "^5.0.9",
-    "@nilfoundation/niljs": "0.25.0",
+    "@nilfoundation/niljs": "workspace:*",
     "@oclif/core": "^4",
     "@oclif/plugin-help": "^6",
     "@oclif/plugin-plugins": "^5",
@@ -61,8 +61,8 @@
   },
   "repository": "nil-blockchain/clijs",
   "scripts": {
-    "build": "rimraf dist && npx tsc -b",
-    "bundle": "rimraf dist && npx tsc -b && node ./bin/bundle.js",
+    "build": "rimraf dist && tsc -b",
+    "bundle": "rimraf dist && tsc -b && node ./bin/bundle.js",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "postpack": "rimraf oclif.manifest.json",
