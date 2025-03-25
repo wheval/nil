@@ -25,22 +25,18 @@ stdenv.mkDerivation rec {
 
   pnpmDeps = (callPackage ./npmdeps.nix { });
 
-  nativeBuildInputs = [
-    nodejs
-    pkgs.foundry
-    pkgs.solc
-    pkgs.bash
-    pnpm_10.configHook
-    pnpm_10
-  ];
+  nativeBuildInputs =
+    [ nodejs pkgs.foundry pkgs.solc pkgs.bash pnpm_10.configHook pnpm_10 ];
 
   soljson26 = builtins.fetchurl {
-    url = "https://binaries.soliditylang.org/wasm/soljson-v0.8.28+commit.7893614a.js";
+    url =
+      "https://binaries.soliditylang.org/wasm/soljson-v0.8.28+commit.7893614a.js";
     sha256 = "0ip1kafi7l5zkn69zj5c41al7s947wqr8llf08q33565dq55ivvj";
   };
 
   forgeStd = pkgs.fetchzip {
-    url = "https://github.com/foundry-rs/forge-std/archive/refs/tags/v1.9.6.zip";
+    url =
+      "https://github.com/foundry-rs/forge-std/archive/refs/tags/v1.9.6.zip";
     sha256 = "sha256-4y1Hf0Te2oJxwKBOgVBEHZeKYt7hs+wTgdIO+rItj0E=";
   };
 
@@ -48,7 +44,8 @@ stdenv.mkDerivation rec {
     owner = "transmissions11";
     repo = "solmate";
     rev = "c93f7716c9909175d45f6ef80a34a650e2d24e56";
-    sha256 = "sha256-zv8Jzap34N5lFVZV/zoT/fk73pSLP/eY427Go3QQM/Y="; # Replace with actual hash
+    sha256 =
+      "sha256-zv8Jzap34N5lFVZV/zoT/fk73pSLP/eY427Go3QQM/Y="; # Replace with actual hash
   };
 
   dsTest = pkgs.fetchFromGitHub {
@@ -98,11 +95,10 @@ stdenv.mkDerivation rec {
 
   installPhase = ''
     mkdir -p $out
-    cp ../package-lock.json $out/
+    cp ../pnpm-lock.yaml $out/
     cp -r * $out/
     cp .env $out/
     rm -rf $out/node_modules
     rm -rf $out/cache
   '';
 }
-

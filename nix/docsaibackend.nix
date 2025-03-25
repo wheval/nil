@@ -1,9 +1,4 @@
-{ lib
-, stdenv
-, callPackage
-, pnpm_10
-, nodejs
-}:
+{ lib, stdenv, callPackage, pnpm_10, nodejs }:
 
 stdenv.mkDerivation rec {
   name = "aibackend";
@@ -14,20 +9,14 @@ stdenv.mkDerivation rec {
     "pnpm-workspace.yaml"
     ".npmrc"
     "^docs_ai_backend(/.*)?$"
+    "^smart-contracts(/.*)?$"
   ];
 
   pnpmDeps = (callPackage ./npmdeps.nix { });
 
   NODE_PATH = "$npmDeps";
 
-  nativeBuildInputs = [
-    nodejs
-    nodejs.python
-    pnpm_10
-    pnpm_10.configHook
-  ];
-
-  dontConfigure = true;
+  nativeBuildInputs = [ nodejs nodejs.python pnpm_10 pnpm_10.configHook ];
 
   preUnpack = ''
     echo "Setting UV_USE_IO_URING=0 to work around the io_uring kernel bug"
@@ -40,11 +29,12 @@ stdenv.mkDerivation rec {
     (cd docs_ai_backend; pnpm run build)
   '';
 
-  checkPhase = ''
-  '';
+  checkPhase = "";
 
   installPhase = ''
     mkdir -p $out
+    mv smart-contracts $out/smart-contracts
+    mv node_modules $out/node_modules
     mv docs_ai_backend/ $out/docs_ai_backend
   '';
 }
