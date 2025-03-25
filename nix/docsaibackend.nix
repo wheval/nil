@@ -24,7 +24,7 @@ stdenv.mkDerivation rec {
     nodejs
     nodejs.python
     pnpm_10
-    pnpm_10.configureHook
+    pnpm_10.configHook
   ];
 
   dontConfigure = true;
