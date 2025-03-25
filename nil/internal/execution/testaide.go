@@ -180,10 +180,16 @@ func Deploy(t *testing.T, ctx context.Context, es *ExecutionState,
 	t.Helper()
 
 	txn := NewDeployTransaction(payload, shardId, from, seqno, types.Value{})
-	es.AddInTransaction(txn)
-	execResult := es.HandleTransaction(ctx, txn, dummyPayer{})
+	execResult := es.AddAndHandleTransaction(ctx, txn, dummyPayer{})
 	require.False(t, execResult.Failed())
 	es.AddReceipt(execResult)
 
 	return txn.To
+}
+
+func (es *ExecutionState) AddAndHandleTransaction(
+	ctx context.Context, txn *types.Transaction, payer Payer,
+) *ExecutionResult {
+	es.AddInTransaction(txn)
+	return es.HandleTransaction(ctx, txn, payer)
 }

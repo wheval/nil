@@ -1279,13 +1279,17 @@ func (es *ExecutionState) handleExecutionTransaction(
 	_ context.Context,
 	transaction *types.Transaction,
 ) *ExecutionResult {
+	if assert.Enable {
+		check.PanicIfNot(transaction.Hash() == es.InTransactionHash)
+	}
+
 	check.PanicIfNot(transaction.IsExecution())
 	addr := transaction.To
 	es.logger.Debug().
 		Stringer(logging.FieldTransactionFrom, transaction.From).
 		Stringer(logging.FieldTransactionTo, addr).
 		Stringer(logging.FieldTransactionFlags, transaction.Flags).
-		Stringer(logging.FieldTransactionHash, transaction.Hash()).
+		Stringer(logging.FieldTransactionHash, es.InTransactionHash).
 		Stringer("value", transaction.Value).
 		Stringer("feeCredit", transaction.FeeCredit).
 		Msg("Handling execution transaction...")
