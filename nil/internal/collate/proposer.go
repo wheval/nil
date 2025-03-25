@@ -351,6 +351,10 @@ func (p *proposer) handleTransactionsFromPool() error {
 	return nil
 }
 
+func (p *proposer) isTxProcessed(dbTx db.RoTx, txHash common.Hash) (bool, error) {
+	return dbTx.ExistsInShard(p.params.ShardId, db.BlockHashAndInTransactionIndexByTransactionHash, txHash.Bytes())
+}
+
 func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 	state, err := db.ReadCollatorState(tx, p.params.ShardId)
 	if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
@@ -434,6 +438,15 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 				}
 
 				if txn.To.ShardId() == p.params.ShardId {
+					// TODO: Temporary workaround to prevent transaction duplication
+					isProcessed, err := p.isTxProcessed(tx, txn.Hash())
+					if err != nil {
+						return err
+					}
+					if isProcessed {
+						continue
+					}
+
 					txnHash := txn.Hash()
 					if err := execution.ValidateInternalTransaction(txn); err != nil {
 						p.logger.Warn().Err(err).

@@ -135,35 +135,43 @@ func (s *Validator) BuildProposal(ctx context.Context) (*execution.ProposalSSZ, 
 	return proposal, nil
 }
 
-func (s *Validator) VerifyProposal(ctx context.Context, proposal *execution.ProposalSSZ) (*types.Block, error) {
+func (s *Validator) BuildBlockByProposal(
+	ctx context.Context, proposal *execution.ProposalSSZ,
+) (*types.Block, common.Hash, error) {
 	p, err := execution.ConvertProposal(proposal)
 	if err != nil {
-		return nil, err
+		return nil, common.EmptyHash, err
 	}
 
-	// No lock since below we use only locked functions and only in read mode
-	if err := s.validateProposal(ctx, p); err != nil {
-		return nil, err
-	}
-
-	prevBlock, _, err := s.GetLastBlock(ctx)
+	prevBlock, err := s.getBlock(ctx, proposal.PrevBlockHash)
 	if err != nil {
-		return nil, err
+		return nil, common.EmptyHash, err
 	}
 
-	s.params.ExecutionMode = execution.ModeVerify
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, prevBlock)
+	params := s.params.BlockGeneratorParams
+	params.ExecutionMode = execution.ModeVerify
+	gen, err := execution.NewBlockGenerator(ctx, params, s.txFabric, prevBlock)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create block generator: %w", err)
+		return nil, common.EmptyHash, fmt.Errorf("failed to create block generator: %w", err)
 	}
 	defer gen.Rollback()
 
 	gasPrices := gen.CollectGasPrices(proposal.PrevBlockId)
 	res, err := gen.BuildBlock(p, gasPrices)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate block: %w", err)
+		return nil, common.EmptyHash, fmt.Errorf("failed to generate block: %w", err)
 	}
-	return res.Block, nil
+	return res.Block, res.BlockHash, nil
+}
+
+func (s *Validator) IsValidProposal(ctx context.Context, proposal *execution.ProposalSSZ) error {
+	p, err := execution.ConvertProposal(proposal)
+	if err != nil {
+		return err
+	}
+
+	// No lock since below we use only locked functions and only in read mode
+	return s.validateProposal(ctx, p)
 }
 
 func (s *Validator) InsertProposal(
@@ -180,7 +188,7 @@ func (s *Validator) InsertProposal(
 func (s *Validator) insertProposalUnlocked(
 	ctx context.Context,
 	proposal *execution.ProposalSSZ,
-	params *types.ConsensusParams,
+	consensusParams *types.ConsensusParams,
 ) error {
 	p, err := execution.ConvertProposal(proposal)
 	if err != nil {
@@ -195,14 +203,15 @@ func (s *Validator) insertProposalUnlocked(
 		return err
 	}
 
-	s.params.ExecutionMode = execution.ModeProposal
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, prevBlock)
+	params := s.params.BlockGeneratorParams
+	params.ExecutionMode = execution.ModeProposal
+	gen, err := execution.NewBlockGenerator(ctx, params, s.txFabric, prevBlock)
 	if err != nil {
 		return fmt.Errorf("failed to create block generator: %w", err)
 	}
 	defer gen.Rollback()
 
-	res, err := gen.GenerateBlock(p, params)
+	res, err := gen.GenerateBlock(p, consensusParams)
 	if err != nil {
 		return fmt.Errorf("failed to generate block: %w", err)
 	}
@@ -410,8 +419,9 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 		}
 	}
 
-	s.params.ExecutionMode = execution.ModeReplay
-	gen, err := execution.NewBlockGenerator(ctx, s.params.BlockGeneratorParams, s.txFabric, prevBlock)
+	params := s.params.BlockGeneratorParams
+	params.ExecutionMode = execution.ModeSyncReplay
+	gen, err := execution.NewBlockGenerator(ctx, params, s.txFabric, prevBlock)
 	if err != nil {
 		return err
 	}

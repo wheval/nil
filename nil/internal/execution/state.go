@@ -32,10 +32,11 @@ const (
 	TraceBlocksEnabled                    = false
 	ExternalTransactionVerificationMaxGas = types.Gas(100_000)
 
-	ModeReadOnly = "read-only"
-	ModeProposal = "proposal"
-	ModeReplay   = "replay"
-	ModeVerify   = "verify"
+	ModeReadOnly     = "read-only"
+	ModeProposal     = "proposal"
+	ModeSyncReplay   = "syncer-replay"
+	ModeManualReplay = "manual-replay"
+	ModeVerify       = "verify"
 )
 
 var blocksTracer *BlocksTracer
@@ -898,18 +899,11 @@ func (es *ExecutionState) AddOutTransaction(
 		return nil, err
 	}
 
-	// TODO:	This happens when we send refunds from uninitialized accounts when transferring money to them.
-	//			For now we will write all such refunds with identical zero seqno, because we can't change seqno
-	//			of uninitialized accounts.
-	//			In future we should add transfer that is free on the reciepient's side, so that these transfers
-	//			won't require refunds.
-	if seqno != 0 {
-		if seqno+1 < seqno {
-			return nil, vm.ErrNonceUintOverflow
-		}
-		if err := es.SetSeqno(caller, seqno+1); err != nil {
-			return nil, err
-		}
+	if seqno+1 < seqno {
+		return nil, vm.ErrNonceUintOverflow
+	}
+	if err := es.SetSeqno(caller, seqno+1); err != nil {
+		return nil, err
 	}
 
 	txn := payload.ToTransaction(caller, seqno)
@@ -1279,13 +1273,17 @@ func (es *ExecutionState) handleExecutionTransaction(
 	_ context.Context,
 	transaction *types.Transaction,
 ) *ExecutionResult {
+	if assert.Enable {
+		check.PanicIfNot(transaction.Hash() == es.InTransactionHash)
+	}
+
 	check.PanicIfNot(transaction.IsExecution())
 	addr := transaction.To
 	es.logger.Debug().
 		Stringer(logging.FieldTransactionFrom, transaction.From).
 		Stringer(logging.FieldTransactionTo, addr).
 		Stringer(logging.FieldTransactionFlags, transaction.Flags).
-		Stringer(logging.FieldTransactionHash, transaction.Hash()).
+		Stringer(logging.FieldTransactionHash, es.InTransactionHash).
 		Stringer("value", transaction.Value).
 		Stringer("feeCredit", transaction.FeeCredit).
 		Msg("Handling execution transaction...")

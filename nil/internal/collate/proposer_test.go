@@ -172,8 +172,7 @@ func (s *ProposerTestSuite) TestCollator() {
 		balance = balance.Add(feeCredit).Add(feeCredit)
 		s.Equal(balance, s.getMainBalance())
 
-		// TODO: Enable when fixed uninitialized refunds
-		// s.checkSeqno(shardId)
+		s.checkSeqno(shardId)
 	})
 
 	s.Run("DoNotProcessDuplicates", func() {
