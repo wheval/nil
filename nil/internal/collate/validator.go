@@ -135,31 +135,33 @@ func (s *Validator) BuildProposal(ctx context.Context) (*execution.ProposalSSZ, 
 	return proposal, nil
 }
 
-func (s *Validator) BuildBlockByProposal(ctx context.Context, proposal *execution.ProposalSSZ) (*types.Block, error) {
+func (s *Validator) BuildBlockByProposal(
+	ctx context.Context, proposal *execution.ProposalSSZ,
+) (*types.Block, common.Hash, error) {
 	p, err := execution.ConvertProposal(proposal)
 	if err != nil {
-		return nil, err
+		return nil, common.EmptyHash, err
 	}
 
 	prevBlock, err := s.getBlock(ctx, proposal.PrevBlockHash)
 	if err != nil {
-		return nil, err
+		return nil, common.EmptyHash, err
 	}
 
 	params := s.params.BlockGeneratorParams
 	params.ExecutionMode = execution.ModeVerify
 	gen, err := execution.NewBlockGenerator(ctx, params, s.txFabric, prevBlock)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create block generator: %w", err)
+		return nil, common.EmptyHash, fmt.Errorf("failed to create block generator: %w", err)
 	}
 	defer gen.Rollback()
 
 	gasPrices := gen.CollectGasPrices(proposal.PrevBlockId)
 	res, err := gen.BuildBlock(p, gasPrices)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate block: %w", err)
+		return nil, common.EmptyHash, fmt.Errorf("failed to generate block: %w", err)
 	}
-	return res.Block, nil
+	return res.Block, res.BlockHash, nil
 }
 
 func (s *Validator) IsValidProposal(ctx context.Context, proposal *execution.ProposalSSZ) error {

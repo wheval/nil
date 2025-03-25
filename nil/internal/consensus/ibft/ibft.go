@@ -33,7 +33,7 @@ type ConsensusParams struct {
 
 type validator interface {
 	BuildProposal(ctx context.Context) (*execution.ProposalSSZ, error)
-	BuildBlockByProposal(ctx context.Context, proposal *execution.ProposalSSZ) (*types.Block, error)
+	BuildBlockByProposal(ctx context.Context, proposal *execution.ProposalSSZ) (*types.Block, common.Hash, error)
 	IsValidProposal(ctx context.Context, proposal *execution.ProposalSSZ) error
 	InsertProposal(ctx context.Context, proposal *execution.ProposalSSZ, params *types.ConsensusParams) error
 	GetLastBlock(ctx context.Context) (*types.Block, common.Hash, error)

@@ -126,7 +126,7 @@ func (i *backendIBFT) IsValidProposalHash(proposal *protoIBFT.Proposal, hash []b
 		return false
 	}
 
-	block, err := i.validator.BuildBlockByProposal(i.ctx, prop)
+	_, blockHash, err := i.validator.BuildBlockByProposal(i.ctx, prop)
 	if err != nil {
 		event := i.logger.Error()
 		if errors.Is(err, cerrors.ErrOldBlock) {
@@ -140,7 +140,6 @@ func (i *backendIBFT) IsValidProposalHash(proposal *protoIBFT.Proposal, hash []b
 		return false
 	}
 
-	blockHash := block.Hash(i.shardId)
 	isValid := bytes.Equal(blockHash.Bytes(), hash)
 	if !isValid {
 		i.logger.Error().
