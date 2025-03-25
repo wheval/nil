@@ -174,7 +174,8 @@ func storeData(ctx context.Context, logger logging.Logger, connect driver.Conn, 
 					diff = append(diff, col1)
 					chType, err := logging.GetClickhouseByAbbreviation(columnsDef[i])
 					if err != nil {
-						logger.Error().Err(err).Msgf("Error getting clickhouse type for log: %+v, column: %s", data, col1)
+						logger.Error().Err(err).
+							Msgf("clickhouse type error: log %+v, column: %s", data, col1)
 						return err
 					}
 					typeDiff = append(typeDiff, chType)
@@ -278,10 +279,9 @@ func initializeDatabaseSchema(ctx context.Context, connect driver.Conn, logger l
 			name: "create table",
 			action: func(ctx context.Context, conn driver.Conn) error {
 				query := fmt.Sprintf(
-					"CREATE TABLE IF NOT EXISTS %s.%s (time DateTime64 DEFAULT now()) ENGINE = MergeTree() ORDER BY time",
-					DefaultDatabase,
-					DefaultTable,
-				)
+					"CREATE TABLE IF NOT EXISTS %s.%s (time DateTime64 DEFAULT now()) "+
+						"ENGINE = MergeTree() ORDER BY time",
+					DefaultDatabase, DefaultTable)
 				return conn.Exec(ctx, query)
 			},
 			errMsg: "Failed to create table",
