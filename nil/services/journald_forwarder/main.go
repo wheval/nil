@@ -145,7 +145,7 @@ func storeData(ctx context.Context, logger logging.Logger, connect driver.Conn, 
 	if value, ok := data[zerolog.TimestampFieldName]; ok {
 		strValue, ok := value.(string)
 		if !ok {
-			logger.Error().Msg("Timestamp is not a string")
+			logger.Error().Msgf("timestamp is not a string in log %+v", data)
 			return errors.New("timestamp is not a string")
 		}
 		parsedTime, err := time.Parse(time.RFC3339, strValue)
