@@ -21,8 +21,7 @@ func (i *backendIBFT) IsValidProposal(rawProposal []byte) bool {
 		return false
 	}
 
-	_, err = i.validator.VerifyProposal(i.ctx, proposal)
-	if err != nil {
+	if err = i.validator.IsValidProposal(i.ctx, proposal); err != nil {
 		event := i.logger.Error()
 		if errors.Is(err, cerrors.ErrOldBlock) {
 			event = i.logger.Debug()
@@ -127,7 +126,7 @@ func (i *backendIBFT) IsValidProposalHash(proposal *protoIBFT.Proposal, hash []b
 		return false
 	}
 
-	block, err := i.validator.VerifyProposal(i.ctx, prop)
+	block, err := i.validator.BuildBlockByProposal(i.ctx, prop)
 	if err != nil {
 		event := i.logger.Error()
 		if errors.Is(err, cerrors.ErrOldBlock) {

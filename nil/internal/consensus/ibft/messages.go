@@ -42,7 +42,7 @@ func (i *backendIBFT) BuildPrePrepareMessage(
 		return nil
 	}
 
-	block, err := i.validator.VerifyProposal(i.ctx, proposal)
+	block, err := i.validator.BuildBlockByProposal(i.ctx, proposal)
 	if err != nil {
 		i.logger.Error().Err(err).Msg("failed to verify proposal")
 		return nil
