@@ -397,7 +397,7 @@ func (g *BlockGenerator) Finalize(blockRes *BlockGenerationResult, params *types
 		return err
 	}
 
-	if err := PostprocessBlock(g.rwTx, g.params.ShardId, blockRes); err != nil {
+	if err := PostprocessBlock(g.rwTx, g.params.ShardId, blockRes, g.params.ExecutionMode); err != nil {
 		return err
 	}
 

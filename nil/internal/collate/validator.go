@@ -420,7 +420,7 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 	}
 
 	params := s.params.BlockGeneratorParams
-	params.ExecutionMode = execution.ModeReplay
+	params.ExecutionMode = execution.ModeSyncReplay
 	gen, err := execution.NewBlockGenerator(ctx, params, s.txFabric, prevBlock)
 	if err != nil {
 		return err

@@ -439,9 +439,6 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 
 				if txn.To.ShardId() == p.params.ShardId {
 					// TODO: Temporary workaround to prevent transaction duplication
-					// This check also breaks refunds from not initialized logic
-					//nolint: lll
-					// See https://github.com/NilFoundation/nil/blob/06885370c1efc4c5990f52869f2b03d14d102d85/nil/internal/execution/state.go#L901-L905
 					isProcessed, err := p.isTxProcessed(tx, txn.Hash())
 					if err != nil {
 						return err

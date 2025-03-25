@@ -121,7 +121,7 @@ func generateBlockFromTransactions(t *testing.T, ctx context.Context, execute bo
 	blockRes, err := es.Commit(blockId, nil)
 	require.NoError(t, err)
 
-	err = PostprocessBlock(tx, shardId, blockRes)
+	err = PostprocessBlock(tx, shardId, blockRes, ModeVerify)
 	require.NoError(t, err)
 	require.NotNil(t, blockRes.Block)
 
