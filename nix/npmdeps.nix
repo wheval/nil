@@ -21,8 +21,9 @@ in
       ../uniswap/package.json
       ../rollup-bridge-contracts/package.json
       ../wallet-extension/package.json
+      ../docs_ai_backend/package.json
     ];
   };
   pname = "nil";
-  hash = "sha256-woSkCWYR/Huqw7mKlowEQxtP+3LitKuk9bySaHTppEw=";
+  hash = "sha256-DiBv9OdWe3JyUmILlUOk/ngzo8Tqz/Ic/SUBcn7Nkm0=";
 })
