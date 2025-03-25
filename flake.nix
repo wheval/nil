@@ -101,9 +101,10 @@
             nil = packages.nil;
             enableTesting = true;
           });
-          rollup-bridge-contracts = (pkgs.callPackage ./nix/rollup-bridge-contracts.nix {
-            enableTesting = true;
-          });
+          rollup-bridge-contracts =
+            (pkgs.callPackage ./nix/rollup-bridge-contracts.nix {
+              enableTesting = true;
+            });
         };
 
         bundlers = rec {
@@ -127,7 +128,7 @@
                 cp -r ${pkg}/share ./usr/
                 cp -r ${packages.nildocs.outPath}/* ./usr/share/${packages.nildocs.pname}
                 cp -r ${packages.nilexplorer.outPath}/* ./usr/share/${packages.nilexplorer.name}
-                cp -r ${packages.docsaibackend.outPath}/* ./usr/share/${packages.nilexplorer.name}
+                cp -r ${packages.docsaibackend.outPath}/* ./usr/share/${packages.docsaibackend.name}
                 cp -r ${packages.l1-contracts.outPath}/* ./usr/share/${packages.l1-contracts.name}
                 cp -r ${packages.rollup-bridge-contracts.outPath}/{.,}* ./usr/share/${packages.rollup-bridge-contracts.name}
 
