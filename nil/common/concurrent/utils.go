@@ -3,46 +3,83 @@ package concurrent
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
-
-	"github.com/NilFoundation/nil/nil/common/check"
 )
 
 type Func = func(context.Context) error
+
+type FuncWithSource struct {
+	Func
+	Stack string
+}
+
+func WithSource(f Func) FuncWithSource {
+	return FuncWithSource{
+		Func: f,
+		Stack: func(stack []byte) string {
+			// We could use an approach like in dd-trace-go
+			// https://github.com/DataDog/dd-trace-go/blob/ba03925427c3ecd73ce2d64af50/ddtrace/tracer/span.go#L376-L407,
+			// but it's easier to just remove unnecessary lines from the output.
+			newlineCount := 0
+			for i := range stack {
+				if stack[i] == '\n' {
+					newlineCount++
+					if newlineCount == 5 {
+						return string(stack[i+1:])
+					}
+				}
+			}
+			return ""
+		}(debug.Stack()),
+	}
+}
 
 // RunWithTimeout calls each given function in a separate goroutine and waits for them to finish.
 // It logs a fatal message if an error occurred.
 // If timeout is positive, it is added to the context. Otherwise, it is ignored.
 // Note that RunWithTimeout does not forcefully terminate the goroutines;
 // your functions should be able to handle context cancellation.
-func RunWithTimeout(ctx context.Context, timeout time.Duration, fs ...Func) error {
+func RunWithTimeout(ctx context.Context, timeout time.Duration, fs ...FuncWithSource) error {
 	var wg sync.WaitGroup
 
+	var cancel context.CancelFunc
 	if timeout > 0 {
-		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
 	}
+	defer cancel()
 
+	var once sync.Once
+	var originError error
 	for _, f := range fs {
 		wg.Add(1)
 
-		go func(fn Func) {
+		go func(fn FuncWithSource) {
 			defer wg.Done()
-
-			err := fn(ctx)
-			// todo: decide on what to do with other goroutines
-			check.PanicIfErr(err)
+			if err := fn.Func(ctx); err != nil {
+				once.Do(func() {
+					var location string
+					if fn.Stack != "" {
+						location = "\n" + fn.Stack
+					} else {
+						location = "<unknown location>"
+					}
+					originError = fmt.Errorf("goroutine failed: %w. Function was created at: %s", err, location)
+					cancel()
+				})
+			}
 		}(f) // to avoid loop-variable reuse in goroutines
 	}
 
 	wg.Wait()
-	return nil
+	return originError
 }
 
 // Run calls RunWithTimeout without a timeout.
-func Run(ctx context.Context, fs ...Func) error {
+func Run(ctx context.Context, fs ...FuncWithSource) error {
 	return RunWithTimeout(ctx, 0, fs...)
 }
 
