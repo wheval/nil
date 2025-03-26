@@ -132,36 +132,41 @@ func (s *Validator) BuildProposal(ctx context.Context) (*execution.ProposalSSZ, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate proposal: %w", err)
 	}
+
+	p, err := execution.ConvertProposal(proposal)
+	if err != nil {
+		return nil, err
+	}
+
+	hash, err := s.buildBlockHashByProposal(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	proposal.BlockHash = hash
+
 	return proposal, nil
 }
 
-func (s *Validator) BuildBlockByProposal(
-	ctx context.Context, proposal *execution.ProposalSSZ,
-) (*types.Block, common.Hash, error) {
-	p, err := execution.ConvertProposal(proposal)
-	if err != nil {
-		return nil, common.EmptyHash, err
-	}
-
+func (s *Validator) buildBlockHashByProposal(ctx context.Context, proposal *execution.Proposal) (common.Hash, error) {
 	prevBlock, err := s.getBlock(ctx, proposal.PrevBlockHash)
 	if err != nil {
-		return nil, common.EmptyHash, err
+		return common.EmptyHash, err
 	}
 
 	params := s.params.BlockGeneratorParams
 	params.ExecutionMode = execution.ModeVerify
 	gen, err := execution.NewBlockGenerator(ctx, params, s.txFabric, prevBlock)
 	if err != nil {
-		return nil, common.EmptyHash, fmt.Errorf("failed to create block generator: %w", err)
+		return common.EmptyHash, fmt.Errorf("failed to create block generator: %w", err)
 	}
 	defer gen.Rollback()
 
 	gasPrices := gen.CollectGasPrices(proposal.PrevBlockId)
-	res, err := gen.BuildBlock(p, gasPrices)
+	res, err := gen.BuildBlock(proposal, gasPrices)
 	if err != nil {
-		return nil, common.EmptyHash, fmt.Errorf("failed to generate block: %w", err)
+		return common.EmptyHash, fmt.Errorf("failed to generate block: %w", err)
 	}
-	return res.Block, res.BlockHash, nil
+	return res.BlockHash, nil
 }
 
 func (s *Validator) IsValidProposal(ctx context.Context, proposal *execution.ProposalSSZ) error {
@@ -171,7 +176,24 @@ func (s *Validator) IsValidProposal(ctx context.Context, proposal *execution.Pro
 	}
 
 	// No lock since below we use only locked functions and only in read mode
-	return s.validateProposal(ctx, p)
+	if err := s.validateProposal(ctx, p); err != nil {
+		return err
+	}
+
+	hash, err := s.buildBlockHashByProposal(ctx, p)
+	if err != nil {
+		return fmt.Errorf("failed to build block by proposal: %w", err)
+	}
+
+	if proposal.BlockHash != hash {
+		s.logger.Error().
+			Stringer("proposedHash", proposal.BlockHash).
+			Stringer("gotHash", hash).
+			Err(cerrors.ErrInvalidProposedHash).
+			Msg("proposed block hash is different")
+		return cerrors.ErrInvalidProposedHash
+	}
+	return nil
 }
 
 func (s *Validator) InsertProposal(
