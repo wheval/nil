@@ -15,6 +15,23 @@ type FuncWithSource struct {
 	Stack string
 }
 
+type ExecutionError struct {
+	Err   error
+	Stack string
+}
+
+var _ error = (*ExecutionError)(nil)
+
+func (e *ExecutionError) Error() string {
+	var location string
+	if e.Stack != "" {
+		location = "\n" + e.Stack
+	} else {
+		location = "<unknown location>"
+	}
+	return fmt.Sprintf("goroutine failed: %s. Function was created at: %s", e.Err.Error(), location)
+}
+
 func WithSource(f Func) FuncWithSource {
 	return FuncWithSource{
 		Func: f,
@@ -61,13 +78,10 @@ func RunWithTimeout(ctx context.Context, timeout time.Duration, fs ...FuncWithSo
 			defer wg.Done()
 			if err := fn.Func(ctx); err != nil {
 				once.Do(func() {
-					var location string
-					if fn.Stack != "" {
-						location = "\n" + fn.Stack
-					} else {
-						location = "<unknown location>"
+					originError = &ExecutionError{
+						Err:   err,
+						Stack: fn.Stack,
 					}
-					originError = fmt.Errorf("goroutine failed: %w. Function was created at: %s", err, location)
 					cancel()
 				})
 			}
