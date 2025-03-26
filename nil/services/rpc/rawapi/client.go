@@ -241,6 +241,10 @@ func (api *ShardApiAccessor) DoPanicOnShard(ctx context.Context) (uint64, error)
 	return sendRequestAndGetResponseWithCallerMethodName[uint64](ctx, api, "DoPanicOnShard")
 }
 
+func (api *ShardApiAccessor) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (uint64, error) {
+	return sendRequestAndGetResponseWithCallerMethodName[uint64](ctx, api, "GetTxpoolStatus", shardId)
+}
+
 func (api *ShardApiAccessor) setNodeApi(nodeApi NodeApi) {
 	api.onSetNodeApi(nodeApi)
 }

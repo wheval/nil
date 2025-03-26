@@ -81,6 +81,8 @@ const (
 	Debug_getContract                    = "debug_getContract"
 	Web3_clientVersion                   = "web3_clientVersion"
 	Dev_doPanicOnShard                   = "dev_doPanicOnShard"
+	Txpool_getTxpoolStatus               = "txpool_GetTxpoolStatus"
+	Txpool_getTxpoolContent              = "txpool_GetTxpoolContent"
 )
 
 const (
@@ -968,4 +970,19 @@ func simpleCallUint64[ReturnType ~uint64](
 		return 0, err
 	}
 	return ReturnType(result), err
+}
+
+func (c *Client) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (uint64, error) {
+	request := c.newRequest(Txpool_getTxpoolStatus, shardId)
+	res, err := c.performRequest(ctx, request)
+	if err != nil {
+		return 0, err
+	}
+
+	var resValue uint64
+	if err := json.Unmarshal(res, &resValue); err != nil {
+		return 0, err
+	}
+
+	return resValue, err
 }

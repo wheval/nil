@@ -46,6 +46,7 @@ func startRpcServer(
 	rawApi rawapi.NodeApi,
 	db db.ReadOnlyDB,
 	client client.Client,
+	txnPool map[types.ShardId]txnpool.Pool,
 ) error {
 	logger := logging.NewLogger("RPC")
 
@@ -81,6 +82,8 @@ func startRpcServer(
 	debugImpl := jsonrpc.NewDebugAPI(rawApi, logger)
 	web3Impl := jsonrpc.NewWeb3API(rawApi)
 
+	txpoolImpl := jsonrpc.NewTxPoolAPI(txnPool, logger)
+
 	apiList := []transport.API{
 		{
 			Namespace: "eth",
@@ -98,6 +101,12 @@ func startRpcServer(
 			Namespace: "web3",
 			Public:    true,
 			Service:   jsonrpc.Web3API(web3Impl),
+			Version:   "1.0",
+		},
+		{
+			Namespace: "txpool",
+			Public:    true,
+			Service:   jsonrpc.TxPoolAPI(txpoolImpl),
 			Version:   "1.0",
 		},
 	}
@@ -527,7 +536,7 @@ func CreateNode(
 					return fmt.Errorf("failed to create node client: %w", err)
 				}
 			}
-			if err := startRpcServer(ctx, cfg, rawApi, database, cl); err != nil {
+			if err := startRpcServer(ctx, cfg, rawApi, database, cl, txnPools); err != nil {
 				logger.Error().Err(err).Msg("RPC server goroutine failed")
 				return err
 			}

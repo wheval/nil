@@ -37,6 +37,8 @@ type NetworkTransportProtocolRo interface {
 	GetNumShards() pb.Uint64Response
 
 	ClientVersion() pb.StringResponse
+	GetTxpoolStatus() pb.Uint64Response
+	GetTxpoolContent() pb.Uint64Response // zerg
 }
 
 // NetworkTransportProtocol is a helper interface for associating the argument and result types of Api methods

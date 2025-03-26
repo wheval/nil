@@ -17,7 +17,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
 )
 
-// DirectClient is a client that interacts with the end api directly, without using the rpc server.
+// DirectClient is a client that interacts with the	 end api directly, without using the rpc server.
 type DirectClient struct {
 	ethApi   jsonrpc.EthAPI
 	debugApi jsonrpc.DebugAPI
@@ -394,4 +394,8 @@ func (c *DirectClient) ClientVersion(ctx context.Context) (string, error) {
 
 func (c *DirectClient) DoPanicOnShard(ctx context.Context, shardId types.ShardId) (uint64, error) {
 	return c.devApi.DoPanicOnShard(ctx, shardId)
+}
+
+func (c *DirectClient) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (uint64, error) { // Zerg
+	panic("Not supported")
 }

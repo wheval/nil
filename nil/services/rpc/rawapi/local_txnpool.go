@@ -25,3 +25,7 @@ func (api *LocalShardApi) SendTransaction(ctx context.Context, encoded []byte) (
 	}
 	return reasons[0], nil
 }
+
+func (api *LocalShardApi) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (uint64, error) { // zerg
+	return uint64(api.txnpool.GetQueue().Len()), nil
+}
