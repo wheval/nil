@@ -43,13 +43,13 @@ npm -v
 1. 📥 Clone the repository:
 
    ```sh
-   git clone https://github.com/NilFoundation/nil-voting-protocol.git
+   git clone git clone https://github.com/NilFoundation/nil.git
    ```
 
 2. 📂 Navigate to the directory and install dependencies:
 
    ```sh
-   cd nil-voting-protocol
+   cd nil/academy/sharded-voting-protocol
    npm install
    ```
 

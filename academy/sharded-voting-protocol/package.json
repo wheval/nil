@@ -1,6 +1,6 @@
 {
   "name": "sharded-voting-protocol",
-  "description": "This is an example repository to showcase how a lending protocol can be built on top of =nil;",
+  "description": "This is an example repository to showcase how a voting protocol can be built on top of =nil;",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
     "hardhat": "^2.22.18"
@@ -10,7 +10,7 @@
     "format": "biome format ./",
     "lint": "biome check ./",
     "lint:fix": "biome check --write .",
-    "e2e": "npx hardhat e2e"
+    "e2e": "npx hardhat run-voting-protocol"
   },
   "dependencies": {
     "@nilfoundation/create-nil-hardhat-project": "^1.0.1",
