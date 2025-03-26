@@ -6,7 +6,6 @@
     "build": "pnpm --filter '!nil-monorepo' run build",
     "lint": "pnpm --filter '!nil-monorepo' run lint",
     "lint:fix": "pnpm --filter '!nil-monorepo' run lint:fix",
-    "pub": "pnpm --filter '!nil-monorepo' run pub",
     "preinstall": "npx only-allow pnpm"
   },
   "author": "",
