@@ -3,10 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "build": "pnpm run build --workspaces --if-present",
-    "lint": "pnpm run lint --workspaces --if-present",
-    "lint:fix": "pnpm run lint:fix --workspaces --if-present",
-    "pub": "pnpm run pub --workspaces --if-present"
+    "build": "pnpm --filter '!nil-monorepo' run build",
+    "lint": "pnpm --filter '!nil-monorepo' run lint",
+    "lint:fix": "pnpm --filter '!nil-monorepo' run lint:fix",
+    "pub": "pnpm --filter '!nil-monorepo' run pub",
+    "preinstall": "npx only-allow pnpm"
   },
   "author": "",
   "license": "ISC",
@@ -48,7 +49,8 @@
       "yarn"
     ],
     "onlyBuiltDependencies": [
-      "better-sqlite3"
+      "better-sqlite3",
+      "@biomejs/biome"
     ],
     "overrides": {
       "rollup": "npm:@rollup/wasm-node@^4.0.0"
@@ -64,6 +66,8 @@
   },
   "engines": {
     "node": ">=22.0.0",
-    "npm": ">=10.0.0"
-  }
+    "npm": "please-use-pnpm",
+    "pnpm": ">=10.5.2"
+  },
+  "packageManager": "pnpm@10.5.2"
 }
