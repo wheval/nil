@@ -81,13 +81,20 @@ func (s *SuiteCliService) TestCliBlock() {
 	block, err := s.DefaultClient.GetBlock(s.Context, types.BaseShardId, 0, false)
 	s.Require().NoError(err)
 
-	res, err := s.cli.FetchBlock(types.BaseShardId, block.Hash.Hex())
+	res, err := s.cli.FetchDebugBlock(types.BaseShardId, block.Hash.Hex(), true, false, true)
 	s.Require().NoError(err)
-	s.JSONEq(s.toJSON(block), string(res))
+	var blockRes map[string]any
+	s.Require().NoError(json.Unmarshal(res, &blockRes))
+	s.EqualValues(block.Number, blockRes["id"])
 
-	res, err = s.cli.FetchBlock(types.BaseShardId, "0")
+	res, err = s.cli.FetchDebugBlock(types.BaseShardId, "0", true, false, true)
 	s.Require().NoError(err)
-	s.JSONEq(s.toJSON(block), string(res))
+	s.Require().NoError(json.Unmarshal(res, &blockRes))
+	s.EqualValues(block.Number, blockRes["id"])
+
+	res, err = s.cli.FetchDebugBlock(types.BaseShardId, "10000000000", true, false, true)
+	s.Require().NoError(err)
+	s.Require().Empty(res)
 }
 
 func (s *SuiteCliService) TestCliTransaction() {
@@ -310,6 +317,9 @@ func (s *SuiteCliExec) TestCallCliBasic() {
 	res := s.RunCli("-c", cfgPath, "block", "--json", block.Number.String())
 	s.Contains(res, block.Number.String())
 	s.Contains(res, block.Hash.String())
+
+	res = s.RunCli("-c", cfgPath, "block", "--json", "10000000000000")
+	s.Equal("null", res)
 }
 
 func (s *SuiteCliExec) TestCliSmartAccount() {
