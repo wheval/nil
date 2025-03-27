@@ -10,10 +10,6 @@ import AbiCommand from "./commands/abi";
 import AbiDecode from "./commands/abi/decode";
 import AbiEncode from "./commands/abi/encode";
 import BlockCommand from "./commands/block";
-import SystemCommand from "./commands/system";
-import ChainId from "./commands/system/chain-id";
-import GasPrice from "./commands/system/gas-price";
-import Shards from "./commands/system/shards";
 import SmartAccountBalance from "./commands/smart-account/balance.js";
 import SmartAccountCallReadOnly from "./commands/smart-account/call-readonly";
 import SmartAccountDeploy from "./commands/smart-account/deploy.js";
@@ -25,6 +21,10 @@ import SmartAccountSendToken from "./commands/smart-account/send-tokens";
 import SmartAccountSendTransaction from "./commands/smart-account/send-transaction.js";
 import SmartAccountSeqno from "./commands/smart-account/seqno";
 import SmartAccountTopup from "./commands/smart-account/top-up";
+import SystemCommand from "./commands/system";
+import ChainId from "./commands/system/chain-id";
+import GasPrice from "./commands/system/gas-price";
+import Shards from "./commands/system/shards";
 
 export const COMMANDS: Record<string, Command.Class> = {
   abi: AbiCommand,
