@@ -80,6 +80,7 @@ const (
 	Debug_getBlockByNumber               = "debug_getBlockByNumber"
 	Debug_getContract                    = "debug_getContract"
 	Web3_clientVersion                   = "web3_clientVersion"
+	Dev_doPanicOnShard                   = "dev_doPanicOnShard"
 )
 
 const (
@@ -1054,4 +1055,9 @@ func (c *Client) GetDebugContract(
 	}
 
 	return DebugRPCContract, err
+}
+
+func (c *Client) DoPanicOnShard(ctx context.Context, shardId types.ShardId) (uint64, error) {
+	_, err := c.call(ctx, Dev_doPanicOnShard, shardId)
+	return 0, err
 }

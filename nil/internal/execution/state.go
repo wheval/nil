@@ -1067,7 +1067,7 @@ func (es *ExecutionState) HandleTransaction(
 			}
 			ev = es.logger.Debug()
 		}
-
+		ev.Stringer(logging.FieldTransactionHash, es.InTransactionHash)
 		ev.Stringer("result", retError).Int(logging.FieldTransactionSeqno, int(txn.Seqno))
 		if !txn.IsRefund() && !txn.IsBounce() {
 			ev.Stringer("gasUsed", retError.GasUsed).
