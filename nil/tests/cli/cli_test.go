@@ -350,6 +350,11 @@ faucet_endpoint = {{ .FaucetUrl }}
 		s.Contains(res, "New smart account address:")
 	})
 
+	s.Run("Check seqno", func() {
+		res := s.RunCli("-c", cfgPath, "smart-account", "seqno")
+		s.Contains(res, "Smart account seqno: 1")
+	})
+
 	var addr string
 	s.Run("Get contract address", func() {
 		addr = s.RunCli("-c", cfgPath, "contract", "address", s.incBinPath, "123321", "--abi", s.incAbiPath, "-q")
@@ -376,7 +381,7 @@ faucet_endpoint = {{ .FaucetUrl }}
 
 	s.Run("Check seqno", func() {
 		res := s.RunCli("-c", cfgPath, "smart-account", "seqno")
-		s.Contains(res, "Smart account seqno: 1")
+		s.Contains(res, "Smart account seqno: 2")
 
 		res = s.RunCli("-c", cfgPath, "contract", "seqno", addr)
 		s.Contains(res, "Contract seqno: 0")
