@@ -7,6 +7,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
+	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/nil_load_generator"
 	"github.com/spf13/cobra"
 )
@@ -26,11 +27,16 @@ func main() {
 	rootCmd.Flags().Uint32Var(&cfg.CheckBalance, "check-balance", 10, "frequency of balance check in iterations")
 	rootCmd.Flags().Uint32Var(&cfg.SwapPerIteration, "swap-per-iteration", 1000, "amount of swaps per iteration")
 	rootCmd.Flags().BoolVar(&cfg.Metrics, "metrics", false, "export metrics via grpc")
-	rootCmd.Flags().StringVar(&cfg.MintTokenAmount0, "mint-token-amount0", "3000000000000000", "mint amount for token0")
-	rootCmd.Flags().StringVar(&cfg.MintTokenAmount1, "mint-token-amount1", "10000000000000", "mint amount for token1")
-	rootCmd.Flags().StringVar(&cfg.ThresholdAmount, "threshold-amount", "3000000000000000000", "threshold amount")
-	rootCmd.Flags().StringVar(&cfg.SwapAmount, "swap-amount", "1000", "swap amount")
-	rootCmd.Flags().StringVar(&cfg.RpcSwapLimit, "rpc-swap-limit", "1000000", "rpc swap limit")
+	cfg.MintTokenAmount0 = types.NewValueFromUint64(3000000000000000)
+	rootCmd.Flags().Var(&cfg.MintTokenAmount0, "mint-token-amount0", "mint amount for token0")
+	cfg.MintTokenAmount1 = types.NewValueFromUint64(10000000000000)
+	rootCmd.Flags().Var(&cfg.MintTokenAmount1, "mint-token-amount1", "mint amount for token1")
+	cfg.ThresholdAmount = types.NewValueFromUint64(3000000000000000000)
+	rootCmd.Flags().Var(&cfg.ThresholdAmount, "threshold-amount", "threshold amount")
+	cfg.SwapAmount = types.NewValueFromUint64(1000)
+	rootCmd.Flags().Var(&cfg.SwapAmount, "swap-amount", "swap amount")
+	cfg.RpcSwapLimit = *types.NewUint256(1000000)
+	rootCmd.Flags().Var(&cfg.RpcSwapLimit, "rpc-swap-limit", "rpc swap limit")
 	rootCmd.Flags().Uint32Var(&cfg.UniswapAccounts, "rpc-uniswap-accounts", 5, "number of uniswap accounts")
 	rootCmd.Flags().StringVar(
 		&cfg.LogLevel, "log-level", "info", "log level: trace|debug|info|warn|error|fatal|panic")
@@ -48,7 +54,7 @@ func main() {
 	}
 	defer telemetry.Shutdown(context.Background())
 
-	if err := nil_load_generator.Run(context.Background(), *cfg, logger); err != nil {
+	if err := nil_load_generator.Run(context.Background(), cfg, logger); err != nil {
 		logger.Error().Err(err).Msg("Error during nil load generator run")
 		panic(err)
 	}
