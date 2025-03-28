@@ -42,6 +42,25 @@ type Config struct {
 	WaitClusterStartup time.Duration
 }
 
+func NewDefaultConfig() *Config {
+	return &Config{
+		Endpoint:           "http://127.0.0.1:8529/",
+		OwnEndpoint:        "tcp://127.0.0.1:8525",
+		FaucetEndpoint:     "tcp://127.0.0.1:8527",
+		CheckBalance:       10,
+		SwapPerIteration:   1000,
+		Metrics:            false,
+		LogLevel:           "info",
+		RpcSwapLimit:       *types.NewUint256(1000000),
+		MintTokenAmount0:   types.NewValueFromUint64(3000000000000000),
+		MintTokenAmount1:   types.NewValueFromUint64(10000000000000),
+		SwapAmount:         types.NewValueFromUint64(1000),
+		UniswapAccounts:    5,
+		ThresholdAmount:    types.NewValueFromUint64(3000000000000000000),
+		WaitClusterStartup: 5 * time.Minute,
+	}
+}
+
 type Service struct {
 	isInitialized atomic.Bool
 
