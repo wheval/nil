@@ -5,11 +5,12 @@ generate_synccommittee_mocks: \
 	$(root_sce)/internal/api/task_handler_generated_mock.go \
 	$(root_sce)/internal/api/task_state_change_handler_generated_mock.go \
 	$(root_sce)/internal/api/task_request_handler_generated_mock.go \
+	$(root_sce)/core/state_reset_launcher_generated_mock.go \
 	$(root_sce)/internal/scheduler/task_scheduler_generated_mock.go \
-    $(root_sce)/internal/rollupcontract/eth_client_generated_mock.go \
-    $(root_sce)/internal/srv/worker_generated_mock.go \
-    $(root_sce)/internal/test_utils/op_context_generated_mock.go \
-    $(root_sce)/prover/tracer/storage_getter_setter_generated_mock.go
+	$(root_sce)/internal/rollupcontract/eth_client_generated_mock.go \
+	$(root_sce)/internal/srv/worker_generated_mock.go \
+	$(root_sce)/internal/test_utils/op_context_generated_mock.go \
+	$(root_sce)/prover/tracer/storage_getter_setter_generated_mock.go
 
 $(root_sce)/internal/api/task_handler_generated_mock.go: \
 	$(root_sce)/internal/api/task_handler.go \
@@ -26,6 +27,10 @@ $(root_sce)/internal/api/task_state_change_handler_generated_mock.go: \
 	$(root_sce)/internal/api/task_state_change_handler.go \
 	$(root_sce)/internal/types/prover_tasks.go
 	go generate $(root_sce)/internal/api/task_state_change_handler.go
+
+$(root_sce)/core/state_reset_launcher_generated_mock.go: \
+	$(root_sce)/core/task_state_change_handler.go
+	go generate $(root_sce)/core/task_state_change_handler.go
 
 $(root_sce)/internal/scheduler/task_scheduler_generated_mock.go: \
 	$(root_sce)/internal/scheduler/task_scheduler.go \
@@ -50,15 +55,15 @@ $(root_sce)/internal/test_utils/op_context_generated_mock.go: \
 	go generate $(root_sce)/prover/tracer/internal/testutils/generate.go
 
 $(root_sce)/prover/tracer/storage_getter_setter_generated_mock.go: \
-    tracer_constants \
-    pb_synccommittee \
-    $(root_sce)/prover/tracer/storage_tracer.go
+	tracer_constants \
+	pb_synccommittee \
+	$(root_sce)/prover/tracer/storage_tracer.go
 	go generate $(root_sce)/prover/tracer
 
 .PHONY: synccommittee_types
 synccommittee_types: \
-    generate_contract_from_abi \
-    generate_synccommittee_mocks \
+	generate_contract_from_abi \
+	generate_synccommittee_mocks \
 	$(root_sce)/internal/types/tasktype_string.go \
 	$(root_sce)/internal/types/proverresulttype_string.go \
 	$(root_sce)/internal/types/taskstatus_string.go \
