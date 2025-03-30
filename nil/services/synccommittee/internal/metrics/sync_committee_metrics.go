@@ -6,8 +6,15 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
+	"github.com/NilFoundation/nil/nil/internal/telemetry/telattr"
+	coreTypes "github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+)
+
+const (
+	attrShardId = "shard.id"
 )
 
 type SyncCommitteeMetricsHandler struct {
@@ -20,6 +27,9 @@ type SyncCommitteeMetricsHandler struct {
 	totalBatchesCreated telemetry.Counter
 	batchSizeBlocks     telemetry.Histogram
 	batchSizeTxs        telemetry.Histogram
+
+	// LagTrackerMetrics
+	blockFetchingLag telemetry.Gauge
 
 	// BlockStorageMetrics
 	totalBatchesProved telemetry.Counter
@@ -52,11 +62,43 @@ func (h *SyncCommitteeMetricsHandler) init(attributes metric.MeasurementOption, 
 		return err
 	}
 
+	if err := h.initLagTrackerMetrics(meter); err != nil {
+		return err
+	}
+
 	if err := h.initBlockStorageMetrics(meter); err != nil {
 		return err
 	}
 
 	if err := h.initProposerMetrics(meter); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *SyncCommitteeMetricsHandler) initAggregatorMetrics(meter telemetry.Meter) error {
+	var err error
+
+	if h.totalBatchesCreated, err = meter.Int64Counter(namespace + "total_batches_created"); err != nil {
+		return err
+	}
+
+	if h.batchSizeBlocks, err = meter.Int64Histogram(namespace + "batch_size_blocks"); err != nil {
+		return err
+	}
+
+	if h.batchSizeTxs, err = meter.Int64Histogram(namespace + "batch_size_txs"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *SyncCommitteeMetricsHandler) initLagTrackerMetrics(meter telemetry.Meter) error {
+	var err error
+
+	if h.blockFetchingLag, err = meter.Int64Gauge(namespace + "block_fetching_lag"); err != nil {
 		return err
 	}
 
@@ -87,24 +129,6 @@ func (h *SyncCommitteeMetricsHandler) initProposerMetrics(meter telemetry.Meter)
 	return nil
 }
 
-func (h *SyncCommitteeMetricsHandler) initAggregatorMetrics(meter telemetry.Meter) error {
-	var err error
-
-	if h.totalBatchesCreated, err = meter.Int64Counter(namespace + "total_batches_created"); err != nil {
-		return err
-	}
-
-	if h.batchSizeBlocks, err = meter.Int64Histogram(namespace + "batch_size_blocks"); err != nil {
-		return err
-	}
-
-	if h.batchSizeTxs, err = meter.Int64Histogram(namespace + "batch_size_txs"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (h *SyncCommitteeMetricsHandler) RecordBatchCreated(ctx context.Context, batch *types.BlockBatch) {
 	h.totalBatchesCreated.Add(ctx, 1, h.attributes)
 
@@ -117,6 +141,18 @@ func (h *SyncCommitteeMetricsHandler) RecordBatchCreated(ctx context.Context, ba
 
 	h.batchSizeBlocks.Record(ctx, batchSizeBlocks, h.attributes)
 	h.batchSizeTxs.Record(ctx, batchSizeTxs, h.attributes)
+}
+
+func (h *SyncCommitteeMetricsHandler) RecordFetchingLag(
+	ctx context.Context,
+	shardId coreTypes.ShardId,
+	blocksCount int64,
+) {
+	attr := telattr.With(
+		attribute.Int64(attrShardId, int64(shardId)),
+	)
+
+	h.blockFetchingLag.Record(ctx, blocksCount, h.attributes, attr)
 }
 
 func (h *SyncCommitteeMetricsHandler) RecordBatchProved(ctx context.Context) {
