@@ -50,6 +50,7 @@ func (s *TaskStateChangeHandlerTestSuite) SetupSuite() {
 }
 
 func (s *TaskStateChangeHandlerTestSuite) SetupTest() {
+	s.resetLauncher.ResetCalls()
 	err := s.db.DropAll()
 	s.Require().NoError(err, "failed to clear database in SetUpTest")
 }
@@ -58,14 +59,94 @@ func (s *TaskStateChangeHandlerTestSuite) TearDownSuite() {
 	s.cancellation()
 }
 
-func (s *TaskStateChangeHandlerTestSuite) Test_Handle_Unknown_Batch() {
-	task := testaide.NewTaskOfType(types.ProofBatch)
-	task.BatchId = types.NewBatchId()
+func (s *TaskStateChangeHandlerTestSuite) Test_OnTaskTerminated_Success() {
+	task, batch := s.batchTaskSetUp()
 	result := testaide.NewSuccessTaskResult(task.Id, testaide.RandomExecutorId())
 
 	err := s.handler.OnTaskTerminated(s.ctx, task, result)
 	s.Require().NoError(err)
 
+	proposalData, err := s.blockStorage.TryGetNextProposalData(s.ctx)
+	s.Require().NoError(err)
+	s.Require().Equal(batch.LatestMainBlock().Hash, proposalData.NewProvedStateRoot)
+
 	resetCalls := s.resetLauncher.LaunchPartialResetWithSuspensionCalls()
 	s.Require().Empty(resetCalls)
+}
+
+func (s *TaskStateChangeHandlerTestSuite) Test_OnTaskTerminated_Retryable_Error() {
+	task, _ := s.batchTaskSetUp()
+	result := testaide.NewRetryableErrorTaskResult(task.Id, testaide.RandomExecutorId())
+
+	err := s.handler.OnTaskTerminated(s.ctx, task, result)
+	s.Require().NoError(err)
+
+	proposalData, err := s.blockStorage.TryGetNextProposalData(s.ctx)
+	s.Require().NoError(err)
+	s.Require().Nil(proposalData)
+
+	resetCalls := s.resetLauncher.LaunchPartialResetWithSuspensionCalls()
+	s.Require().Empty(resetCalls)
+}
+
+func (s *TaskStateChangeHandlerTestSuite) Test_OnTaskTerminated_Non_Retryable_Error() {
+	task, _ := s.batchTaskSetUp()
+	result := testaide.NewNonRetryableErrorTaskResult(task.Id, testaide.RandomExecutorId())
+
+	err := s.handler.OnTaskTerminated(s.ctx, task, result)
+	s.Require().NoError(err)
+
+	proposalData, err := s.blockStorage.TryGetNextProposalData(s.ctx)
+	s.Require().NoError(err)
+	s.Require().Nil(proposalData)
+
+	resetCalls := s.resetLauncher.LaunchPartialResetWithSuspensionCalls()
+	s.Require().Len(resetCalls, 1)
+}
+
+func (s *TaskStateChangeHandlerTestSuite) batchTaskSetUp() (*types.Task, *types.BlockBatch) {
+	s.T().Helper()
+
+	batch := testaide.NewBlockBatch(10)
+
+	err := s.blockStorage.SetProvedStateRoot(s.ctx, batch.FirstMainBlock().ParentHash)
+	s.Require().NoError(err)
+
+	err = s.blockStorage.SetBlockBatch(s.ctx, batch)
+	s.Require().NoError(err)
+
+	task := testaide.NewTaskOfType(types.ProofBatch)
+	task.BatchId = batch.Id
+	return task, batch
+}
+
+func (s *TaskStateChangeHandlerTestSuite) Test_OnTaskTerminated_Unknown_Batch() {
+	task := testaide.NewTaskOfType(types.ProofBatch)
+	task.BatchId = types.NewBatchId()
+	executor := testaide.RandomExecutorId()
+
+	testCases := []struct {
+		name   string
+		result *types.TaskResult
+	}{
+		{
+			"Success", testaide.NewSuccessTaskResult(task.Id, executor),
+		},
+		{
+			"Retryable_Error", testaide.NewRetryableErrorTaskResult(task.Id, executor),
+		},
+		{
+			"Critical_Error", testaide.NewNonRetryableErrorTaskResult(task.Id, executor),
+		},
+	}
+
+	for _, testCase := range testCases {
+		s.Run(testCase.name, func() {
+			err := s.handler.OnTaskTerminated(s.ctx, task, testCase.result)
+			s.Require().NoError(err)
+
+			resetCalls := s.resetLauncher.LaunchPartialResetWithSuspensionCalls()
+			s.Require().Empty(resetCalls)
+		})
+	}
 }
