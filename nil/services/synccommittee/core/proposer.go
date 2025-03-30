@@ -11,6 +11,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/core/fetching"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rollupcontract"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
@@ -27,12 +28,12 @@ type ProposerStorage interface {
 
 type ProposerMetrics interface {
 	metrics.BasicMetrics
-	RecordProposerTxSent(ctx context.Context, proposalData *scTypes.ProposalData)
+	RecordStateUpdated(ctx context.Context, proposalData *scTypes.ProposalData)
 }
 
 type proposer struct {
 	storage   ProposerStorage
-	rpcClient RpcBlockFetcher
+	rpcClient fetching.RpcBlockFetcher
 
 	rollupContractWrapper rollupcontract.Wrapper
 	config                ProposerConfig
@@ -56,7 +57,7 @@ func NewProposer(
 	config ProposerConfig,
 	storage ProposerStorage,
 	contractWrapper rollupcontract.Wrapper,
-	rpcClient RpcBlockFetcher,
+	rpcClient fetching.RpcBlockFetcher,
 	metrics ProposerMetrics,
 	logger logging.Logger,
 ) (*proposer, error) {
@@ -199,7 +200,7 @@ func (p *proposer) updateState(
 		return fmt.Errorf("failed to update state: %w", err)
 	}
 
-	p.metrics.RecordProposerTxSent(ctx, proposalData)
+	p.metrics.RecordStateUpdated(ctx, proposalData)
 
 	return nil
 }

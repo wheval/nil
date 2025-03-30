@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rollupcontract"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/core/fetching"
 )
 
 const (
@@ -12,7 +13,7 @@ const (
 type Config struct {
 	RpcEndpoint             string                       `yaml:"endpoint,omitempty"`
 	TaskListenerRpcEndpoint string                       `yaml:"ownEndpoint,omitempty"`
-	AggregatorConfig        AggregatorConfig             `yaml:",inline"`
+	AggregatorConfig        fetching.AggregatorConfig    `yaml:",inline"`
 	ProposerParams          ProposerConfig               `yaml:"-"`
 	ContractWrapperConfig   rollupcontract.WrapperConfig `yaml:",inline"`
 	Telemetry               *telemetry.Config            `yaml:",inline"`
@@ -22,7 +23,7 @@ func NewDefaultConfig() *Config {
 	return &Config{
 		RpcEndpoint:             "tcp://127.0.0.1:8529",
 		TaskListenerRpcEndpoint: DefaultTaskRpcEndpoint,
-		AggregatorConfig:        NewDefaultAggregatorConfig(),
+		AggregatorConfig:        fetching.NewDefaultAggregatorConfig(),
 		ProposerParams:          NewDefaultProposerConfig(),
 		ContractWrapperConfig:   rollupcontract.NewDefaultWrapperConfig(),
 		Telemetry: &telemetry.Config{
