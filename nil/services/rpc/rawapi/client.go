@@ -276,7 +276,7 @@ func discoverAppropriatePeer(
 ) (network.PeerID, error) {
 	peersWithSpecifiedShard := networkManager.GetPeersForProtocol(protocol)
 	if len(peersWithSpecifiedShard) == 0 {
-		return "", fmt.Errorf("No peers with shard %d found", shardId)
+		return "", fmt.Errorf("no peers with shard %d found", shardId)
 	}
 	return peersWithSpecifiedShard[0], nil
 }

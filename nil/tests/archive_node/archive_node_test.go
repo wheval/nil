@@ -123,7 +123,7 @@ func (s *SuiteArchiveNode) TestRestarts() {
 func (s *SuiteArchiveNode) TestGetFaucetBalance() {
 	value, err := s.DefaultClient.GetBalance(s.Context, types.FaucetAddress, "latest")
 	s.Require().NoError(err)
-	s.Positive(value.Uint64())
+	s.NotZero(value.Uint64())
 }
 
 func TestArchiveNodeWithBootstrapPeers(t *testing.T) {
