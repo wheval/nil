@@ -133,8 +133,8 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 
 		for {
 			select {
-			case newBlockId := <-syncCh:
-				if newBlockId < types.BlockNumber(height) {
+			case event := <-syncCh:
+				if event.evType != replayType || event.blockNumber < types.BlockNumber(height) {
 					continue
 				}
 
