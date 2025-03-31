@@ -69,8 +69,7 @@ golangci-lint:
 format: generated
 	GOPROXY= go mod tidy
 	GOPROXY= go mod vendor
-	gofumpt -l -w .
-	gci write . --skip-generated --skip-vendor
+	golangci-lint fmt
 
 lint: format golangci-lint
 

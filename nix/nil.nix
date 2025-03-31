@@ -12,8 +12,6 @@
 , go-tools
 , gotools
 , golangci-lint
-, gofumpt
-, gci
 , delve
 , gopls
 , protoc-gen-go
@@ -73,8 +71,6 @@ buildGo124Module rec {
     (overrideBuildGoModule go-tools)
     (overrideBuildGoModule gopls)
     golangci-lint
-    (overrideBuildGoModule gofumpt)
-    (overrideBuildGoModule gci)
     (overrideBuildGoModule delve)
     (overrideBuildGoModule protoc-gen-go)
   ];
