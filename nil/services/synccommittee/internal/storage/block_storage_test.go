@@ -392,10 +392,7 @@ func (s *BlockStorageTestSuite) Test_TryGetNextProposalData_Concurrently() {
 	var receivedData []*scTypes.ProposalData
 	proofGroup.Go(func() error {
 		// poll all blocks data from the storage
-		for {
-			if len(receivedData) == batchesCount {
-				break
-			}
+		for len(receivedData) != batchesCount {
 			select {
 			case <-s.ctx.Done():
 				return s.ctx.Err()

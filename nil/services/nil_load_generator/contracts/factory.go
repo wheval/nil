@@ -22,7 +22,7 @@ func (f *Factory) Deploy(smartAccount SmartAccount) error {
 	if err != nil {
 		return err
 	}
-	code := append(f.Contract.Code.Clone(), argsPacked...)
+	code := append(f.Code.Clone(), argsPacked...)
 	f.Addr, err = DeployContract(smartAccount.CliService, smartAccount.Addr, code)
 	return err
 }

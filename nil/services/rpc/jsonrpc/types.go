@@ -514,10 +514,10 @@ func toOutTransactions(input []*rpctypes.OutTransaction) ([]*OutTransaction, err
 			Transaction: &types.Transaction{},
 			ForwardKind: txn.ForwardKind,
 		}
-		if err := decoded.Transaction.UnmarshalSSZ(txn.TransactionSSZ); err != nil {
+		if err := decoded.UnmarshalSSZ(txn.TransactionSSZ); err != nil {
 			return nil, err
 		}
-		decoded.TxnHash = decoded.Transaction.Hash()
+		decoded.TxnHash = decoded.Hash()
 
 		output[i] = &OutTransaction{
 			Transaction:     decoded,

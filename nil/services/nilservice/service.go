@@ -490,7 +490,7 @@ func CreateNode(
 		}))
 	case RpcRunMode:
 		if networkManager == nil {
-			err := errors.New("Failed to start rpc node without network configuration")
+			err := errors.New("failed to start rpc node without network configuration")
 			logger.Error().Err(err).Send()
 			return nil, err
 		}

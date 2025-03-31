@@ -332,7 +332,7 @@ func (s *Syncer) saveBlock(ctx context.Context, block *types.BlockWithExtractedD
 	}
 
 	s.logger.Trace().
-		Stringer(logging.FieldBlockNumber, block.Block.Id).
+		Stringer(logging.FieldBlockNumber, block.Id).
 		Msg("Block written")
 
 	return nil

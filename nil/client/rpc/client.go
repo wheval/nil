@@ -192,7 +192,7 @@ func RunContractBatch(ctx context.Context, client *Client, smartAccount types.Ad
 	// get hash of the latest message
 	rawTxn, ok := resp[len(resp)-1].(json.RawMessage)
 	if !ok {
-		return common.EmptyHash, errors.New("Result is not bytes")
+		return common.EmptyHash, errors.New("result is not bytes")
 	}
 
 	var txHash common.Hash

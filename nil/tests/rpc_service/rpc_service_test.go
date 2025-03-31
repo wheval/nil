@@ -109,7 +109,7 @@ func (s *SuiteRpcService) TestRpcDebugModules() {
 	s.Require().NoError(err)
 
 	s.Require().NotEmpty(block.Id)
-	s.Require().NotEqual(common.EmptyHash, block.Block.Hash(types.BaseShardId))
+	s.Require().NotEqual(common.EmptyHash, block.Hash(types.BaseShardId))
 	s.Require().NotEmpty(res.Content)
 
 	fullRes, err := s.Client.GetDebugBlock(s.Context, types.BaseShardId, "latest", true)

@@ -10,7 +10,6 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/services/relayer/internal/storage"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/jonboulle/clockwork"
@@ -194,7 +193,7 @@ func (s *EventListenerTestSuite) TestFetchHistoricalEvents() {
 			return []*L1MessageSent{
 				{
 					MessageHash: getMsgHash(msgSourceFetcher, callNumber+1),
-					Raw: types.Log{
+					Raw: ethtypes.Log{
 						BlockNumber: from,
 						BlockHash:   ethcommon.BytesToHash([]byte{1, 2, 3, 4}),
 					},
@@ -217,7 +216,7 @@ func (s *EventListenerTestSuite) TestFetchHistoricalEvents() {
 		err = s.storage.IterateEventsByBatch(s.ctx, 100, func(events []*Event) error {
 			s.Len(events, eventCount)
 			for i, event := range events {
-				s.EqualValues(expectedRanges[i].from, event.BlockNumber)
+				s.Equal(expectedRanges[i].from, event.BlockNumber)
 				s.EqualValues(i, event.SequenceNumber)
 			}
 			return nil
@@ -268,7 +267,7 @@ func (s *EventListenerTestSuite) TestFetchEventsFromSubscription() {
 				for i := 1; i < 4; i++ {
 					sink <- &L1MessageSent{
 						MessageHash: getMsgHash(msgSourceSubscription, i),
-						Raw: types.Log{
+						Raw: ethtypes.Log{
 							BlockNumber: 1024 + uint64(i),
 							BlockHash:   ethcommon.BytesToHash([]byte{1, 2, 3, byte(i)}),
 						},
@@ -332,7 +331,7 @@ func (s *EventListenerTestSuite) TestSmoke() {
 			for i := 1; i < 4; i++ {
 				sink <- &L1MessageSent{
 					MessageHash: getMsgHash(msgSourceSubscription, i),
-					Raw: types.Log{
+					Raw: ethtypes.Log{
 						BlockNumber: 1024 + uint64(i),
 						BlockHash:   ethcommon.BytesToHash([]byte{1, 2, 3, byte(i)}),
 					},
@@ -367,7 +366,7 @@ func (s *EventListenerTestSuite) TestSmoke() {
 		return []*L1MessageSent{
 			{
 				MessageHash: getMsgHash(msgSourceFetcher, callNumber+1),
-				Raw: types.Log{
+				Raw: ethtypes.Log{
 					BlockNumber: from,
 					BlockHash:   ethcommon.BytesToHash([]byte{1, 2, 3, 4}),
 				},

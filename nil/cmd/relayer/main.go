@@ -72,7 +72,7 @@ func addRunCommandFlags(runCmd *cobra.Command, cfg *Config) {
 		"l1-endpoint", "", "URL for ETH L1 client",
 	)
 	runCmd.Flags().StringVar(
-		&cfg.RelayerConfig.EventListenerConfig.BridgeMessengerContractAddress,
+		&cfg.EventListenerConfig.BridgeMessengerContractAddress,
 		"l1-contract-addr",
 		"",
 		"Address of L1BridgeMessenger contract to fetch events from",
@@ -81,16 +81,16 @@ func addRunCommandFlags(runCmd *cobra.Command, cfg *Config) {
 		"l1-timeout", time.Second, "Max timeout for ETH client to timeout",
 	)
 	runCmd.Flags().IntVar(
-		&cfg.RelayerConfig.EventListenerConfig.BatchSize,
+		&cfg.EventListenerConfig.BatchSize,
 		"l1-fetcher-batch-size",
-		cfg.RelayerConfig.EventListenerConfig.BatchSize,
+		cfg.EventListenerConfig.BatchSize,
 		"Block range len used in event listener to fetch historical data",
 	)
 
 	runCmd.Flags().DurationVar(
-		&cfg.RelayerConfig.EventListenerConfig.PollInterval,
+		&cfg.EventListenerConfig.PollInterval,
 		"l1-fetcher-poll-interval",
-		cfg.RelayerConfig.EventListenerConfig.PollInterval,
+		cfg.EventListenerConfig.PollInterval,
 		"Pause which l1 fetcher takes between fetching historical data batches",
 	)
 

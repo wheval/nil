@@ -335,9 +335,9 @@ func (s *Validator) validateRepliedBlock(
 // +checklocksread:s.mutex
 func (s *Validator) validateBlockForProposalUnlocked(ctx context.Context, block *types.BlockWithExtractedData) error {
 	proposal := &execution.Proposal{
-		PrevBlockId:   block.Block.Id - 1,
-		PrevBlockHash: block.Block.PrevBlock,
-		MainShardHash: block.Block.MainShardHash,
+		PrevBlockId:   block.Id - 1,
+		PrevBlockHash: block.PrevBlock,
+		MainShardHash: block.MainShardHash,
 		ShardHashes:   block.ChildBlocks,
 	}
 	return s.validateProposalUnlocked(ctx, proposal)
@@ -395,9 +395,9 @@ func (s *Validator) ReplayBlock(ctx context.Context, block *types.BlockWithExtra
 
 // +checklocks:s.mutex
 func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockWithExtractedData) error {
-	blockHash := block.Block.Hash(s.params.ShardId)
+	blockHash := block.Hash(s.params.ShardId)
 	s.logger.Trace().
-		Stringer(logging.FieldBlockNumber, block.Block.Id).
+		Stringer(logging.FieldBlockNumber, block.Id).
 		Stringer(logging.FieldBlockHash, blockHash).
 		Msg("Replaying block")
 
@@ -409,9 +409,9 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 	}
 
 	proposal := &execution.Proposal{
-		PrevBlockId:   block.Block.Id - 1,
-		PrevBlockHash: block.Block.PrevBlock,
-		MainShardHash: block.Block.MainShardHash,
+		PrevBlockId:   block.Id - 1,
+		PrevBlockHash: block.PrevBlock,
+		MainShardHash: block.MainShardHash,
 		ShardHashes:   block.ChildBlocks,
 	}
 	proposal.InternalTxns, proposal.ExternalTxns = execution.SplitInTransactions(block.InTransactions)

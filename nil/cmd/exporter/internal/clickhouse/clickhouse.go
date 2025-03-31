@@ -69,7 +69,7 @@ func NewTransactionWithBinary(
 		Transaction:      *transaction,
 		Binary:           transactionBinary,
 		BlockId:          block.Id,
-		BlockHash:        block.Block.Hash(shardId),
+		BlockHash:        block.Hash(shardId),
 		Hash:             hash,
 		ShardId:          shardId,
 		TransactionIndex: idx,
@@ -266,7 +266,7 @@ func (d *ClickhouseDriver) ExportBlocks(ctx context.Context, blocksToExport []*i
 			Block:    *block.decoded.Block,
 			Binary:   binary,
 			ShardId:  block.decoded.ShardId,
-			Hash:     block.decoded.Block.Hash(block.decoded.ShardId),
+			Hash:     block.decoded.Hash(block.decoded.ShardId),
 			InTxnNum: uint64(len(block.decoded.InTransactions)),
 		}
 		blockErr = blockBatch.AppendStruct(binaryBlockExtended)
