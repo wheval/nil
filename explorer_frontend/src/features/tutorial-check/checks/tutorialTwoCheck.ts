@@ -73,7 +73,12 @@ async function runTutorialCheckTwo(props: CheckProps) {
   if (checkMinting) {
     props.setTutorialChecksEvent(TutorialChecksStatus.Failed);
     console.log(resMinting);
-    props.tutorialContractStepFailed("Failed to call mintTokenCustom()!");
+    props.tutorialContractStepFailed(
+      `
+      Calling Operator.checkMintToken() produced one or more failed receipts!
+      Debug this transaction using the Cometa service: ${hashMinting}.
+      `,
+    );
     return false;
   }
 
@@ -117,7 +122,12 @@ async function runTutorialCheckTwo(props: CheckProps) {
 
   if (Object.values(customTokenBalanceOperator).at(1) === CUSTOM_TOKEN_AMOUNT) {
     props.setTutorialChecksEvent(TutorialChecksStatus.Failed);
-    props.tutorialContractStepFailed("Operator did not receive tokens from CustomToken!");
+    props.tutorialContractStepFailed(
+      `
+      Calling Operator.checkSendToken() produced one or more failed receipts!
+      To investigate, debug this transaction using the Cometa service: ${hashSending}.
+      `,
+    );
     return false;
   }
 
