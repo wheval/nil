@@ -21,7 +21,7 @@ type cmdConfig struct {
 }
 
 func main() {
-	check.PanicIfErr(execute())
+	check.PanicIfNotCancelledErr(execute())
 }
 
 func execute() error {
