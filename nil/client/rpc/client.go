@@ -81,8 +81,8 @@ const (
 	Debug_getContract                    = "debug_getContract"
 	Web3_clientVersion                   = "web3_clientVersion"
 	Dev_doPanicOnShard                   = "dev_doPanicOnShard"
-	Txpool_getTxpoolStatus               = "txpool_GetTxpoolStatus"
-	Txpool_getTxpoolContent              = "txpool_GetTxpoolContent"
+	Txpool_getTxpoolStatus               = "txpool_getTxpoolStatus"
+	Txpool_getTxpoolContent              = "txpool_getTxpoolContent"
 )
 
 const (
@@ -972,17 +972,10 @@ func simpleCallUint64[ReturnType ~uint64](
 	return ReturnType(result), err
 }
 
-func (c *Client) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (uint64, error) {
-	request := c.newRequest(Txpool_getTxpoolStatus, shardId)
-	res, err := c.performRequest(ctx, request)
-	if err != nil {
-		return 0, err
-	}
+func (c *Client) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (jsonrpc.TxPoolStatus, error) {
+	return simpleCall[jsonrpc.TxPoolStatus](ctx, c, Txpool_getTxpoolStatus, shardId)
+}
 
-	var resValue uint64
-	if err := json.Unmarshal(res, &resValue); err != nil {
-		return 0, err
-	}
-
-	return resValue, err
+func (c *Client) GetTxpoolContent(ctx context.Context, shardId types.ShardId) (jsonrpc.TxPoolContent, error) {
+	return simpleCall[jsonrpc.TxPoolContent](ctx, c, Txpool_getTxpoolContent, shardId)
 }
