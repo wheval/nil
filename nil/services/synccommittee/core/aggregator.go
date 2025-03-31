@@ -103,14 +103,14 @@ func (agg *aggregator) Name() string {
 }
 
 func (agg *aggregator) Run(ctx context.Context, started chan<- struct{}) error {
-	agg.logger.Info().Msg("starting blocks fetching")
+	agg.logger.Info().Msg("Starting block fetching")
 
 	err := agg.workerAction.Run(ctx, started)
 
 	if err == nil || errors.Is(err, context.Canceled) {
-		agg.logger.Info().Msg("blocks fetching stopped")
+		agg.logger.Info().Msg("Block fetching stopped")
 	} else {
-		agg.logger.Error().Err(err).Msg("error running aggregator, stopped")
+		agg.logger.Error().Err(err).Msg("Error running aggregator, stopped")
 	}
 
 	return err
@@ -122,9 +122,9 @@ func (agg *aggregator) Pause(ctx context.Context) error {
 		return err
 	}
 	if paused {
-		agg.logger.Info().Msg("blocks fetching paused")
+		agg.logger.Info().Msg("Block fetching paused")
 	} else {
-		agg.logger.Warn().Msg("blocks fetching already paused")
+		agg.logger.Warn().Msg("Block fetching already paused")
 	}
 	return nil
 }
@@ -135,9 +135,9 @@ func (agg *aggregator) Resume(ctx context.Context) error {
 		return err
 	}
 	if resumed {
-		agg.logger.Info().Msg("blocks fetching resumed")
+		agg.logger.Info().Msg("Block fetching resumed")
 	} else {
-		agg.logger.Warn().Msg("blocks fetching already running")
+		agg.logger.Warn().Msg("Block fetching already running")
 	}
 	return nil
 }
@@ -161,31 +161,27 @@ func (agg *aggregator) handleProcessingErr(ctx context.Context, err error) error
 	case err == nil:
 		return nil
 
-	case errors.Is(err, types.ErrBatchNotReady):
-		agg.logger.Warn().Err(err).Msg("received unready block batch, skipping")
-		return nil
-
 	case errors.Is(err, types.ErrBlockMismatch):
-		agg.logger.Warn().Err(err).Msg("block mismatch detected, resetting state")
+		agg.logger.Warn().Err(err).Msg("Block mismatch detected, resetting state")
 		if err := agg.resetter.ResetProgressNotProved(ctx); err != nil {
 			return fmt.Errorf("error resetting state: %w", err)
 		}
 		return nil
 
 	case errors.Is(err, storage.ErrStateRootNotInitialized):
-		agg.logger.Warn().Err(err).Msg("state root not initialized, skipping")
+		agg.logger.Warn().Err(err).Msg("State root not initialized, skipping")
 		return nil
 
 	case errors.Is(err, storage.ErrCapacityLimitReached):
-		agg.logger.Info().Err(err).Msg("storage capacity limit reached, skipping")
+		agg.logger.Info().Err(err).Msg("Storage capacity limit reached, skipping")
 		return nil
 
 	case errors.Is(err, context.Canceled):
-		agg.logger.Info().Err(err).Msg("block processing cancelled")
+		agg.logger.Info().Err(err).Msg("Block processing cancelled")
 		return err
 
 	default:
-		agg.logger.Error().Err(err).Msg("error processing blocks")
+		agg.logger.Error().Err(err).Msg("Error processing blocks")
 		return err
 	}
 }
@@ -220,7 +216,7 @@ func (agg *aggregator) processBlockRange(ctx context.Context) error {
 		agg.logger.Debug().
 			Stringer(logging.FieldShardId, coreTypes.MainShardId).
 			Stringer(logging.FieldBlockNumber, latestBlockRef.Number).
-			Msg("no new blocks to fetch")
+			Msg("No new blocks to fetch")
 		return nil
 	}
 
@@ -392,7 +388,7 @@ func (agg *aggregator) createProofTasks(ctx context.Context, batch *types.BlockB
 
 	agg.logger.Debug().
 		Stringer(logging.FieldBatchId, batch.Id).
-		Msgf("created proof task, latestMainHash=%s", batch.LatestMainBlock().Hash)
+		Msgf("Created proof task, latestMainHash=%s", batch.LatestMainBlock().Hash)
 
 	return nil
 }
