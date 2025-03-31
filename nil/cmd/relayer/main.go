@@ -121,6 +121,25 @@ func addRunCommandFlags(runCmd *cobra.Command, cfg *Config) {
 		cfg.TransactionSenderConfig.DbPollInterval,
 		"Poll interval for L2 transaction sender",
 	)
+
+	// L2 debug mode flags
+	runCmd.Flags().BoolVar(&cfg.L2ContractConfig.DebugMode,
+		"l2-debug-mode", false, "Enable debug mode for L2 transaction sender",
+	)
+
+	runCmd.Flags().StringVar(
+		&cfg.L2ContractConfig.SmartAccountSalt,
+		"l2-smart-account-salt",
+		"",
+		"Salt for L2 smart account (debug-only)",
+	)
+
+	runCmd.Flags().StringVar(
+		&cfg.L2ContractConfig.FaucetAddress,
+		"l2-faucet-address",
+		"",
+		"Faucet address for L2 transaction sender (debug-only)",
+	)
 }
 
 func runService(ctx context.Context, cfg *Config) error {
