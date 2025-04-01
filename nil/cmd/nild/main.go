@@ -128,7 +128,7 @@ func parseArgs() *nildconfig.Config {
 		&cfg.AdminSocketPath,
 		"admin-socket-path",
 		cfg.AdminSocketPath,
-		"unix socket path to start admin server on (disabled if empty)}")
+		"unix socket path to start admin server on (disabled if empty)")
 	rootCmd.PersistentFlags().StringVar(
 		&cfg.ReadThrough.SourceAddr,
 		"read-through-db-addr",
