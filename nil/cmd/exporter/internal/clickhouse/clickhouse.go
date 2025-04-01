@@ -120,7 +120,10 @@ func NewLogWithBinary(log *types.Log, binary []byte, receipt *types.Receipt) *Lo
 	return res
 }
 
-func NewClickhouseDriver(_ context.Context, endpoint, login, password, database string) (*ClickhouseDriver, error) {
+func NewClickhouseDriver(ctx context.Context, endpoint, login, password, database string) (*ClickhouseDriver, error) {
+	if err := common.CreateClickHouseDbIfNotExists(ctx, database, login, password, endpoint); err != nil {
+		return nil, err
+	}
 	// Create connection to Clickhouse
 	connectionOptions := clickhouse.Options{
 		Auth: clickhouse.Auth{

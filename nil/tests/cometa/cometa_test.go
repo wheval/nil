@@ -2,6 +2,7 @@ package cometa
 
 import (
 	"os/exec"
+	"syscall"
 	"testing"
 	"time"
 
@@ -68,18 +69,12 @@ func (s *SuiteCometaClickhouse) SetupSuite() {
 		"--mysql_port=",
 		"--path="+dir,
 	)
+	s.clickhouse.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	s.clickhouse.Dir = dir
 	err := s.clickhouse.Start()
 	s.Require().NoError(err)
 
 	time.Sleep(1 * time.Second)
-	createDb := exec.Command( //nolint:gosec
-		"clickhouse-client",
-		"--port=9002",
-		"--query",
-		"CREATE DATABASE IF NOT EXISTS "+s.cometaCfg.DbName)
-	out, err := createDb.CombinedOutput()
-	s.Require().NoErrorf(err, "output: %s", out)
 
 	s.SuiteCometa.SetupSuite()
 
@@ -88,7 +83,12 @@ func (s *SuiteCometaClickhouse) SetupSuite() {
 
 func (s *SuiteCometaClickhouse) TearDownSuite() {
 	if s.clickhouse != nil {
-		err := s.clickhouse.Process.Kill()
+		// https://stackoverflow.com/questions/22470193/why-wont-go-kill-a-child-process-correctly
+		// simple s.clickhouse.Kill() won't work on child process
+		// this leads to errors in sequential test runs
+		pgid, err := syscall.Getpgid(s.clickhouse.Process.Pid)
+		s.Require().NoError(err)
+		err = syscall.Kill(-pgid, syscall.SIGTERM)
 		s.Require().NoError(err)
 	}
 }
