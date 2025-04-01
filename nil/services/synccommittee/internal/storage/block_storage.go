@@ -308,8 +308,6 @@ func (bs *BlockStorage) createProposalDataTx(
 	proposalCandidate *batchEntry,
 	currentProvedStateRoot common.Hash,
 ) (*scTypes.ProposalData, error) {
-	transactions := make([]scTypes.PrunedTransaction, 0)
-
 	var firstBlockFetchedAt time.Time
 
 	for i, blockId := range proposalCandidate.BlockIds {
@@ -320,14 +318,11 @@ func (bs *BlockStorage) createProposalDataTx(
 		if i == 0 {
 			firstBlockFetchedAt = bEntry.FetchedAt
 		}
-
-		blockTransactions := scTypes.BlockTransactions(&bEntry.Block)
-		transactions = append(transactions, blockTransactions...)
 	}
 
 	return scTypes.NewProposalData(
 		proposalCandidate.Id,
-		transactions,
+		proposalCandidate.DataProofs,
 		currentProvedStateRoot,
 		proposalCandidate.LatestMainBlockHash,
 		firstBlockFetchedAt,

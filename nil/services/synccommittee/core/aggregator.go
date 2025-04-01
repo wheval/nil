@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,14 +11,16 @@ import (
 	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	coreTypes "github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/core/batches"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/blob"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/encode"
 	v1 "github.com/NilFoundation/nil/nil/services/synccommittee/core/batches/encode/v1"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/core/reset"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rollupcontract"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/jonboulle/clockwork"
 )
 
@@ -41,11 +44,13 @@ type AggregatorBlockStorage interface {
 
 type AggregatorConfig struct {
 	RpcPollingInterval time.Duration
+	MaxBlobsInTx       uint
 }
 
 func NewAggregatorConfig(rpcPollingInterval time.Duration) AggregatorConfig {
 	return AggregatorConfig{
 		RpcPollingInterval: rpcPollingInterval,
+		MaxBlobsInTx:       6,
 	}
 }
 
@@ -58,10 +63,13 @@ type aggregator struct {
 	blockStorage    AggregatorBlockStorage
 	taskStorage     AggregatorTaskStorage
 	subgraphFetcher *subgraphFetcher
-	batchCommitter  batches.BatchCommitter
+	batchEncoder    encode.BatchEncoder
+	blobBuilder     blob.Builder
+	rollupContract  rollupcontract.Wrapper
 	resetter        *reset.StateResetter
 	clock           clockwork.Clock
 	metrics         AggregatorMetrics
+	config          AggregatorConfig
 	workerAction    *concurrent.Suspendable
 	logger          logging.Logger
 }
@@ -71,6 +79,7 @@ func NewAggregator(
 	blockStorage AggregatorBlockStorage,
 	taskStorage AggregatorTaskStorage,
 	resetter *reset.StateResetter,
+	rollupContractWrapper rollupcontract.Wrapper,
 	clock clockwork.Clock,
 	logger logging.Logger,
 	metrics AggregatorMetrics,
@@ -81,16 +90,13 @@ func NewAggregator(
 		blockStorage:    blockStorage,
 		taskStorage:     taskStorage,
 		subgraphFetcher: newSubgraphFetcher(rpcClient, logger),
-		batchCommitter: batches.NewBatchCommitter(
-			v1.NewEncoder(logger),
-			blob.NewBuilder(),
-			nil, // TODO
-			logger,
-			batches.DefaultCommitOptions(),
-		),
-		resetter: resetter,
-		clock:    clock,
-		metrics:  metrics,
+		batchEncoder:    v1.NewEncoder(logger),
+		blobBuilder:     blob.NewBuilder(),
+		rollupContract:  rollupContractWrapper,
+		resetter:        resetter,
+		clock:           clock,
+		metrics:         metrics,
+		config:          config,
 	}
 
 	agg.workerAction = concurrent.NewSuspendable(agg.runIteration, config.RpcPollingInterval)
@@ -357,13 +363,18 @@ func (agg *aggregator) handleBlockBatch(ctx context.Context, batch *types.BlockB
 		return err
 	}
 
+	sidecar, dataProofs, err := agg.prepareForBatchCommit(ctx, batch)
+	if err != nil {
+		return err
+	}
+	batch.SetDataProofs(dataProofs)
+
 	if err := agg.blockStorage.SetBlockBatch(ctx, batch); err != nil {
 		return fmt.Errorf("error storing block batch, latestMainHash=%s: %w", batch.LatestMainBlock().Hash, err)
 	}
 
-	prunedBatch := types.NewPrunedBatch(batch)
-	if err := agg.batchCommitter.Commit(ctx, prunedBatch); err != nil {
-		return err
+	if err := agg.rollupContract.CommitBatch(ctx, sidecar, batch.Id.String()); err != nil {
+		return fmt.Errorf("error committing batch, latestMainHash=%s: %w", batch.LatestMainBlock().Hash, err)
 	}
 
 	if err := agg.createProofTasks(ctx, batch); err != nil {
@@ -391,4 +402,21 @@ func (agg *aggregator) createProofTasks(ctx context.Context, batch *types.BlockB
 		Msgf("Created proof task, latestMainHash=%s", batch.LatestMainBlock().Hash)
 
 	return nil
+}
+
+func (agg *aggregator) prepareForBatchCommit(
+	ctx context.Context, batch *types.BlockBatch,
+) (*ethtypes.BlobTxSidecar, types.DataProofs, error) {
+	var binTransactions bytes.Buffer
+	if err := agg.batchEncoder.Encode(types.NewPrunedBatch(batch), &binTransactions); err != nil {
+		return nil, nil, err
+	}
+	agg.logger.Debug().Int("compressed_batch_len", binTransactions.Len()).Msg("encoded transaction")
+
+	blobs, err := agg.blobBuilder.MakeBlobs(&binTransactions, agg.config.MaxBlobsInTx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return agg.rollupContract.PrepareBlobs(ctx, blobs)
 }
