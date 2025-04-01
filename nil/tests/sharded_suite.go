@@ -12,6 +12,7 @@ import (
 	"github.com/NilFoundation/nil/nil/client"
 	rpc_client "github.com/NilFoundation/nil/nil/client/rpc"
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/abi"
 	"github.com/NilFoundation/nil/nil/internal/config"
@@ -183,7 +184,8 @@ func (s *ShardedSuite) start(
 	options ...network.Option,
 ) {
 	s.T().Helper()
-	s.Context, s.ctxCancel = context.WithCancel(context.Background())
+	s.Context, s.ctxCancel = context.WithCancel(
+		context.WithValue(context.Background(), concurrent.RootContextNameLabel, "cluster lifecycle"))
 
 	if s.DbInit == nil {
 		s.DbInit = func() db.DB {
