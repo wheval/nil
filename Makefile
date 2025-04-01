@@ -3,9 +3,15 @@ GOBIN = $(CURDIR)/build/bin
 GOPRIVATE = github.com/NilFoundation
 PACKAGE = github.com/NilFoundation/nil
 
+# Default mode is debug
+ifeq ($(MODE),release)
+    TAGS = "$(BUILD_TAGS)"
+else
+    TAGS = "$(BUILD_TAGS),assert"
+endif
+
 GO_FLAGS =
-GOBUILD = GOPRIVATE="$(GOPRIVATE)" $(GO) build $(GO_FLAGS)
-GO_DBG_BUILD = GOPRIVATE="$(GOPRIVATE)" $(GO) build -tags $(BUILD_TAGS),debug,assert -gcflags=all="-N -l"  # see delve docs
+GOBUILD = GOPRIVATE="$(GOPRIVATE)" $(GO) build $(GO_FLAGS) -tags $(TAGS)
 GOTEST = GOPRIVATE="$(GOPRIVATE)" GODEBUG=cgocheck=0 $(GO) test -tags $(BUILD_TAGS),debug,assert,test,goexperiment.synctest $(GO_FLAGS) ./... -p 2
 
 SC_COMMANDS = sync_committee sync_committee_cli proof_provider prover nil_block_generator relayer
@@ -23,7 +29,7 @@ test: generated
 %.cmd: generated
 	@# Note: $* is replaced by the command name
 	@echo "Building $*"
-	@cd ./nil/cmd/$* && $(GOBUILD) -o $(GOBIN)/$* -tags assert
+	@cd ./nil/cmd/$* && $(GOBUILD) -o $(GOBIN)/$*
 	@echo "Run \"$(GOBIN)/$*\" to launch $*."
 
 %.runcmd: %.cmd
