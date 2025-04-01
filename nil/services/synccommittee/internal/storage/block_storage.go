@@ -115,6 +115,24 @@ func (bs *BlockStorage) TryGetLatestBatchId(ctx context.Context) (*scTypes.Batch
 	return bs.ops.getLatestBatchId(tx)
 }
 
+func (bs *BlockStorage) BatchExists(ctx context.Context, batchId scTypes.BatchId) (bool, error) {
+	tx, err := bs.database.CreateRoTx(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+
+	_, err = bs.ops.getBatch(tx, batchId)
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, scTypes.ErrBatchNotFound):
+		return false, nil
+	default:
+		return false, err
+	}
+}
+
 func (bs *BlockStorage) GetLatestFetched(ctx context.Context) (scTypes.BlockRefs, error) {
 	tx, err := bs.database.CreateRoTx(ctx)
 	if err != nil {

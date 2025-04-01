@@ -13,6 +13,7 @@ import (
 )
 
 type ProvedBatchSetter interface {
+	BatchExists(ctx context.Context, batchId types.BatchId) (bool, error)
 	SetBatchAsProved(ctx context.Context, batchId types.BatchId) error
 }
 
@@ -45,6 +46,15 @@ func (h *taskStateChangeHandler) OnTaskTerminated(
 	task *types.Task,
 	result *types.TaskResult,
 ) error {
+	batchExists, err := h.batchSetter.BatchExists(ctx, task.BatchId)
+	if err != nil {
+		return fmt.Errorf("failed to check if batch with id=%s exists: %w", task.BatchId, err)
+	}
+	if !batchExists {
+		h.onBatchDoesNotExist(task, err, "OnTaskTerminated")
+		return nil
+	}
+
 	switch {
 	case result.IsSuccess():
 		log.NewTaskResultEvent(h.logger, zerolog.InfoLevel, result).
@@ -57,9 +67,26 @@ func (h *taskStateChangeHandler) OnTaskTerminated(
 		return nil
 
 	default:
-		log.NewTaskResultEvent(h.logger, zerolog.WarnLevel, result).
-			Msg("task execution failed with critical error, state will be reset")
-		return h.stateResetLauncher.LaunchPartialResetWithSuspension(ctx, task.BatchId)
+		return h.resetState(ctx, task, result)
+	}
+}
+
+func (h *taskStateChangeHandler) resetState(ctx context.Context, task *types.Task, result *types.TaskResult) error {
+	log.NewTaskResultEvent(h.logger, zerolog.WarnLevel, result).
+		Msg("task execution failed with critical error, state will be reset")
+
+	err := h.stateResetLauncher.LaunchPartialResetWithSuspension(ctx, task.BatchId)
+
+	switch {
+	case err == nil:
+		return nil
+
+	case errors.Is(err, types.ErrBatchNotFound):
+		h.onBatchDoesNotExist(task, err, "LaunchPartialResetWithSuspension")
+		return nil
+
+	default:
+		return fmt.Errorf("failed to reset state, batchId=%s: %w", task.BatchId, err)
 	}
 }
 
@@ -84,13 +111,17 @@ func (h *taskStateChangeHandler) onTaskSuccess(ctx context.Context, task *types.
 		return err
 
 	case errors.Is(err, types.ErrBatchNotFound):
-		log.NewTaskEvent(h.logger, zerolog.WarnLevel, task).
-			Err(err).
-			Stringer(logging.FieldBatchId, task.BatchId).
-			Msg("batch not found, skipping (SetBatchAsProved)")
+		h.onBatchDoesNotExist(task, err, "SetBatchAsProved")
 		return nil
 
 	default:
 		return fmt.Errorf("failed to set batch with id=%s as proved: %w", task.BatchId, err)
 	}
+}
+
+func (h *taskStateChangeHandler) onBatchDoesNotExist(task *types.Task, err error, operationName string) {
+	log.NewTaskEvent(h.logger, zerolog.WarnLevel, task).
+		Err(err).
+		Stringer(logging.FieldBatchId, task.BatchId).
+		Msgf("Batch does not exist, skipping (%s)", operationName)
 }

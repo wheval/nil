@@ -136,7 +136,7 @@ func (s *BlockStorageTestSuite) Test_SetBlockBatch_Free_Capacity_On_SetBatchAsPr
 	s.Require().NoError(err)
 }
 
-func (s *BlockStorageTestSuite) Test_LatestBatchId() {
+func (s *BlockStorageTestSuite) Test_TryGetLatestBatchId() {
 	const batchesCount = 5
 	batches := testaide.NewBatchesSequence(batchesCount)
 
@@ -154,6 +154,26 @@ func (s *BlockStorageTestSuite) Test_LatestBatchId() {
 	}
 }
 
+func (s *BlockStorageTestSuite) Test_BatchExists_True() {
+	batch := testaide.NewBlockBatch(3)
+	err := s.bs.SetBlockBatch(s.ctx, batch)
+	s.Require().NoError(err)
+
+	exists, err := s.bs.BatchExists(s.ctx, batch.Id)
+	s.Require().NoError(err)
+	s.Require().True(exists)
+}
+
+func (s *BlockStorageTestSuite) Test_BatchExists_False() {
+	batch := testaide.NewBlockBatch(3)
+	err := s.bs.SetBlockBatch(s.ctx, batch)
+	s.Require().NoError(err)
+
+	exists, err := s.bs.BatchExists(s.ctx, scTypes.NewBatchId())
+	s.Require().NoError(err)
+	s.Require().False(exists)
+}
+
 func (s *BlockStorageTestSuite) Test_LatestBatchId_Mismatch() {
 	const batchesCount = 2
 	batches := testaide.NewBatchesSequence(batchesCount)
@@ -167,7 +187,7 @@ func (s *BlockStorageTestSuite) Test_LatestBatchId_Mismatch() {
 	s.Require().ErrorIs(err, scTypes.ErrBatchMismatch)
 }
 
-func (s *BlockStorageTestSuite) TestGetLastFetchedBlock() {
+func (s *BlockStorageTestSuite) Test_GetLatestFetched() {
 	// initially latestFetched should be empty
 	latestFetched, err := s.bs.GetLatestFetched(s.ctx)
 	s.Require().NoError(err)
@@ -177,7 +197,7 @@ func (s *BlockStorageTestSuite) TestGetLastFetchedBlock() {
 	err = s.bs.SetBlockBatch(s.ctx, batch)
 	s.Require().NoError(err)
 
-	// latestFetched is updated after the main shard block is saved
+	// latestFetched is updated after batch is saved
 	latestFetched, err = s.bs.GetLatestFetched(s.ctx)
 	s.Require().NoError(err)
 	s.Require().NotEmpty(latestFetched)
