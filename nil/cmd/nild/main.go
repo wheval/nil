@@ -54,9 +54,11 @@ func main() {
 		cfg.Config,
 		database,
 		nil,
-		concurrent.WithSource(func(ctx context.Context) error {
-			return database.LogGC(ctx, cfg.DB.DiscardRatio, cfg.DB.GcFrequency)
-		}))
+		concurrent.MakeTask(
+			"badger GC",
+			func(ctx context.Context) error {
+				return database.LogGC(ctx, cfg.DB.DiscardRatio, cfg.DB.GcFrequency)
+			}))
 
 	database.Close()
 	os.Exit(exitCode)
