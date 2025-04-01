@@ -240,7 +240,7 @@ func initSyncers(ctx context.Context, syncers []*collate.Syncer, allowDbDrop boo
 		return err
 	}
 	for _, syncer := range syncers {
-		if err := syncer.GenerateZerostate(ctx); err != nil {
+		if err := syncer.GenerateZerostateIfShardIsEmpty(ctx); err != nil {
 			return err
 		}
 	}
@@ -322,7 +322,9 @@ func createSyncers(
 	}))
 	res.funcs = append(res.funcs, concurrent.WithSource(func(ctx context.Context) error {
 		for _, syncer := range res.syncers {
-			syncer.WaitComplete()
+			if err := syncer.WaitComplete(ctx); err != nil {
+				return err
+			}
 		}
 		return res.syncers[0].SetHandlers(ctx)
 	}))
@@ -339,7 +341,16 @@ type Node struct {
 
 func (i *Node) Run() error {
 	if err := concurrent.Run(i.ctx, i.funcs...); err != nil {
-		i.logger.Error().Err(err).Msg("App encountered an error and will be terminated.")
+		var executionErr *concurrent.ExecutionError
+		var protocolVersionMismatchErr *collate.ProtocolVersionMismatchError
+		if errors.As(err, &executionErr) && errors.As(executionErr.Err, &protocolVersionMismatchErr) {
+			i.logger.Error().
+				Str("localVersion", protocolVersionMismatchErr.LocalVersion).
+				Str("remoteVersion", protocolVersionMismatchErr.RemoteVersion).
+				Msg("Protocol version mismatch. Probably nild executable is outdated.")
+		} else {
+			i.logger.Error().Err(err).Msg("App encountered an error and will be terminated.")
+		}
 		return err
 	}
 	i.logger.Info().Msg("App is terminated.")
