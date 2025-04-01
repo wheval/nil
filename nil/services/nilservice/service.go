@@ -550,30 +550,7 @@ func CreateNode(
 		return nil, err
 	}
 
-	if (cfg.RPCPort != 0 || cfg.HttpUrl != "") && rawApi != nil {
-		funcs = append(funcs, concurrent.MakeTask(
-			"rpc-api",
-			func(ctx context.Context) error {
-				if syncersResult != nil {
-					if err := syncersResult.Wait(); err != nil { // Wait for syncers initialization
-						return err
-					}
-				}
-
-				var cl client.Client
-				if cfg.Cometa != nil || cfg.IsFaucetApiEnabled() {
-					cl, err = client.NewEthClient(ctx, database, rawApi, logger)
-					if err != nil {
-						return fmt.Errorf("failed to create node client: %w", err)
-					}
-				}
-				if err := startRpcServer(ctx, cfg, rawApi, database, cl); err != nil {
-					logger.Error().Err(err).Msg("RPC server goroutine failed")
-					return err
-				}
-				return nil
-			}))
-	}
+	funcs = addRpcServerWorkerIfEnabled(funcs, cfg, rawApi, syncersResult, database, logger)
 
 	if cfg.RunMode != CollatorsOnlyRunMode && cfg.RunMode != RpcRunMode {
 		readonly := cfg.RunMode != NormalRunMode
@@ -594,6 +571,43 @@ func CreateNode(
 		logger:         logger,
 		ctx:            ctx,
 	}, nil
+}
+
+func addRpcServerWorkerIfEnabled(
+	tasks []concurrent.Task,
+	cfg *Config,
+	rawApi *rawapi.NodeApiOverShardApis,
+	syncersResult *syncersResult,
+	database db.DB,
+	logger logging.Logger,
+) []concurrent.Task {
+	if (cfg.RPCPort == 0 && cfg.HttpUrl == "") || rawApi == nil {
+		return tasks
+	}
+
+	return append(tasks, concurrent.MakeTask(
+		"rpc-api",
+		func(ctx context.Context) error {
+			if syncersResult != nil {
+				if err := syncersResult.Wait(); err != nil { // Wait for syncers initialization
+					return err
+				}
+			}
+
+			var cl client.Client
+			if cfg.Cometa != nil || cfg.IsFaucetApiEnabled() {
+				var err error
+				cl, err = client.NewEthClient(ctx, database, rawApi, logger)
+				if err != nil {
+					return fmt.Errorf("failed to create node client: %w", err)
+				}
+			}
+			if err := startRpcServer(ctx, cfg, rawApi, database, cl); err != nil {
+				logger.Error().Err(err).Msg("RPC server goroutine failed")
+				return err
+			}
+			return nil
+		}))
 }
 
 // Run starts transaction pools and collators for given shards, creates a single RPC server for all shards.
