@@ -62,10 +62,8 @@ func TestTaskExecutorSuite(t *testing.T) {
 }
 
 func (s *TestSuite) Test_TaskExecutor_Executes_Tasks() {
-	started := make(chan struct{})
-	go func() {
-		_ = s.taskExecutor.Run(s.context, started)
-	}()
+	started, cancelFn := s.runTaskExecutor(s.context)
+	defer cancelFn()
 	err := testaide.WaitFor(s.context, started, 10*time.Second)
 	s.Require().NoError(err, "task executor did not start in time")
 
@@ -101,17 +99,31 @@ func (s *TestSuite) Test_TaskExecutor_Executes_Tasks() {
 	}
 }
 
+func (s *TestSuite) runTaskExecutor(ctx context.Context) (chan struct{}, func()) {
+	s.T().Helper()
+
+	ctx, cancelFunc := context.WithCancel(ctx)
+	started := make(chan struct{})
+	stopped := make(chan struct{})
+	go func() {
+		_ = s.taskExecutor.Run(ctx, started)
+		stopped <- struct{}{}
+	}()
+
+	return started, func() {
+		cancelFunc()
+		<-stopped
+	}
+}
+
 func (s *TestSuite) Test_TaskExecutor_Busy_Handler() {
 	// Make task handler not ready for tasks and check that Handle() was not called
 	s.taskHandler.IsReadyToHandleFunc = func(ctx context.Context) (bool, error) {
 		return false, nil
 	}
-	ctx, cancelFunc := context.WithTimeout(s.context, 2*time.Second)
-	defer cancelFunc()
-	started := make(chan struct{})
-	go func() {
-		_ = s.taskExecutor.Run(ctx, started)
-	}()
+	_, cancelFn := s.runTaskExecutor(s.context)
+	defer cancelFn()
+
 	s.Require().Never(
 		func() bool {
 			return len(s.taskHandler.HandleCalls()) != 0
