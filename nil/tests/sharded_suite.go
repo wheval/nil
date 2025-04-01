@@ -354,7 +354,9 @@ func (s *ShardedSuite) EnsureArchiveNodeStarted(
 ) (client.Client, network.AddrInfo) {
 	s.T().Helper()
 
+	s.Wg.Add(1)
 	go func() {
+		defer s.Wg.Done()
 		err := <-rc
 		s.NoError(err)
 	}()
