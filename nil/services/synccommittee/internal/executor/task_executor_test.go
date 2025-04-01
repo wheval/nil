@@ -23,7 +23,7 @@ type TestSuite struct {
 }
 
 func (s *TestSuite) SetupTest() {
-	s.context, s.cancellation = context.WithCancel(context.Background())
+	s.context, s.cancellation = context.WithCancel(s.T().Context())
 	s.requestHandler = newTaskRequestHandlerMock()
 	s.taskHandler = &api.TaskHandlerMock{
 		IsReadyToHandleFunc: func(ctx context.Context) (bool, error) { return true, nil },
@@ -62,6 +62,7 @@ func TestTaskExecutorSuite(t *testing.T) {
 }
 
 func (s *TestSuite) Test_TaskExecutor_Executes_Tasks() {
+	taskHandler := s.taskHandler
 	started, cancelFn := s.runTaskExecutor(s.context)
 	defer cancelFn()
 	err := testaide.WaitFor(s.context, started, 10*time.Second)
@@ -86,14 +87,14 @@ func (s *TestSuite) Test_TaskExecutor_Executes_Tasks() {
 
 	s.Require().Eventually(
 		func() bool {
-			taskHandleCalls := s.taskHandler.HandleCalls()
+			taskHandleCalls := taskHandler.HandleCalls()
 			return len(taskHandleCalls) >= tasksThreshold
 		},
 		time.Second,
 		10*time.Millisecond,
 	)
 
-	for _, call := range s.taskHandler.HandleCalls() {
+	for _, call := range taskHandler.HandleCalls() {
 		s.Require().Equal(s.taskExecutor.Id(), call.ExecutorId,
 			"Task executor should have passed its id in the result")
 	}
@@ -117,8 +118,9 @@ func (s *TestSuite) runTaskExecutor(ctx context.Context) (chan struct{}, func())
 }
 
 func (s *TestSuite) Test_TaskExecutor_Busy_Handler() {
+	taskHandler := s.taskHandler
 	// Make task handler not ready for tasks and check that Handle() was not called
-	s.taskHandler.IsReadyToHandleFunc = func(ctx context.Context) (bool, error) {
+	taskHandler.IsReadyToHandleFunc = func(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 	_, cancelFn := s.runTaskExecutor(s.context)
@@ -126,7 +128,7 @@ func (s *TestSuite) Test_TaskExecutor_Busy_Handler() {
 
 	s.Require().Never(
 		func() bool {
-			return len(s.taskHandler.HandleCalls()) != 0
+			return len(taskHandler.HandleCalls()) != 0
 		},
 		time.Second,
 		100*time.Millisecond,
