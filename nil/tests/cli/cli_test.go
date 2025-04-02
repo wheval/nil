@@ -43,9 +43,7 @@ func (s *SuiteCliBase) SetupSuite() {
 	s.incBinPath = s.TmpDir + "/Incrementer.bin"
 	s.incAbiPath = s.TmpDir + "/Incrementer.abi"
 	compileIncrementerAndSaveToFile(s.T(), s.incBinPath, s.incAbiPath)
-}
 
-func (s *SuiteCliBase) SetupTest() {
 	s.Start(&nilservice.Config{
 		NShards:              3,
 		CollatorTickPeriodMs: 200,
@@ -60,7 +58,7 @@ func (s *SuiteCliBase) SetupTest() {
 	s.Require().NotNil(s.cli)
 }
 
-func (s *SuiteCliBase) TearDownTest() {
+func (s *SuiteCliBase) TearDownSuite() {
 	s.Cancel()
 }
 
