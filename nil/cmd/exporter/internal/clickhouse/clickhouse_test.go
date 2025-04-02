@@ -3,6 +3,7 @@ package clickhouse
 import (
 	"context"
 	"os/exec"
+	"syscall"
 	"testing"
 	"time"
 
@@ -18,7 +19,7 @@ type SuiteClickhouse struct {
 
 func (s *SuiteClickhouse) SetupSuite() {
 	dir := s.T().TempDir()
-	clickhouse := exec.Command( //nolint:gosec
+	s.clickhouse = exec.Command( //nolint:gosec
 		"clickhouse", "server", "--",
 		"--listen_host=127.0.0.1",
 		"--tcp_port=9003",
@@ -26,14 +27,11 @@ func (s *SuiteClickhouse) SetupSuite() {
 		"--mysql_port=",
 		"--path="+dir,
 	)
-	clickhouse.Dir = dir
-	err := clickhouse.Start()
+	s.clickhouse.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	s.clickhouse.Dir = dir
+	err := s.clickhouse.Start()
 	s.Require().NoError(err)
 	time.Sleep(1 * time.Second)
-
-	createDb := exec.Command("clickhouse-client", "--port=9003", "--query", "CREATE DATABASE IF NOT EXISTS nil_database")
-	_, err = createDb.CombinedOutput()
-	s.Require().NoError(err)
 
 	s.driver, err = NewClickhouseDriver(context.Background(), "127.0.0.1:9003", "", "", "nil_database")
 	s.Require().NoError(err)
@@ -45,7 +43,12 @@ func (s *SuiteClickhouse) SetupSuite() {
 
 func (s *SuiteClickhouse) TearDownSuite() {
 	if s.clickhouse != nil {
-		err := s.clickhouse.Process.Kill()
+		// https://stackoverflow.com/questions/22470193/why-wont-go-kill-a-child-process-correctly
+		// simple s.clickhouse.Kill() won't work on child process
+		// this leads to errors in sequential test runs
+		pgid, err := syscall.Getpgid(s.clickhouse.Process.Pid)
+		s.Require().NoError(err)
+		err = syscall.Kill(-pgid, syscall.SIGTERM)
 		s.Require().NoError(err)
 	}
 }
