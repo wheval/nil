@@ -22,15 +22,5 @@ func CreateClickHouseDbIfNotExists(ctx context.Context, dbname, user, password, 
 	}
 	defer conn.Close()
 
-	rows, err := conn.Query(ctx, "SELECT name FROM system.databases WHERE name = ?", dbname)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	if !rows.Next() {
-		err = conn.Exec(ctx, fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbname))
-		return err
-	}
-	return nil
+	return conn.Exec(ctx, fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbname))
 }
