@@ -273,6 +273,13 @@ func (g *BlockGenerator) handleTxn(txn *types.Transaction) error {
 		g.counters.ExecTransactions++
 	}
 
+	var err error
+	var seqno types.Seqno
+	if assert.Enable && txn.IsExternal() {
+		seqno, err = g.executionState.GetExtSeqno(txn.To)
+		check.PanicIfErr(err)
+	}
+
 	txnHash := g.executionState.AddInTransaction(txn)
 
 	var res *ExecutionResult
@@ -291,9 +298,21 @@ func (g *BlockGenerator) handleTxn(txn *types.Transaction) error {
 	if res.FatalError != nil {
 		return res.FatalError
 	}
-	g.addReceipt(res)
+	g.handleResult(res)
 	g.counters.CoinsUsed = g.counters.CoinsUsed.Add(res.CoinsUsed())
 
+	if assert.Enable && txn.IsExternal() {
+		newSeqno, err := g.executionState.GetExtSeqno(txn.To)
+		check.PanicIfErr(err)
+		if res.GasUsed == 0 {
+			check.PanicIfNotf(newSeqno == seqno,
+				"seqno changed during execution with GasUsed=0 (old %d, new: %d)", seqno, newSeqno)
+		} else {
+			check.PanicIfNotf(newSeqno == seqno+1,
+				"seqno was not changed correctly during execution (old %d, new: %d). Gas used: %d",
+				seqno, newSeqno, res.GasUsed)
+		}
+	}
 	return nil
 }
 
@@ -359,7 +378,7 @@ func (g *BlockGenerator) handleExternalTransaction(txn *types.Transaction) *Exec
 	return res
 }
 
-func (g *BlockGenerator) addReceipt(execResult *ExecutionResult) {
+func (g *BlockGenerator) handleResult(execResult *ExecutionResult) {
 	check.PanicIfNot(execResult.FatalError == nil)
 
 	txnHash := g.executionState.InTransactionHash

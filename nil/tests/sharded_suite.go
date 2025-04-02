@@ -4,6 +4,7 @@ package tests
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"os"
 	"slices"
@@ -534,4 +535,18 @@ func (s *ShardedSuite) CallGetter(
 ) []byte {
 	s.T().Helper()
 	return CallGetter(s.T(), s.Context, s.DefaultClient, addr, calldata, blockId, overrides)
+}
+
+func (s *ShardedSuite) SendTransactionViaSmartAccountNoCheck(
+	addrSmartAccount types.Address,
+	addrTo types.Address,
+	key *ecdsa.PrivateKey,
+	calldata []byte,
+	fee types.FeePack,
+	value types.Value,
+	tokens []types.TokenBalance,
+) *jsonrpc.RPCReceipt {
+	s.T().Helper()
+	return SendTransactionViaSmartAccountNoCheck(
+		s.T(), s.DefaultClient, addrSmartAccount, addrTo, key, calldata, fee, value, tokens)
 }

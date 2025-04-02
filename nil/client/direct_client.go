@@ -388,7 +388,11 @@ func (c *DirectClient) GetDebugContract(
 	contractAddr types.Address,
 	blockId any,
 ) (*jsonrpc.DebugRPCContract, error) {
-	panic("Not supported")
+	blockNrOrHash, err := transport.AsBlockReference(blockId)
+	if err != nil {
+		return nil, err
+	}
+	return c.debugApi.GetContract(ctx, contractAddr, transport.BlockNumberOrHash(blockNrOrHash))
 }
 
 func (c *DirectClient) ClientVersion(ctx context.Context) (string, error) {
