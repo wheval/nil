@@ -131,13 +131,18 @@ func (fe *FinalityEnsurer) Run(ctx context.Context, started chan<- struct{}) err
 
 	fe.logger.Info().Msg("initializing component")
 
+	blockFetcherStarted := make(chan struct{})
 	eg.Go(func() error {
-		return fe.blockFetcher(gCtx)
+		return fe.blockFetcher(gCtx, blockFetcherStarted)
 	})
 
+	eventPollerStarted := make(chan struct{})
 	eg.Go(func() error {
-		return fe.pendingEventPoller(gCtx)
+		return fe.pendingEventPoller(gCtx, eventPollerStarted)
 	})
+
+	<-blockFetcherStarted
+	<-eventPollerStarted
 
 	close(started)
 
@@ -146,10 +151,11 @@ func (fe *FinalityEnsurer) Run(ctx context.Context, started chan<- struct{}) err
 	return nil
 }
 
-func (fe *FinalityEnsurer) blockFetcher(ctx context.Context) error {
+func (fe *FinalityEnsurer) blockFetcher(ctx context.Context, started chan struct{}) error {
 	fe.logger.Info().Msg("started finalized block fetcher")
 
 	ticker := fe.clock.NewTicker(fe.config.EthPollInterval)
+	close(started)
 
 	var lastSuccessfulUpdate time.Time
 	for {
@@ -198,10 +204,12 @@ func (fe *FinalityEnsurer) blockFetcher(ctx context.Context) error {
 	}
 }
 
-func (fe *FinalityEnsurer) pendingEventPoller(ctx context.Context) error {
+func (fe *FinalityEnsurer) pendingEventPoller(ctx context.Context, started chan struct{}) error {
 	fe.logger.Info().Msg("started l1 pending event processor")
 
 	ticker := fe.clock.NewTicker(fe.config.DbPollInterval)
+	close(started)
+
 	for {
 		select {
 		case <-ctx.Done():
