@@ -5,13 +5,13 @@ package tests
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/client"
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/abi"
-	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rollup"
@@ -398,22 +398,15 @@ func CallGetterT[T any](
 	return gotValue
 }
 
-func GetContract(t *testing.T, ctx context.Context, database db.DB, address types.Address) *types.SmartContract {
+func GetContract(t *testing.T, client client.Client, address types.Address) *types.SmartContract {
 	t.Helper()
 
-	tx, err := database.CreateRoTx(ctx)
-	require.NoError(t, err)
-	defer tx.Rollback()
-
-	block, _, err := db.ReadLastBlock(tx, address.ShardId())
+	res, err := client.GetDebugContract(t.Context(), address, "latest")
 	require.NoError(t, err)
 
-	contractTree := execution.NewDbContractTrieReader(tx, address.ShardId())
-	contractTree.SetRootHash(block.SmartContractsRoot)
-
-	contract, err := contractTree.Fetch(address.Hash())
-	require.NoError(t, err)
-	return contract
+	var contract types.SmartContract
+	require.NoError(t, contract.UnmarshalSSZ(res.Contract))
+	return &contract
 }
 
 var DummyL1Fetcher = rollup.L1BlockFetcherMock{
@@ -424,4 +417,42 @@ var DummyL1Fetcher = rollup.L1BlockFetcherMock{
 
 func GetDummyL1Fetcher() rollup.L1BlockFetcher {
 	return &DummyL1Fetcher
+}
+
+func SendTransactionViaSmartAccountNoCheck(
+	t *testing.T,
+	client client.Client,
+	addrSmartAccount types.Address,
+	addrTo types.Address,
+	key *ecdsa.PrivateKey,
+	calldata []byte,
+	fee types.FeePack,
+	value types.Value,
+	tokens []types.TokenBalance,
+) *jsonrpc.RPCReceipt {
+	t.Helper()
+
+	// Send the raw transaction
+	txHash, err := client.SendTransactionViaSmartAccount(
+		t.Context(), addrSmartAccount, calldata, fee, value, tokens, addrTo, key)
+	require.NoError(t, err)
+
+	receipt := WaitIncludedInMain(t, t.Context(), client, txHash)
+	// We don't check the receipt for success here, as it can be failed on purpose
+	if receipt.Success {
+		// But if it is successful, we expect exactly one out receipt
+		require.Len(t, receipt.OutReceipts, 1)
+	} else {
+		require.NotEqual(t, "Success", receipt.Status)
+	}
+
+	return receipt
+}
+
+func GetRandomBytes(t *testing.T, size int) []byte {
+	t.Helper()
+	data := make([]byte, size)
+	_, err := rand.Read(data)
+	require.NoError(t, err)
+	return data
 }

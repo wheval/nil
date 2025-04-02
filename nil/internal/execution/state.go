@@ -1110,6 +1110,14 @@ func (es *ExecutionState) HandleTransaction(
 		if err := es.SetExtSeqno(addr, seqno+1); err != nil {
 			return NewExecutionResult().SetFatal(err)
 		}
+
+		defer func() {
+			// Execution message pays for verifyExternal.
+			// We need to revert ExtSeqno only for Deploy messages that doesn't spend gas.
+			if txn.IsDeploy() && retError.GasUsed == 0 {
+				check.PanicIfErr(es.SetExtSeqno(txn.To, seqno))
+			}
+		}()
 	}
 
 	es.txnFeeCredit = txn.FeeCredit

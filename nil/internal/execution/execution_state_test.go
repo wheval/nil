@@ -466,6 +466,35 @@ func (s *SuiteExecutionState) TestTransactionStatus() {
 		s.Equal(types.ErrorInvalidOpcode, types.GetErrorCode(err))
 		s.Equal("InvalidOpcode: invalid opcode: DIV", err.Error())
 	})
+
+	s.Run("InsufficientFunds", func() {
+		salt := common.HexToHash("0xdeadbeef")
+		deployPayload := contracts.CounterDeployPayloadWithSalt(s.T(), salt)
+		dstAddr := contracts.CounterAddressWithSalt(s.T(), shardId, salt)
+
+		txn := types.NewEmptyTransaction()
+		txn.Flags = types.NewTransactionFlags()
+		txn.To = dstAddr
+		txn.Data = contracts.NewFaucetWithdrawToCallData(s.T(), dstAddr, types.NewValueFromUint64(1_000))
+		txn.Seqno = 1
+		txn.FeeCredit = toGasCredit(100_000)
+		txn.MaxFeePerGas = types.MaxFeePerGasDefault
+		txn.From = faucetAddr
+		res := es.AddAndHandleTransaction(s.ctx, txn, dummyPayer{})
+		s.False(res.Failed())
+
+		txn = NewDeployTransaction(deployPayload, shardId, faucetAddr, 2, types.Value{})
+		txn.Flags = types.NewTransactionFlags(types.TransactionFlagDeploy)
+		txn.FeeCredit = toGasCredit(100_000_000_000_000)
+
+		acc, err := es.GetAccount(txn.To)
+		s.Require().NoError(err)
+
+		res = es.AddAndHandleTransaction(s.ctx, txn, NewAccountPayer(acc, txn))
+		s.True(res.Failed())
+		s.Equal(types.ErrorInsufficientFunds, res.Error.Code())
+		s.Require().ErrorAs(res.Error, new(types.ExecError))
+	})
 }
 
 func (s *SuiteExecutionState) TestPrecompiles() {

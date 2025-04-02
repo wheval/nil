@@ -245,22 +245,8 @@ func (s *RpcSuite) SendTransactionViaSmartAccountNoCheck(
 	tokens []types.TokenBalance,
 ) *jsonrpc.RPCReceipt {
 	s.T().Helper()
-
-	// Send the raw transaction
-	txHash, err := s.Client.SendTransactionViaSmartAccount(
-		s.Context, addrSmartAccount, calldata, fee, value, tokens, addrTo, key)
-	s.Require().NoError(err)
-
-	receipt := s.WaitIncludedInMain(txHash)
-	// We don't check the receipt for success here, as it can be failed on purpose
-	if receipt.Success {
-		// But if it is successful, we expect exactly one out receipt
-		s.Require().Len(receipt.OutReceipts, 1)
-	} else {
-		s.Require().NotEqual("Success", receipt.Status)
-	}
-
-	return receipt
+	return SendTransactionViaSmartAccountNoCheck(
+		s.T(), s.Client, addrSmartAccount, addrTo, key, calldata, fee, value, tokens)
 }
 
 func (s *RpcSuite) CallGetter(
