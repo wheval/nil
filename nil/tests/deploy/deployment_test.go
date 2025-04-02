@@ -100,7 +100,8 @@ func (s *SuiteDeployment) TestDeploy() {
 
 		code, err := contracts.GetCode(contracts.NameDeployee)
 		s.Require().NoError(err)
-		deployPayload := s.PrepareDefaultDeployPayload(*s.abiDeployee, code, s.addressDeployer, uint32(987654321))
+		deployPayload := s.PrepareDefaultDeployPayload(
+			*s.abiDeployee, common.EmptyHash, code, s.addressDeployer, uint32(987654321))
 
 		calldata := s.AbiPack(
 			abiSmartAccount, "asyncDeploy", big.NewInt(2), big.NewInt(1111), deployPayload.Bytes(), salt)

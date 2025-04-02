@@ -117,13 +117,15 @@ func LoadContract(t *testing.T, path string, name string) (types.Code, abi.ABI) 
 	return code, abi
 }
 
-func PrepareDefaultDeployPayload(t *testing.T, abi abi.ABI, code []byte, args ...any) types.DeployPayload {
+func PrepareDefaultDeployPayload(
+	t *testing.T, abi abi.ABI, salt common.Hash, code []byte, args ...any,
+) types.DeployPayload {
 	t.Helper()
 
 	constructor, err := abi.Pack("", args...)
 	require.NoError(t, err)
 	code = append(code, constructor...)
-	return types.BuildDeployPayload(code, common.EmptyHash)
+	return types.BuildDeployPayload(code, salt)
 }
 
 func WaitBlock(
