@@ -141,12 +141,11 @@ func startRpcServer(
 		task := concurrent.MakeTask(
 			"indexer",
 			func(ctx context.Context) (err error) {
-				err2 := indexer.StartIndexer(ctx, &indexer.Cfg{
+				return indexer.StartIndexer(ctx, &indexer.Cfg{
 					Client:        client,
 					IndexerDriver: idx.Driver,
 					BlocksChan:    make(chan *driver.BlockWithShardId, 1000),
 				})
-				return err2
 			})
 		if err := concurrent.Run(ctx, task); err != nil {
 			return err
