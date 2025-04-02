@@ -43,8 +43,8 @@ type AggregatorBlockStorage interface {
 }
 
 type AggregatorConfig struct {
-	RpcPollingInterval time.Duration
-	MaxBlobsInTx       uint
+	RpcPollingInterval time.Duration `yaml:"pollingDelay,omitempty"`
+	MaxBlobsInTx       uint          `yaml:"-"`
 }
 
 func NewAggregatorConfig(rpcPollingInterval time.Duration) AggregatorConfig {
