@@ -135,6 +135,8 @@
                 chmod -R u+rwx,g+rx,o+rx ./usr/share/${packages.nilexplorer.name}
                 chmod -R u+rwx,g+rx,o+rx ./usr/share/${packages.docsaibackend.name}
 
+                mv ./usr/bin/cometa ./usr/bin/nil-cometa
+
                 bash ${
                   ./scripts/binary_patch_version.sh
                 } ./usr/bin/nild ${versionFull}
