@@ -170,7 +170,6 @@ func (p *TxnPool) add(txns ...*metaTxn) ([]DiscardReason, error) {
 		}
 		discardReasons[i] = NotSet // unnecessary
 		p.logger.Debug().
-			Uint64(logging.FieldShardId, uint64(txn.To.ShardId())).
 			Stringer(logging.FieldTransactionHash, txn.Hash()).
 			Stringer(logging.FieldTransactionTo, txn.To).
 			Int(logging.FieldTransactionSeqno, int(txn.Seqno)).
@@ -185,7 +184,6 @@ func (p *TxnPool) validateTxn(txn *metaTxn) (DiscardReason, bool) {
 	seqno, has := p.all.seqno(txn.To)
 	if has && seqno > txn.Seqno {
 		p.logger.Debug().
-			Uint64(logging.FieldShardId, uint64(txn.To.ShardId())).
 			Stringer(logging.FieldTransactionHash, txn.Hash()).
 			Uint64(logging.FieldAccountSeqno, seqno.Uint64()).
 			Uint64(logging.FieldTransactionSeqno, txn.Seqno.Uint64()).
@@ -394,7 +392,6 @@ func (p *TxnPool) removeCommitted(bySeqno *ByReceiverAndSeqno, txns []*types.Tra
 		bySeqno.ascend(senderID, func(txn *metaTxn) bool {
 			if txn.Seqno > seqno {
 				p.logger.Trace().
-					Uint64(logging.FieldShardId, uint64(txn.To.ShardId())).
 					Uint64(logging.FieldTransactionSeqno, txn.Seqno.Uint64()).
 					Uint64(logging.FieldAccountSeqno, seqno.Uint64()).
 					Msg("Removing committed, cmp seqnos")
@@ -403,7 +400,6 @@ func (p *TxnPool) removeCommitted(bySeqno *ByReceiverAndSeqno, txns []*types.Tra
 			}
 
 			p.logger.Trace().
-				Uint64(logging.FieldShardId, uint64(txn.To.ShardId())).
 				Stringer(logging.FieldTransactionHash, txn.Hash()).
 				Stringer(logging.FieldTransactionTo, txn.To).
 				Uint64(logging.FieldTransactionSeqno, txn.Seqno.Uint64()).
