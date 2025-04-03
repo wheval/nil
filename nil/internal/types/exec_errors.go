@@ -113,6 +113,9 @@ const (
 	// ErrorSeqnoGap is returned when transaction seqno does not match the seqno of the recipient.
 	ErrorSeqnoGap
 
+	// ErrorTxIdGap is returned when TxId is greater than what the recipient expects.
+	ErrorTxIdGap
+
 	// ErrorExternalMsgVerificationFailed is returned when verifyExternal call fails.
 	ErrorExternalMsgVerificationFailed
 

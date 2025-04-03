@@ -376,6 +376,7 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 			state.Neighbors = append(state.Neighbors, types.Neighbor{ShardId: neighborId})
 		}
 		neighbor := &state.Neighbors[position]
+		nextTx := p.executionState.InTxCounts[neighborId]
 
 		var lastBlockNumber types.BlockNumber
 		lastBlock, _, err := db.ReadLastBlock(tx, neighborId)
@@ -433,6 +434,16 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 				}
 
 				if txn.To.ShardId() == p.params.ShardId {
+					if txn.TxId < nextTx {
+						// When we become proposer, we start with an outdated CollatorState,
+						// so we need to skip transactions that were already processed.
+						p.logger.Debug().
+							Uint64("txId", uint64(txn.TxId)).Uint64("nextTx", uint64(nextTx)).
+							Msg("Already processed transaction")
+						continue
+					}
+					nextTx++
+
 					txnHash := txn.Hash()
 					// TODO: Temporary workaround to prevent transaction duplication
 					isProcessed, err := p.isTxProcessed(tx, txnHash)
@@ -443,7 +454,7 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 						continue
 					}
 
-					if err := execution.ValidateInternalTransaction(txn); err != nil {
+					if err := p.executionState.ValidateInternalTransaction(txn); err != nil {
 						p.logger.Warn().Err(err).
 							Stringer(logging.FieldTransactionHash, txnHash).
 							Msg("Invalid internal transaction")

@@ -97,6 +97,7 @@ func generateBlockFromTransactions(t *testing.T, execute bool,
 	es.BaseFee = types.DefaultGasPrice
 
 	for _, txn := range txns {
+		txn.TxId = es.InTxCounts[txn.From.ShardId()]
 		es.AddInTransaction(txn)
 
 		if !execute {
@@ -190,6 +191,7 @@ func Deploy(t *testing.T, es *ExecutionState,
 func (es *ExecutionState) AddAndHandleTransaction(
 	ctx context.Context, txn *types.Transaction, payer Payer,
 ) *ExecutionResult {
+	txn.TxId = es.InTxCounts[txn.From.ShardId()]
 	es.AddInTransaction(txn)
 	return es.HandleTransaction(ctx, txn, payer)
 }
