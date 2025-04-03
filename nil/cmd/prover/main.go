@@ -19,6 +19,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const appTitle = "=nil; Prover"
+
 func main() {
 	check.PanicIfNotCancelledErr(execute())
 }
@@ -58,8 +60,6 @@ func execute() error {
 	addCommonFlags(rootCmd, commonCfg)
 	runCmd.Flags().StringVar(&runConfig.DbPath, "db-path", runConfig.DbPath, "path to database")
 
-	rootCmd.AddCommand(runCmd)
-
 	traceConfig := tracer.TraceConfig{}
 	var marshalModePlaceholder string
 	generateTraceCmd := &cobra.Command{
@@ -89,7 +89,6 @@ func execute() error {
 		},
 	}
 	addMarshalModeFlag(generateTraceCmd, &marshalModePlaceholder)
-	rootCmd.AddCommand(generateTraceCmd)
 
 	var printConfig PrintConfig
 	printTraceCmd := &cobra.Command{
@@ -102,8 +101,9 @@ func execute() error {
 		},
 	}
 	addMarshalModeFlag(printTraceCmd, &printConfig.MarshalMode)
-	rootCmd.AddCommand(printTraceCmd)
 
+	versionCmd := cobrax.VersionCmd(appTitle)
+	rootCmd.AddCommand(runCmd, generateTraceCmd, printTraceCmd, versionCmd)
 	return rootCmd.Execute()
 }
 

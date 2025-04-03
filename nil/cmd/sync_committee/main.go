@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const appTitle = "=nil; Sync Committee"
+
 type cmdConfig struct {
 	*core.Config `yaml:",inline"`
 
@@ -42,11 +44,10 @@ func execute() error {
 			return run(cfg)
 		},
 	}
-
 	addFlags(runCmd, cfg)
 
-	rootCmd.AddCommand(runCmd)
-
+	versionCmd := cobrax.VersionCmd(appTitle)
+	rootCmd.AddCommand(runCmd, versionCmd)
 	return rootCmd.Execute()
 }
 
