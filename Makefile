@@ -17,6 +17,10 @@ GOTEST = GOPRIVATE="$(GOPRIVATE)" GODEBUG=cgocheck=0 $(GO) test -tags $(BUILD_TA
 SC_COMMANDS = sync_committee sync_committee_cli proof_provider prover nil_block_generator relayer
 COMMANDS += nild nil nil_load_generator exporter cometa faucet journald_forwarder relay stresser $(SC_COMMANDS)
 
+BINARY_NAMES := cometa=nil-cometa
+get_bin_name = $(if $(filter $(1)=%,$(BINARY_NAMES)),$(patsubst $(1)=%,%,$(filter $(1)=%,$(BINARY_NAMES))),$(1))
+
+
 all: $(COMMANDS)
 
 .PHONY: generated
@@ -28,9 +32,10 @@ test: generated
 
 %.cmd: generated
 	@# Note: $* is replaced by the command name
+	$(eval BINNAME := $(call get_bin_name,$*))
 	@echo "Building $*"
-	@cd ./nil/cmd/$* && $(GOBUILD) -o $(GOBIN)/$*
-	@echo "Run \"$(GOBIN)/$*\" to launch $*."
+	@cd ./nil/cmd/$* && $(GOBUILD) -o $(GOBIN)/$(BINNAME)
+	@echo "Run \"$(GOBIN)/$(BINNAME)\" to launch $*."
 
 %.runcmd: %.cmd
 	@$(GOBIN)/$* $(CMDARGS)
