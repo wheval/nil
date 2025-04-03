@@ -302,10 +302,13 @@ func NewExecutionState(tx any, shardId types.ShardId, params StateParams) (*Exec
 		return nil, errors.New("invalid tx type")
 	}
 
-	logger := logging.NewLogger("execution")
+	l := logging.NewLogger("execution").
+		With().
+		Stringer(logging.FieldShardId, shardId)
 	if params.Mode != "" {
-		logger = logger.With().Str("mode", params.Mode).Logger()
+		l = l.Str("mode", params.Mode)
 	}
+	logger := l.Logger()
 
 	feeCalculator := params.FeeCalculator
 	if feeCalculator == nil {
@@ -1223,7 +1226,6 @@ func (es *ExecutionState) handleDeployTransaction(_ context.Context, transaction
 
 	es.logger.Debug().
 		Stringer(logging.FieldTransactionTo, addr).
-		Stringer(logging.FieldShardId, es.ShardId).
 		Msg("Handling deploy transaction...")
 
 	if err := es.newVm(transaction.IsInternal(), transaction.From, nil); err != nil {
@@ -1603,7 +1605,6 @@ func (es *ExecutionState) CommitBlock(src *BlockGenerationResult, params *types.
 	}
 
 	es.logger.Trace().
-		Stringer(logging.FieldShardId, es.ShardId).
 		Stringer(logging.FieldBlockNumber, block.Id).
 		Stringer(logging.FieldBlockHash, blockHash).
 		Msgf("Committed new block with %d in-txns and %d out-txns", len(es.InTransactions), block.OutTransactionsNum)

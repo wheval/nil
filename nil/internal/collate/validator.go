@@ -447,7 +447,6 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 			s.logger.Error().
 				Uint64(logging.FieldBlockNumber, uint64(block.Id)).
 				Stringer(logging.FieldBlockHash, block.Hash(s.params.ShardId)).
-				Stringer(logging.FieldShardId, s.params.ShardId).
 				Stringer(logging.FieldSignature, block.Signature).
 				Err(err).
 				Msg("Failed to verify block signature")

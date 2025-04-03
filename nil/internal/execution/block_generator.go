@@ -153,7 +153,6 @@ func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) []types
 		block, err := db.ReadBlock(p.rwTx, shardId, shardHash)
 		if err != nil {
 			p.logger.Err(err).
-				Stringer(logging.FieldShardId, shardId).
 				Stringer(logging.FieldBlockHash, shardHash).
 				Msg("Get gas price from shard: failed to read block")
 			shards[shardId] = *types.DefaultGasPrice.Uint256
