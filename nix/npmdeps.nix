@@ -25,5 +25,5 @@ in
     ];
   };
   pname = "nil";
-  hash = "sha256-ymS+nQS8QsTZNMEbaGwiq1NOoqMCkpfWSSUJnxsROxQ=";
+  hash = "sha256-gO2bQb/qAYrnQ4rlPjaYrYDOkWvk+tG4MIEioeAt+fo=";
 })

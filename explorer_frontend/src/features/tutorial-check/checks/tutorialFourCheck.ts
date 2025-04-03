@@ -68,7 +68,12 @@ async function runTutorialCheckFour(props: CheckProps) {
   if (checkDeploy) {
     props.setTutorialChecksEvent(TutorialChecksStatus.Failed);
     console.log(resDeploy);
-    props.tutorialContractStepFailed("Failed to call Deployer.deploy()!");
+    props.tutorialContractStepFailed(
+      `
+      Calling Deployer.deploy() produced one or more failed receipts!
+      To investigate, debug this transaction using the Cometa service: ${hashDeploy}.
+      `,
+    );
     return false;
   }
 
@@ -91,7 +96,12 @@ async function runTutorialCheckFour(props: CheckProps) {
   if (checkIncrement) {
     props.setTutorialChecksEvent(TutorialChecksStatus.Failed);
     console.log(resIncrement);
-    props.tutorialContractStepFailed("Failed to call Counter.increment()!");
+    props.tutorialContractStepFailed(
+      `
+      Calling Counter.increment() produced one or more failed receipts!
+      To investigate, debug this transaction using the Cometa service: ${hashDeploy}.
+      `,
+    );
     return false;
   }
 
