@@ -73,16 +73,21 @@ async function runTutorialCheckOne(props: CheckProps) {
   if (checkCaller) {
     props.setTutorialChecksEvent(TutorialChecksStatus.Failed);
     console.log(resCaller);
-    props.tutorialContractStepFailed("Failed to call Caller.sendValue()!");
+    props.tutorialContractStepFailed(
+      `
+      Calling Caller.sendValue() produced one or more failed receipts!
+      To investigate, debug this transaction using the Cometa service: ${hashCaller}.
+      `,
+    );
     return false;
   }
-  props.tutorialContractStepPassed("Caller sendValue has been called successfully!");
+  props.tutorialContractStepPassed("Caller.sendValue() has been called successfully!");
 
   const receiverBalance = await client.getBalance(resultReceiver.address);
 
   if (receiverBalance !== 300_000n) {
     props.setTutorialChecksEvent(TutorialChecksStatus.Failed);
-    props.tutorialContractStepFailed("Receiver failed to receive tokens!");
+    props.tutorialContractStepFailed("Receiver did not receive 300_000 tokens!");
     return false;
   }
   props.tutorialContractStepPassed("Receiver got 300_000 tokens!");

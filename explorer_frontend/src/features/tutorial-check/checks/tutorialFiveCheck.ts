@@ -73,7 +73,12 @@ async function runTutorialCheckFive(props: CheckProps) {
   if (checkMinting) {
     props.setTutorialChecksEvent(TutorialChecksStatus.Failed);
     console.log(resMinting);
-    props.tutorialContractStepFailed("Failed to mint the NFT!");
+    props.tutorialContractStepFailed(
+      `
+      Calling NFT.mintNFT() produced one or more failed receipts!
+      To investigate, debug this transaction using the Cometa service: ${mintRequest}.
+      `,
+    );
     return false;
   }
 
@@ -94,7 +99,12 @@ async function runTutorialCheckFive(props: CheckProps) {
   if (!checkSecondMinting) {
     props.setTutorialChecksEvent(TutorialChecksStatus.Failed);
     console.log(resSecondMinting);
-    props.tutorialContractStepFailed("NFT has been minted twice!");
+    props.tutorialContractStepFailed(
+      `
+      Calling NFT.mintNFT() the second time did not produce any failed receipts!
+      The NFT has been minted twice.
+      `,
+    );
     return false;
   }
 
@@ -114,7 +124,12 @@ async function runTutorialCheckFive(props: CheckProps) {
   if (checkSending) {
     props.setTutorialChecksEvent(TutorialChecksStatus.Failed);
     console.log(resSending);
-    props.tutorialContractStepFailed("Failed to send the NFT!");
+    props.tutorialContractStepFailed(
+      `
+      Calling NFT.sendNFT() produced one or more failed receipts!
+      To investigate, debug this transaction using the Cometa service: ${sendRequest}.
+      `,
+    );
     return false;
   }
 

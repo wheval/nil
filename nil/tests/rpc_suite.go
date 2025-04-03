@@ -245,22 +245,8 @@ func (s *RpcSuite) SendTransactionViaSmartAccountNoCheck(
 	tokens []types.TokenBalance,
 ) *jsonrpc.RPCReceipt {
 	s.T().Helper()
-
-	// Send the raw transaction
-	txHash, err := s.Client.SendTransactionViaSmartAccount(
-		s.Context, addrSmartAccount, calldata, fee, value, tokens, addrTo, key)
-	s.Require().NoError(err)
-
-	receipt := s.WaitIncludedInMain(txHash)
-	// We don't check the receipt for success here, as it can be failed on purpose
-	if receipt.Success {
-		// But if it is successful, we expect exactly one out receipt
-		s.Require().Len(receipt.OutReceipts, 1)
-	} else {
-		s.Require().NotEqual("Success", receipt.Status)
-	}
-
-	return receipt
+	return SendTransactionViaSmartAccountNoCheck(
+		s.T(), s.Client, addrSmartAccount, addrTo, key, calldata, fee, value, tokens)
 }
 
 func (s *RpcSuite) CallGetter(
@@ -295,9 +281,11 @@ func (s *RpcSuite) AbiUnpack(abi *abi.ABI, name string, data []byte) []interface
 	return res
 }
 
-func (s *RpcSuite) PrepareDefaultDeployPayload(abi abi.ABI, code []byte, args ...any) types.DeployPayload {
+func (s *RpcSuite) PrepareDefaultDeployPayload(
+	abi abi.ABI, salt common.Hash, code []byte, args ...any,
+) types.DeployPayload {
 	s.T().Helper()
-	return PrepareDefaultDeployPayload(s.T(), abi, code, args...)
+	return PrepareDefaultDeployPayload(s.T(), abi, salt, code, args...)
 }
 
 func (s *RpcSuite) GasToValue(gas uint64) types.Value {

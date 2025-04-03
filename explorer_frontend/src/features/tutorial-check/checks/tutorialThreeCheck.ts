@@ -73,7 +73,12 @@ async function runTutorialCheckThree(props: CheckProps) {
   if (checkRequest) {
     props.setTutorialChecksEvent(TutorialChecksStatus.Failed);
     console.log(resRequest);
-    props.tutorialContractStepFailed("Failed to call Requester.requestMultiplication()!");
+    props.tutorialContractStepFailed(
+      `
+      Calling Requester.requestMultiplication() produced one or more failed receipts!
+      To investigate, debug this transaction using the Cometa service: ${hashRequest}.
+      `,
+    );
     return false;
   }
 

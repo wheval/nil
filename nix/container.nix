@@ -218,7 +218,7 @@ in
         StateDirectory = "explorer_backend";
         RuntimeDirectory = "explorer_backend";
         Environment = [
-          "EXPLORER_DB=/var/lib/explorer_backend/explorer.db"
+          "EXPLORER_CODE_SNIPPETS_DB_PATH=/var/lib/explorer_backend/explorer.db"
           "DB_URL=http://127.0.0.1:8123"
           "DB_USER=default"
           "DB_NAME=nil_database"

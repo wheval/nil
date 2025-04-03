@@ -34,7 +34,7 @@ func (s *SuiteReadThroughDb) SetupTest() {
 	s.num = 0
 
 	s.cfg = &nilservice.Config{
-		NShards: 5,
+		NShards: 3,
 		HttpUrl: rpc.GetSockPathIdx(s.T(), s.num),
 	}
 

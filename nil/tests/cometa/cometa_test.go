@@ -37,15 +37,6 @@ type SuiteCometaClickhouse struct {
 	clickhouse *exec.Cmd
 }
 
-func (s *SuiteCometa) SetupSuite() {
-	s.cometaCfg.DbPath = s.T().TempDir() + "/cometa.db"
-	s.cometaCfg.OwnEndpoint = ""
-	var err error
-
-	s.testAddress, err = contracts.CalculateAddress(contracts.NameTest, 1, []byte{1})
-	s.Require().NoError(err)
-}
-
 func (s *SuiteCometaClickhouse) SetupSuite() {
 	s.cometaCfg.UseBadger = false
 
@@ -99,7 +90,14 @@ func (s *SuiteCometaBadger) SetupSuite() {
 	s.SuiteCometa.SetupSuite()
 }
 
-func (s *SuiteCometa) SetupTest() {
+func (s *SuiteCometa) SetupSuite() {
+	s.cometaCfg.DbPath = s.T().TempDir() + "/cometa.db"
+	s.cometaCfg.OwnEndpoint = ""
+	var err error
+
+	s.testAddress, err = contracts.CalculateAddress(contracts.NameTest, 1, []byte{1})
+	s.Require().NoError(err)
+
 	mainSmartAccountValue, err := types.NewValueFromDecimal("1000000000000000000000")
 	s.Require().NoError(err)
 	zerostateCfg := &execution.ZeroStateConfig{

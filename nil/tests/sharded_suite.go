@@ -4,6 +4,7 @@ package tests
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"os"
 	"slices"
@@ -493,9 +494,11 @@ func (s *ShardedSuite) LoadContract(path string, name string) (types.Code, abi.A
 	return LoadContract(s.T(), path, name)
 }
 
-func (s *ShardedSuite) PrepareDefaultDeployPayload(abi abi.ABI, code []byte, args ...any) types.DeployPayload {
+func (s *ShardedSuite) PrepareDefaultDeployPayload(
+	abi abi.ABI, salt common.Hash, code []byte, args ...any,
+) types.DeployPayload {
 	s.T().Helper()
-	return PrepareDefaultDeployPayload(s.T(), abi, code, args...)
+	return PrepareDefaultDeployPayload(s.T(), abi, salt, code, args...)
 }
 
 func (s *ShardedSuite) GetBalance(address types.Address) types.Value {
@@ -534,4 +537,18 @@ func (s *ShardedSuite) CallGetter(
 ) []byte {
 	s.T().Helper()
 	return CallGetter(s.T(), s.Context, s.DefaultClient, addr, calldata, blockId, overrides)
+}
+
+func (s *ShardedSuite) SendTransactionViaSmartAccountNoCheck(
+	addrSmartAccount types.Address,
+	addrTo types.Address,
+	key *ecdsa.PrivateKey,
+	calldata []byte,
+	fee types.FeePack,
+	value types.Value,
+	tokens []types.TokenBalance,
+) *jsonrpc.RPCReceipt {
+	s.T().Helper()
+	return SendTransactionViaSmartAccountNoCheck(
+		s.T(), s.DefaultClient, addrSmartAccount, addrTo, key, calldata, fee, value, tokens)
 }

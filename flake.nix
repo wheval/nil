@@ -143,7 +143,7 @@
                 } ./usr/bin/nil ${versionFull}
                 bash ${
                   ./scripts/binary_patch_version.sh
-                } ./usr/bin/cometa ${versionFull}
+                } ./usr/bin/nil-cometa ${versionFull}
                 ${pkgs.fpm}/bin/fpm -s dir -t deb --name ${pkg.pname} -v ${version} --deb-compression xz --deb-use-file-permissions usr
               '';
               installPhase = ''

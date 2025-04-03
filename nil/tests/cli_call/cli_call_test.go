@@ -31,9 +31,7 @@ func (s *SuiteCliTestCall) SetupSuite() {
 
 	s.testAddress, err = contracts.CalculateAddress(contracts.NameTest, 1, []byte{1})
 	s.Require().NoError(err)
-}
 
-func (s *SuiteCliTestCall) SetupTest() {
 	zeroState := &execution.ZeroStateConfig{
 		Contracts: []*execution.ContractDescr{{
 			Name:     "Test",
@@ -67,7 +65,7 @@ address = {{ .Address }}
 	s.Require().NoError(err)
 }
 
-func (s *SuiteCliTestCall) TearDownTest() {
+func (s *SuiteCliTestCall) TearDownSuite() {
 	s.Cancel()
 }
 
