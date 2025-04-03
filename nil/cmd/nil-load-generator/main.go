@@ -12,7 +12,7 @@ import (
 
 func main() {
 	cfg := nil_load_generator.NewDefaultConfig()
-	componentName := "nil_load_generator"
+	componentName := "nil-load-generator"
 	logger := logging.NewLogger(componentName)
 	rootCmd := &cobra.Command{
 		Use:   componentName,
