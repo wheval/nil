@@ -281,9 +281,11 @@ func (s *RpcSuite) AbiUnpack(abi *abi.ABI, name string, data []byte) []interface
 	return res
 }
 
-func (s *RpcSuite) PrepareDefaultDeployPayload(abi abi.ABI, code []byte, args ...any) types.DeployPayload {
+func (s *RpcSuite) PrepareDefaultDeployPayload(
+	abi abi.ABI, salt common.Hash, code []byte, args ...any,
+) types.DeployPayload {
 	s.T().Helper()
-	return PrepareDefaultDeployPayload(s.T(), abi, code, args...)
+	return PrepareDefaultDeployPayload(s.T(), abi, salt, code, args...)
 }
 
 func (s *RpcSuite) GasToValue(gas uint64) types.Value {

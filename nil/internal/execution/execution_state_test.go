@@ -33,7 +33,7 @@ func (s *SuiteExecutionState) SetupSuite() {
 
 func (s *SuiteExecutionState) SetupTest() {
 	var err error
-	s.db, err = db.NewBadgerDb(s.Suite.T().TempDir() + "test.db")
+	s.db, err = db.NewBadgerDbInMemory()
 	s.Require().NoError(err)
 }
 
@@ -697,41 +697,52 @@ func BenchmarkBlockGeneration(b *testing.B) {
 		},
 	}
 
-	params := NewBlockGeneratorParams(1, 2)
-
-	gen, err := NewBlockGenerator(ctx, params, database, nil)
+	gen, err := NewBlockGenerator(ctx, NewBlockGeneratorParams(0, 2), database, nil)
 	require.NoError(b, err)
 	_, err = gen.GenerateZeroState(zeroState)
 	require.NoError(b, err)
 
-	txn := types.NewEmptyTransaction()
-	txn.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
-	txn.To = address
-	txn.From = address
-	txn.RefundTo = address
-	txn.FeeCredit = types.NewValueFromUint64(10_000_000)
+	params := NewBlockGeneratorParams(1, 2)
+	gen, err = NewBlockGenerator(ctx, params, database, nil)
+	require.NoError(b, err)
+	block, err := gen.GenerateZeroState(zeroState)
+	require.NoError(b, err)
 
 	abi, err := contracts.GetAbi(contracts.NameCounter)
 	require.NoError(b, err)
-	txn.Data, err = abi.Pack("add", int32(1))
+	calldata, err := abi.Pack("add", int32(1))
 	require.NoError(b, err)
 
-	proposal := &Proposal{}
-	for range 1000 {
-		proposal.InternalTxns = append(proposal.InternalTxns, txn)
+	proposals := make([]*Proposal, b.N)
+	var seqno types.Seqno
+
+	for i := range b.N {
+		proposals[i] = &Proposal{}
+		for range 1000 {
+			txn := types.NewEmptyTransaction()
+			txn.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
+			txn.To = address
+			txn.From = address
+			txn.RefundTo = address
+			txn.FeeCredit = types.NewValueFromUint64(10_000_000)
+			txn.Data = calldata
+			txn.MaxFeePerGas = types.MaxFeePerGasDefault
+			txn.Seqno = seqno
+			seqno++
+
+			proposals[i].InternalTxns = append(proposals[i].InternalTxns, txn)
+		}
 	}
 
 	b.ResetTimer()
 
-	for range b.N {
-		tx, _ := database.CreateRwTx(ctx)
-		proposal.PrevBlockHash, _ = db.ReadLastBlockHash(tx, 1)
+	for i := range b.N {
+		proposals[i].PrevBlockHash = block.Hash(1)
 
-		gen, err = NewBlockGenerator(ctx, params, database, nil)
+		gen, err = NewBlockGenerator(ctx, params, database, block)
 		require.NoError(b, err)
-		_, err = gen.GenerateBlock(proposal, &types.ConsensusParams{})
+		blockRes, err := gen.GenerateBlock(proposals[i], &types.ConsensusParams{})
 		require.NoError(b, err)
-
-		tx.Rollback()
+		block = blockRes.Block
 	}
 }

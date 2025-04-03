@@ -43,9 +43,7 @@ func (s *SuiteCliBase) SetupSuite() {
 	s.incBinPath = s.TmpDir + "/Incrementer.bin"
 	s.incAbiPath = s.TmpDir + "/Incrementer.abi"
 	compileIncrementerAndSaveToFile(s.T(), s.incBinPath, s.incAbiPath)
-}
 
-func (s *SuiteCliBase) SetupTest() {
 	s.Start(&nilservice.Config{
 		NShards:              3,
 		CollatorTickPeriodMs: 200,
@@ -60,7 +58,7 @@ func (s *SuiteCliBase) SetupTest() {
 	s.Require().NotNil(s.cli)
 }
 
-func (s *SuiteCliBase) TearDownTest() {
+func (s *SuiteCliBase) TearDownSuite() {
 	s.Cancel()
 }
 
@@ -99,7 +97,7 @@ func (s *SuiteCliService) TestCliBlock() {
 
 func (s *SuiteCliService) TestCliTransaction() {
 	contractCode, abi := s.LoadContract(common.GetAbsolutePath("../contracts/increment.sol"), "Incrementer")
-	deployPayload := s.PrepareDefaultDeployPayload(abi, contractCode, big.NewInt(0))
+	deployPayload := s.PrepareDefaultDeployPayload(abi, common.Hash{0x1}, contractCode, big.NewInt(0))
 
 	_, receipt := s.DeployContractViaMainSmartAccount(types.BaseShardId, deployPayload, types.GasToValue(5_000_000))
 	s.Require().True(receipt.Success)
@@ -120,7 +118,7 @@ func (s *SuiteCliService) TestCliTransaction() {
 
 func (s *SuiteCliService) TestReadContract() {
 	contractCode, abi := s.LoadContract(common.GetAbsolutePath("../contracts/increment.sol"), "Incrementer")
-	deployPayload := s.PrepareDefaultDeployPayload(abi, contractCode, big.NewInt(1))
+	deployPayload := s.PrepareDefaultDeployPayload(abi, common.Hash{0x2}, contractCode, big.NewInt(1))
 
 	addr, receipt := s.DeployContractViaMainSmartAccount(types.BaseShardId, deployPayload, types.GasToValue(5_000_000))
 	s.Require().True(receipt.Success)
@@ -140,7 +138,7 @@ func (s *SuiteCliService) TestContract() {
 
 	// Deploy contract
 	contractCode, abi := s.LoadContract(common.GetAbsolutePath("../contracts/increment.sol"), "Incrementer")
-	deployCode := s.PrepareDefaultDeployPayload(abi, contractCode, big.NewInt(2))
+	deployCode := s.PrepareDefaultDeployPayload(abi, common.Hash{0x3}, contractCode, big.NewInt(2))
 	txHash, addr, err := s.cli.DeployContractViaSmartAccount(
 		smartAccount.ShardId()+1, smartAccount, deployCode, types.Value{})
 	s.Require().NoError(err)
@@ -232,7 +230,7 @@ func (s *SuiteCliService) TestSendExternalTransaction() {
 
 	contractCode, abi := s.LoadContract(
 		common.GetAbsolutePath("../contracts/external_increment.sol"), "ExternalIncrementer")
-	deployCode := s.PrepareDefaultDeployPayload(abi, contractCode, big.NewInt(2))
+	deployCode := s.PrepareDefaultDeployPayload(abi, common.Hash{0x4}, contractCode, big.NewInt(2))
 	txHash, addr, err := s.cli.DeployContractViaSmartAccount(
 		types.BaseShardId, smartAccount, deployCode, types.GasToValue(10_000_000))
 	s.Require().NoError(err)

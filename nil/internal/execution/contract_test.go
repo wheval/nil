@@ -79,17 +79,19 @@ func TestOpcodes(t *testing.T) {
 func TestPrecompiles(t *testing.T) {
 	t.Parallel()
 
+	state := newState(t)
+	defer state.tx.Rollback()
+
 	// Test checks that precompiles are not crashed
 	// if called with an empty input data
 	check := func(i int) {
-		state := newState(t)
-		defer state.tx.Rollback()
 		require.NoError(t, state.newVm(true, types.EmptyAddress, nil))
 
 		callTransaction := types.NewEmptyTransaction()
 		callTransaction.Flags = types.NewTransactionFlags(types.TransactionFlagInternal)
 		callTransaction.FeeCredit = toGasCredit(100_000)
 		callTransaction.MaxFeePerGas = defaultMaxFeePerGas
+		callTransaction.Seqno = types.Seqno(i)
 		state.AddInTransaction(callTransaction)
 
 		addr := fmt.Sprintf("%x", i)

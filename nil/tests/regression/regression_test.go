@@ -232,7 +232,7 @@ func (s *SuiteRegression) TestInsufficientFundsDeploy() {
 
 func (s *SuiteRegression) TestUnsuccessfulDeployWithGasUsed() {
 	contractCode, abi := s.LoadContract(common.GetAbsolutePath("../contracts/Unconstructable.sol"), "Unconstructable")
-	deployPayload := s.PrepareDefaultDeployPayload(abi, contractCode)
+	deployPayload := s.PrepareDefaultDeployPayload(abi, common.EmptyHash, contractCode)
 	addr := types.CreateAddress(types.BaseShardId, deployPayload)
 
 	txHash, err := s.Client.SendTransactionViaSmartAccount(

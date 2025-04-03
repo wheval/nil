@@ -494,9 +494,11 @@ func (s *ShardedSuite) LoadContract(path string, name string) (types.Code, abi.A
 	return LoadContract(s.T(), path, name)
 }
 
-func (s *ShardedSuite) PrepareDefaultDeployPayload(abi abi.ABI, code []byte, args ...any) types.DeployPayload {
+func (s *ShardedSuite) PrepareDefaultDeployPayload(
+	abi abi.ABI, salt common.Hash, code []byte, args ...any,
+) types.DeployPayload {
 	s.T().Helper()
-	return PrepareDefaultDeployPayload(s.T(), abi, code, args...)
+	return PrepareDefaultDeployPayload(s.T(), abi, salt, code, args...)
 }
 
 func (s *ShardedSuite) GetBalance(address types.Address) types.Value {
