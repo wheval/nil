@@ -59,9 +59,6 @@ func (d *ClickhouseDriver) FetchLatestProcessedBlockId(ctx context.Context, id t
 	if err != nil {
 		return nil, err
 	}
-	if blockNum == types.InvalidBlockNumber {
-		return nil, nil
-	}
 	return &blockNum, nil
 }
 
