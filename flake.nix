@@ -137,15 +137,12 @@
 
                 mv ./usr/bin/cometa ./usr/bin/nil-cometa
 
-                bash ${
-                  ./scripts/binary_patch_version.sh
-                } ./usr/bin/nild ${versionFull}
-                bash ${
-                  ./scripts/binary_patch_version.sh
-                } ./usr/bin/nil ${versionFull}
-                bash ${
-                  ./scripts/binary_patch_version.sh
-                } ./usr/bin/nil-cometa ${versionFull}
+                for binary in ./usr/bin/*; do
+                    if [ -f "$binary" ]; then
+                        bash ${ ./scripts/binary_patch_version.sh } "$binary" ${versionFull}
+                    fi
+                done
+
                 ${pkgs.fpm}/bin/fpm -s dir -t deb --name ${pkg.pname} -v ${version} --deb-compression xz --deb-use-file-permissions usr
               '';
               installPhase = ''

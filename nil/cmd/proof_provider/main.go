@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const appTitle = "=nil; Proof Provider"
+
 type cmdConfig struct {
 	*proofprovider.Config `yaml:",inline"`
 
@@ -44,11 +46,10 @@ func execute() error {
 			return run(cfg)
 		},
 	}
-
 	addFlags(runCmd, cfg)
 
-	rootCmd.AddCommand(runCmd)
-
+	versionCmd := cobrax.VersionCmd(appTitle)
+	rootCmd.AddCommand(runCmd, versionCmd)
 	return rootCmd.Execute()
 }
 
