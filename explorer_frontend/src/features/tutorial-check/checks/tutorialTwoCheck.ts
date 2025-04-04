@@ -1,9 +1,4 @@
-import {
-  HttpTransport,
-  PublicClient,
-  generateSmartAccount,
-  waitTillCompleted,
-} from "@nilfoundation/niljs";
+import { HttpTransport, PublicClient, generateSmartAccount } from "@nilfoundation/niljs";
 import { TutorialChecksStatus } from "../../../pages/tutorials/model";
 import type { CheckProps } from "../CheckProps";
 
@@ -59,14 +54,14 @@ async function runTutorialCheckTwo(props: CheckProps) {
 
   props.tutorialContractStepPassed("Operator and CustomToken have been deployed!");
 
-  const hashMinting = await smartAccount.sendTransaction({
+  const mintTx = await smartAccount.sendTransaction({
     to: resultOperator.address,
     abi: operatorContract.abi,
     functionName: "checkMintToken",
     args: [resultCustomToken.address, CUSTOM_TOKEN_AMOUNT],
   });
 
-  const resMinting = await waitTillCompleted(client, hashMinting);
+  const resMinting = await mintTx.wait();
 
   const checkMinting = resMinting.some((receipt) => !receipt.success);
 
@@ -97,7 +92,7 @@ async function runTutorialCheckTwo(props: CheckProps) {
 
   const gasPrice = await client.getGasPrice(1);
 
-  const hashSending = await smartAccount.sendTransaction({
+  const sendTx = await smartAccount.sendTransaction({
     to: resultOperator.address,
     abi: operatorContract.abi,
     functionName: "checkSendToken",
@@ -105,7 +100,7 @@ async function runTutorialCheckTwo(props: CheckProps) {
     feeCredit: gasPrice * 5_000_000n,
   });
 
-  const resSending = await waitTillCompleted(client, hashSending);
+  const resSending = await sendTx.wait();
 
   const checkSending = resSending.some((receipt) => !receipt.success);
 
