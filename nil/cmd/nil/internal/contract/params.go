@@ -22,10 +22,6 @@ const (
 	asJsonFlag       = "json"
 )
 
-var params = &contractParams{
-	Params: &common.Params{},
-}
-
 type contractParams struct {
 	*common.Params
 
