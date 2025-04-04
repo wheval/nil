@@ -68,7 +68,7 @@ func (d *ClickhouseDriver) FetchAddressActions(
 	timestamp db.Timestamp,
 ) ([]indexertypes.AddressAction, error) {
 	rows, err := d.conn.Query(context.Background(), `
-		SELECT 
+		SELECT
 			t.hash,
 			t.from,
 			t.to,
@@ -284,13 +284,13 @@ func (d *ClickhouseDriver) SetupScheme(ctx context.Context, params indexerdriver
 	}
 
 	if !params.AllowDbDrop {
-		return fmt.Errorf("version mismatch: blockchain %x, exporter %x", params.Version, version)
+		return fmt.Errorf("version mismatch: blockchain %x, indexer %x", params.Version, version)
 	}
 
 	if version.Empty() {
 		logger.Info().Msg("Database is empty. Recreating...")
 	} else {
-		logger.Info().Msgf("Version mismatch: blockchain %x, exporter %x. Dropping database...", params.Version, version)
+		logger.Info().Msgf("Version mismatch: blockchain %x, indexer %x. Dropping database...", params.Version, version)
 	}
 
 	if err := d.conn.Exec(ctx, "DROP DATABASE IF EXISTS "+d.options.Auth.Database); err != nil {

@@ -15,9 +15,9 @@ GOBUILD = GOPRIVATE="$(GOPRIVATE)" $(GO) build $(GO_FLAGS) -tags $(TAGS)
 GOTEST = GOPRIVATE="$(GOPRIVATE)" GODEBUG=cgocheck=0 $(GO) test -tags $(BUILD_TAGS),debug,assert,test,goexperiment.synctest $(GO_FLAGS) ./... -p 2
 
 SC_COMMANDS = sync_committee sync_committee_cli proof_provider prover nil_block_generator relayer
-COMMANDS += nild nil nil-load-generator exporter cometa faucet journald_forwarder relay stresser $(SC_COMMANDS)
+COMMANDS += nild nil nil-load-generator indexer cometa faucet journald_forwarder relay stresser $(SC_COMMANDS)
 
-BINARY_NAMES := cometa=nil-cometa
+BINARY_NAMES := cometa=nil-cometa indexer=nil-indexer
 get_bin_name = $(if $(filter $(1)=%,$(BINARY_NAMES)),$(patsubst $(1)=%,%,$(filter $(1)=%,$(BINARY_NAMES))),$(1))
 
 
