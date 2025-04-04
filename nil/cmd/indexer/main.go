@@ -32,9 +32,9 @@ func initConfig() {
 		home, err := os.Getwd()
 		check.PanicIfErr(err)
 
-		// Search config in home directory with the name "exporter.cobra" (without an extension).
+		// Search config in home directory with the name "indexer.cobra" (without an extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName("exporter")
+		viper.SetConfigName("indexer")
 	}
 
 	check.PanicIfErr(viper.ReadInConfig())
@@ -48,9 +48,9 @@ func main() {
 
 	cobra.OnInitialize(initConfig)
 	rootCmd := &cobra.Command{
-		Use:   "exporter [-c config.yaml] [flags]",
-		Short: "exporter is a tool to export data from Nil blockchain to Clickhouse.",
-		Long: `Exporter is a tool to export data from Nil blockchain to Clickhouse.
+		Use:   "indexer [-c config.yaml] [flags]",
+		Short: "indexer is a tool to export data from Nil blockchain to Clickhouse.",
+		Long: `Indexer is a tool to export data from Nil blockchain to Clickhouse.
 You could config it via config file or flags or environment variables.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			requiredParams := []string{"clickhouse-endpoint", "clickhouse-login", "clickhouse-database"}
@@ -76,7 +76,7 @@ You could config it via config file or flags or environment variables.`,
 		"config",
 		"c",
 		"",
-		"config file (default is $CWD/exporter.cobra.yaml)")
+		"config file (default is $CWD/indexer.cobra.yaml)")
 	rootCmd.Flags().StringP("api-endpoint", "a", "http://127.0.0.1:8529", "API endpoint")
 	rootCmd.Flags().StringP("clickhouse-endpoint", "e", "127.0.0.1:9000", "Clickhouse endpoint")
 	rootCmd.Flags().StringP("clickhouse-login", "l", "", "Clickhouse login")

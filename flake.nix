@@ -136,6 +136,7 @@
                 chmod -R u+rwx,g+rx,o+rx ./usr/share/${packages.docsaibackend.name}
 
                 mv ./usr/bin/cometa ./usr/bin/nil-cometa
+                mv ./usr/bin/indexer ./usr/bin/nil-indexer
 
                 for binary in ./usr/bin/*; do
                     if [ -f "$binary" ]; then
