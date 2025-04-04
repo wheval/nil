@@ -1,9 +1,4 @@
-import {
-  HttpTransport,
-  PublicClient,
-  generateSmartAccount,
-  waitTillCompleted,
-} from "@nilfoundation/niljs";
+import { HttpTransport, PublicClient, generateSmartAccount } from "@nilfoundation/niljs";
 import { TutorialChecksStatus } from "../../../pages/tutorials/model";
 import { deploySmartContractFx } from "../../contracts/models/base";
 import type { CheckProps } from "../CheckProps";
@@ -59,14 +54,14 @@ async function runTutorialCheckThree(props: CheckProps) {
 
   props.tutorialContractStepPassed("Requester and RequestedContract have been deployed!");
 
-  const hashRequest = await smartAccount.sendTransaction({
+  const requestTx = await smartAccount.sendTransaction({
     to: resultRequester.address,
     abi: requesterContract.abi,
     functionName: "requestMultiplication",
     args: [resultRequestedContract.address],
   });
 
-  const resRequest = await waitTillCompleted(client, hashRequest);
+  const resRequest = await requestTx.wait();
 
   const checkRequest = await resRequest.some((receipt) => !receipt.success);
 
