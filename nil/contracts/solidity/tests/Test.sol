@@ -7,6 +7,7 @@ import "../lib/Nil.sol";
 contract Test is NilBase {
     event stubCalled(uint32 v);
     event testEvent(uint indexed a, uint indexed b);
+    event newContract(address);
 
     uint32 private internalValue = 0;
     uint256 private timestamp = 0;
@@ -274,6 +275,11 @@ contract Test is NilBase {
         bytes calldata
     ) external pure returns (bool) {
         return true;
+    }
+
+    function deployContract() public {
+        Empty newEmpty = new Empty();
+        emit newContract(address(newEmpty));
     }
 }
 
