@@ -363,7 +363,7 @@ func (agg *aggregator) createBlockBatch(
 		return nil, err
 	}
 
-	return types.NewBlockBatch(latestBatchId, *subgraph)
+	return types.NewBlockBatch(latestBatchId).WithAddedSubgraph(*subgraph)
 }
 
 // handleBlockBatch checks the validity of a block and stores it if valid.
@@ -382,7 +382,7 @@ func (agg *aggregator) handleBlockBatch(ctx context.Context, batch *types.BlockB
 	if err != nil {
 		return err
 	}
-	batch.SetDataProofs(dataProofs)
+	batch = batch.WithDataProofs(dataProofs)
 
 	if err := agg.blockStorage.SetBlockBatch(ctx, batch); err != nil {
 		return fmt.Errorf("error storing block batch, latestMainHash=%s: %w", batch.LatestMainBlock().Hash, err)
