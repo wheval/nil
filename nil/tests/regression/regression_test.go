@@ -449,6 +449,27 @@ func (s *SuiteRegression) TestBigTransactions() {
 	})
 }
 
+func (s *SuiteRegression) TestDeployFromContract() {
+	abi, err := contracts.GetAbi(contracts.NameTest)
+	s.Require().NoError(err)
+
+	calldata, err := abi.Pack("deployContract")
+	s.Require().NoError(err)
+
+	receipt := s.SendExternalTransactionNoCheck(calldata, s.testAddress)
+	s.Require().True(receipt.Success)
+
+	contractAddr1, err := abi.Unpack("newContract", receipt.Logs[0].Data)
+	s.Require().NoError(err)
+
+	receipt = s.SendExternalTransactionNoCheck(calldata, s.testAddress)
+	s.Require().True(receipt.Success)
+
+	contractAddr2, err := abi.Unpack("newContract", receipt.Logs[0].Data)
+	s.Require().NoError(err)
+	s.NotEqual(contractAddr1, contractAddr2)
+}
+
 func TestRegression(t *testing.T) {
 	t.Parallel()
 
