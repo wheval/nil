@@ -1,7 +1,4 @@
 import {
-  BUTTON_KIND,
-  BUTTON_SIZE,
-  Button,
   HeadingXLarge,
   ParagraphXSmall,
   SPACE,
@@ -10,9 +7,7 @@ import {
   Tabs,
   Tag,
 } from "@nilfoundation/ui-kit";
-import { Link } from "atomic-router-react";
 import { useStyletron } from "baseui";
-import { ArrowLeft, ArrowRight } from "baseui/icon";
 import type { TabsOverrides } from "baseui/tabs";
 import { type Store, combine } from "effector";
 import { useStore } from "effector-react";
@@ -34,7 +29,7 @@ const $paramsStore: Store<[{ shard: string; id: string }, string]> = combine(
   blockDetailsRoute.$isOpened,
   (params, paramsDetails, isBlockPage, isBlockDetails) => {
     if (isBlockPage) {
-      return [params, "overview"];
+      return [params, "all"];
     }
     if (isBlockDetails) {
       return [
@@ -45,7 +40,7 @@ const $paramsStore: Store<[{ shard: string; id: string }, string]> = combine(
         paramsDetails.details,
       ];
     }
-    return [params, "overview"];
+    return [params, "all"];
   },
 );
 
