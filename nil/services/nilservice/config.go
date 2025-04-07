@@ -1,6 +1,7 @@
 package nilservice
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -9,6 +10,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/collate"
 	"github.com/NilFoundation/nil/nil/internal/config"
 	"github.com/NilFoundation/nil/nil/internal/crypto/bls"
+	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/keys"
 	"github.com/NilFoundation/nil/nil/internal/network"
@@ -84,7 +86,8 @@ type Config struct {
 
 	L1Fetcher rollup.L1BlockFetcher `yaml:"-"`
 
-	FeeCalculator execution.FeeCalculator `yaml:"-"`
+	FeeCalculator         execution.FeeCalculator                                                   `yaml:"-"`
+	NetworkManagerFactory func(ctx context.Context, cfg *Config, db db.DB) (network.Manager, error) `yaml:"-"`
 }
 
 const (

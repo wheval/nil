@@ -486,9 +486,9 @@ func CreateNode(
 		}
 	}
 
-	var txnPools map[types.ShardId]txnpool.Pool
-	if cfg.Network != nil && cfg.RunMode != NormalRunMode {
-		cfg.Network.DHTMode = dht.ModeClient
+	createNetworkManager := cfg.NetworkManagerFactory
+	if createNetworkManager == nil {
+		createNetworkManager = CreateNetworkManager
 	}
 	networkManager, err := createNetworkManager(ctx, cfg, database)
 	if err != nil {
@@ -496,6 +496,7 @@ func CreateNode(
 		return nil, err
 	}
 
+	var txnPools map[types.ShardId]txnpool.Pool
 	var syncersResult *syncersResult
 	switch cfg.RunMode {
 	case NormalRunMode, CollatorsOnlyRunMode:
@@ -668,7 +669,11 @@ func Run(
 	return 0
 }
 
-func createNetworkManager(ctx context.Context, cfg *Config, database db.DB) (*network.BasicManager, error) {
+func CreateNetworkManager(ctx context.Context, cfg *Config, database db.DB) (network.Manager, error) {
+	if cfg.Network != nil && cfg.RunMode != NormalRunMode {
+		cfg.Network.DHTMode = dht.ModeClient
+	}
+
 	if cfg.RunMode == RpcRunMode {
 		return network.NewClientManager(ctx, cfg.Network, database)
 	}
