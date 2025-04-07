@@ -1,5 +1,5 @@
 import { EditorView } from "@codemirror/view";
-import { CodeField, ParagraphSmall, TAB_KIND, TAG_KIND, TAG_SIZE, Tabs, Tab, Tag } from "@nilfoundation/ui-kit";
+import { CodeField, ParagraphSmall, TAG_KIND, TAG_SIZE, Tag } from "@nilfoundation/ui-kit";
 import { Alert } from "baseui/icon";
 import type { FC } from "react";
 import { useStyletron } from "styletron-react";
@@ -10,7 +10,7 @@ import type { Transaction } from "../types/Transaction";
 import { InlineCopyButton } from "./InlineCopyButton";
 import { useState, useEffect } from "react";
 import type { Key } from "react";
-import type { OnChangeHandler, TabsOverrides } from "baseui/tabs";
+import type { OnChangeHandler } from "baseui/tabs";
 import {ethers} from "ethers";
 
 type OverviewProps = {
@@ -267,7 +267,7 @@ const Default = ({ tx }: { tx: Transaction }) => {
           <strong>Parameters:</strong>
         </ParagraphSmall>
         {params.map((param: string, index: number) => (
-          <ParagraphSmall key={index}>{param}</ParagraphSmall>
+          <ParagraphSmall key={`param-${param}-${index}`}>{param}</ParagraphSmall>
         ))}
       </div>
     );
