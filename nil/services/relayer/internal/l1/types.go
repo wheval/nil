@@ -1,9 +1,17 @@
 package l1
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+)
+
+type depositType = uint8
+
+const (
+	depositTypeERC20 depositType = 0
+	depositTypeETH   depositType = 1
 )
 
 type Event struct {
@@ -30,6 +38,17 @@ type Event struct {
 	ExpiryTime         *big.Int       `json:"expiryTime"`
 	L2FeeRefundAddress common.Address `json:"l2FeeRefundAddress"`
 	FeeCreditData      FeeCreditData  `json:"feeCreditData"`
+}
+
+func (ev *Event) validate() error {
+	if ev.Type != depositTypeERC20 &&
+		ev.Type != depositTypeETH {
+		return fmt.Errorf("%w: unexpected deposit type: %d", ErrInvalidEvent, ev.Type)
+	}
+	if ev.Value == nil || ev.Nonce == nil {
+		return fmt.Errorf("%w: value (%v) and nonce (%v) fields cannot be empty", ErrInvalidEvent, ev.Value, ev.Nonce)
+	}
+	return nil
 }
 
 type FeeCreditData struct {
