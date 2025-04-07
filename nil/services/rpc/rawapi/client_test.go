@@ -11,6 +11,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi/pb"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/protobuf/proto"
 )
@@ -71,11 +72,11 @@ func (s *ApiClientTestSuite) doRequest() (sszx.SSZEncodedData, error) {
 	return s.apiClient.TestMethod(s.ctx, rawapitypes.NamedBlockIdentifierAsBlockReference(rawapitypes.LatestBlock))
 }
 
-func (s *ApiClientTestSuite) waitForRequestHandler() {
+func (s *ApiClientTestSuite) waitForRequestHandler(protocol protocol.ID) {
 	s.T().Helper()
 	s.Eventually(
 		func() bool {
-			return len(s.clientNetworkManager.GetPeersForProtocolPrefix("/shard/1/testapi/")) != 0
+			return len(s.clientNetworkManager.GetPeersForProtocol(protocol)) != 0
 		},
 		10*time.Second,
 		100*time.Millisecond)
@@ -102,7 +103,7 @@ func (s *ApiClientTestSuite) TestValidResponse() {
 			resp, err := proto.Marshal(response)
 			return resp, err
 		})
-	s.waitForRequestHandler()
+	s.waitForRequestHandler("/shard/1/testapi/TestMethod")
 
 	response, err := s.doRequest()
 	s.Require().NoError(err)
@@ -119,7 +120,7 @@ func (s *ApiClientTestSuite) TestInvalidResponse() {
 			*requestHandlerCalled = true
 			return nil, nil
 		})
-	s.waitForRequestHandler()
+	s.waitForRequestHandler("/shard/1/testapi/TestMethod")
 
 	_, err := s.doRequest()
 	s.Require().ErrorContains(err, "unexpected response")
@@ -141,7 +142,7 @@ func (s *ApiClientTestSuite) TestErrorResponse() {
 			}
 			return proto.Marshal(response)
 		})
-	s.waitForRequestHandler()
+	s.waitForRequestHandler("/shard/1/testapi/TestMethod")
 
 	_, err := s.doRequest()
 	s.Require().ErrorContains(err, "Test error")

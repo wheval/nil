@@ -10,7 +10,6 @@ type Manager interface {
 	GetPeerProtocolVersion(peer PeerID) (string, error)
 	AllKnownPeers() []PeerID
 	GetPeersForProtocol(pid ProtocolID) []PeerID
-	GetPeersForProtocolPrefix(prefix string) []PeerID
 	Connect(ctx context.Context, addr AddrInfo) (PeerID, error)
 	Close()
 
