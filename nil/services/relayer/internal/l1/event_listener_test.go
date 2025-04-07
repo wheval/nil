@@ -192,9 +192,9 @@ func (s *EventListenerTestSuite) TestFetchHistoricalEvents() {
 			// for each range return single event for its first block
 			return []*L1MessageSent{
 				{
-					MessageHash:  getMsgHash(msgSourceFetcher, callNumber+1),
-					MessageValue: big.NewInt(1),
-					MessageNonce: big.NewInt(2),
+					MessageHash:       getMsgHash(msgSourceFetcher, callNumber+1),
+					MessageExpiryTime: big.NewInt(1),
+					MessageNonce:      big.NewInt(2),
 					Raw: ethtypes.Log{
 						BlockNumber: from,
 						BlockHash:   ethcommon.BytesToHash([]byte{1, 2, 3, 4}),
@@ -268,9 +268,9 @@ func (s *EventListenerTestSuite) TestFetchEventsFromSubscription() {
 			go func() {
 				for i := 1; i < 4; i++ {
 					sink <- &L1MessageSent{
-						MessageHash:  getMsgHash(msgSourceSubscription, i),
-						MessageValue: big.NewInt(1),
-						MessageNonce: big.NewInt(2),
+						MessageHash:       getMsgHash(msgSourceSubscription, i),
+						MessageExpiryTime: big.NewInt(1),
+						MessageNonce:      big.NewInt(2),
 						Raw: ethtypes.Log{
 							BlockNumber: 1024 + uint64(i),
 							BlockHash:   ethcommon.BytesToHash([]byte{1, 2, 3, byte(i)}),
@@ -334,9 +334,9 @@ func (s *EventListenerTestSuite) TestSmoke() {
 		go func() {
 			for i := 1; i < 4; i++ {
 				sink <- &L1MessageSent{
-					MessageHash:  getMsgHash(msgSourceSubscription, i),
-					MessageValue: big.NewInt(1),
-					MessageNonce: big.NewInt(2),
+					MessageHash:       getMsgHash(msgSourceSubscription, i),
+					MessageExpiryTime: big.NewInt(1),
+					MessageNonce:      big.NewInt(2),
 					Raw: ethtypes.Log{
 						BlockNumber: 1024 + uint64(i),
 						BlockHash:   ethcommon.BytesToHash([]byte{1, 2, 3, byte(i)}),
@@ -371,9 +371,9 @@ func (s *EventListenerTestSuite) TestSmoke() {
 		// for each range return single event for its first block
 		return []*L1MessageSent{
 			{
-				MessageHash:  getMsgHash(msgSourceFetcher, callNumber+1),
-				MessageValue: big.NewInt(1),
-				MessageNonce: big.NewInt(2),
+				MessageHash:       getMsgHash(msgSourceFetcher, callNumber+1),
+				MessageExpiryTime: big.NewInt(1),
+				MessageNonce:      big.NewInt(2),
 				Raw: ethtypes.Log{
 					BlockNumber: from,
 					BlockHash:   ethcommon.BytesToHash([]byte{1, 2, 3, 4}),

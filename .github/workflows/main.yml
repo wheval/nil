@@ -106,7 +106,7 @@ jobs:
       - name: build binaries
         run: |
           export PATH=$PATH:$(go env GOPATH)/bin
-          make
+          make nild nil
 
       - name: Upload nil binary as artifact
         if: github.event_name == 'workflow_dispatch'

@@ -354,7 +354,6 @@ func (el *EventListener) convertEvent(ethEvent *L1MessageSent) *Event {
 
 		Sender:             ethEvent.MessageSender,
 		Target:             ethEvent.MessageTarget,
-		Value:              ethEvent.MessageValue,
 		Nonce:              ethEvent.MessageNonce,
 		Message:            ethEvent.Message,
 		Type:               ethEvent.MessageType,

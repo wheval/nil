@@ -42,6 +42,8 @@ test: generated
 
 $(COMMANDS): %: generated %.cmd
 
+$(SC_COMMANDS:%=%.cmd): gen_rollup_contracts_bindings
+
 include nil/common/sszx/Makefile.inc
 include nil/internal/db/Makefile.inc
 include nil/internal/mpt/Makefile.inc
@@ -74,7 +76,7 @@ $(BIN_FILES): | compile-bins
 
 compile-contracts: $(BIN_FILES)
 
-golangci-lint:
+golangci-lint: gen_rollup_contracts_bindings
 	golangci-lint run
 
 format: generated
