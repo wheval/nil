@@ -41,7 +41,7 @@ func NewLocalShardApi(shardId types.ShardId, db db.ReadOnlyDB, txnpool txnpool.P
 
 func (api *LocalShardApi) setAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
-	networkManager *network.Manager,
+	networkManager *network.BasicManager,
 	readonly bool,
 	logger logging.Logger,
 ) error {

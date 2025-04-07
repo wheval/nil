@@ -14,7 +14,7 @@ func topicPendingTransactions(shardId types.ShardId) string {
 
 func PublishPendingTransaction(
 	ctx context.Context,
-	networkManager *network.Manager,
+	networkManager *network.BasicManager,
 	shardId types.ShardId,
 	txn *metaTxn,
 ) error {

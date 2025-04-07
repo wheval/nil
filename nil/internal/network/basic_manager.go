@@ -16,7 +16,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 )
 
-type Manager struct {
+type BasicManager struct {
 	ctx             context.Context
 	prefix          string
 	protocolVersion string
@@ -30,7 +30,7 @@ type Manager struct {
 	logger logging.Logger
 }
 
-func ConnectToPeers(ctx context.Context, peers AddrInfoSlice, m Manager, logger logging.Logger) {
+func ConnectToPeers(ctx context.Context, peers AddrInfoSlice, m BasicManager, logger logging.Logger) {
 	connectToPeers(ctx, peers, m.host, logger)
 }
 
@@ -59,7 +59,7 @@ func newManagerFromHost(
 	h host.Host,
 	database db.DB,
 	logger logging.Logger,
-) (*Manager, error) {
+) (*BasicManager, error) {
 	logger.Info().Msgf("Listening on addresses:\n%s\n", common.Join("\n", h.Addrs()...))
 
 	connectToDhtBootstrapPeers(ctx, conf, h, logger)
@@ -74,7 +74,7 @@ func newManagerFromHost(
 		return nil, err
 	}
 
-	return &Manager{
+	return &BasicManager{
 		ctx:             ctx,
 		prefix:          conf.Prefix,
 		protocolVersion: conf.ProtocolVersion,
@@ -86,11 +86,11 @@ func newManagerFromHost(
 	}, nil
 }
 
-func (m *Manager) withNetworkPrefix(prefix string) string {
+func (m *BasicManager) withNetworkPrefix(prefix string) string {
 	return m.prefix + prefix
 }
 
-func NewManager(ctx context.Context, conf *Config, database db.DB) (*Manager, error) {
+func NewManager(ctx context.Context, conf *Config, database db.DB) (*BasicManager, error) {
 	if !conf.Enabled() {
 		return nil, ErrNetworkDisabled
 	}
@@ -114,7 +114,7 @@ func NewManager(ctx context.Context, conf *Config, database db.DB) (*Manager, er
 	return newManagerFromHost(ctx, conf, h, database, logger)
 }
 
-func NewClientManager(ctx context.Context, conf *Config, database db.DB) (*Manager, error) {
+func NewClientManager(ctx context.Context, conf *Config, database db.DB) (*BasicManager, error) {
 	h, logger, err := newClient(ctx, conf)
 	if err != nil {
 		return nil, err
@@ -122,15 +122,15 @@ func NewClientManager(ctx context.Context, conf *Config, database db.DB) (*Manag
 	return newManagerFromHost(ctx, conf, h, database, logger)
 }
 
-func (m *Manager) PubSub() *PubSub {
+func (m *BasicManager) PubSub() *PubSub {
 	return m.pubSub
 }
 
-func (m *Manager) ProtocolVersion() string {
+func (m *BasicManager) ProtocolVersion() string {
 	return m.protocolVersion
 }
 
-func (m *Manager) GetPeerProtocolVersion(peer peer.ID) (string, error) {
+func (m *BasicManager) GetPeerProtocolVersion(peer peer.ID) (string, error) {
 	pv, err := m.host.Peerstore().Get(peer, "ProtocolVersion")
 	if err != nil {
 		return "", err
@@ -142,13 +142,13 @@ func (m *Manager) GetPeerProtocolVersion(peer peer.ID) (string, error) {
 	return versionString, nil
 }
 
-func (m *Manager) AllKnownPeers() []peer.ID {
+func (m *BasicManager) AllKnownPeers() []peer.ID {
 	return slices.DeleteFunc(m.host.Peerstore().PeersWithAddrs(), func(i PeerID) bool {
 		return m.host.ID() == i
 	})
 }
 
-func (m *Manager) GetPeersForProtocol(pid protocol.ID) []peer.ID {
+func (m *BasicManager) GetPeersForProtocol(pid protocol.ID) []peer.ID {
 	var peersForProtocol []peer.ID
 	peers := m.host.Network().Peers()
 
@@ -163,7 +163,7 @@ func (m *Manager) GetPeersForProtocol(pid protocol.ID) []peer.ID {
 	return peersForProtocol
 }
 
-func (m *Manager) GetPeersForProtocolPrefix(prefix string) []peer.ID {
+func (m *BasicManager) GetPeersForProtocolPrefix(prefix string) []peer.ID {
 	if len(prefix) == 0 || prefix[len(prefix)-1] != '/' {
 		m.logger.Error().Msgf("Invalid protocol prefix: %s. It should be a string ending with '/'", prefix)
 		return nil
@@ -187,7 +187,7 @@ func (m *Manager) GetPeersForProtocolPrefix(prefix string) []peer.ID {
 	return peersForProtocolPrefix
 }
 
-func (m *Manager) Connect(ctx context.Context, addr AddrInfo) (PeerID, error) {
+func (m *BasicManager) Connect(ctx context.Context, addr AddrInfo) (PeerID, error) {
 	m.logger.Debug().Msgf("Connecting to %s", addr)
 
 	if err := m.host.Connect(ctx, peer.AddrInfo(addr)); err != nil {
@@ -196,7 +196,7 @@ func (m *Manager) Connect(ctx context.Context, addr AddrInfo) (PeerID, error) {
 	return addr.ID, nil
 }
 
-func (m *Manager) Close() {
+func (m *BasicManager) Close() {
 	if m.dht != nil {
 		if err := m.dht.Close(); err != nil {
 			m.logError(err, "Error closing DHT")
@@ -214,11 +214,11 @@ func (m *Manager) Close() {
 	}
 }
 
-func (m *Manager) logError(err error, msg string) {
+func (m *BasicManager) logError(err error, msg string) {
 	m.logErrorWithLogger(m.logger, err, msg)
 }
 
-func (m *Manager) logErrorWithLogger(logger logging.Logger, err error, msg string) {
+func (m *BasicManager) logErrorWithLogger(logger logging.Logger, err error, msg string) {
 	if m.ctx.Err() != nil {
 		// If we're already closing, no need to log errors.
 		return

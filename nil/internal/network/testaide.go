@@ -16,17 +16,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func CalcAddress(m *Manager) AddrInfo {
+func CalcAddress(m *BasicManager) AddrInfo {
 	addr, err := peer.AddrInfoFromString(hostAddress(m))
 	check.PanicIfErr(err)
 	return AddrInfo(*addr)
 }
 
-func hostAddress(m *Manager) string {
+func hostAddress(m *BasicManager) string {
 	return m.host.Addrs()[0].String() + "/p2p/" + m.host.ID().String()
 }
 
-func NewTestManagerWithBaseConfig(ctx context.Context, t *testing.T, conf *Config) *Manager {
+func NewTestManagerWithBaseConfig(ctx context.Context, t *testing.T, conf *Config) *BasicManager {
 	t.Helper()
 
 	conf = common.CopyPtr(conf)
@@ -44,10 +44,10 @@ func NewTestManagerWithBaseConfig(ctx context.Context, t *testing.T, conf *Confi
 	return m
 }
 
-func NewTestManagers(ctx context.Context, t *testing.T, initialTcpPort int, n int) []*Manager {
+func NewTestManagers(ctx context.Context, t *testing.T, initialTcpPort int, n int) []*BasicManager {
 	t.Helper()
 
-	managers := make([]*Manager, n)
+	managers := make([]*BasicManager, n)
 	cfg := &Config{}
 	for i := range n {
 		cfg.TcpPort = initialTcpPort + i
@@ -56,7 +56,7 @@ func NewTestManagers(ctx context.Context, t *testing.T, initialTcpPort int, n in
 	return managers
 }
 
-func ConnectManagers(t *testing.T, m1, m2 *Manager) (PeerID, PeerID) {
+func ConnectManagers(t *testing.T, m1, m2 *BasicManager) (PeerID, PeerID) {
 	t.Helper()
 
 	id, err := m1.Connect(m1.ctx, CalcAddress(m2))
@@ -67,7 +67,7 @@ func ConnectManagers(t *testing.T, m1, m2 *Manager) (PeerID, PeerID) {
 	return m1.host.ID(), m2.host.ID()
 }
 
-func ConnectAllManagers(t *testing.T, managers ...*Manager) {
+func ConnectAllManagers(t *testing.T, managers ...*BasicManager) {
 	t.Helper()
 
 	for i := range len(managers) - 1 {
@@ -77,7 +77,7 @@ func ConnectAllManagers(t *testing.T, managers ...*Manager) {
 	}
 }
 
-func WaitForPeer(t *testing.T, m *Manager, id PeerID) {
+func WaitForPeer(t *testing.T, m *BasicManager, id PeerID) {
 	t.Helper()
 
 	require.Eventually(t, func() bool {

@@ -23,8 +23,8 @@ type RawApiTestSuite struct {
 
 	ctx                  context.Context
 	logger               logging.Logger
-	serverNetworkManager *network.Manager
-	clientNetworkManager *network.Manager
+	serverNetworkManager *network.BasicManager
+	clientNetworkManager *network.BasicManager
 	serverPeerId         network.PeerID
 }
 
