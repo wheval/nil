@@ -1,17 +1,17 @@
 import { EditorView } from "@codemirror/view";
 import { CodeField, ParagraphSmall, TAG_KIND, TAG_SIZE, Tag } from "@nilfoundation/ui-kit";
 import { Alert } from "baseui/icon";
+import type { OnChangeHandler } from "baseui/tabs";
+import { ethers } from "ethers";
 import type { FC } from "react";
+import { useEffect, useState } from "react";
+import type { Key } from "react";
 import { useStyletron } from "styletron-react";
 import { addressRoute, blockRoute } from "../../routing";
 import { Divider, Info, InfoBlock, Link, addHexPrefix, formatShard, measure } from "../../shared";
 import { TokenDisplay } from "../../shared/components/Token";
 import type { Transaction } from "../types/Transaction";
 import { InlineCopyButton } from "./InlineCopyButton";
-import { useState, useEffect } from "react";
-import type { Key } from "react";
-import type { OnChangeHandler } from "baseui/tabs";
-import {ethers} from "ethers";
 
 type OverviewProps = {
   transaction: Transaction;
@@ -163,12 +163,7 @@ export const Overview: FC<OverviewProps> = ({ transaction: tx }) => {
         }
       />
       <Divider />
-      <Info
-        label="Transaction payload (bytecode):"
-        value={
-              <Bytecode tx={tx} />
-        }
-      />
+      <Info label="Transaction payload (bytecode):" value={<Bytecode tx={tx} />} />
     </InfoBlock>
   );
 };
@@ -208,7 +203,9 @@ const Default = ({ tx }: { tx: Transaction }) => {
       } else {
         setIsLoading(true);
         try {
-          const response = await fetch(`https://www.4byte.directory/api/v1/signatures/?hex_signature=${selector}`);
+          const response = await fetch(
+            `https://www.4byte.directory/api/v1/signatures/?hex_signature=${selector}`,
+          );
           const data = await response.json();
           if (data.results && data.results.length > 0) {
             setSignature(data.results[0].text_signature);
@@ -267,7 +264,14 @@ const Default = ({ tx }: { tx: Transaction }) => {
           <strong>Parameters:</strong>
         </ParagraphSmall>
         {params.map((param: string, index: number) => (
-          <ParagraphSmall key={`param-${param}-${index}`}>{param}</ParagraphSmall>
+          <ParagraphSmall
+            key={`param-${param}-${
+              // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+              index
+            }`}
+          >
+            {param}
+          </ParagraphSmall>
         ))}
       </div>
     );
