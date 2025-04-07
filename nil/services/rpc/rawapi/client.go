@@ -24,7 +24,7 @@ type (
 		ctx context.Context, codec *methodCodec, methodName string, args ...any) ([]byte, error)
 	nodeApiSetter                            func(NodeApi)
 	setAsP2pRequestHandlersIfAllowedFunction func(
-		ctx context.Context, networkManager *network.BasicManager, readonly bool, logger logging.Logger) error
+		ctx context.Context, networkManager network.Manager, readonly bool, logger logging.Logger) error
 )
 
 type ShardApiAccessor struct {
@@ -36,7 +36,7 @@ type ShardApiAccessor struct {
 
 var _ ShardApi = (*ShardApiAccessor)(nil)
 
-func NewNetworkRawApiAccessor(shardId types.ShardId, networkManager *network.BasicManager) (*ShardApiAccessor, error) {
+func NewNetworkRawApiAccessor(shardId types.ShardId, networkManager network.Manager) (*ShardApiAccessor, error) {
 	return newNetworkRawApiAccessor(
 		shardId, networkManager, reflect.TypeFor[ShardApi](), reflect.TypeFor[NetworkTransportProtocol]())
 }
@@ -48,7 +48,7 @@ func NewLocalRawApiAccessor(shardId types.ShardId, rawapi *LocalShardApi) (*Shar
 
 func newNetworkRawApiAccessor(
 	shardId types.ShardId,
-	networkManager *network.BasicManager,
+	networkManager network.Manager,
 	apiType reflect.Type,
 	transportType reflect.Type,
 ) (*ShardApiAccessor, error) {
@@ -62,7 +62,7 @@ func newNetworkRawApiAccessor(
 		doApiRequest: makeDoNetworkRawApiRequestFunction(networkManager, shardId, "rawapi"),
 		onSetNodeApi: func(NodeApi) {},
 		onSetAsP2pRequestHandlersIfAllowed: func(
-			ctx context.Context, networkManager *network.BasicManager, readonly bool, logger logging.Logger,
+			ctx context.Context, networkManager network.Manager, readonly bool, logger logging.Logger,
 		) error {
 			return nil
 		},
@@ -87,7 +87,7 @@ func newDirectRawApiAccessor(
 			rawapi.setNodeApi(nodeApi)
 		},
 		onSetAsP2pRequestHandlersIfAllowed: func(
-			ctx context.Context, networkManager *network.BasicManager, readonly bool, logger logging.Logger,
+			ctx context.Context, networkManager network.Manager, readonly bool, logger logging.Logger,
 		) error {
 			return SetRawApiRequestHandlers(ctx, shardId, rawapi, networkManager, readonly, logger)
 		},
@@ -95,7 +95,7 @@ func newDirectRawApiAccessor(
 }
 
 func makeDoNetworkRawApiRequestFunction(
-	networkManager *network.BasicManager,
+	networkManager network.Manager,
 	shardId types.ShardId,
 	apiName string,
 ) doApiRequestFunction {
@@ -255,7 +255,7 @@ func (api *ShardApiAccessor) setNodeApi(nodeApi NodeApi) {
 
 func (api *ShardApiAccessor) setAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
-	networkManager *network.BasicManager,
+	networkManager network.Manager,
 	readonly bool,
 	logger logging.Logger,
 ) error {
@@ -278,7 +278,7 @@ func sendRequestAndGetResponseWithCallerMethodName[ResponseType any](
 }
 
 func discoverAppropriatePeer(
-	networkManager *network.BasicManager,
+	networkManager network.Manager,
 	shardId types.ShardId,
 	protocol network.ProtocolID,
 ) (network.PeerID, error) {

@@ -54,7 +54,7 @@ type Validator struct {
 
 	txFabric       db.DB
 	pool           TxnPool
-	networkManager *network.BasicManager // +checklocksignore: thread safe
+	networkManager network.Manager       // +checklocksignore: thread safe
 	blockVerifier  *signer.BlockVerifier // +checklocksignore: thread safe
 
 	mutex         sync.RWMutex
@@ -70,7 +70,7 @@ type Validator struct {
 }
 
 func NewValidator(
-	params *Params, mainShardValidator *Validator, txFabric db.DB, pool TxnPool, nm *network.BasicManager,
+	params *Params, mainShardValidator *Validator, txFabric db.DB, pool TxnPool, nm network.Manager,
 ) (*Validator, error) {
 	metrics, err := NewMetricsHandler(params.ShardId)
 	if err != nil {

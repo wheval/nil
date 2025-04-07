@@ -16,14 +16,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func CalcAddress(m *BasicManager) AddrInfo {
+func CalcAddress(m Manager) AddrInfo {
 	addr, err := peer.AddrInfoFromString(hostAddress(m))
 	check.PanicIfErr(err)
 	return AddrInfo(*addr)
 }
 
-func hostAddress(m *BasicManager) string {
-	return m.host.Addrs()[0].String() + "/p2p/" + m.host.ID().String()
+func hostAddress(m Manager) string {
+	return m.getHost().Addrs()[0].String() + "/p2p/" + m.getHost().ID().String()
 }
 
 func NewTestManagerWithBaseConfig(ctx context.Context, t *testing.T, conf *Config) *BasicManager {
@@ -56,15 +56,15 @@ func NewTestManagers(ctx context.Context, t *testing.T, initialTcpPort int, n in
 	return managers
 }
 
-func ConnectManagers(t *testing.T, m1, m2 *BasicManager) (PeerID, PeerID) {
+func ConnectManagers(t *testing.T, m1, m2 Manager) (PeerID, PeerID) {
 	t.Helper()
 
-	id, err := m1.Connect(m1.ctx, CalcAddress(m2))
+	id, err := m1.Connect(t.Context(), CalcAddress(m2))
 	require.NoError(t, err)
-	require.Equal(t, m2.host.ID(), id)
+	require.Equal(t, m2.getHost().ID(), id)
 
-	WaitForPeer(t, m2, m1.host.ID())
-	return m1.host.ID(), m2.host.ID()
+	WaitForPeer(t, m2, m1.getHost().ID())
+	return m1.getHost().ID(), m2.getHost().ID()
 }
 
 func ConnectAllManagers(t *testing.T, managers ...*BasicManager) {
@@ -77,11 +77,11 @@ func ConnectAllManagers(t *testing.T, managers ...*BasicManager) {
 	}
 }
 
-func WaitForPeer(t *testing.T, m *BasicManager, id PeerID) {
+func WaitForPeer(t *testing.T, m Manager, id PeerID) {
 	t.Helper()
 
 	require.Eventually(t, func() bool {
-		return slices.Contains(m.host.Peerstore().Peers(), id)
+		return slices.Contains(m.getHost().Peerstore().Peers(), id)
 	}, 10*time.Second, 100*time.Millisecond)
 }
 

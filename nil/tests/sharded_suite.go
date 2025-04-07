@@ -35,7 +35,7 @@ type Instance struct {
 	RpcUrl     string
 	P2pAddress network.AddrInfo
 	Client     client.Client
-	nm         *network.BasicManager
+	nm         network.Manager
 	Config     *nilservice.Config
 }
 
@@ -270,7 +270,7 @@ func (s *ShardedSuite) StartShardAllValidators(cfg *nilservice.Config, port int)
 	s.start(cfg, port, createAllShardsAllValidatorsCfg)
 }
 
-func (s *ShardedSuite) connectToInstances(nm *network.BasicManager) {
+func (s *ShardedSuite) connectToInstances(nm network.Manager) {
 	s.T().Helper()
 
 	var wg sync.WaitGroup

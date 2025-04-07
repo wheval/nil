@@ -191,7 +191,7 @@ type ServiceInterop struct {
 
 func getRawApi(
 	cfg *Config,
-	networkManager *network.BasicManager,
+	networkManager network.Manager,
 	database db.DB,
 	txnPools map[types.ShardId]txnpool.Pool,
 ) (*rawapi.NodeApiOverShardApis, error) {
@@ -233,7 +233,7 @@ func getRawApi(
 func setP2pRequestHandlers(
 	ctx context.Context,
 	rawApi *rawapi.NodeApiOverShardApis,
-	networkManager *network.BasicManager,
+	networkManager network.Manager,
 	readonly bool,
 	logger logging.Logger,
 ) error {
@@ -251,7 +251,7 @@ func setP2pRequestHandlers(
 	return nil
 }
 
-func validateArchiveNodeConfig(_ *Config, nm *network.BasicManager) error {
+func validateArchiveNodeConfig(_ *Config, nm network.Manager) error {
 	if nm == nil {
 		return errors.New("failed to start archive node without network configuration")
 	}
@@ -300,7 +300,7 @@ func createSyncers(
 	name string,
 	cfg *Config,
 	validators []*collate.Validator,
-	nm *network.BasicManager,
+	nm network.Manager,
 	database db.DB,
 	logger logging.Logger,
 ) (*syncersResult, error) {
@@ -361,7 +361,7 @@ func createSyncers(
 }
 
 type Node struct {
-	NetworkManager *network.BasicManager
+	NetworkManager network.Manager
 	funcs          []concurrent.Task
 	logger         logging.Logger
 	ctx            context.Context
@@ -397,7 +397,7 @@ func runNormalOrCollatorsOnly(
 	funcs []concurrent.Task,
 	cfg *Config,
 	database db.DB,
-	networkManager *network.BasicManager,
+	networkManager network.Manager,
 	logger logging.Logger,
 ) ([]concurrent.Task, map[types.ShardId]txnpool.Pool, error) {
 	if err := cfg.LoadValidatorKeys(); err != nil {
@@ -546,7 +546,7 @@ func CreateNode(
 		funcs = append(funcs, concurrent.MakeTask(
 			"connect to peers",
 			func(ctx context.Context) error {
-				network.ConnectToPeers(ctx, cfg.RpcNode.ArchiveNodeList, *networkManager, logger)
+				network.ConnectToPeers(ctx, cfg.RpcNode.ArchiveNodeList, networkManager, logger)
 				return nil
 			}))
 	default:
@@ -700,7 +700,7 @@ func createValidators(
 	ctx context.Context,
 	cfg *Config,
 	database db.DB,
-	networkManager *network.BasicManager,
+	networkManager network.Manager,
 ) ([]*collate.Validator, error) {
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
 
@@ -728,8 +728,10 @@ func createValidators(
 
 func createShards(
 	cfg *Config,
-	validators []*collate.Validator, syncers *syncersResult,
-	database db.DB, networkManager *network.BasicManager,
+	validators []*collate.Validator,
+	syncers *syncersResult,
+	database db.DB,
+	networkManager network.Manager,
 	logger logging.Logger,
 ) ([]concurrent.Task, error) {
 	funcs := make([]concurrent.Task, 0, cfg.NShards)

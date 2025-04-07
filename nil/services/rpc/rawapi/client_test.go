@@ -21,7 +21,7 @@ type generatedApiClientIface interface {
 
 type generatedApiClient struct {
 	apiCodec       apiCodec
-	networkManager *network.BasicManager
+	networkManager network.Manager
 	serverPeerId   network.PeerID
 	doApiRequest   doApiRequestFunction
 }
@@ -32,7 +32,7 @@ type ApiClientTestSuite struct {
 	apiClient *generatedApiClient
 }
 
-func newGeneratedApiClient(networkManager *network.BasicManager, serverPeerId network.PeerID) (*generatedApiClient, error) {
+func newGeneratedApiClient(networkManager network.Manager, serverPeerId network.PeerID) (*generatedApiClient, error) {
 	apiCodec, err := newApiCodec(
 		reflect.TypeFor[generatedApiClientIface](),
 		reflect.TypeFor[compatibleNetworkTransportProtocol]())

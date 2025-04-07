@@ -30,8 +30,10 @@ type BasicManager struct {
 	logger logging.Logger
 }
 
-func ConnectToPeers(ctx context.Context, peers AddrInfoSlice, m BasicManager, logger logging.Logger) {
-	connectToPeers(ctx, peers, m.host, logger)
+var _ Manager = (*BasicManager)(nil)
+
+func ConnectToPeers(ctx context.Context, peers AddrInfoSlice, m Manager, logger logging.Logger) {
+	connectToPeers(ctx, peers, m.getHost(), logger)
 }
 
 func connectToPeers(ctx context.Context, peers AddrInfoSlice, h Host, logger logging.Logger) {
@@ -225,4 +227,8 @@ func (m *BasicManager) logErrorWithLogger(logger logging.Logger, err error, msg 
 	}
 
 	logger.Error().Err(err).Msg(msg)
+}
+
+func (m *BasicManager) getHost() Host {
+	return m.host
 }

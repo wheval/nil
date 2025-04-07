@@ -54,7 +54,7 @@ func SetRawApiRequestHandlers(
 	ctx context.Context,
 	shardId types.ShardId,
 	api ShardApi,
-	manager *network.BasicManager,
+	manager network.Manager,
 	readonly bool,
 	logger logging.Logger,
 ) error {
@@ -102,7 +102,7 @@ func setRawApiRequestHandlers(
 	api any,
 	shardId types.ShardId,
 	apiName string,
-	manager *network.BasicManager,
+	manager network.Manager,
 	logger logging.Logger,
 ) error {
 	requestHandlers, err := getRawApiRequestHandlers(protocolInterfaceType, apiType, api, shardId, apiName)

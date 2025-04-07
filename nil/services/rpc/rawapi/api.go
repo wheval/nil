@@ -131,7 +131,7 @@ type ShardApi interface {
 func SetShardApiAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
 	shardApi ShardApi,
-	networkManager *network.BasicManager,
+	networkManager network.Manager,
 	readonly bool,
 	logger logging.Logger,
 ) error {

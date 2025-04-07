@@ -27,7 +27,7 @@ type ConsensusParams struct {
 	ShardId    types.ShardId
 	Db         db.DB
 	Validator  validator
-	NetManager *network.BasicManager
+	NetManager network.Manager
 	PrivateKey bls.PrivateKey
 }
 
@@ -48,7 +48,7 @@ type backendIBFT struct {
 	shardId      types.ShardId
 	validator    validator
 	logger       logging.Logger
-	nm           *network.BasicManager
+	nm           network.Manager
 	transport    transport
 	signer       *Signer
 	mh           *MetricsHandler
