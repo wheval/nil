@@ -40,7 +40,7 @@ import (
 )
 
 // syncer will pull blocks actively if no blocks appear for 5 rounds
-const syncTimeoutFactor = 5
+const defaultSyncTimeoutFactor = 5
 
 func startRpcServer(
 	ctx context.Context,
@@ -272,7 +272,7 @@ func initSyncers(ctx context.Context, syncers []*collate.Syncer, allowDbDrop boo
 
 func getSyncerConfig(name string, cfg *Config, shardId types.ShardId) *collate.SyncerConfig {
 	collatorTickPeriod := time.Millisecond * time.Duration(cfg.CollatorTickPeriodMs)
-	syncerTimeout := syncTimeoutFactor * collatorTickPeriod
+	syncerTimeout := collatorTickPeriod * time.Duration(cfg.SyncTimeoutFactor)
 
 	return &collate.SyncerConfig{
 		Name:                 name,
@@ -351,6 +351,9 @@ func createSyncers(
 		func(ctx context.Context) error {
 			for _, syncer := range res.syncers {
 				if err := syncer.WaitComplete(ctx); err != nil {
+					if errors.Is(err, context.Canceled) {
+						return nil
+					}
 					return err
 				}
 			}
@@ -475,6 +478,10 @@ func CreateNode(
 
 	if cfg.CollatorTickPeriodMs == 0 {
 		cfg.CollatorTickPeriodMs = defaultCollatorTickPeriodMs
+	}
+
+	if cfg.SyncTimeoutFactor == 0 {
+		cfg.SyncTimeoutFactor = defaultSyncTimeoutFactor
 	}
 
 	if cfg.ZeroState == nil {

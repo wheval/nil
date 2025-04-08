@@ -111,16 +111,17 @@ func createOneShardOneValidatorCfg(
 	}
 
 	return &nilservice.Config{
-		NShards:              cfg.NShards,
-		MyShards:             myShards,
-		SplitShards:          true,
-		HttpUrl:              s.Instances[index].RpcUrl,
-		Topology:             cfg.Topology,
-		CollatorTickPeriodMs: cfg.CollatorTickPeriodMs,
-		Network:              netCfg,
-		ValidatorKeysPath:    validatorKeysPath,
-		ZeroState:            newZeroState(cfg.ZeroState, validators),
-		DisableConsensus:     cfg.DisableConsensus,
+		NShards:               cfg.NShards,
+		MyShards:              myShards,
+		SplitShards:           true,
+		HttpUrl:               s.Instances[index].RpcUrl,
+		Topology:              cfg.Topology,
+		CollatorTickPeriodMs:  cfg.CollatorTickPeriodMs,
+		Network:               netCfg,
+		ValidatorKeysPath:     validatorKeysPath,
+		ZeroState:             newZeroState(cfg.ZeroState, validators),
+		DisableConsensus:      cfg.DisableConsensus,
+		NetworkManagerFactory: cfg.NetworkManagerFactory,
 	}
 }
 
@@ -284,13 +285,15 @@ func (s *ShardedSuite) GetNShards() uint32 {
 }
 
 type ArchiveNodeConfig struct {
-	Ctx                context.Context
-	Wg                 *sync.WaitGroup
-	AllowDbDrop        bool
-	Port               int
-	WithBootstrapPeers bool
-	DisableConsensus   bool
-	NetworkOptions     []network.Option
+	Ctx                   context.Context
+	Wg                    *sync.WaitGroup
+	AllowDbDrop           bool
+	Port                  int
+	WithBootstrapPeers    bool
+	DisableConsensus      bool
+	NetworkOptions        []network.Option
+	SyncTimeoutFactor     uint32
+	NetworkManagerFactory func(context.Context, *nilservice.Config, db.DB) (network.Manager, error)
 }
 
 type RpcNodeConfig struct {
@@ -305,6 +308,8 @@ func (s *ShardedSuite) RunArchiveNode(params *ArchiveNodeConfig) (*nilservice.Co
 	if params.Ctx != nil {
 		ctx = params.Ctx
 	}
+	ctx = context.WithValue(ctx, concurrent.RootContextNameLabel, "archive node lifecycle")
+
 	wg := &s.Wg
 	if params.Wg != nil {
 		wg = params.Wg
@@ -316,15 +321,16 @@ func (s *ShardedSuite) RunArchiveNode(params *ArchiveNodeConfig) (*nilservice.Co
 	serviceName := fmt.Sprintf("archive-%d", params.Port)
 
 	cfg := &nilservice.Config{
-		AllowDbDrop:      params.AllowDbDrop,
-		NShards:          s.GetNShards(),
-		Network:          netCfg,
-		HttpUrl:          rpc.GetSockPathService(s.T(), serviceName),
-		RunMode:          nilservice.ArchiveRunMode,
-		ZeroState:        s.Instances[0].Config.ZeroState,
-		DisableConsensus: params.DisableConsensus,
+		AllowDbDrop:           params.AllowDbDrop,
+		NShards:               s.GetNShards(),
+		Network:               netCfg,
+		HttpUrl:               rpc.GetSockPathService(s.T(), serviceName),
+		RunMode:               nilservice.ArchiveRunMode,
+		ZeroState:             s.Instances[0].Config.ZeroState,
+		DisableConsensus:      params.DisableConsensus,
+		SyncTimeoutFactor:     params.SyncTimeoutFactor,
+		NetworkManagerFactory: params.NetworkManagerFactory,
 	}
-
 	PatchConfigWithTestDefaults(cfg)
 
 	cfg.MyShards = slices.Collect(common.Range(0, uint(cfg.NShards)))

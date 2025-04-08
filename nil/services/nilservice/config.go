@@ -68,6 +68,7 @@ type Config struct {
 	GracefulShutdown     bool   `yaml:"-"`
 	TraceEVM             bool   `yaml:"-"`
 	CollatorTickPeriodMs uint32 `yaml:"-"`
+	SyncTimeoutFactor    uint32 `yaml:"-"`
 	Topology             string `yaml:"-"`
 	EnableConfigCache    bool   `yaml:"-"`
 
