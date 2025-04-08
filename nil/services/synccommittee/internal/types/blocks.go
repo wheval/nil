@@ -297,13 +297,13 @@ func NewProposalData(
 	dataProofs DataProofs,
 	oldProvedStateRoot common.Hash,
 	newProvedStateRoot common.Hash,
-	mainBlockFetchedAt time.Time,
+	firstBlockFetchedAt time.Time,
 ) *ProposalData {
 	return &ProposalData{
 		BatchId:             batchId,
 		DataProofs:          dataProofs,
 		OldProvedStateRoot:  oldProvedStateRoot,
 		NewProvedStateRoot:  newProvedStateRoot,
-		FirstBlockFetchedAt: mainBlockFetchedAt,
+		FirstBlockFetchedAt: firstBlockFetchedAt,
 	}
 }

@@ -36,7 +36,7 @@ type AggregatorTaskStorage interface {
 type AggregatorBlockStorage interface {
 	GetLatestFetched(ctx context.Context) (types.BlockRefs, error)
 	TryGetProvedStateRoot(ctx context.Context) (*common.Hash, error)
-	TryGetLatestBatchId(ctx context.Context) (*types.BatchId, error)
+	TryGetLatestBatch(ctx context.Context) (*types.BlockBatch, error)
 	SetBlockBatch(ctx context.Context, batch *types.BlockBatch) error
 	GetFreeSpaceBatchCount(ctx context.Context) (uint32, error)
 	SetProvedStateRoot(ctx context.Context, stateRoot common.Hash) error
@@ -316,8 +316,9 @@ func (agg *aggregator) getBlockRef(
 func (agg *aggregator) fetchAndProcessBlocks(ctx context.Context, blocksRange types.BlocksRange) error {
 	shardId := coreTypes.MainShardId
 	const requestBatchSize = 20
-	results, err := agg.rpcClient.GetBlocksRange(
-		ctx, shardId, blocksRange.Start, blocksRange.End+1, true, requestBatchSize)
+	mainShardBlocks, err := agg.rpcClient.GetBlocksRange(
+		ctx, shardId, blocksRange.Start, blocksRange.End+1, true, requestBatchSize,
+	)
 	if err != nil {
 		return fmt.Errorf(
 			"error fetching blocks from shard %d in range [%d, %d]: %w",
@@ -325,7 +326,7 @@ func (agg *aggregator) fetchAndProcessBlocks(ctx context.Context, blocksRange ty
 		)
 	}
 
-	for _, mainShardBlock := range results {
+	for _, mainShardBlock := range mainShardBlocks {
 		blockBatch, err := agg.createBlockBatch(ctx, mainShardBlock)
 		if err != nil {
 			return fmt.Errorf("error creating batch, mainHash=%s: %w", mainShardBlock.Hash, err)
@@ -336,11 +337,6 @@ func (agg *aggregator) fetchAndProcessBlocks(ctx context.Context, blocksRange ty
 		}
 	}
 
-	fetchedLen := int64(len(results))
-	agg.logger.Debug().
-		Int64("blkCount", fetchedLen).
-		Stringer(logging.FieldShardId, shardId).
-		Msg("fetched main shard blocks")
 	return nil
 }
 
@@ -348,9 +344,13 @@ func (agg *aggregator) createBlockBatch(
 	ctx context.Context,
 	mainShardBlock *types.Block,
 ) (*types.BlockBatch, error) {
-	latestBatchId, err := agg.blockStorage.TryGetLatestBatchId(ctx)
+	latestBatch, err := agg.blockStorage.TryGetLatestBatch(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error reading latest batch id: %w", err)
+		return nil, fmt.Errorf("error reading latest batch: %w", err)
+	}
+	var latestBatchId *types.BatchId
+	if latestBatch != nil {
+		latestBatchId = &latestBatch.Id
 	}
 
 	latestFetched, err := agg.blockStorage.GetLatestFetched(ctx)
