@@ -56,13 +56,6 @@ type ShardedSuite struct {
 	Instances []Instance
 }
 
-type DhtBootstrapByValidators int
-
-const (
-	WithoutDhtBootstrapByValidators DhtBootstrapByValidators = iota
-	WithDhtBootstrapByValidators
-)
-
 func (s *ShardedSuite) Cancel() {
 	s.T().Helper()
 
@@ -300,6 +293,11 @@ type ArchiveNodeConfig struct {
 	NetworkOptions     []network.Option
 }
 
+type RpcNodeConfig struct {
+	WithDhtBootstrapByValidators bool
+	ArchiveNodes                 network.AddrInfoSlice
+}
+
 func (s *ShardedSuite) RunArchiveNode(params *ArchiveNodeConfig) (*nilservice.Config, network.AddrInfo, chan error) {
 	s.T().Helper()
 
@@ -375,10 +373,7 @@ func (s *ShardedSuite) StartArchiveNode(params *ArchiveNodeConfig) (client.Clien
 	return s.EnsureArchiveNodeStarted(s.RunArchiveNode(params))
 }
 
-func (s *ShardedSuite) StartRPCNode(
-	dhtBootstrapByValidators DhtBootstrapByValidators,
-	archiveNodes network.AddrInfoSlice,
-) (client.Client, string) {
+func (s *ShardedSuite) StartRPCNode(params *RpcNodeConfig) (client.Client, string) {
 	s.T().Helper()
 
 	netCfg, _ := network.GenerateConfig(s.T(), 0)
@@ -393,14 +388,14 @@ func (s *ShardedSuite) StartRPCNode(
 		RpcNode: nilservice.NewDefaultRpcNodeConfig(),
 	}
 
-	if dhtBootstrapByValidators == WithDhtBootstrapByValidators {
+	if params.WithDhtBootstrapByValidators {
 		netCfg.DHTBootstrapPeers = slices.Collect(common.Transform(slices.Values(s.Instances), getShardAddress))
 	}
-	cfg.RpcNode.ArchiveNodeList = archiveNodes
+	cfg.RpcNode.ArchiveNodeList = params.ArchiveNodes
 
 	node, err := nilservice.CreateNode(s.Context, serviceName, cfg, s.DbInit(), nil)
 	s.Require().NoError(err)
-	if dhtBootstrapByValidators == WithDhtBootstrapByValidators {
+	if params.WithDhtBootstrapByValidators {
 		s.connectToInstances(node.NetworkManager)
 	}
 

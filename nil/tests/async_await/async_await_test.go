@@ -88,7 +88,10 @@ func (s *SuiteAsyncAwait) SetupSuite() {
 		WithBootstrapPeers: true,
 		DisableConsensus:   disableConsensus,
 	})
-	s.DefaultClient, _ = s.StartRPCNode(tests.WithDhtBootstrapByValidators, network.AddrInfoSlice{archiveNodeAddr})
+	s.DefaultClient, _ = s.StartRPCNode(&tests.RpcNodeConfig{
+		WithDhtBootstrapByValidators: true,
+		ArchiveNodes:                 network.AddrInfoSlice{archiveNodeAddr},
+	})
 }
 
 func (s *SuiteAsyncAwait) SetupTest() {
