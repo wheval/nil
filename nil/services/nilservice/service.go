@@ -194,7 +194,7 @@ func getRawApi(
 	networkManager network.Manager,
 	database db.DB,
 	txnPools map[types.ShardId]txnpool.Pool,
-) (*rawapi.NodeApiOverShardApis, error) {
+) (rawapi.NodeApi, error) {
 	readonly := false
 	var myShards []uint
 	switch cfg.RunMode {
@@ -232,24 +232,6 @@ func getRawApi(
 	}
 	rawApi := rawapi.NewNodeApiOverShardApis(shardApis)
 	return rawApi, nil
-}
-
-func setP2pRequestHandlers(
-	ctx context.Context,
-	rawApi *rawapi.NodeApiOverShardApis,
-	networkManager network.Manager,
-	logger logging.Logger,
-) error {
-	if networkManager == nil {
-		return nil
-	}
-	for shardId, api := range rawApi.Apis {
-		if err := rawapi.SetShardApiAsP2pRequestHandlersIfAllowed(ctx, api, networkManager, logger); err != nil {
-			logger.Error().Err(err).Stringer(logging.FieldShardId, shardId).Msg("Failed to set raw API request handler")
-			return err
-		}
-	}
-	return nil
 }
 
 func validateArchiveNodeConfig(_ *Config, nm network.Manager) error {
@@ -585,7 +567,7 @@ func CreateNode(
 	funcs = addRpcServerWorkerIfEnabled(funcs, cfg, rawApi, syncersResult, database, logger)
 
 	if cfg.RunMode != CollatorsOnlyRunMode && cfg.RunMode != RpcRunMode {
-		if err := setP2pRequestHandlers(ctx, rawApi, networkManager, logger); err != nil {
+		if err := rawApi.SetP2pRequestHandlers(ctx, networkManager, logger); err != nil {
 			return nil, err
 		}
 
@@ -607,7 +589,7 @@ func CreateNode(
 func addRpcServerWorkerIfEnabled(
 	tasks []concurrent.Task,
 	cfg *Config,
-	rawApi *rawapi.NodeApiOverShardApis,
+	rawApi rawapi.NodeApi,
 	syncersResult *syncersResult,
 	database db.DB,
 	logger logging.Logger,

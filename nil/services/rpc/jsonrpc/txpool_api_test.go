@@ -16,7 +16,7 @@ import (
 type SuiteTxnPoolApi struct {
 	SuiteAccountsBase
 	txnpoolApi *TxPoolAPIImpl
-	api        *rawapi.NodeApiOverShardApis
+	api        rawapi.NodeApi
 	pool       txnpool.Pool
 }
 

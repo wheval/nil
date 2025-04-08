@@ -13,7 +13,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
-type NodeApiRo interface {
+type NodeApi interface {
 	GetBlockHeader(
 		ctx context.Context,
 		shardId types.ShardId,
@@ -66,12 +66,11 @@ type NodeApiRo interface {
 
 	GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (uint64, error)
 	GetTxpoolContent(ctx context.Context, shardId types.ShardId) ([]*types.Transaction, error)
-}
 
-type NodeApi interface {
-	NodeApiRo
 	SendTransaction(ctx context.Context, shardId types.ShardId, transaction []byte) (txnpool.DiscardReason, error)
 	DoPanicOnShard(ctx context.Context, shardId types.ShardId) (uint64, error)
+
+	SetP2pRequestHandlers(ctx context.Context, networkManager network.Manager, logger logging.Logger) error
 }
 
 type ShardApiRo interface {
@@ -125,13 +124,4 @@ type ShardApi interface {
 	ShardApiRo
 	SendTransaction(ctx context.Context, transaction []byte) (txnpool.DiscardReason, error)
 	DoPanicOnShard(ctx context.Context) (uint64, error)
-}
-
-func SetShardApiAsP2pRequestHandlersIfAllowed(
-	ctx context.Context,
-	shardApi ShardApi,
-	networkManager network.Manager,
-	logger logging.Logger,
-) error {
-	return shardApi.setAsP2pRequestHandlersIfAllowed(ctx, networkManager, logger)
 }

@@ -8,7 +8,9 @@ import (
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
+	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/common/sszx"
+	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
 	rpctypes "github.com/NilFoundation/nil/nil/services/rpc/types"
@@ -19,12 +21,9 @@ type NodeApiOverShardApis struct {
 	Apis map[types.ShardId]ShardApi
 }
 
-var (
-	_ NodeApiRo = (*NodeApiOverShardApis)(nil)
-	_ NodeApi   = (*NodeApiOverShardApis)(nil)
-)
+var _ NodeApi = (*NodeApiOverShardApis)(nil)
 
-func NewNodeApiOverShardApis(apis map[types.ShardId]ShardApi) *NodeApiOverShardApis {
+func NewNodeApiOverShardApis(apis map[types.ShardId]ShardApi) NodeApi {
 	nodeApi := &NodeApiOverShardApis{
 		Apis: apis,
 	}
@@ -364,4 +363,24 @@ func (api *NodeApiOverShardApis) GetTxpoolContent(
 		return nil, makeCallError(methodName, shardId, err)
 	}
 	return result, nil
+}
+
+func (api *NodeApiOverShardApis) SetP2pRequestHandlers(
+	ctx context.Context,
+	networkManager network.Manager,
+	logger logging.Logger,
+) error {
+	if networkManager == nil {
+		return nil
+	}
+	for shardId, api := range api.Apis {
+		if err := api.setAsP2pRequestHandlersIfAllowed(ctx, networkManager, logger); err != nil {
+			logger.Error().
+				Err(err).
+				Stringer(logging.FieldShardId, shardId).
+				Msg("Failed to set raw API request handler")
+			return err
+		}
+	}
+	return nil
 }
