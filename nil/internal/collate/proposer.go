@@ -22,7 +22,7 @@ import (
 
 const (
 	defaultMaxGasInBlock                 = types.DefaultMaxGasInBlock
-	maxTxnsFromPool                      = 1000
+	maxTxnsFromPool                      = 10_000
 	defaultMaxForwardTransactionsInBlock = 200
 
 	validatorPatchLevel = 1

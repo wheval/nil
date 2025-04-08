@@ -1577,8 +1577,6 @@ func (es *ExecutionState) BuildBlock(blockId types.BlockNumber) (*BlockGeneratio
 			L1BlockNumber:       l1BlockNumber,
 			PatchLevel:          es.PatchLevel,
 			RollbackCounter:     es.RollbackCounter,
-			// TODO(@klonD90): remove this field after changing explorer
-			Timestamp: 0,
 		},
 		LogsBloom: types.CreateBloom(es.Receipts),
 	}
