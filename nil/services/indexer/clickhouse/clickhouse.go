@@ -65,7 +65,7 @@ func (d *ClickhouseDriver) FetchLatestProcessedBlockId(ctx context.Context, id t
 func (d *ClickhouseDriver) FetchAddressActions(
 	ctx context.Context,
 	address types.Address,
-	timestamp db.Timestamp,
+	since types.BlockNumber,
 ) ([]indexertypes.AddressAction, error) {
 	rows, err := d.conn.Query(context.Background(), `
 		SELECT
@@ -73,14 +73,13 @@ func (d *ClickhouseDriver) FetchAddressActions(
 			t.from,
 			t.to,
 			t.value as amount,
-			t.timestamp,
 			t.block_id,
 			t.success,
 			t.binary
 		FROM transactions t
-		WHERE (t.from = $1 OR t.to = $1) AND t.timestamp >= $2
-		ORDER BY t.timestamp ASC
-	`, address, timestamp)
+		WHERE (t.from = $1 OR t.to = $1) AND t.block_id >= $2
+		ORDER BY t.block_id ASC
+	`, address, since)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query transactions: %w", err)
 	}
@@ -96,7 +95,6 @@ func (d *ClickhouseDriver) FetchAddressActions(
 			&action.From,
 			&action.To,
 			&action.Amount,
-			&action.Timestamp,
 			&action.BlockId,
 			&success,
 			&txnBinary,
@@ -163,7 +161,6 @@ type TransactionWithBinary struct {
 	ShardId           types.ShardId          `ch:"shard_id"`
 	TransactionIndex  types.TransactionIndex `ch:"transaction_index"`
 	Outgoing          bool                   `ch:"outgoing"`
-	Timestamp         uint64                 `ch:"timestamp"`
 	ParentTransaction common.Hash            `ch:"parent_transaction"`
 	ErrorMessage      string                 `ch:"error_message"`
 	FailedPc          uint32                 `ch:"failed_pc"`
@@ -187,7 +184,6 @@ func NewTransactionWithBinary(
 		Hash:             hash,
 		ShardId:          shardId,
 		TransactionIndex: idx,
-		Timestamp:        block.Timestamp,
 		ErrorMessage:     block.Errors[hash],
 	}
 	if receipt != nil {

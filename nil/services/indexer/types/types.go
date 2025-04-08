@@ -10,14 +10,13 @@ import (
 )
 
 type AddressAction struct {
-	Hash      common.Hash         `json:"hash"`
-	From      types.Address       `json:"from"`
-	To        types.Address       `json:"to"`
-	Amount    types.Value         `json:"amount"`
-	Timestamp db.Timestamp        `json:"timestamp"`
-	BlockId   types.BlockNumber   `json:"blockId"`
-	Type      AddressActionKind   `json:"type"`
-	Status    AddressActionStatus `json:"status"`
+	Hash    common.Hash         `json:"hash"`
+	From    types.Address       `json:"from"`
+	To      types.Address       `json:"to"`
+	Amount  types.Value         `json:"amount"`
+	BlockId types.BlockNumber   `json:"blockId"`
+	Type    AddressActionKind   `json:"type"`
+	Status  AddressActionStatus `json:"status"`
 }
 
 type AddressActionKind uint8

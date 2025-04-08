@@ -11,7 +11,6 @@ test("getAddressActions", async ({ expect }) => {
       from: addHexPrefix(defaultAddress),
       to: addHexPrefix(defaultAddress),
       amount: BigInt(1),
-      timestamp: 1000,
       blockId: 200,
       type: AddressActionKind.ReceiveEth,
       status: AddressActionStatus.Success,
