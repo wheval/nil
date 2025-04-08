@@ -161,6 +161,10 @@ func (b *BadgerDriver) indexBlockTransactions(
 	return nil
 }
 
+func (d *BadgerDriver) IndexTxPool(ctx context.Context, txPoolStatuses []*driver.TxPoolStatus) error {
+	return errors.New("not implemented")
+}
+
 func getTransactionStatus(receipt *types.Receipt) indexertypes.AddressActionStatus {
 	if receipt.Success {
 		return indexertypes.Success

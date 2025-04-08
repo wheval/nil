@@ -83,6 +83,7 @@ You could config it via config file or flags or environment variables.`,
 	rootCmd.Flags().StringP("clickhouse-password", "p", "", "Clickhouse password")
 	rootCmd.Flags().StringP("clickhouse-database", "d", "", "Clickhouse database")
 	rootCmd.Flags().Bool("allow-db-clear", false, "Drop db if versions differ")
+	rootCmd.Flags().Bool("index-txpool", false, "Do indexing of txpool")
 
 	check.PanicIfErr(viper.BindPFlags(rootCmd.Flags()))
 
@@ -105,6 +106,7 @@ You could config it via config file or flags or environment variables.`,
 		Client:        rpc.NewClient(apiEndpoint, logger),
 		IndexerDriver: clickhouseDriver,
 		AllowDbDrop:   allowDbDrop,
+		DoIndexTxpool: viper.GetBool("index-txpool"),
 	}))
 
 	logger.Info().Msg("Indexer stopped")
