@@ -68,16 +68,15 @@ func (h *Helper) DeployContract(name string, shardId types.ShardId) (*Contract, 
 		topUpValue = topUpValue.Mul(topUpValue)
 		if err = h.TopUp(addr, topUpValue); err == nil {
 			break
-		} else {
-			h.logger.Warn().Err(err).Msgf("Failed to top up %s", addr.Hex())
 		}
+		h.logger.Warn().Err(err).Msgf("Failed to top up %x", addr)
 	}
 
 	if topUpTries == 0 {
-		return nil, fmt.Errorf("failed to top up %s: %w", addr.Hex(), err)
+		return nil, fmt.Errorf("failed to top up %x: %w", addr, err)
 	}
 
-	h.logger.Debug().Msgf("Top-up success: %s", addr.Hex())
+	h.logger.Debug().Msgf("Top-up success: %x", addr)
 
 	tx, addr, err := h.Client.DeployExternal(h.ctx, shardId, payload, types.NewFeePackFromGas(100_000_000))
 	if err != nil {
@@ -129,14 +128,14 @@ func (h *Helper) Call(contract *Contract, method string, params *TxParams, args 
 }
 
 func (h *Helper) TopUp(addr types.Address, value types.Value) error {
-	if tx, err := h.faucet.TopUpViaFaucet(types.FaucetAddress, addr, value); err != nil {
+	tx, err := h.faucet.TopUpViaFaucet(types.FaucetAddress, addr, value)
+	if err != nil {
 		return fmt.Errorf("failed to top up via faucet: %w", err)
-	} else {
-		if receipt, err := h.WaitTx(tx); err != nil {
-			return fmt.Errorf("failed to get receipt %s during top up: %w", tx, err)
-		} else if !receipt.AllSuccess() {
-			return fmt.Errorf("failed to top up via faucet: %s", receipt.Status)
-		}
+	}
+	if receipt, err := h.WaitTx(tx); err != nil {
+		return fmt.Errorf("failed to get receipt %s during top up: %w", tx, err)
+	} else if !receipt.AllSuccess() {
+		return fmt.Errorf("failed to top up via faucet: %s", receipt.Status)
 	}
 	return nil
 }

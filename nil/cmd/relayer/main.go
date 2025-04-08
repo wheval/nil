@@ -180,10 +180,7 @@ func addRunCommandFlags(runCmd *cobra.Command, cfg *Config) error {
 		"Faucet address for L2 transaction sender (debug-only)",
 	)
 
-	if err := viper.BindPFlags(runCmd.Flags()); err != nil {
-		return err
-	}
-	return nil
+	return viper.BindPFlags(runCmd.Flags())
 }
 
 func runService(ctx context.Context, cfg *Config) error {

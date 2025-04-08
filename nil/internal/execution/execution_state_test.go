@@ -67,8 +67,7 @@ func (s *SuiteExecutionState) TestExecState() {
 	s.Run("DeployTransactions", func() {
 		from := types.GenerateRandomAddress(shardId)
 		for i := range numTransactions {
-			Deploy(s.T(), s.ctx, es,
-				types.BuildDeployPayload(hexutil.FromHex(code), common.BytesToHash([]byte{byte(i)})),
+			Deploy(s.T(), es, types.BuildDeployPayload(hexutil.FromHex(code), common.BytesToHash([]byte{byte(i)})),
 				shardId, from, i)
 		}
 	})
@@ -150,7 +149,7 @@ func (s *SuiteExecutionState) TestDeployAndCall() {
 		s.Require().NoError(err)
 		s.EqualValues(0, seqno)
 
-		Deploy(s.T(), s.ctx, es, payload, shardId, types.Address{}, 0)
+		Deploy(s.T(), es, payload, shardId, types.Address{}, 0)
 
 		seqno, err = es.GetSeqno(addrSmartAccount)
 		s.Require().NoError(err)
@@ -183,11 +182,11 @@ func (s *SuiteExecutionState) TestExecStateMultipleBlocks() {
 
 	txn1 := createTx(1)
 	txn2 := createTx(2)
-	blockHash1 := GenerateBlockFromTransactionsWithoutExecution(s.T(), context.Background(),
+	blockHash1 := GenerateBlockFromTransactionsWithoutExecution(s.T(),
 		types.BaseShardId, 0, common.EmptyHash, s.db, txn1, txn2)
 
 	txn3 := createTx(3)
-	blockHash2 := GenerateBlockFromTransactionsWithoutExecution(s.T(), context.Background(),
+	blockHash2 := GenerateBlockFromTransactionsWithoutExecution(s.T(),
 		types.BaseShardId, 1, blockHash1, s.db, txn3)
 
 	tx, err := s.db.CreateRoTx(s.ctx)
@@ -401,11 +400,9 @@ func (s *SuiteExecutionState) TestTransactionStatus() {
 	var counterAddr, faucetAddr types.Address
 
 	s.Run("Deploy", func() {
-		counterAddr = Deploy(s.T(), s.ctx, es,
-			contracts.CounterDeployPayload(s.T()), shardId, types.Address{}, 0)
+		counterAddr = Deploy(s.T(), es, contracts.CounterDeployPayload(s.T()), shardId, types.Address{}, 0)
 
-		faucetAddr = Deploy(s.T(), s.ctx, es,
-			contracts.FaucetDeployPayload(s.T()), shardId, types.Address{}, 0)
+		faucetAddr = Deploy(s.T(), es, contracts.FaucetDeployPayload(s.T()), shardId, types.Address{}, 0)
 		s.Require().NoError(es.SetBalance(faucetAddr, types.NewValueFromUint64(100_000_000)))
 	})
 
@@ -512,8 +509,7 @@ func (s *SuiteExecutionState) TestPrecompiles() {
 	s.Run("Deploy", func() {
 		code, err := contracts.GetCode(contracts.NamePrecompilesTest)
 		s.Require().NoError(err)
-		testAddr = Deploy(
-			s.T(), s.ctx, es, types.BuildDeployPayload(code, common.EmptyHash), shardId, types.Address{}, 0)
+		testAddr = Deploy(s.T(), es, types.BuildDeployPayload(code, common.EmptyHash), shardId, types.Address{}, 0)
 	})
 
 	abi, err := contracts.GetAbi(contracts.NamePrecompilesTest)

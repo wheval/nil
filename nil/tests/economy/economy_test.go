@@ -82,8 +82,8 @@ func (s *SuiteEconomy) SetupSuite() {
 		CollatorTickPeriodMs: 200,
 		RunMode:              nilservice.CollatorsOnlyRunMode,
 	})
-	tests.WaitShardTick(s.T(), s.Context, s.Client, types.MainShardId)
-	tests.WaitShardTick(s.T(), s.Context, s.Client, types.BaseShardId)
+	tests.WaitShardTick(s.T(), s.Client, types.MainShardId)
+	tests.WaitShardTick(s.T(), s.Client, types.BaseShardId)
 }
 
 func (s *SuiteEconomy) TearDownSuite() {

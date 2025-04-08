@@ -22,8 +22,7 @@ var defaultMaxFeePerGas = types.MaxFeePerGasDefault
 func deployContract(t *testing.T, contract *compiler.Contract, state *ExecutionState, seqno types.Seqno) types.Address {
 	t.Helper()
 
-	return Deploy(t, t.Context(), state,
-		types.BuildDeployPayload(hexutil.FromHex(contract.Code), common.EmptyHash),
+	return Deploy(t, state, types.BuildDeployPayload(hexutil.FromHex(contract.Code), common.EmptyHash),
 		types.BaseShardId, types.Address{}, seqno)
 }
 

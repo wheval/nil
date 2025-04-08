@@ -80,7 +80,7 @@ func runNew(cmd *cobra.Command, _ []string, cfg *common.Config, params *smartAcc
 		return err
 	}
 
-	if err := config.PatchConfig(map[string]interface{}{
+	if err := config.PatchConfig(map[string]any{
 		config.AddressField: smartAccountAddress.Hex(),
 	}, false); err != nil {
 		logger.Error().Err(err).Msg("failed to update the smart account address in the config file")

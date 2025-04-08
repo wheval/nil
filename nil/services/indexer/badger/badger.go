@@ -267,8 +267,6 @@ func (b *BadgerDriver) FetchBlock(
 	}
 	if blockWithSSZ.Decoded != nil {
 		block = blockWithSSZ.Decoded.Block
-	} else {
-		return nil, err
 	}
 
 	return block, nil
@@ -387,7 +385,7 @@ func (b *BadgerDriver) HaveBlock(ctx context.Context, id types.ShardId, number t
 }
 
 func (b *BadgerDriver) FetchEarliestAbsentBlockId(ctx context.Context, id types.ShardId) (types.BlockNumber, error) {
-	var earliestAbsent types.BlockNumber = 0
+	var earliestAbsent types.BlockNumber
 
 	tx, err := b.db.CreateRoTx(ctx)
 	if err != nil {
@@ -411,7 +409,7 @@ func (b *BadgerDriver) FetchNextPresentBlockId(
 	id types.ShardId,
 	number types.BlockNumber,
 ) (types.BlockNumber, error) {
-	var nextPresent types.BlockNumber = 0
+	var nextPresent types.BlockNumber
 
 	tx, err := b.db.CreateRoTx(ctx)
 	if err != nil {

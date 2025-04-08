@@ -127,8 +127,8 @@ func (s *SuiteCometa) SetupSuite() {
 		DisableConsensus:     true,
 	})
 	s.cometaClient = *cometa.NewClient(s.Endpoint)
-	tests.WaitShardTick(s.T(), s.Context, s.Client, types.MainShardId)
-	tests.WaitShardTick(s.T(), s.Context, s.Client, types.BaseShardId)
+	tests.WaitShardTick(s.T(), s.Client, types.MainShardId)
+	tests.WaitShardTick(s.T(), s.Client, types.BaseShardId)
 }
 
 func (s *SuiteCometa) TestTwinContracts() {

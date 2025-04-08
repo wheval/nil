@@ -54,8 +54,8 @@ func (s *SuiteRegression) SetupSuite() {
 		RunMode:   nilservice.CollatorsOnlyRunMode,
 		ZeroState: zeroState,
 	})
-	tests.WaitShardTick(s.T(), s.Context, s.Client, types.MainShardId)
-	tests.WaitShardTick(s.T(), s.Context, s.Client, types.BaseShardId)
+	tests.WaitShardTick(s.T(), s.Client, types.MainShardId)
+	tests.WaitShardTick(s.T(), s.Client, types.BaseShardId)
 }
 
 func (s *SuiteRegression) TearDownSuite() {
@@ -181,7 +181,7 @@ func (s *SuiteRegression) TestInsufficientFundsIncExtSeqno() {
 	s.Require().False(receipt.Success)
 	s.Require().Equal("InsufficientFunds", receipt.Status)
 
-	tests.WaitShardTick(s.T(), s.Context, s.Client, types.BaseShardId)
+	tests.WaitShardTick(s.T(), s.Client, types.BaseShardId)
 
 	txn.Seqno++
 	txHash, err = s.Client.SendTransaction(s.T().Context(), txn)
