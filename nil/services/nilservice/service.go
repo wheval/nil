@@ -203,7 +203,6 @@ func getRawApi(
 	case NormalRunMode, ArchiveRunMode:
 		myShards = cfg.GetMyShards()
 	case RpcRunMode:
-		break
 	case CollatorsOnlyRunMode:
 		return nil, nil
 	default:
@@ -243,7 +242,7 @@ func setP2pRequestHandlers(
 	}
 	for shardId, api := range rawApi.Apis {
 		if err := rawapi.SetShardApiAsP2pRequestHandlersIfAllowed(
-			api, ctx, networkManager, readonly, logger,
+			ctx, api, networkManager, readonly, logger,
 		); err != nil {
 			logger.Error().Err(err).Stringer(logging.FieldShardId, shardId).Msg("Failed to set raw API request handler")
 			return err

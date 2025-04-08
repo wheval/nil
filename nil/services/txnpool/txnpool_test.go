@@ -314,7 +314,7 @@ func (s *SuiteTxnPool) TestReplacement() {
 }
 
 func (s *SuiteTxnPool) TestNetwork() {
-	nms := network.NewTestManagers(s.T(), s.ctx, 9100, 2)
+	nms := network.NewTestManagers(s.ctx, s.T(), 9100, 2)
 
 	pool1, err := New(s.ctx, NewConfig(0), nms[0])
 	s.Require().NoError(err)

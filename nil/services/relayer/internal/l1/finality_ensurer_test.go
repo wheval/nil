@@ -103,10 +103,9 @@ func (s *FinalityEnsurerTestSuite) SetupTest() {
 			return &ethtypes.Header{
 				Number: big.NewInt(int64(*s.mockLatestBlock)),
 			}, nil
-		} else {
-			if hdr, ok := s.mockBlockHdrByNum[number.Uint64()]; ok {
-				return &hdr, nil
-			}
+		}
+		if hdr, ok := s.mockBlockHdrByNum[number.Uint64()]; ok {
+			return &hdr, nil
 		}
 		return nil, nil
 	}

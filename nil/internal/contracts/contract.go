@@ -105,7 +105,7 @@ func NewCallData(fileName, methodName string, args ...any) ([]byte, error) {
 	return abiCallee.Pack(methodName, args...)
 }
 
-func UnpackData(fileName, methodName string, data []byte) ([]interface{}, error) {
+func UnpackData(fileName, methodName string, data []byte) ([]any, error) {
 	abiCallee, err := GetAbi(fileName)
 	if err != nil {
 		return nil, err

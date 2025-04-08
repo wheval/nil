@@ -70,11 +70,7 @@ func (h *SyncCommitteeMetricsHandler) init(attributes metric.MeasurementOption, 
 		return err
 	}
 
-	if err := h.initProposerMetrics(meter); err != nil {
-		return err
-	}
-
-	return nil
+	return h.initProposerMetrics(meter)
 }
 
 func (h *SyncCommitteeMetricsHandler) initAggregatorMetrics(meter telemetry.Meter) error {

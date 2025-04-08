@@ -134,7 +134,7 @@ func (d *DebugHandler) CollectReceiptsRec(
 		Transaction: txn,
 		Contract:    contract,
 	}
-	txnIndex += 1
+	txnIndex++
 	for _, outReceipt := range receipt.OutReceipts {
 		if _, err = d.CollectReceiptsRec(receiptInfo, outReceipt); err != nil {
 			return nil, err

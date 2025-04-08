@@ -277,7 +277,7 @@ func (s *ProposerTestSuite) checkSeqno(shardId types.ShardId) {
 		seqno := txns[0].Seqno
 		for _, m := range txns {
 			s.Require().Equal(seqno, m.Seqno)
-			seqno += 1
+			seqno++
 		}
 	}
 

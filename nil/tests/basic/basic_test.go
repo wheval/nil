@@ -769,7 +769,7 @@ func (s *SuiteRpc) TestTwoInvalidSignatureTxs() {
 	block, err := s.Client.GetBlock(s.Context, shardId, "latest", false)
 	s.Require().NoError(err)
 
-	tests.WaitBlock(s.T(), s.Context, s.Client, shardId, uint64(block.Number)+1)
+	tests.WaitBlock(s.T(), s.Client, shardId, uint64(block.Number)+1)
 }
 
 func (s *SuiteRpc) TestDbApi() {

@@ -54,7 +54,7 @@ rpc_endpoint = {{ .HttpUrl }}
 private_key = {{ .PrivateKey }}
 address = {{ .Address }}
 `
-	iniData, err := common.ParseTemplate(iniDataTmpl, map[string]interface{}{
+	iniData, err := common.ParseTemplate(iniDataTmpl, map[string]any{
 		"HttpUrl":    s.endpoint,
 		"PrivateKey": nilcrypto.PrivateKeyToEthereumFormat(execution.MainPrivateKey),
 		"Address":    types.MainSmartAccountAddress.Hex(),
