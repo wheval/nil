@@ -146,25 +146,14 @@ func (s *ProposerTestSuite) TestCollator() {
 		s.Equal(types.Value{}, s.getBalance(shardId, to))
 	})
 
-	// Now process internal transactions by one to test queueing.
-	p.params.MaxInternalTransactionsInBlock = 1
 	pool.Reset()
 
 	s.Run("ProcessInternalTransaction1", func() {
 		generateBlock()
 
 		s.Equal(balance, s.getMainBalance())
-		s.Equal(txnValue, s.getBalance(shardId, to))
+		s.Equal(txnValue.Mul(types.NewValueFromUint64(2)), s.getBalance(shardId, to))
 	})
-
-	s.Run("ProcessInternalTransaction2", func() {
-		generateBlock()
-
-		s.Equal(balance, s.getMainBalance())
-		s.Equal(txnValue.Add(txnValue), s.getBalance(shardId, to))
-	})
-
-	p.params.MaxInternalTransactionsInBlock = defaultMaxInternalTxns
 
 	s.Run("ProcessRefundTransactions", func() {
 		generateBlock()
