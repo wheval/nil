@@ -113,8 +113,7 @@ type ShardApiRo interface {
 
 	ClientVersion(ctx context.Context) (string, error)
 
-	setAsP2pRequestHandlersIfAllowed(
-		ctx context.Context, networkManager *network.BasicManager, readonly bool, logger logging.Logger) error
+	setAsP2pRequestHandlersIfAllowed(ctx context.Context, networkManager network.Manager, logger logging.Logger) error
 
 	GetTxpoolStatus(ctx context.Context) (uint64, error)
 	GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error)
@@ -132,8 +131,7 @@ func SetShardApiAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
 	shardApi ShardApi,
 	networkManager network.Manager,
-	readonly bool,
 	logger logging.Logger,
 ) error {
-	return shardApi.setAsP2pRequestHandlersIfAllowed(ctx, networkManager, readonly, logger)
+	return shardApi.setAsP2pRequestHandlersIfAllowed(ctx, networkManager, logger)
 }

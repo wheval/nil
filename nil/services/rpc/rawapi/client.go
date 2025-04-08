@@ -32,18 +32,19 @@ type ShardApiAccessor struct {
 	doApiRequest                       doApiRequestFunction
 	onSetNodeApi                       nodeApiSetter
 	onSetAsP2pRequestHandlersIfAllowed setAsP2pRequestHandlersIfAllowedFunction
+	readonly                           bool
 }
 
 var _ ShardApi = (*ShardApiAccessor)(nil)
 
 func NewNetworkRawApiAccessor(shardId types.ShardId, networkManager network.Manager) (*ShardApiAccessor, error) {
 	return newNetworkRawApiAccessor(
-		shardId, networkManager, reflect.TypeFor[ShardApi](), reflect.TypeFor[NetworkTransportProtocol]())
+		shardId, networkManager, reflect.TypeFor[ShardApi](), reflect.TypeFor[NetworkTransportProtocol](), false)
 }
 
 func NewLocalRawApiAccessor(shardId types.ShardId, rawapi *LocalShardApi) (*ShardApiAccessor, error) {
 	return newDirectRawApiAccessor(
-		shardId, rawapi, reflect.TypeFor[ShardApi](), reflect.TypeFor[NetworkTransportProtocol]())
+		shardId, rawapi, reflect.TypeFor[ShardApi](), reflect.TypeFor[NetworkTransportProtocol](), rawapi.readonly)
 }
 
 func newNetworkRawApiAccessor(
@@ -51,6 +52,7 @@ func newNetworkRawApiAccessor(
 	networkManager network.Manager,
 	apiType reflect.Type,
 	transportType reflect.Type,
+	readonly bool,
 ) (*ShardApiAccessor, error) {
 	codec, err := newApiCodec(apiType, transportType)
 	if err != nil {
@@ -66,6 +68,7 @@ func newNetworkRawApiAccessor(
 		) error {
 			return nil
 		},
+		readonly: readonly,
 	}, nil
 }
 
@@ -74,6 +77,7 @@ func newDirectRawApiAccessor(
 	rawapi ShardApi,
 	apiType reflect.Type,
 	transportType reflect.Type,
+	readonly bool,
 ) (*ShardApiAccessor, error) {
 	codec, err := newApiCodec(apiType, transportType)
 	if err != nil {
@@ -91,6 +95,7 @@ func newDirectRawApiAccessor(
 		) error {
 			return SetRawApiRequestHandlers(ctx, shardId, rawapi, networkManager, readonly, logger)
 		},
+		readonly: readonly,
 	}, nil
 }
 
@@ -256,10 +261,9 @@ func (api *ShardApiAccessor) setNodeApi(nodeApi NodeApi) {
 func (api *ShardApiAccessor) setAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
 	networkManager network.Manager,
-	readonly bool,
 	logger logging.Logger,
 ) error {
-	return api.onSetAsP2pRequestHandlersIfAllowed(ctx, networkManager, readonly, logger)
+	return api.onSetAsP2pRequestHandlersIfAllowed(ctx, networkManager, api.readonly, logger)
 }
 
 func sendRequestAndGetResponseWithCallerMethodName[ResponseType any](

@@ -48,7 +48,7 @@ func (suite *SuiteTxnPoolApi) SetupSuite() {
 
 	mainShardApi, err := rawapi.NewLocalRawApiAccessor(
 		types.MainShardId,
-		rawapi.NewLocalShardApi(types.MainShardId, database, suite.pool, false))
+		rawapi.NewLocalShardApi(types.MainShardId, database, suite.pool, false, false))
 	suite.Require().NoError(err)
 	localShardApis := map[types.ShardId]rawapi.ShardApi{types.MainShardId: mainShardApi}
 

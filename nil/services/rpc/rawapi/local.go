@@ -17,6 +17,7 @@ type LocalShardApi struct {
 	ShardId      types.ShardId
 	txnpool      txnpool.Pool
 	enableDevApi bool
+	readonly     bool // TODO: change to methodsFilter and unify with enableDevApi
 
 	nodeApi NodeApi
 	logger  logging.Logger
@@ -27,7 +28,13 @@ var (
 	_ ShardApi   = (*LocalShardApi)(nil)
 )
 
-func NewLocalShardApi(shardId types.ShardId, db db.ReadOnlyDB, txnpool txnpool.Pool, enableDevApi bool) *LocalShardApi {
+func NewLocalShardApi(
+	shardId types.ShardId,
+	db db.ReadOnlyDB,
+	txnpool txnpool.Pool,
+	readonly bool,
+	enableDevApi bool,
+) *LocalShardApi {
 	stateAccessor := execution.NewStateAccessor()
 	return &LocalShardApi{
 		db:           db,
@@ -35,6 +42,7 @@ func NewLocalShardApi(shardId types.ShardId, db db.ReadOnlyDB, txnpool txnpool.P
 		ShardId:      shardId,
 		txnpool:      txnpool,
 		enableDevApi: enableDevApi,
+		readonly:     readonly,
 		logger:       logging.NewLogger("local_api"),
 	}
 }
@@ -42,10 +50,9 @@ func NewLocalShardApi(shardId types.ShardId, db db.ReadOnlyDB, txnpool txnpool.P
 func (api *LocalShardApi) setAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
 	networkManager network.Manager,
-	readonly bool,
 	logger logging.Logger,
 ) error {
-	return SetRawApiRequestHandlers(ctx, api.ShardId, api, networkManager, readonly, logger)
+	return SetRawApiRequestHandlers(ctx, api.ShardId, api, networkManager, api.readonly, logger)
 }
 
 func (api *LocalShardApi) setNodeApi(nodeApi NodeApi) {

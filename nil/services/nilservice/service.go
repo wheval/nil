@@ -195,12 +195,16 @@ func getRawApi(
 	database db.DB,
 	txnPools map[types.ShardId]txnpool.Pool,
 ) (*rawapi.NodeApiOverShardApis, error) {
+	readonly := false
 	var myShards []uint
 	switch cfg.RunMode {
 	case BlockReplayRunMode:
 		txnPools = nil
 		fallthrough
-	case NormalRunMode, ArchiveRunMode:
+	case ArchiveRunMode:
+		readonly = true
+		fallthrough
+	case NormalRunMode:
 		myShards = cfg.GetMyShards()
 	case RpcRunMode:
 	case CollatorsOnlyRunMode:
@@ -213,7 +217,7 @@ func getRawApi(
 	for shardId := range types.ShardId(cfg.NShards) {
 		var err error
 		if slices.Contains(myShards, uint(shardId)) {
-			shardApis[shardId] = rawapi.NewLocalShardApi(shardId, database, txnPools[shardId], cfg.EnableDevApi)
+			shardApis[shardId] = rawapi.NewLocalShardApi(shardId, database, txnPools[shardId], readonly, cfg.EnableDevApi)
 			if assert.Enable {
 				api, ok := shardApis[shardId].(*rawapi.LocalShardApi)
 				check.PanicIfNot(ok)
@@ -234,16 +238,13 @@ func setP2pRequestHandlers(
 	ctx context.Context,
 	rawApi *rawapi.NodeApiOverShardApis,
 	networkManager network.Manager,
-	readonly bool,
 	logger logging.Logger,
 ) error {
 	if networkManager == nil {
 		return nil
 	}
 	for shardId, api := range rawApi.Apis {
-		if err := rawapi.SetShardApiAsP2pRequestHandlersIfAllowed(
-			ctx, api, networkManager, readonly, logger,
-		); err != nil {
+		if err := rawapi.SetShardApiAsP2pRequestHandlersIfAllowed(ctx, api, networkManager, logger); err != nil {
 			logger.Error().Err(err).Stringer(logging.FieldShardId, shardId).Msg("Failed to set raw API request handler")
 			return err
 		}
@@ -584,8 +585,7 @@ func CreateNode(
 	funcs = addRpcServerWorkerIfEnabled(funcs, cfg, rawApi, syncersResult, database, logger)
 
 	if cfg.RunMode != CollatorsOnlyRunMode && cfg.RunMode != RpcRunMode {
-		readonly := cfg.RunMode != NormalRunMode
-		if err := setP2pRequestHandlers(ctx, rawApi, networkManager, readonly, logger); err != nil {
+		if err := setP2pRequestHandlers(ctx, rawApi, networkManager, logger); err != nil {
 			return nil, err
 		}
 

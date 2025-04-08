@@ -32,7 +32,7 @@ func NewTestEthAPI(ctx context.Context, t *testing.T, db db.DB, nShards int) *AP
 	pools := NewPools(ctx, t, nShards)
 	for shardId := range types.ShardId(nShards) {
 		var err error
-		shardApi := rawapi.NewLocalShardApi(shardId, db, pools[shardId], false)
+		shardApi := rawapi.NewLocalShardApi(shardId, db, pools[shardId], false, false)
 		shardApis[shardId], err = rawapi.NewLocalRawApiAccessor(shardId, shardApi)
 		require.NoError(t, err)
 	}

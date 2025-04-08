@@ -117,7 +117,7 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 			var err error
 			localShardApis[shardId], err = rawapi.NewLocalRawApiAccessor(
 				shardId,
-				rawapi.NewLocalShardApi(shardId, s.Db, service.TxnPools[shardId], false))
+				rawapi.NewLocalShardApi(shardId, s.Db, service.TxnPools[shardId], false, false))
 			s.Require().NoError(err)
 		}
 		localApi := rawapi.NewNodeApiOverShardApis(localShardApis)
