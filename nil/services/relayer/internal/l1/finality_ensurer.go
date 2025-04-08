@@ -196,6 +196,7 @@ func (fe *FinalityEnsurer) blockFetcher(ctx context.Context, started chan struct
 
 			fe.logger.Info().
 				Uint64("local_finalized_block_number", header.Number.Uint64()).
+				Stringer("block_hash", header.Hash()).
 				Msg("refreshed actual finalized block number")
 			lastSuccessfulUpdate = now
 
@@ -356,6 +357,8 @@ func (fe *FinalityEnsurer) checkBlocksFinality(
 		if finalizedBlock.BlockHash != blk.BlockHash {
 			fe.logger.Debug().
 				Uint64("orphaned_block_num", blk.BlockNumber).
+				Stringer("actual_hash", blk.BlockHash).
+				Stringer("expected_hash", finalizedBlock.BlockHash).
 				Msg("found orphaned block")
 
 			orphaned = append(orphaned, blk)
