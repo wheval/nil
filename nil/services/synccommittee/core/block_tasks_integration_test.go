@@ -146,11 +146,10 @@ func (s *BlockTasksIntegrationTestSuite) Test_Provide_Tasks_And_Handle_Failure_R
 	s.Require().NoError(err)
 	s.Require().Nil(proposalData)
 
-	// status for ProofBatch task should be updated
+	// failed ProofBatch task should be removed
 	batchProofEntry, err := s.taskStorage.TryGetTaskEntry(s.ctx, taskToExecute.Id)
 	s.Require().NoError(err)
-	s.Require().NotNil(batchProofEntry)
-	s.Require().Equal(types.Failed, batchProofEntry.Status)
+	s.Require().Nil(batchProofEntry)
 }
 
 func newTestSuccessProviderResult(taskToExecute *types.Task, executorId types.TaskExecutorId) *types.TaskResult {
