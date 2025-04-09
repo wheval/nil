@@ -32,6 +32,15 @@ func NewBlockGeneratorParams(shardId types.ShardId, nShards uint32) BlockGenerat
 	}
 }
 
+type BlockGeneratorCounters struct {
+	InternalTransactions int64
+	ExternalTransactions int64
+	DeployTransactions   int64
+	ExecTransactions     int64
+	CoinsUsed            types.Value
+	GasPrice             types.Value
+}
+
 type BlockGenerator struct {
 	ctx    context.Context
 	params BlockGeneratorParams
@@ -41,7 +50,6 @@ type BlockGenerator struct {
 	executionState *ExecutionState
 
 	logger   logging.Logger
-	mh       *MetricsHandler
 	counters *BlockGeneratorCounters
 }
 
@@ -53,6 +61,8 @@ type BlockGenerationResult struct {
 	OutTxns      []*types.Transaction
 	OutTxnHashes []common.Hash
 	ConfigParams map[string][]byte
+
+	Counters *BlockGeneratorCounters
 }
 
 func NewBlockGenerator(
@@ -92,12 +102,6 @@ func NewBlockGeneratorWithEs(
 	rwTx db.RwTx,
 	es *ExecutionState,
 ) (*BlockGenerator, error) {
-	const mhName = "github.com/NilFoundation/nil/nil/internal/execution"
-	mh, err := NewMetricsHandler(mhName, params.ShardId)
-	if err != nil {
-		return nil, err
-	}
-
 	return &BlockGenerator{
 		ctx:            ctx,
 		params:         params,
@@ -107,8 +111,7 @@ func NewBlockGeneratorWithEs(
 		logger: logging.NewLogger("block-gen").With().
 			Stringer(logging.FieldShardId, params.ShardId).
 			Logger(),
-		mh:       mh,
-		counters: NewBlockGeneratorCounters(),
+		counters: &BlockGeneratorCounters{},
 	}, nil
 }
 
@@ -261,6 +264,9 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, gasPrices []t
 	for i, shardHash := range proposal.ShardHashes {
 		g.executionState.ChildShardBlocks[types.ShardId(i+1)] = shardHash
 	}
+
+	g.counters.GasPrice = g.executionState.GasPrice
+
 	return nil
 }
 
@@ -326,15 +332,10 @@ func (g *BlockGenerator) GenerateBlock(
 	proposal *Proposal,
 	params *types.ConsensusParams,
 ) (*BlockGenerationResult, error) {
-	g.mh.StartProcessingMeasurement(g.ctx, proposal.PrevBlockId+1)
-	defer func() { g.mh.EndProcessingMeasurement(g.ctx, g.counters) }()
-
 	gasPrices := g.CollectGasPrices(proposal.PrevBlockId)
 	if err := g.prepareExecutionState(proposal, gasPrices); err != nil {
 		return nil, err
 	}
-
-	g.mh.RecordGasPrice(g.ctx, g.executionState.GasPrice)
 
 	if err := db.WriteCollatorState(g.rwTx, g.params.ShardId, proposal.CollatorState); err != nil {
 		return nil, fmt.Errorf("failed to write collator state: %w", err)
@@ -417,6 +418,8 @@ func (g *BlockGenerator) finalize(
 	if err != nil {
 		return nil, err
 	}
+
+	blockRes.Counters = g.counters
 
 	return blockRes, g.Finalize(blockRes, params)
 }
