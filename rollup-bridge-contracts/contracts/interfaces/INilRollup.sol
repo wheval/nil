@@ -22,6 +22,10 @@ interface INilRollup is INilAccessControl {
         bytes32 newStateRoot
     );
 
+    /// @notice Emitted when the state is successfully reset to a provided state root.
+    /// @param stateRoot The state root to which the system was reset.
+    event StateReset(bytes32 stateRoot);
+
     /*//////////////////////////////////////////////////////////////////////////
                                        STRUCTS
     //////////////////////////////////////////////////////////////////////////*/
@@ -63,9 +67,6 @@ interface INilRollup is INilAccessControl {
     /// @return The latest finalized batch index.
     function getLastFinalizedBatchIndex() external view returns (string memory);
 
-    /// @return The last committed batch index.
-    function getLastCommittedBatchIndex() external view returns (string memory);
-
     /// @param batchIndex The index of the batch.
     /// @return The state root of a finalized batch.
     function finalizedStateRoots(
@@ -99,6 +100,13 @@ interface INilRollup is INilAccessControl {
     function batchIndexOfRoot(
         bytes32 stateRoot
     ) external view returns (string memory);
+
+    /// @notice Returns the previous state root in the finalized batch history.
+    /// @param stateRoot The state root of a finalized batch.
+    /// @return The state root that immediately precedes the given stateRoot in the history.
+    function previousStateRoot(
+        bytes32 stateRoot
+    ) external view returns (bytes32);
 
     function getCurrentStateRoot() external view returns (bytes32);
 
