@@ -82,7 +82,7 @@ format: generated
 	GOPROXY= go mod vendor
 	golangci-lint fmt
 
-lint: format golangci-lint
+lint: format golangci-lint checklocks
 
 checklocks: generated
 	@export GOFLAGS="$$GOFLAGS -tags=test,goexperiment.synctest"; \

@@ -718,7 +718,10 @@ func createValidators(
 			}
 		}
 
-		list[i] = collate.NewValidator(params, list[0], database, txpool, networkManager)
+		list[i], err = collate.NewValidator(params, list[0], database, txpool, networkManager)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return list, nil
 }
