@@ -30,13 +30,16 @@ type Pool interface {
 	Peek(n int) ([]*types.TxnWithHash, error)
 	SeqnoToAddress(addr types.Address) (seqno types.Seqno, inPool bool)
 	Get(hash common.Hash) (*types.Transaction, error)
-	GetPendingLength() int
+	GetPendingLength() (int, error)
+	GetSize() int
 }
 
 type TxnPool struct {
 	started bool
 	cfg     Config
 	baseFee types.Value
+	// seqnoMap is a map of addresses to their current seqno. Seqno is updated when the transaction is committed.
+	seqnoMap map[types.Address]types.Seqno
 
 	networkManager *network.Manager
 
@@ -54,8 +57,9 @@ func New(ctx context.Context, cfg Config, networkManager *network.Manager) (*Txn
 		Logger()
 
 	res := &TxnPool{
-		started: true,
-		cfg:     cfg,
+		started:  true,
+		cfg:      cfg,
+		seqnoMap: make(map[types.Address]types.Seqno),
 
 		networkManager: networkManager,
 
@@ -181,18 +185,17 @@ func (p *TxnPool) add(txns ...*metaTxn) ([]DiscardReason, error) {
 }
 
 func (p *TxnPool) validateTxn(txn *metaTxn) (DiscardReason, bool) {
-	seqno, has := p.all.seqno(txn.To)
-	if has && seqno > txn.Seqno {
+	if txn.ChainId != types.DefaultChainId {
+		return InvalidChainId, false
+	}
+
+	if seqno, ok := p.seqnoMap[txn.To]; ok && seqno > txn.Seqno {
 		p.logger.Debug().
 			Stringer(logging.FieldTransactionHash, txn.Hash()).
 			Uint64(logging.FieldAccountSeqno, seqno.Uint64()).
 			Uint64(logging.FieldTransactionSeqno, txn.Seqno.Uint64()).
 			Msg("Seqno too low.")
 		return SeqnoTooLow, false
-	}
-
-	if txn.ChainId != types.DefaultChainId {
-		return InvalidChainId, false
 	}
 
 	return NotSet, true
@@ -237,7 +240,15 @@ func (p *TxnPool) Get(hash common.Hash) (*types.Transaction, error) {
 	return txn.Transaction, nil
 }
 
-func (p *TxnPool) GetPendingLength() int {
+func (p *TxnPool) GetPendingLength() (int, error) {
+	res, err := p.Peek(0)
+	if err != nil {
+		return 0, err
+	}
+	return len(res), nil
+}
+
+func (p *TxnPool) GetSize() int {
 	return p.all.tree.Len()
 }
 
@@ -311,11 +322,11 @@ func (p *TxnPool) discardLocked(txn *metaTxn, reason DiscardReason) {
 func (p *TxnPool) nextSenderTxnLocked(senderID types.Address, seqno types.Seqno) *metaTxn {
 	var res *metaTxn
 	p.all.ascend(senderID, func(txn *metaTxn) bool {
-		if txn.Seqno <= seqno || !txn.IsValid() {
-			return true
+		if txn.Seqno == seqno+1 && txn.IsValid() {
+			res = txn
+			return false
 		}
-		res = txn
-		return false
+		return true
 	})
 	return res
 }
@@ -389,6 +400,7 @@ func (p *TxnPool) removeCommitted(bySeqno *ByReceiverAndSeqno, txns []*types.Tra
 	discarded := 0
 
 	for senderID, seqno := range seqnosToRemove {
+		p.seqnoMap[senderID] = seqno + 1
 		bySeqno.ascend(senderID, func(txn *metaTxn) bool {
 			if txn.Seqno > seqno {
 				p.logger.Trace().
