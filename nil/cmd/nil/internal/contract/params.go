@@ -32,4 +32,5 @@ type contractParams struct {
 	salt     types.Uint256
 	shardId  types.ShardId
 	value    types.Value
+	blockId  string
 }
