@@ -22,7 +22,7 @@ import (
 
 const (
 	MetadataApi             = "rpc"
-	defaultBatchConcurrency = 1 // trnasactions from batch maust be processed in order
+	defaultBatchConcurrency = 2
 	defaultBatchLimit       = 100
 )
 
