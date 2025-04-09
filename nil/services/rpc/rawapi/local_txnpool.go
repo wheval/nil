@@ -27,7 +27,7 @@ func (api *LocalShardApi) SendTransaction(ctx context.Context, encoded []byte) (
 }
 
 func (api *LocalShardApi) GetTxpoolStatus(ctx context.Context) (uint64, error) {
-	return uint64(api.txnpool.GetPendingLength()), nil
+	return uint64(api.txnpool.GetSize()), nil
 }
 
 func (api *LocalShardApi) GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error) {
