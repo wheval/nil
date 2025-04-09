@@ -6,11 +6,13 @@
 , nodejs
 , nil
 , enableTesting ? false
+, solc
+, solc-select
 }:
 
 stdenv.mkDerivation rec {
-  name = "uniswap";
-  pname = "uniswap";
+  name = "nil-hardhat-plugin";
+  pname = "nil-hardhat-plugin";
   src = lib.sourceByRegex ./.. [
     "package.json"
     "pnpm-lock.yaml"
@@ -18,10 +20,9 @@ stdenv.mkDerivation rec {
     ".npmrc"
     "^niljs(/.*)?$"
     "^smart-contracts(/.*)?$"
-    "^hardhat-plugin(/.*)?$"
     "^create-nil-hardhat-project(/.*)?$"
     "biome.json"
-    "^uniswap(/.*)?$"
+    "^hardhat-plugin(/.*)?$"
   ];
 
   soljson26 = builtins.fetchurl {
@@ -31,12 +32,14 @@ stdenv.mkDerivation rec {
 
   pnpmDeps = (callPackage ./npmdeps.nix { });
 
+  NODE_PATH = "$npmDeps";
 
   nativeBuildInputs = [
     nodejs
-    pnpm_10.configHook
     pnpm_10
+    pnpm_10.configHook
     biome
+    solc
   ] ++ (if enableTesting then [ nil ] else [ ]);
 
   preUnpack = ''
@@ -45,34 +48,21 @@ stdenv.mkDerivation rec {
   '';
 
   buildPhase = ''
-    patchShebangs node_modules
+    patchShebangs node_modules || true
 
     (cd smart-contracts; pnpm run build)
     (cd niljs; pnpm run build)
+
+    (cd hardhat-plugin && pnpm run build)
   '';
 
   doCheck = enableTesting;
 
   checkPhase = ''
-    echo "Installing soljson"
-    (cd create-nil-hardhat-project; bash install_soljson.sh ${soljson26})
-
     export BIOME_BINARY=${biome}/bin/biome
-    export NIL_RPC_ENDPOINT="http://127.0.0.1:8529"
 
-    nild run --http-port 8529 --collator-tick-ms=100 >nild.log 2>&1 &
-    sleep 2
-
-    nil config set rpc_endpoint $NIL_RPC_ENDPOINT
-
-    export PRIVATE_KEY=`nil keygen new -q`
-    export SMART_ACCOUNT_ADDR=`nil smart-account new -q`
-
-    echo "Checking uniswap"
-    (cd uniswap; pnpm run lint)
-    (cd uniswap; pnpm run compile)
-
-    echo "tests finished successfully"
+    echo "Linting hardhat-plugin"
+    (cd hardhat-plugin; pnpm run lint)
   '';
 
   installPhase = ''

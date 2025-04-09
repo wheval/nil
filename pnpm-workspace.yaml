@@ -2,6 +2,7 @@ packages:
   - 'smart-contracts'
   - 'niljs'
   - "create-nil-hardhat-project"
+  - "hardhat-plugin"
   - "docs"
   - "explorer_frontend"
   - "explorer_backend"

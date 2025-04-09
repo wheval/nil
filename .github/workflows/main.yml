@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: ["ibft", "heavy", "nil", "nildocs", "niljs", "nilexplorer", "uniswap", "rollup-bridge-contracts", "clijs", "walletextension"]
+        check: ["ibft", "heavy", "nil", "nildocs", "niljs", "nilexplorer", "uniswap", "rollup-bridge-contracts", "clijs", "walletextension", "nilhardhat"]
     steps:
       - name: checkout local actions
         uses: actions/checkout@v3
