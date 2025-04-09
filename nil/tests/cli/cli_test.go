@@ -405,6 +405,16 @@ faucet_endpoint = {{ .FaucetUrl }}
 		s.Contains(res, "uint256: 123321")
 	})
 
+	s.Run("Call read-only 'get' function of contract", func() {
+		res := s.RunCli("-c", cfgPath, "contract", addr)
+		s.Contains(res, "Hash: ")
+		s.Contains(res, "Address: "+addr)
+		s.Contains(res, "Balance: 0")
+		s.Contains(res, "Seqno: 2")
+		s.Contains(res, "ExtSeqno: 0")
+		s.Contains(res, "StorageRoot: ")
+	})
+
 	s.Run("Estimate fee", func() {
 		isNum := func(str string) {
 			s.T().Helper()
