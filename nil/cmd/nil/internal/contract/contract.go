@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/NilFoundation/nil/nil/cmd/nil/common"
-	libcommon "github.com/NilFoundation/nil/nil/common"
-
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/cliservice"
 	"github.com/spf13/cobra"
@@ -61,9 +59,7 @@ func runContract(cmd *cobra.Command, args []string, cfg *common.Config, params *
 			return err
 		}
 
-		hash := libcommon.PoseidonHash(debugRPCContract.Contract)
-
-		fmt.Println("Hash:", hash)
+		fmt.Println("Hash:", contract.Hash())
 		fmt.Println("Address:", contract.Address.String())
 		fmt.Println("Balance:", contract.Balance.Uint256.String())
 		fmt.Println("Seqno:", contract.Seqno.String())

@@ -80,7 +80,6 @@ func (s *Service) GetTokens(contractAddress types.Address) (types.TokensMap, err
 
 func (s *Service) GetDebugContract(contractAddress types.Address, blockId any) (*jsonrpc.DebugRPCContract, error) {
 	contract, err := s.client.GetDebugContract(s.ctx, contractAddress, blockId)
-
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to get contract debug information")
 		return nil, err
