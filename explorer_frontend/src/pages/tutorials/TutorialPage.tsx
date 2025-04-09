@@ -21,7 +21,7 @@ import { ContractsContainer } from "../../features/contracts/components/Contract
 import { NetworkErrorNotification } from "../../features/healthcheck";
 import { $rpcIsHealthy } from "../../features/healthcheck/model";
 import { Logs } from "../../features/logs/components/Logs";
-import { Logo, useMobile } from "../../features/shared";
+import { useMobile } from "../../features/shared";
 import { Navbar } from "../../features/shared/components/Layout/Navbar";
 import { mobileContainerStyle, styles } from "../../features/shared/components/Layout/styles";
 import { TutorialText } from "../../features/tutorial/TutorialText";
@@ -98,26 +98,10 @@ export const TutorialPage = () => {
   return (
     <div className={css(isMobile ? mobileContainerStyle : styles.container)}>
       {!isRPCHealthy && <NetworkErrorNotification />}
-      <Navbar
-        logo={
-          <Logo
-            subText={
-              <span
-                className={css({
-                  marginTop: "4px",
-                  fontSize: "12px",
-                  color: COLORS.blue400,
-                  fontFamily: "Inter, sans-serif",
-                })}
-              >
-                Tutorials v1.0
-              </span>
-            }
-          />
-        }
-      >
+      <Navbar showCodeInteractionButtons={true}>
         <AccountPane />
       </Navbar>
+
       <div
         className={css({
           width: "100%",
@@ -144,7 +128,7 @@ export const TutorialPage = () => {
                       minSize={10}
                       order={1}
                     >
-                      <Code extraMobileButton={null} extraToolbarButton={runCheckButton} />
+                      <Code />
                     </Panel>
                     <PanelResizeHandle
                       className={css({

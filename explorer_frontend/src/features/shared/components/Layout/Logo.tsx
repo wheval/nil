@@ -1,21 +1,21 @@
 import { Link } from "atomic-router-react";
-import type { ReactNode } from "react";
+import { useStore } from "effector-react";
 import { useStyletron } from "styletron-react";
 import { explorerRoute } from "../../../routing/routes/explorerRoute";
+import { tutorialWithUrlStringRoute } from "../../../routing/routes/tutorialRoute";
 import logo from "./assets/Logo.svg";
 import { styles } from "./styles";
 
-type LogoProps = {
-  subText?: ReactNode;
-};
-
-export const Logo = ({ subText }: LogoProps) => {
+export const Logo = () => {
   const [css] = useStyletron();
+  const isTutorial = useStore(tutorialWithUrlStringRoute.$isOpened);
 
   return (
     <Link className={css(styles.logo)} to={explorerRoute}>
       <img src={logo} alt="logo" />
-      {subText}
+      {!isTutorial && <span className={css(styles.playgroundText)}>Playground v1.0</span>}
+
+      {isTutorial && <span className={css(styles.tutorialText)}>Tutorials v1.0</span>}
     </Link>
   );
 };
