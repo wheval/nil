@@ -27,9 +27,8 @@ type Consensus interface {
 type Params struct {
 	execution.BlockGeneratorParams
 
-	MaxGasInBlock                  types.Gas
-	MaxInternalTransactionsInBlock int
-	MaxForwardTransactionsInBlock  int
+	MaxGasInBlock                 types.Gas
+	MaxForwardTransactionsInBlock int
 
 	CollatorTickPeriod time.Duration
 	Timeout            time.Duration

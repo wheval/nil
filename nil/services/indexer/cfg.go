@@ -10,4 +10,5 @@ type Cfg struct {
 	Client        client.Client
 	BlocksChan    chan *driver.BlockWithShardId
 	AllowDbDrop   bool
+	DoIndexTxpool bool
 }

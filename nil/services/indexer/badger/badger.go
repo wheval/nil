@@ -133,13 +133,12 @@ func (b *BadgerDriver) indexBlockTransactions(
 		}
 
 		baseAction := indexertypes.AddressAction{
-			Hash:      hash,
-			From:      txn.From,
-			To:        txn.To,
-			Amount:    txn.Value,
-			Timestamp: db.Timestamp(block.Timestamp),
-			BlockId:   block.Id,
-			Status:    getTransactionStatus(receipt.decoded),
+			Hash:    hash,
+			From:    txn.From,
+			To:      txn.To,
+			Amount:  txn.Value,
+			BlockId: block.Id,
+			Status:  getTransactionStatus(receipt.decoded),
 		}
 
 		logger := logging.NewLogger("indexer-badger")
@@ -162,6 +161,10 @@ func (b *BadgerDriver) indexBlockTransactions(
 	return nil
 }
 
+func (d *BadgerDriver) IndexTxPool(ctx context.Context, txPoolStatuses []*driver.TxPoolStatus) error {
+	return errors.New("not implemented")
+}
+
 func getTransactionStatus(receipt *types.Receipt) indexertypes.AddressActionStatus {
 	if receipt.Success {
 		return indexertypes.Success
@@ -170,7 +173,7 @@ func getTransactionStatus(receipt *types.Receipt) indexertypes.AddressActionStat
 }
 
 func storeAddressAction(tx db.RwTx, address types.Address, action *indexertypes.AddressAction) error {
-	key := makeAddressActionKey(address, uint64(action.Timestamp), action.Hash)
+	key := makeAddressActionKey(address, uint64(action.BlockId), action.Hash)
 	value, err := json.Marshal(action)
 	if err != nil {
 		return fmt.Errorf("failed to serialize address action: %w", err)
@@ -196,7 +199,7 @@ func makeAddressActionTimestampKey(address types.Address, timestamp uint64) []by
 func (b *BadgerDriver) FetchAddressActions(
 	ctx context.Context,
 	address types.Address,
-	since db.Timestamp,
+	since types.BlockNumber,
 ) ([]indexertypes.AddressAction, error) {
 	actions := make([]indexertypes.AddressAction, 0)
 	const limit = 100

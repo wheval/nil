@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/NilFoundation/nil/nil/common/logging"
-	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/indexer/badger"
 	"github.com/NilFoundation/nil/nil/services/indexer/clickhouse"
@@ -55,7 +54,7 @@ type IndexerJsonRpc interface {
 	GetAddressActions(
 		ctx context.Context,
 		address types.Address,
-		since db.Timestamp,
+		since types.BlockNumber,
 	) ([]indexertypes.AddressAction, error)
 }
 
@@ -98,7 +97,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 func (s *Service) GetAddressActions(
 	ctx context.Context,
 	address types.Address,
-	since db.Timestamp,
+	since types.BlockNumber,
 ) ([]indexertypes.AddressAction, error) {
 	return s.Driver.FetchAddressActions(ctx, address, since)
 }

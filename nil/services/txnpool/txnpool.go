@@ -30,7 +30,7 @@ type Pool interface {
 	Peek(n int) ([]*types.TxnWithHash, error)
 	SeqnoToAddress(addr types.Address) (seqno types.Seqno, inPool bool)
 	Get(hash common.Hash) (*types.Transaction, error)
-	GetQueue() *TxnQueue
+	GetPendingLength() int
 }
 
 type TxnPool struct {
@@ -237,8 +237,8 @@ func (p *TxnPool) Get(hash common.Hash) (*types.Transaction, error) {
 	return txn.Transaction, nil
 }
 
-func (p *TxnPool) GetQueue() *TxnQueue {
-	return p.queue
+func (p *TxnPool) GetPendingLength() int {
+	return p.all.tree.Len()
 }
 
 func (p *TxnPool) getLocked(hash common.Hash) *metaTxn {
@@ -429,6 +429,10 @@ func (p *TxnPool) removeCommitted(bySeqno *ByReceiverAndSeqno, txns []*types.Tra
 func (p *TxnPool) Peek(n int) ([]*types.TxnWithHash, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
+	if n == 0 {
+		n = int(p.cfg.Size)
+	}
 
 	// Peek algorithm will alter the queue, so we need to clone it first.
 	q := p.queue.Clone()
