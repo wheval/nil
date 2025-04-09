@@ -17,23 +17,14 @@ import (
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
-type NodeApiOverShardApis struct {
-	Apis map[types.ShardId]ShardApi
+type nodeApiOverShardApis struct {
+	apisRo map[types.ShardId]ShardApiRo
+	apisRw map[types.ShardId]ShardApiRw
+
+	allApis []shardApiBase
 }
 
-var _ NodeApi = (*NodeApiOverShardApis)(nil)
-
-func NewNodeApiOverShardApis(apis map[types.ShardId]ShardApi) NodeApi {
-	nodeApi := &NodeApiOverShardApis{
-		Apis: apis,
-	}
-
-	for _, api := range apis {
-		api.setNodeApi(nodeApi)
-	}
-
-	return nodeApi
-}
+var _ NodeApi = (*nodeApiOverShardApis)(nil)
 
 var ErrShardNotFound = errors.New("shard API not found")
 
@@ -55,13 +46,13 @@ func makeCallError(methodName string, shardId types.ShardId, err error) error {
 	return fmt.Errorf("failed to call method %s on shard %d: %w", methodName, shardId, err)
 }
 
-func (api *NodeApiOverShardApis) GetBlockHeader(
+func (api *nodeApiOverShardApis) GetBlockHeader(
 	ctx context.Context,
 	shardId types.ShardId,
 	blockReference rawapitypes.BlockReference,
 ) (sszx.SSZEncodedData, error) {
 	methodName := methodNameChecked("GetBlockHeader")
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return nil, makeShardNotFoundError(methodName, shardId)
 	}
@@ -72,13 +63,13 @@ func (api *NodeApiOverShardApis) GetBlockHeader(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetFullBlockData(
+func (api *nodeApiOverShardApis) GetFullBlockData(
 	ctx context.Context,
 	shardId types.ShardId,
 	blockReference rawapitypes.BlockReference,
 ) (*types.RawBlockWithExtractedData, error) {
 	methodName := methodNameChecked("GetFullBlockData")
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return nil, makeShardNotFoundError(methodName, shardId)
 	}
@@ -89,13 +80,13 @@ func (api *NodeApiOverShardApis) GetFullBlockData(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetBlockTransactionCount(
+func (api *nodeApiOverShardApis) GetBlockTransactionCount(
 	ctx context.Context,
 	shardId types.ShardId,
 	blockReference rawapitypes.BlockReference,
 ) (uint64, error) {
 	methodName := methodNameChecked("GetBlockTransactionCount")
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return 0, makeShardNotFoundError(methodName, shardId)
 	}
@@ -106,14 +97,14 @@ func (api *NodeApiOverShardApis) GetBlockTransactionCount(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetBalance(
+func (api *nodeApiOverShardApis) GetBalance(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
 ) (types.Value, error) {
 	methodName := methodNameChecked("GetBalance")
 	shardId := address.ShardId()
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return types.Value{}, makeShardNotFoundError(methodName, shardId)
 	}
@@ -124,14 +115,14 @@ func (api *NodeApiOverShardApis) GetBalance(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetCode(
+func (api *nodeApiOverShardApis) GetCode(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
 ) (types.Code, error) {
 	methodName := methodNameChecked("GetCode")
 	shardId := address.ShardId()
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return types.Code{}, makeShardNotFoundError(methodName, shardId)
 	}
@@ -142,14 +133,14 @@ func (api *NodeApiOverShardApis) GetCode(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetTokens(
+func (api *nodeApiOverShardApis) GetTokens(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
 ) (map[types.TokenId]types.Value, error) {
 	methodName := methodNameChecked("GetTokens")
 	shardId := address.ShardId()
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return nil, makeShardNotFoundError(methodName, shardId)
 	}
@@ -160,14 +151,14 @@ func (api *NodeApiOverShardApis) GetTokens(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetContract(
+func (api *nodeApiOverShardApis) GetContract(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
 ) (*rawapitypes.SmartContract, error) {
 	methodName := methodNameChecked("GetContract")
 	shardId := address.ShardId()
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return nil, makeShardNotFoundError(methodName, shardId)
 	}
@@ -178,7 +169,7 @@ func (api *NodeApiOverShardApis) GetContract(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) Call(
+func (api *nodeApiOverShardApis) Call(
 	ctx context.Context,
 	args rpctypes.CallArgs,
 	mainBlockReferenceOrHashWithChildren rawapitypes.BlockReferenceOrHashWithChildren,
@@ -192,7 +183,7 @@ func (api *NodeApiOverShardApis) Call(
 	}
 
 	shardId := txn.To.ShardId()
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return nil, makeShardNotFoundError(methodName, shardId)
 	}
@@ -203,13 +194,13 @@ func (api *NodeApiOverShardApis) Call(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetInTransaction(
+func (api *nodeApiOverShardApis) GetInTransaction(
 	ctx context.Context,
 	shardId types.ShardId,
 	request rawapitypes.TransactionRequest,
 ) (*rawapitypes.TransactionInfo, error) {
 	methodName := methodNameChecked("GetInTransaction")
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return nil, makeShardNotFoundError(methodName, shardId)
 	}
@@ -220,13 +211,13 @@ func (api *NodeApiOverShardApis) GetInTransaction(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetInTransactionReceipt(
+func (api *nodeApiOverShardApis) GetInTransactionReceipt(
 	ctx context.Context,
 	shardId types.ShardId,
 	hash common.Hash,
 ) (*rawapitypes.ReceiptInfo, error) {
 	methodName := methodNameChecked("GetInTransactionReceipt")
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return nil, makeShardNotFoundError(methodName, shardId)
 	}
@@ -237,9 +228,9 @@ func (api *NodeApiOverShardApis) GetInTransactionReceipt(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GasPrice(ctx context.Context, shardId types.ShardId) (types.Value, error) {
+func (api *nodeApiOverShardApis) GasPrice(ctx context.Context, shardId types.ShardId) (types.Value, error) {
 	methodName := methodNameChecked("GasPrice")
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return types.Value{}, makeShardNotFoundError(methodName, shardId)
 	}
@@ -250,10 +241,10 @@ func (api *NodeApiOverShardApis) GasPrice(ctx context.Context, shardId types.Sha
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetShardIdList(ctx context.Context) ([]types.ShardId, error) {
+func (api *nodeApiOverShardApis) GetShardIdList(ctx context.Context) ([]types.ShardId, error) {
 	methodName := methodNameChecked("GetShardIdList")
 	shardId := types.MainShardId
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return nil, makeShardNotFoundError(methodName, shardId)
 	}
@@ -264,10 +255,10 @@ func (api *NodeApiOverShardApis) GetShardIdList(ctx context.Context) ([]types.Sh
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetNumShards(ctx context.Context) (uint64, error) {
+func (api *nodeApiOverShardApis) GetNumShards(ctx context.Context) (uint64, error) {
 	methodName := methodNameChecked("GetNumShards")
 	shardId := types.MainShardId
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return 0, makeShardNotFoundError(methodName, shardId)
 	}
@@ -278,14 +269,14 @@ func (api *NodeApiOverShardApis) GetNumShards(ctx context.Context) (uint64, erro
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetTransactionCount(
+func (api *nodeApiOverShardApis) GetTransactionCount(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
 ) (uint64, error) {
 	methodName := methodNameChecked("GetTransactionCount")
 	shardId := address.ShardId()
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return 0, makeShardNotFoundError(methodName, shardId)
 	}
@@ -296,13 +287,13 @@ func (api *NodeApiOverShardApis) GetTransactionCount(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) SendTransaction(
+func (api *nodeApiOverShardApis) SendTransaction(
 	ctx context.Context,
 	shardId types.ShardId,
 	transaction []byte,
 ) (txnpool.DiscardReason, error) {
 	methodName := methodNameChecked("SendTransaction")
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRw[shardId]
 	if !ok {
 		return 0, makeShardNotFoundError(methodName, shardId)
 	}
@@ -313,10 +304,10 @@ func (api *NodeApiOverShardApis) SendTransaction(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) ClientVersion(ctx context.Context) (string, error) {
+func (api *nodeApiOverShardApis) ClientVersion(ctx context.Context) (string, error) {
 	methodName := methodNameChecked("ClientVersion")
 	shardId := types.MainShardId
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return "", makeShardNotFoundError(methodName, shardId)
 	}
@@ -327,18 +318,18 @@ func (api *NodeApiOverShardApis) ClientVersion(ctx context.Context) (string, err
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) DoPanicOnShard(ctx context.Context, shardId types.ShardId) (uint64, error) {
+func (api *nodeApiOverShardApis) DoPanicOnShard(ctx context.Context, shardId types.ShardId) (uint64, error) {
 	methodName := methodNameChecked("DoPanicOnShard")
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRw[shardId]
 	if !ok {
 		return 0, makeShardNotFoundError(methodName, shardId)
 	}
 	return shardApi.DoPanicOnShard(ctx)
 }
 
-func (api *NodeApiOverShardApis) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (uint64, error) {
+func (api *nodeApiOverShardApis) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (uint64, error) {
 	methodName := methodNameChecked("GetTxpoolStatus")
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return 0, makeShardNotFoundError(methodName, shardId)
 	}
@@ -349,12 +340,12 @@ func (api *NodeApiOverShardApis) GetTxpoolStatus(ctx context.Context, shardId ty
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) GetTxpoolContent(
+func (api *nodeApiOverShardApis) GetTxpoolContent(
 	ctx context.Context,
 	shardId types.ShardId,
 ) ([]*types.Transaction, error) {
 	methodName := methodNameChecked("GetTxpoolContent")
-	shardApi, ok := api.Apis[shardId]
+	shardApi, ok := api.apisRo[shardId]
 	if !ok {
 		return nil, makeShardNotFoundError(methodName, shardId)
 	}
@@ -365,7 +356,7 @@ func (api *NodeApiOverShardApis) GetTxpoolContent(
 	return result, nil
 }
 
-func (api *NodeApiOverShardApis) SetP2pRequestHandlers(
+func (api *nodeApiOverShardApis) SetP2pRequestHandlers(
 	ctx context.Context,
 	networkManager network.Manager,
 	logger logging.Logger,
@@ -373,11 +364,11 @@ func (api *NodeApiOverShardApis) SetP2pRequestHandlers(
 	if networkManager == nil {
 		return nil
 	}
-	for shardId, api := range api.Apis {
+	for _, api := range api.allApis {
 		if err := api.setAsP2pRequestHandlersIfAllowed(ctx, networkManager, logger); err != nil {
 			logger.Error().
 				Err(err).
-				Stringer(logging.FieldShardId, shardId).
+				Stringer(logging.FieldShardId, api.shardId()).
 				Msg("Failed to set raw API request handler")
 			return err
 		}

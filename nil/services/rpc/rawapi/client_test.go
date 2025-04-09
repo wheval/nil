@@ -44,7 +44,9 @@ func newGeneratedApiClient(networkManager network.Manager, serverPeerId network.
 		apiCodec:       apiCodec,
 		networkManager: networkManager,
 		serverPeerId:   serverPeerId,
-		doApiRequest:   makeDoNetworkRawApiRequestFunction(networkManager, types.BaseShardId, "testapi"),
+		doApiRequest: func(ctx context.Context, codec *methodCodec, args ...any) ([]byte, error) {
+			return doNetworkShardApiRequest(ctx, networkManager, types.BaseShardId, "testapi", codec, args...)
+		},
 	}, nil
 }
 

@@ -2,6 +2,7 @@ package rawapi
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
@@ -11,50 +12,55 @@ import (
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
-type LocalShardApi struct {
-	db           db.ReadOnlyDB
-	accessor     *execution.StateAccessor
-	ShardId      types.ShardId
-	txnpool      txnpool.Pool
-	enableDevApi bool
-	readonly     bool // TODO: change to methodsFilter and unify with enableDevApi
+type localShardApiRo struct {
+	db       db.ReadOnlyDB
+	accessor *execution.StateAccessor
+	shard    types.ShardId
+	txnpool  txnpool.Pool
 
 	nodeApi NodeApi
 	logger  logging.Logger
 }
 
-var (
-	_ ShardApiRo = (*LocalShardApi)(nil)
-	_ ShardApi   = (*LocalShardApi)(nil)
-)
+var _ ShardApiRo = (*localShardApiRo)(nil)
 
-func NewLocalShardApi(
+func newLocalShardApiRo(
 	shardId types.ShardId,
 	db db.ReadOnlyDB,
 	txnpool txnpool.Pool,
-	readonly bool,
 	enableDevApi bool,
-) *LocalShardApi {
+) *localShardApiRo {
 	stateAccessor := execution.NewStateAccessor()
-	return &LocalShardApi{
+	return &localShardApiRo{
 		db:           db,
 		accessor:     stateAccessor,
-		ShardId:      shardId,
+		shard:        shardId,
 		txnpool:      txnpool,
 		enableDevApi: enableDevApi,
-		readonly:     readonly,
 		logger:       logging.NewLogger("local_api"),
 	}
 }
 
-func (api *LocalShardApi) setAsP2pRequestHandlersIfAllowed(
+func (api *localShardApiRo) shardId() types.ShardId {
+	return api.shard
+}
+
+func (api *localShardApiRo) setAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
 	networkManager network.Manager,
 	logger logging.Logger,
 ) error {
-	return SetRawApiRequestHandlers(ctx, api.ShardId, api, networkManager, api.readonly, logger)
+	return setRawApiRequestHandlers(
+		ctx,
+		reflect.TypeFor[NetworkTransportProtocolRo](),
+		reflect.TypeFor[ShardApiRo](),
+		api,
+		api.shard,
+		apiNameRo,
+		networkManager,
+		logger)
 }
 
-func (api *LocalShardApi) setNodeApi(nodeApi NodeApi) {
+func (api *localShardApiRo) setNodeApi(nodeApi NodeApi) {
 	api.nodeApi = nodeApi
 }

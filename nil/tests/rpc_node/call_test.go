@@ -2,6 +2,9 @@ package tests
 
 import (
 	"context"
+	"sync/atomic"
+	"testing"
+
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
@@ -15,8 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/stretchr/testify/suite"
-	"sync/atomic"
-	"testing"
 )
 
 type SuiteRpcNodeCall struct {
@@ -39,7 +40,7 @@ func (m *validatorNetworkManager) GetPeersForProtocol(protocol network.ProtocolI
 
 func makeValidatorNetworkManagerFactory(archiveNodePeerId *atomic.Value) NetworkManagerFactory {
 	getPeersForProtocol := func(nm network.Manager, protocol network.ProtocolID) []network.PeerID {
-		if protocol == "/shard/2/rawapi/Call" {
+		if protocol == "/shard/2/rawapi_ro/Call" {
 			peerId, ok := archiveNodePeerId.Load().(network.PeerID)
 			check.PanicIfNot(ok && peerId != "")
 			return []network.PeerID{peerId}

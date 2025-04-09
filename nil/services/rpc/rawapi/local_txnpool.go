@@ -9,8 +9,9 @@ import (
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
-func (api *LocalShardApi) SendTransaction(ctx context.Context, encoded []byte) (txnpool.DiscardReason, error) {
-	if api.txnpool == nil {
+func (api *localShardApiRw) SendTransaction(ctx context.Context, encoded []byte) (txnpool.DiscardReason, error) {
+	// FIXME: move txnpool to rwApi!!
+	if api.roApi.txnpool == nil {
 		return 0, errors.New("transaction pool is not available")
 	}
 
@@ -19,19 +20,19 @@ func (api *LocalShardApi) SendTransaction(ctx context.Context, encoded []byte) (
 		return 0, fmt.Errorf("failed to decode transaction: %w", err)
 	}
 
-	reasons, err := api.txnpool.Add(ctx, extTxn.ToTransaction())
+	reasons, err := api.roApi.txnpool.Add(ctx, extTxn.ToTransaction())
 	if err != nil {
 		return 0, err
 	}
 	return reasons[0], nil
 }
 
-func (api *LocalShardApi) GetTxpoolStatus(ctx context.Context) (uint64, error) {
+func (api *localShardApiRo) GetTxpoolStatus(ctx context.Context) (uint64, error) {
 	return uint64(api.txnpool.GetSize()), nil
 }
 
-func (api *LocalShardApi) GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error) {
-	txns, err := api.txnpool.Peek(0)
+func (api *localShardApiRo) GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error) {
+	txns, err := api.txnpool.Peek(api.txnpool.GetQueue().Len())
 	if err != nil {
 		return nil, err
 	}

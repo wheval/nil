@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/client"
-	"github.com/NilFoundation/nil/nil/common/assert"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
@@ -213,25 +212,32 @@ func getRawApi(
 		panic("unsupported run mode for raw API")
 	}
 
-	shardApis := make(map[types.ShardId]rawapi.ShardApi)
+	nodeApiBuilder := rawapi.NodeApiBuilder()
 	for shardId := range types.ShardId(cfg.NShards) {
 		var err error
 		if slices.Contains(myShards, uint(shardId)) {
-			shardApis[shardId] = rawapi.NewLocalShardApi(shardId, database, txnPools[shardId], readonly, cfg.EnableDevApi)
-			if assert.Enable {
-				api, ok := shardApis[shardId].(*rawapi.LocalShardApi)
-				check.PanicIfNot(ok)
-				shardApis[shardId], err = rawapi.NewLocalRawApiAccessor(shardId, api)
+			err = nodeApiBuilder.WithLocalShardApiRo(shardId, database, txnPools[shardId], cfg.EnableDevApi)
+			if err != nil {
+				return nil, err
+			}
+			if !readonly {
+				err = nodeApiBuilder.WithLocalShardApiRw(shardId, database, txnPools[shardId], cfg.EnableDevApi)
+				if err != nil {
+					return nil, err
+				}
 			}
 		} else {
-			shardApis[shardId], err = rawapi.NewNetworkRawApiAccessor(shardId, networkManager)
-		}
-		if err != nil {
-			return nil, err
+			err = nodeApiBuilder.WithNetworkShardApiClientRo(shardId, networkManager)
+			if err != nil {
+				return nil, err
+			}
+			err = nodeApiBuilder.WithNetworkShardApiClientRw(shardId, networkManager)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	rawApi := rawapi.NewNodeApiOverShardApis(shardApis)
-	return rawApi, nil
+	return nodeApiBuilder.BuildAndReset(), nil
 }
 
 func validateArchiveNodeConfig(_ *Config, nm network.Manager) error {

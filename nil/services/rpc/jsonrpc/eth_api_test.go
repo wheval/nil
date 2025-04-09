@@ -28,16 +28,14 @@ func NewPools(ctx context.Context, t *testing.T, n int) map[types.ShardId]txnpoo
 func NewTestEthAPI(ctx context.Context, t *testing.T, db db.DB, nShards int) *APIImpl {
 	t.Helper()
 
-	shardApis := make(map[types.ShardId]rawapi.ShardApi)
 	pools := NewPools(ctx, t, nShards)
+
+	nodeApiBuilder := rawapi.NodeApiBuilder()
 	for shardId := range types.ShardId(nShards) {
-		var err error
-		shardApi := rawapi.NewLocalShardApi(shardId, db, pools[shardId], false, false)
-		shardApis[shardId], err = rawapi.NewLocalRawApiAccessor(shardId, shardApi)
-		require.NoError(t, err)
+		require.NoError(t, nodeApiBuilder.WithLocalShardApiRo(shardId, db, pools[shardId], false))
+		require.NoError(t, nodeApiBuilder.WithLocalShardApiRw(shardId, db, pools[shardId], false))
 	}
-	rawApi := rawapi.NewNodeApiOverShardApis(shardApis)
-	return NewEthAPI(ctx, rawApi, db, true, false)
+	return NewEthAPI(ctx, nodeApiBuilder.BuildAndReset(), db, true, false)
 }
 
 func TestGetTransactionReceipt(t *testing.T) {
