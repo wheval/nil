@@ -46,10 +46,9 @@ func (suite *SuiteTxnPoolApi) SetupSuite() {
 	suite.Require().NoError(err)
 	defer database.Close()
 
-	nodeApiBuilder := rawapi.NodeApiBuilder()
-	suite.Require().NoError(
-		nodeApiBuilder.WithLocalShardApiRo(types.MainShardId, database, suite.pool, false))
-	suite.api = nodeApiBuilder.BuildAndReset()
+	suite.api = rawapi.NodeApiBuilder(database, nil).
+		WithLocalShardApiRo(types.MainShardId, suite.pool).
+		BuildAndReset()
 	suite.txnpoolApi = NewTxPoolAPI(suite.api, logging.NewLogger("Test"))
 	suite.Require().NoError(err)
 }

@@ -10,15 +10,22 @@ import (
 
 type nodeApiBuilder struct {
 	nodeApi *nodeApiOverShardApis
+
+	// common dependencies
+	db             db.ReadOnlyDB
+	networkManager network.Manager
 }
 
-func NodeApiBuilder() *nodeApiBuilder {
+func NodeApiBuilder(db db.DB, networkManager network.Manager) *nodeApiBuilder {
 	return &nodeApiBuilder{
 		nodeApi: &nodeApiOverShardApis{
 			apisRo:  make(map[types.ShardId]ShardApiRo),
 			apisRw:  make(map[types.ShardId]ShardApiRw),
+			apisDev: make(map[types.ShardId]ShardApiDev),
 			allApis: make([]shardApiBase, 0),
 		},
+		db:             db,
+		networkManager: networkManager,
 	}
 }
 
@@ -31,60 +38,49 @@ func (nb *nodeApiBuilder) BuildAndReset() NodeApi {
 	return &rv
 }
 
-func (nb *nodeApiBuilder) WithLocalShardApiRo(
-	shardId types.ShardId,
-	db db.ReadOnlyDB,
-	txnpool txnpool.Pool,
-	enableDevApi bool,
-) error {
-	var localShardApi ShardApiRo = newLocalShardApiRo(shardId, db, txnpool, enableDevApi)
+func (nb *nodeApiBuilder) WithLocalShardApiRo(shardId types.ShardId, txnpool txnpool.Pool) *nodeApiBuilder {
+	var localShardApi ShardApiRo = newLocalShardApiRo(shardId, nb.db, txnpool)
 	if assert.Enable {
-		var err error
-		localShardApi, err = newShardApiClientDirectEmulatorRo(localShardApi)
-		if err != nil {
-			return err
-		}
+		localShardApi = newShardApiClientDirectEmulatorRo(localShardApi)
 	}
 	nb.nodeApi.apisRo[shardId] = localShardApi
 	nb.nodeApi.allApis = append(nb.nodeApi.allApis, localShardApi)
-	return nil
+	return nb
 }
 
-func (nb *nodeApiBuilder) WithLocalShardApiRw(
-	shardId types.ShardId,
-	db db.ReadOnlyDB,
-	txnpool txnpool.Pool,
-	enableDevApi bool,
-) error {
-	var localShardApi ShardApiRw = newLocalShardApiRw(newLocalShardApiRo(shardId, db, txnpool, enableDevApi))
+func (nb *nodeApiBuilder) WithLocalShardApiRw(shardId types.ShardId, txnpool txnpool.Pool) *nodeApiBuilder {
+	var localShardApi ShardApiRw = newLocalShardApiRw(newLocalShardApiRo(shardId, nb.db, txnpool))
 	if assert.Enable {
-		var err error
-		localShardApi, err = newShardApiClientDirectEmulatorRw(localShardApi)
-		if err != nil {
-			return err
-		}
+		localShardApi = newShardApiClientDirectEmulatorRw(localShardApi)
 	}
 	nb.nodeApi.apisRw[shardId] = localShardApi
 	nb.nodeApi.allApis = append(nb.nodeApi.allApis, localShardApi)
-	return nil
+	return nb
 }
 
-func (nb *nodeApiBuilder) WithNetworkShardApiClientRo(shardId types.ShardId, networkManager network.Manager) error {
-	networkShardApiClient, err := newShardApiClientNetworkRo(shardId, networkManager)
-	if err != nil {
-		return err
-	}
+func (nb *nodeApiBuilder) WithNetworkShardApiClientRo(shardId types.ShardId) *nodeApiBuilder {
+	networkShardApiClient := newShardApiClientNetworkRo(shardId, nb.networkManager)
 	nb.nodeApi.apisRo[shardId] = networkShardApiClient
 	nb.nodeApi.allApis = append(nb.nodeApi.allApis, networkShardApiClient)
-	return nil
+	return nb
 }
 
-func (nb *nodeApiBuilder) WithNetworkShardApiClientRw(shardId types.ShardId, networkManager network.Manager) error {
-	networkShardApiClient, err := newShardApiClientNetworkRw(shardId, networkManager)
-	if err != nil {
-		return err
-	}
+func (nb *nodeApiBuilder) WithNetworkShardApiClientRw(shardId types.ShardId) *nodeApiBuilder {
+	networkShardApiClient := newShardApiClientNetworkRw(shardId, nb.networkManager)
 	nb.nodeApi.apisRw[shardId] = networkShardApiClient
 	nb.nodeApi.allApis = append(nb.nodeApi.allApis, networkShardApiClient)
-	return nil
+	return nb
+}
+
+func (nb *nodeApiBuilder) WithLocalShardApiDev(shardId types.ShardId) *nodeApiBuilder {
+	nb.nodeApi.apisDev[shardId] = newLocalShardApiDev(shardId)
+	nb.nodeApi.allApis = append(nb.nodeApi.allApis, nb.nodeApi.apisDev[shardId])
+	return nb
+}
+
+func (nb *nodeApiBuilder) WithNetworkShardApiClientDev(shardId types.ShardId) *nodeApiBuilder {
+	networkDevApiClient := newShardApiClientNetworkDev(shardId, nb.networkManager)
+	nb.nodeApi.apisDev[shardId] = networkDevApiClient
+	nb.nodeApi.allApis = append(nb.nodeApi.allApis, networkDevApiClient)
+	return nb
 }

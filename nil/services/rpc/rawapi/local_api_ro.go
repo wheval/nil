@@ -28,16 +28,14 @@ func newLocalShardApiRo(
 	shardId types.ShardId,
 	db db.ReadOnlyDB,
 	txnpool txnpool.Pool,
-	enableDevApi bool,
 ) *localShardApiRo {
 	stateAccessor := execution.NewStateAccessor()
 	return &localShardApiRo{
-		db:           db,
-		accessor:     stateAccessor,
-		shard:        shardId,
-		txnpool:      txnpool,
-		enableDevApi: enableDevApi,
-		logger:       logging.NewLogger("local_api"),
+		db:       db,
+		accessor: stateAccessor,
+		shard:    shardId,
+		txnpool:  txnpool,
+		logger:   logging.NewLogger("local_api"),
 	}
 }
 

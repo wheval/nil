@@ -46,6 +46,9 @@ type NetworkTransportProtocolRo interface {
 
 type NetworkTransportProtocolRw interface {
 	SendTransaction(pb.SendTransactionRequest) pb.SendTransactionResponse
+}
+
+type NetworkTransportProtocolDev interface {
 	DoPanicOnShard() pb.Uint64Response
 }
 

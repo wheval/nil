@@ -2,6 +2,7 @@ package rawapi
 
 import (
 	"context"
+	"github.com/NilFoundation/nil/nil/common/check"
 	"reflect"
 
 	"github.com/NilFoundation/nil/nil/internal/network"
@@ -18,18 +19,22 @@ var (
 	_ shardApiRequestPerformerSetter = (*shardApiClientRw)(nil)
 )
 
-func newShardApiClientNetworkRw(shardId types.ShardId, networkManager network.Manager) (*shardApiClientRw, error) {
-	return newShardApiClientNetwork[*shardApiClientRw](
+func newShardApiClientNetworkRw(shardId types.ShardId, networkManager network.Manager) *shardApiClientRw {
+	client, err := newShardApiClientNetwork[*shardApiClientRw](
 		shardId,
 		apiNameRw,
 		networkManager,
 		reflect.TypeFor[ShardApiRw](),
 		reflect.TypeFor[NetworkTransportProtocolRw]())
+	check.PanicIfErr(err)
+	return client
 }
 
-func newShardApiClientDirectEmulatorRw(shardApi ShardApiRw) (*shardApiClientRw, error) {
-	return newShardApiClientDirectEmulator[ShardApiRw, *shardApiClientRw](
+func newShardApiClientDirectEmulatorRw(shardApi ShardApiRw) *shardApiClientRw {
+	client, err := newShardApiClientDirectEmulator[ShardApiRw, *shardApiClientRw](
 		apiNameRw, shardApi, reflect.TypeFor[ShardApiRw](), reflect.TypeFor[NetworkTransportProtocolRw]())
+	check.PanicIfErr(err)
+	return client
 }
 
 func (api *shardApiClientRw) setShardApiRequestPerformer(requestPerformer shardApiRequestPerformer) {

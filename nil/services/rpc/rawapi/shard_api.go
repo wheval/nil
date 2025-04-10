@@ -72,5 +72,12 @@ type ShardApiRw interface {
 	shardApiBase
 
 	SendTransaction(ctx context.Context, transaction []byte) (txnpool.DiscardReason, error)
+}
+
+const apiNameDev = "rawapi_dev"
+
+type ShardApiDev interface {
+	shardApiBase
+
 	DoPanicOnShard(ctx context.Context) (uint64, error)
 }

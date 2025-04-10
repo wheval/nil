@@ -212,29 +212,21 @@ func getRawApi(
 		panic("unsupported run mode for raw API")
 	}
 
-	nodeApiBuilder := rawapi.NodeApiBuilder()
+	nodeApiBuilder := rawapi.NodeApiBuilder(database, networkManager)
 	for shardId := range types.ShardId(cfg.NShards) {
-		var err error
 		if slices.Contains(myShards, uint(shardId)) {
-			err = nodeApiBuilder.WithLocalShardApiRo(shardId, database, txnPools[shardId], cfg.EnableDevApi)
-			if err != nil {
-				return nil, err
-			}
+			nodeApiBuilder.WithLocalShardApiRo(shardId, txnPools[shardId])
 			if !readonly {
-				err = nodeApiBuilder.WithLocalShardApiRw(shardId, database, txnPools[shardId], cfg.EnableDevApi)
-				if err != nil {
-					return nil, err
+				nodeApiBuilder.WithLocalShardApiRw(shardId, txnPools[shardId])
+				if cfg.EnableDevApi {
+					nodeApiBuilder.WithLocalShardApiDev(shardId)
 				}
 			}
 		} else {
-			err = nodeApiBuilder.WithNetworkShardApiClientRo(shardId, networkManager)
-			if err != nil {
-				return nil, err
-			}
-			err = nodeApiBuilder.WithNetworkShardApiClientRw(shardId, networkManager)
-			if err != nil {
-				return nil, err
-			}
+			nodeApiBuilder.
+				WithNetworkShardApiClientRo(shardId).
+				WithNetworkShardApiClientRw(shardId).
+				WithNetworkShardApiClientDev(shardId)
 		}
 	}
 	return nodeApiBuilder.BuildAndReset(), nil

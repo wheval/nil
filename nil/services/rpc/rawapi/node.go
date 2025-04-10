@@ -18,8 +18,9 @@ import (
 )
 
 type nodeApiOverShardApis struct {
-	apisRo map[types.ShardId]ShardApiRo
-	apisRw map[types.ShardId]ShardApiRw
+	apisRo  map[types.ShardId]ShardApiRo
+	apisRw  map[types.ShardId]ShardApiRw
+	apisDev map[types.ShardId]ShardApiDev
 
 	allApis []shardApiBase
 }
@@ -320,7 +321,7 @@ func (api *nodeApiOverShardApis) ClientVersion(ctx context.Context) (string, err
 
 func (api *nodeApiOverShardApis) DoPanicOnShard(ctx context.Context, shardId types.ShardId) (uint64, error) {
 	methodName := methodNameChecked("DoPanicOnShard")
-	shardApi, ok := api.apisRw[shardId]
+	shardApi, ok := api.apisDev[shardId]
 	if !ok {
 		return 0, makeShardNotFoundError(methodName, shardId)
 	}

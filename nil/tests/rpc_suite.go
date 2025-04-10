@@ -112,10 +112,11 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 
 	if cfg.RunMode == nilservice.CollatorsOnlyRunMode {
 		service := <-serviceInterop
-		nodeApiBuilder := rawapi.NodeApiBuilder()
+		nodeApiBuilder := rawapi.NodeApiBuilder(s.Db, nil)
 		for shardId := range types.ShardId(s.ShardsNum) {
-			s.Require().NoError(nodeApiBuilder.WithLocalShardApiRo(shardId, s.Db, service.TxnPools[shardId], false))
-			s.Require().NoError(nodeApiBuilder.WithLocalShardApiRw(shardId, s.Db, service.TxnPools[shardId], false))
+			nodeApiBuilder.
+				WithLocalShardApiRo(shardId, service.TxnPools[shardId]).
+				WithLocalShardApiRw(shardId, service.TxnPools[shardId])
 		}
 		localApi := nodeApiBuilder.BuildAndReset()
 		c, err := client.NewEthClient(s.Context, s.Db, localApi, logging.NewFromZerolog(zerolog.New(os.Stderr)))
