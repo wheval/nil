@@ -845,6 +845,12 @@ importers:
 
   rollup-bridge-contracts:
     dependencies:
+      '@nilfoundation/niljs':
+        specifier: 0.25.0
+        version: link:../niljs
+      '@nilfoundation/smart-contracts':
+        specifier: 0.7.0
+        version: link:../smart-contracts
       '@openzeppelin/contracts':
         specifier: ^5.1.0
         version: 5.2.0
