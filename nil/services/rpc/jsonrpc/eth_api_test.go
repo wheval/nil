@@ -33,7 +33,7 @@ func NewTestEthAPI(ctx context.Context, t *testing.T, db db.DB, nShards int) *AP
 	nodeApiBuilder := rawapi.NodeApiBuilder(db, nil)
 	for shardId := range types.ShardId(nShards) {
 		nodeApiBuilder.
-			WithLocalShardApiRo(shardId, pools[shardId]).
+			WithLocalShardApiRo(shardId).
 			WithLocalShardApiRw(shardId, pools[shardId])
 	}
 	return NewEthAPI(ctx, nodeApiBuilder.BuildAndReset(), db, true, false)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"slices"
 	"sync"
 	"syscall"
 	"time"
@@ -193,43 +192,42 @@ func getRawApi(
 	networkManager network.Manager,
 	database db.DB,
 	txnPools map[types.ShardId]txnpool.Pool,
-) (rawapi.NodeApi, error) {
-	readonly := false
-	var myShards []uint
-	switch cfg.RunMode {
-	case BlockReplayRunMode:
-		txnPools = nil
-		fallthrough
-	case ArchiveRunMode:
-		readonly = true
-		fallthrough
-	case NormalRunMode:
-		myShards = cfg.GetMyShards()
-	case RpcRunMode:
-	case CollatorsOnlyRunMode:
-		return nil, nil
-	default:
-		panic("unsupported run mode for raw API")
-	}
-
+) rawapi.NodeApi {
 	nodeApiBuilder := rawapi.NodeApiBuilder(database, networkManager)
-	for shardId := range types.ShardId(cfg.NShards) {
-		if slices.Contains(myShards, uint(shardId)) {
-			nodeApiBuilder.WithLocalShardApiRo(shardId, txnPools[shardId])
-			if !readonly {
-				nodeApiBuilder.WithLocalShardApiRw(shardId, txnPools[shardId])
-				if cfg.EnableDevApi {
-					nodeApiBuilder.WithLocalShardApiDev(shardId)
-				}
-			}
-		} else {
+
+	switch cfg.RunMode {
+	case RpcRunMode:
+		for shardId := range types.ShardId(cfg.NShards) {
 			nodeApiBuilder.
 				WithNetworkShardApiClientRo(shardId).
 				WithNetworkShardApiClientRw(shardId).
 				WithNetworkShardApiClientDev(shardId)
 		}
+
+	case ArchiveRunMode:
+		for shardId := range types.ShardId(cfg.NShards) {
+			nodeApiBuilder.WithLocalShardApiRo(shardId)
+		}
+
+	case NormalRunMode:
+		for shardId := range types.ShardId(cfg.NShards) {
+			nodeApiBuilder.WithLocalShardApiRo(shardId)
+			if cfg.IsShardActive(shardId) {
+				nodeApiBuilder.WithLocalShardApiRw(shardId, txnPools[shardId])
+			}
+			if cfg.EnableDevApi {
+				nodeApiBuilder.WithLocalShardApiDev(shardId)
+			}
+		}
+
+	case BlockReplayRunMode:
+		nodeApiBuilder.WithLocalShardApiRo(cfg.Replay.ShardId)
+
+	case CollatorsOnlyRunMode:
+		return nil
 	}
-	return nodeApiBuilder.BuildAndReset(), nil
+
+	return nodeApiBuilder.BuildAndReset()
 }
 
 func validateArchiveNodeConfig(_ *Config, nm network.Manager) error {
@@ -556,12 +554,7 @@ func CreateNode(
 			return nil
 		}))
 
-	rawApi, err := getRawApi(cfg, networkManager, database, txnPools)
-	if err != nil {
-		logger.Error().Err(err).Msg("Failed to create raw API")
-		return nil, err
-	}
-
+	rawApi := getRawApi(cfg, networkManager, database, txnPools)
 	funcs = addRpcServerWorkerIfEnabled(funcs, cfg, rawApi, syncersResult, database, logger)
 
 	if cfg.RunMode != CollatorsOnlyRunMode && cfg.RunMode != RpcRunMode {

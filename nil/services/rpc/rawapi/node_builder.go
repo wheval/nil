@@ -38,8 +38,8 @@ func (nb *nodeApiBuilder) BuildAndReset() NodeApi {
 	return &rv
 }
 
-func (nb *nodeApiBuilder) WithLocalShardApiRo(shardId types.ShardId, txnpool txnpool.Pool) *nodeApiBuilder {
-	var localShardApi ShardApiRo = newLocalShardApiRo(shardId, nb.db, txnpool)
+func (nb *nodeApiBuilder) WithLocalShardApiRo(shardId types.ShardId) *nodeApiBuilder {
+	var localShardApi ShardApiRo = newLocalShardApiRo(shardId, nb.db)
 	if assert.Enable {
 		localShardApi = newShardApiClientDirectEmulatorRo(localShardApi)
 	}
@@ -49,7 +49,7 @@ func (nb *nodeApiBuilder) WithLocalShardApiRo(shardId types.ShardId, txnpool txn
 }
 
 func (nb *nodeApiBuilder) WithLocalShardApiRw(shardId types.ShardId, txnpool txnpool.Pool) *nodeApiBuilder {
-	var localShardApi ShardApiRw = newLocalShardApiRw(newLocalShardApiRo(shardId, nb.db, txnpool))
+	var localShardApi ShardApiRw = newLocalShardApiRw(newLocalShardApiRo(shardId, nb.db), txnpool)
 	if assert.Enable {
 		localShardApi = newShardApiClientDirectEmulatorRw(localShardApi)
 	}

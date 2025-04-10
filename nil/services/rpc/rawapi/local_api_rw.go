@@ -7,17 +7,20 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
 type localShardApiRw struct {
-	roApi *localShardApiRo
+	roApi   *localShardApiRo
+	txnpool txnpool.Pool
 }
 
 var _ ShardApiRw = (*localShardApiRw)(nil)
 
-func newLocalShardApiRw(roApi *localShardApiRo) *localShardApiRw {
+func newLocalShardApiRw(roApi *localShardApiRo, txnpool txnpool.Pool) *localShardApiRw {
 	return &localShardApiRw{
-		roApi: roApi,
+		roApi:   roApi,
+		txnpool: txnpool,
 	}
 }
 

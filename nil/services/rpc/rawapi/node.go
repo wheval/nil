@@ -277,7 +277,7 @@ func (api *nodeApiOverShardApis) GetTransactionCount(
 ) (uint64, error) {
 	methodName := methodNameChecked("GetTransactionCount")
 	shardId := address.ShardId()
-	shardApi, ok := api.apisRo[shardId]
+	shardApi, ok := api.apisRw[shardId]
 	if !ok {
 		return 0, makeShardNotFoundError(methodName, shardId)
 	}
@@ -330,7 +330,7 @@ func (api *nodeApiOverShardApis) DoPanicOnShard(ctx context.Context, shardId typ
 
 func (api *nodeApiOverShardApis) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (uint64, error) {
 	methodName := methodNameChecked("GetTxpoolStatus")
-	shardApi, ok := api.apisRo[shardId]
+	shardApi, ok := api.apisRw[shardId]
 	if !ok {
 		return 0, makeShardNotFoundError(methodName, shardId)
 	}
@@ -346,7 +346,7 @@ func (api *nodeApiOverShardApis) GetTxpoolContent(
 	shardId types.ShardId,
 ) ([]*types.Transaction, error) {
 	methodName := methodNameChecked("GetTxpoolContent")
-	shardApi, ok := api.apisRo[shardId]
+	shardApi, ok := api.apisRw[shardId]
 	if !ok {
 		return nil, makeShardNotFoundError(methodName, shardId)
 	}

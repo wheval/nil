@@ -41,8 +41,6 @@ type ShardApiRo interface {
 		address types.Address,
 		blockReference rawapitypes.BlockReference,
 	) (map[types.TokenId]types.Value, error)
-	GetTransactionCount(
-		ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (uint64, error)
 	GetContract(
 		ctx context.Context,
 		address types.Address,
@@ -61,9 +59,6 @@ type ShardApiRo interface {
 	GetNumShards(ctx context.Context) (uint64, error)
 
 	ClientVersion(ctx context.Context) (string, error)
-
-	GetTxpoolStatus(ctx context.Context) (uint64, error)
-	GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error)
 }
 
 const apiNameRw = "rawapi_rw"
@@ -72,6 +67,11 @@ type ShardApiRw interface {
 	shardApiBase
 
 	SendTransaction(ctx context.Context, transaction []byte) (txnpool.DiscardReason, error)
+	GetTransactionCount(
+		ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (uint64, error)
+
+	GetTxpoolStatus(ctx context.Context) (uint64, error)
+	GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error)
 }
 
 const apiNameDev = "rawapi_dev"

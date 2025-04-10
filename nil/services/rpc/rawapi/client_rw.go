@@ -2,11 +2,12 @@ package rawapi
 
 import (
 	"context"
-	"github.com/NilFoundation/nil/nil/common/check"
 	"reflect"
 
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
@@ -46,6 +47,17 @@ func (api *shardApiClientRw) SendTransaction(ctx context.Context, transaction []
 		ctx, api, "SendTransaction", transaction)
 }
 
-func (api *shardApiClientRw) DoPanicOnShard(ctx context.Context) (uint64, error) {
-	return sendRequestAndGetResponseWithCallerMethodName[uint64](ctx, api, "DoPanicOnShard")
+func (api *shardApiClientRw) GetTransactionCount(
+	ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference,
+) (uint64, error) {
+	return sendRequestAndGetResponseWithCallerMethodName[uint64](
+		ctx, api, "GetTransactionCount", address, blockReference)
+}
+
+func (api *shardApiClientRw) GetTxpoolStatus(ctx context.Context) (uint64, error) {
+	return sendRequestAndGetResponseWithCallerMethodName[uint64](ctx, api, "GetTxpoolStatus")
+}
+
+func (api *shardApiClientRw) GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error) {
+	return sendRequestAndGetResponseWithCallerMethodName[[]*types.Transaction](ctx, api, "GetTxpoolContent")
 }

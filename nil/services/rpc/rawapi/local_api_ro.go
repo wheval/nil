@@ -9,14 +9,12 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/execution"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
 type localShardApiRo struct {
 	db       db.ReadOnlyDB
 	accessor *execution.StateAccessor
 	shard    types.ShardId
-	txnpool  txnpool.Pool
 
 	nodeApi NodeApi
 	logger  logging.Logger
@@ -24,17 +22,12 @@ type localShardApiRo struct {
 
 var _ ShardApiRo = (*localShardApiRo)(nil)
 
-func newLocalShardApiRo(
-	shardId types.ShardId,
-	db db.ReadOnlyDB,
-	txnpool txnpool.Pool,
-) *localShardApiRo {
+func newLocalShardApiRo(shardId types.ShardId, db db.ReadOnlyDB) *localShardApiRo {
 	stateAccessor := execution.NewStateAccessor()
 	return &localShardApiRo{
 		db:       db,
 		accessor: stateAccessor,
 		shard:    shardId,
-		txnpool:  txnpool,
 		logger:   logging.NewLogger("local_api"),
 	}
 }

@@ -247,7 +247,7 @@ func (api *localShardApiRo) getSmartContract(
 	return contract, nil
 }
 
-func (api *localShardApiRo) GetTransactionCount(
+func (api *localShardApiRw) GetTransactionCount(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
@@ -265,13 +265,13 @@ func (api *localShardApiRo) GetTransactionCount(
 		blockReference = rawapitypes.NamedBlockIdentifierAsBlockReference(rawapitypes.LatestBlock)
 	}
 
-	tx, err := api.db.CreateRoTx(ctx)
+	tx, err := api.roApi.db.CreateRoTx(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("cannot open tx to find account: %w", err)
 	}
 	defer tx.Rollback()
 
-	acc, err := api.getSmartContract(tx, address, blockReference)
+	acc, err := api.roApi.getSmartContract(tx, address, blockReference)
 	if err != nil {
 		if errors.Is(err, db.ErrKeyNotFound) {
 			return 0, nil

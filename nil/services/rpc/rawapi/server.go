@@ -29,7 +29,6 @@ type NetworkTransportProtocolRo interface {
 	GetBalance(request pb.AccountRequest) pb.BalanceResponse
 	GetCode(request pb.AccountRequest) pb.CodeResponse
 	GetTokens(request pb.AccountRequest) pb.TokensResponse
-	GetTransactionCount(pb.AccountRequest) pb.Uint64Response
 	GetContract(request pb.AccountRequest) pb.RawContractResponse
 
 	Call(pb.CallRequest) pb.CallResponse
@@ -39,13 +38,14 @@ type NetworkTransportProtocolRo interface {
 	GetNumShards() pb.Uint64Response
 
 	ClientVersion() pb.StringResponse
-
-	GetTxpoolStatus() pb.Uint64Response
-	GetTxpoolContent() pb.RawTxnsResponse
 }
 
 type NetworkTransportProtocolRw interface {
 	SendTransaction(pb.SendTransactionRequest) pb.SendTransactionResponse
+	GetTransactionCount(pb.AccountRequest) pb.Uint64Response
+
+	GetTxpoolStatus() pb.Uint64Response
+	GetTxpoolContent() pb.RawTxnsResponse
 }
 
 type NetworkTransportProtocolDev interface {

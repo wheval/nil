@@ -2,10 +2,10 @@ package rawapi
 
 import (
 	"context"
-	"github.com/NilFoundation/nil/nil/common/check"
 	"reflect"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/sszx"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -129,21 +129,6 @@ func (api *shardApiClientRo) GetNumShards(ctx context.Context) (uint64, error) {
 	return sendRequestAndGetResponseWithCallerMethodName[uint64](ctx, api, "GetNumShards")
 }
 
-func (api *shardApiClientRo) GetTransactionCount(
-	ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference,
-) (uint64, error) {
-	return sendRequestAndGetResponseWithCallerMethodName[uint64](
-		ctx, api, "GetTransactionCount", address, blockReference)
-}
-
 func (api *shardApiClientRo) ClientVersion(ctx context.Context) (string, error) {
 	return sendRequestAndGetResponseWithCallerMethodName[string](ctx, api, "ClientVersion")
-}
-
-func (api *shardApiClientRo) GetTxpoolStatus(ctx context.Context) (uint64, error) {
-	return sendRequestAndGetResponseWithCallerMethodName[uint64](ctx, api, "GetTxpoolStatus")
-}
-
-func (api *shardApiClientRo) GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error) {
-	return sendRequestAndGetResponseWithCallerMethodName[[]*types.Transaction](ctx, api, "GetTxpoolContent")
 }

@@ -115,7 +115,7 @@ func (s *RpcSuite) Start(cfg *nilservice.Config) {
 		nodeApiBuilder := rawapi.NodeApiBuilder(s.Db, nil)
 		for shardId := range types.ShardId(s.ShardsNum) {
 			nodeApiBuilder.
-				WithLocalShardApiRo(shardId, service.TxnPools[shardId]).
+				WithLocalShardApiRo(shardId).
 				WithLocalShardApiRw(shardId, service.TxnPools[shardId])
 		}
 		localApi := nodeApiBuilder.BuildAndReset()
