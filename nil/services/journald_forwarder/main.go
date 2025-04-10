@@ -213,9 +213,7 @@ func (s *LogServer) Export(
 
 	uniqueEvent := createUniqueColumnsEvent(eventsToStore)
 	for key := range existColumns {
-		if _, exists := uniqueEvent[key]; exists {
-			delete(uniqueEvent, key)
-		}
+		delete(uniqueEvent, key)
 	}
 
 	if len(uniqueEvent) == 0 {
