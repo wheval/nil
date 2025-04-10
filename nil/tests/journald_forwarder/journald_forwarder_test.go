@@ -167,74 +167,72 @@ func (s *SuiteJournaldForwarder) dropDatabase(dbName string) {
 }
 
 func (s *SuiteJournaldForwarder) TestLogDataInsert() {
-	s.Run("Check insert columns and values", func() {
-		valueString := "test log"
-		valueFloat := 123.01
-		valueMessage := "test log1"
+	valueString := "test log"
+	valueFloat := 123.01
+	valueMessage := "test log1"
 
-		logBuf := new(bytes.Buffer)
-		logger := logging.NewLoggerWithWriter("log1", logBuf).With().
-			Float64("valueFloat", valueFloat).Str("valueStr", valueString).Logger()
-		logger.Info().Err(errors.New("test error")).Msg(valueMessage)
+	logBuf := new(bytes.Buffer)
+	logger := logging.NewLoggerWithWriter("log1", logBuf).With().
+		Float64("valueFloat", valueFloat).Str("valueStr", valueString).Logger()
+	logger.Info().Err(errors.New("test error")).Msg(valueMessage)
 
-		s.Require().NoError(sendLogs(s.context, s.cfg.ListenAddr, logBuf.String()))
-		time.Sleep(1 * time.Second)
+	s.Require().NoError(sendLogs(s.context, s.cfg.ListenAddr, logBuf.String()))
+	time.Sleep(1 * time.Second)
 
-		schema1 := map[string]string{
-			"_HOSTNAME":     "String",
-			"_SYSTEMD_UNIT": "String",
-			"time":          "DateTime64(3)",
-			"level":         "String",
-			"error":         "String",
-			"message":       "String",
-			"caller":        "String",
-			"component":     "String",
-			"valueFloat":    "Float64",
-			"valueStr":      "String",
-		}
-		schemaRes := s.getTableSchema(s.connection)
-		s.Require().Equal(schema1, schemaRes)
+	schema1 := map[string]string{
+		"_HOSTNAME":     "String",
+		"_SYSTEMD_UNIT": "String",
+		"time":          "DateTime64(3)",
+		"level":         "String",
+		"error":         "String",
+		"message":       "String",
+		"caller":        "String",
+		"component":     "String",
+		"valueFloat":    "Float64",
+		"valueStr":      "String",
+	}
+	schemaRes := s.getTableSchema(s.connection)
+	s.Require().Equal(schema1, schemaRes)
 
-		query := fmt.Sprintf(
-			"SELECT component, valueStr, valueFloat FROM %s.%s WHERE message = '%s';",
-			journald_forwarder.DefaultDatabase, journald_forwarder.DefaultTable, valueMessage,
-		)
-		rows, err := s.connection.Query(s.context, query)
-		s.Require().NoError(err)
-		defer rows.Close()
+	query := fmt.Sprintf(
+		"SELECT component, valueStr, valueFloat FROM %s.%s WHERE message = '%s';",
+		journald_forwarder.DefaultDatabase, journald_forwarder.DefaultTable, valueMessage,
+	)
+	rows, err := s.connection.Query(s.context, query)
+	s.Require().NoError(err)
+	defer rows.Close()
 
-		s.Require().True(rows.Next())
+	s.Require().True(rows.Next())
 
-		var resComponent, resValueStr string
-		var resValueFloat float64
-		s.Require().NoError(rows.Scan(&resComponent, &resValueStr, &resValueFloat))
+	var resComponent, resValueStr string
+	var resValueFloat float64
+	s.Require().NoError(rows.Scan(&resComponent, &resValueStr, &resValueFloat))
 
-		s.Require().Equal("log1", resComponent)
-		s.Require().Equal(valueString, resValueStr)
-		s.Require().InEpsilon(valueFloat, resValueFloat, 0.0001)
+	s.Require().Equal("log1", resComponent)
+	s.Require().Equal(valueString, resValueStr)
+	s.Require().InEpsilon(valueFloat, resValueFloat, 0.0001)
 
-		logBuf = new(bytes.Buffer)
-		logger = logging.NewLoggerWithWriter("log2", logBuf).With().
-			Uint256(
-				"valueUInt256",
-				"115792089237316195423570985008687907853269984665640564039457584007913129639935").
-			Logger()
-		logger.Log().Msg("test log2")
-		s.Require().NoError(sendLogs(s.context, s.cfg.ListenAddr, logBuf.String()))
-		time.Sleep(1 * time.Second)
-		schema2 := schema1
-		schema2["valueUInt256"] = "UInt256"
-		schemaRes = s.getTableSchema(s.connection)
-		s.Require().Equal(schema2, schemaRes)
+	logBuf = new(bytes.Buffer)
+	logger = logging.NewLoggerWithWriter("log2", logBuf).With().
+		Uint256(
+			"valueUInt256",
+			"115792089237316195423570985008687907853269984665640564039457584007913129639935").
+		Logger()
+	logger.Log().Msg("test log2")
+	s.Require().NoError(sendLogs(s.context, s.cfg.ListenAddr, logBuf.String()))
+	time.Sleep(1 * time.Second)
+	schema2 := schema1
+	schema2["valueUInt256"] = "UInt256"
+	schemaRes = s.getTableSchema(s.connection)
+	s.Require().Equal(schema2, schemaRes)
 
-		logBuf = new(bytes.Buffer)
-		logger = logging.NewLoggerWithWriterStore("log2noCh", false, logBuf).With().Bool("newBool", false).Logger()
-		logger.Log().Msg("test log2notCh")
-		s.Require().NoError(sendLogs(s.context, s.cfg.ListenAddr, logBuf.String()))
-		time.Sleep(1 * time.Second)
-		schemaRes = s.getTableSchema(s.connection)
-		s.Require().Equal(schema2, schemaRes)
-	})
+	logBuf = new(bytes.Buffer)
+	logger = logging.NewLoggerWithWriterStore("log2noCh", false, logBuf).With().Bool("newBool", false).Logger()
+	logger.Log().Msg("test log2notCh")
+	s.Require().NoError(sendLogs(s.context, s.cfg.ListenAddr, logBuf.String()))
+	time.Sleep(1 * time.Second)
+	schemaRes = s.getTableSchema(s.connection)
+	s.Require().Equal(schema2, schemaRes)
 }
 
 func (s *SuiteJournaldForwarder) TestBatchLogDataInsert() {
@@ -293,6 +291,53 @@ func (s *SuiteJournaldForwarder) TestBatchLogDataInsert() {
 		schemaRes := s.getTableSchema(s.connection)
 		s.Require().Equal(schema, schemaRes)
 	})
+}
+
+func (s *SuiteJournaldForwarder) TestInsertedValue() {
+	x1 := 1
+	x2 := 2
+	x3 := 3
+	logBuf1 := new(bytes.Buffer)
+	logger1 := logging.NewLoggerWithWriter("log", logBuf1).With().
+		Int("x1", x1).Str("record", "first").Logger()
+
+	logBuf2 := new(bytes.Buffer)
+	logger2 := logging.NewLoggerWithWriter("log", logBuf2).With().
+		Int("x2", x2).Int("x3", x3).Str("record", "second").Logger()
+
+	logger1.Info().Msg("")
+	logger2.Info().Msg("")
+	s.Require().NoError(sendLogs(s.context, s.cfg.ListenAddr, logBuf1.String(), logBuf2.String()))
+	time.Sleep(1 * time.Second)
+
+	query := fmt.Sprintf(
+		"SELECT record, x1, x2, x3 FROM %s.%s;",
+		journald_forwarder.DefaultDatabase, journald_forwarder.DefaultTable,
+	)
+	rows, err := s.connection.Query(s.context, query)
+	s.Require().NoError(err)
+	defer rows.Close()
+
+	var tableX1, tableX2, tableX3 int64
+	var st string
+	for rows.Next() {
+		s.Require().NoError(rows.Scan(&st, &tableX1, &tableX2, &tableX3))
+
+		if st == "first" {
+			s.Require().Equal(int64(x1), tableX1)
+			s.Require().Equal(int64(0), tableX2)
+			s.Require().Equal(int64(0), tableX3)
+			continue
+		}
+		if st == "second" {
+			s.Require().Equal(int64(0), tableX1)
+			s.Require().Equal(int64(x2), tableX2)
+			s.Require().Equal(int64(x3), tableX3)
+			continue
+		}
+
+		s.Require().Failf("unexpected value for string variable: %s", st)
+	}
 }
 
 func createLogRecord(key, value string) *v1.LogRecord {
