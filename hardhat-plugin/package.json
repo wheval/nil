@@ -39,8 +39,5 @@
   },
   "files": [
     "dist"
-  ],
-  "simple-git-hooks": {
-    "pre-commit": "npm run lint"
-  }
+  ]
 }

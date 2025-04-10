@@ -3,6 +3,7 @@ import {
   type LocalECDSAKeySigner,
   type PublicClient,
   SmartAccountV1,
+  convertEthToWei,
 } from "@nilfoundation/niljs";
 import type { Address } from "viem";
 
@@ -23,7 +24,7 @@ export async function deployWallet(
     const faucets = await faucetClient.getAllFaucets();
     await faucetClient.topUpAndWaitUntilCompletion(
       {
-        amount: 1_000_000_000_000_000_000n,
+        amount: convertEthToWei(1),
         smartAccountAddress: address,
         faucetAddress: faucets.NIL,
       },
