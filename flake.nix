@@ -32,6 +32,7 @@
           nil = (pkgs.callPackage ./nix/nil.nix { solc = solc; });
           niljs = (pkgs.callPackage ./nix/niljs.nix { solc = solc; });
           clijs = (pkgs.callPackage ./nix/clijs.nix { nil = nil; });
+          nilhardhat = (pkgs.callPackage ./nix/nilhardhat.nix { solc = solc; });
           nildocs = (pkgs.callPackage ./nix/nildocs.nix {
             nil = nil;
             solc = solc;
@@ -81,6 +82,11 @@
           });
           clijs = (pkgs.callPackage ./nix/clijs.nix {
             nil = packages.nil;
+            enableTesting = true;
+          });
+          nilhardhat = (pkgs.callPackage ./nix/nilhardhat.nix {
+            nil = packages.nil;
+            solc = packages.solc;
             enableTesting = true;
           });
           nildocs = (pkgs.callPackage ./nix/nildocs.nix {
