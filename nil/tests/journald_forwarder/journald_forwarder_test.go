@@ -295,6 +295,55 @@ func (s *SuiteJournaldForwarder) TestBatchLogDataInsert() {
 	})
 }
 
+func (s *SuiteJournaldForwarder) TestInsertedValue() {
+	s.Run("Check insert", func() {
+		x1 := 1
+		x2 := 2
+		x3 := 3
+		logBuf1 := new(bytes.Buffer)
+		logger1 := logging.NewLoggerWithWriter("log", logBuf1).With().
+			Int("x1", x1).Str("record", "first").Logger()
+
+		logBuf2 := new(bytes.Buffer)
+		logger2 := logging.NewLoggerWithWriter("log", logBuf2).With().
+			Int("x2", x2).Int("x3", x3).Str("record", "second").Logger()
+
+		logger1.Info().Msg("")
+		logger2.Info().Msg("")
+		s.Require().NoError(sendLogs(s.context, s.cfg.ListenAddr, logBuf1.String(), logBuf2.String()))
+		time.Sleep(1 * time.Second)
+
+		query := fmt.Sprintf(
+			"SELECT record, x1, x2, x3 FROM %s.%s;",
+			journald_forwarder.DefaultDatabase, journald_forwarder.DefaultTable,
+		)
+		rows, err := s.connection.Query(s.context, query)
+		s.Require().NoError(err)
+		defer rows.Close()
+
+		var tableX1, tableX2, tableX3 int64
+		var st string
+		for rows.Next() {
+			s.Require().NoError(rows.Scan(&st, &tableX1, &tableX2, &tableX3))
+
+			if st == "first" {
+				s.Require().Equal(int64(x1), tableX1)
+				s.Require().Equal(int64(0), tableX2)
+				s.Require().Equal(int64(0), tableX3)
+				continue
+			}
+			if st == "second" {
+				s.Require().Equal(int64(0), tableX1)
+				s.Require().Equal(int64(x2), tableX2)
+				s.Require().Equal(int64(x3), tableX3)
+				continue
+			}
+
+			s.Require().Failf("unexpected value for string variable: %s", st)
+		}
+	})
+}
+
 func createLogRecord(key, value string) *v1.LogRecord {
 	return &v1.LogRecord{
 		Body: &common.AnyValue{
