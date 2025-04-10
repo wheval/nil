@@ -36,7 +36,7 @@ export async function deployWallet(
   const deployed = await smartAccount.checkDeploymentStatus();
   if (!deployed) {
     console.log("Deploying smartAccount", smartAccount.address);
-    await smartAccount.selfDeploy();
+    await smartAccount.selfDeploy(true);
   }
   return smartAccount;
 }
