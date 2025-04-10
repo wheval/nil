@@ -148,12 +148,6 @@ func addRunCommandFlags(runCmd *cobra.Command, cfg *Config) error {
 		cfg.L2ContractConfig.SmartAccountAddress,
 		"Smart account address for relayer to operate on L2",
 	)
-	runCmd.Flags().StringVar(
-		&cfg.L2ContractConfig.ContractABIPath,
-		"l2-contract-abi-path",
-		cfg.L2ContractConfig.ContractABIPath,
-		"ABI of nil L2BridgeMessenger contract",
-	)
 	runCmd.Flags().DurationVar(
 		&cfg.TransactionSenderConfig.DbPollInterval,
 		"l2-transaction-sender-db-poll-interval",

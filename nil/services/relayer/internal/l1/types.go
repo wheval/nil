@@ -30,7 +30,6 @@ type Event struct {
 	// Payload
 	Sender             common.Address `json:"sender"`
 	Target             common.Address `json:"target"`
-	Value              *big.Int       `json:"value"`
 	Nonce              *big.Int       `json:"nonce"`
 	Message            []byte         `json:"message"`
 	Type               uint8          `json:"messageType"`
@@ -45,8 +44,9 @@ func (ev *Event) validate() error {
 		ev.Type != depositTypeETH {
 		return fmt.Errorf("%w: unexpected deposit type: %d", ErrInvalidEvent, ev.Type)
 	}
-	if ev.Value == nil || ev.Nonce == nil {
-		return fmt.Errorf("%w: value (%v) and nonce (%v) fields cannot be empty", ErrInvalidEvent, ev.Value, ev.Nonce)
+	if ev.ExpiryTime == nil || ev.Nonce == nil {
+		return fmt.Errorf("%w: expiry time (%v) and nonce (%v) fields cannot be empty",
+			ErrInvalidEvent, ev.ExpiryTime, ev.Nonce)
 	}
 	return nil
 }

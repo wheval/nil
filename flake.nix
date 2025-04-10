@@ -29,7 +29,11 @@
       rec {
         packages = rec {
           solc = (pkgs.callPackage ./nix/solc.nix { });
-          nil = (pkgs.callPackage ./nix/nil.nix { solc = solc; });
+          rollup-bridge-contracts = (pkgs.callPackage ./nix/rollup-bridge-contracts.nix { });
+          nil = (pkgs.callPackage ./nix/nil.nix {
+            solc = solc;
+            rollup-bridge-contracts = rollup-bridge-contracts;
+          });
           niljs = (pkgs.callPackage ./nix/niljs.nix { solc = solc; });
           clijs = (pkgs.callPackage ./nix/clijs.nix { nil = nil; });
           nilhardhat = (pkgs.callPackage ./nix/nilhardhat.nix { solc = solc; });
@@ -51,14 +55,13 @@
           walletextension = (pkgs.callPackage ./nix/walletextension.nix { });
           uniswap = (pkgs.callPackage ./nix/uniswap.nix { });
           docsaibackend = (pkgs.callPackage ./nix/docsaibackend.nix { });
-          rollup-bridge-contracts =
-            (pkgs.callPackage ./nix/rollup-bridge-contracts.nix { });
         };
         checks = rec {
           nil = (pkgs.callPackage ./nix/nil.nix {
             enableRaceDetector = true;
             enableTesting = true;
             solc = packages.solc;
+            rollup-bridge-contracts = packages.rollup-bridge-contracts;
           });
 
           # split tests into groups
