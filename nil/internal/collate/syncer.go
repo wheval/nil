@@ -50,7 +50,7 @@ type Syncer struct {
 	topic string
 
 	db             db.DB
-	networkManager *network.Manager
+	networkManager network.Manager
 
 	logger logging.Logger
 
@@ -59,7 +59,7 @@ type Syncer struct {
 	validator *Validator
 }
 
-func NewSyncer(cfg *SyncerConfig, validator *Validator, db db.DB, networkManager *network.Manager) (*Syncer, error) {
+func NewSyncer(cfg *SyncerConfig, validator *Validator, db db.DB, networkManager network.Manager) (*Syncer, error) {
 	var waitForSync sync.WaitGroup
 	waitForSync.Add(1)
 

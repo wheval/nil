@@ -29,7 +29,10 @@ func (s *SuiteFaucet) SetupSuite() {
 		CollatorTickPeriodMs: 200,
 	}, 10225)
 
-	s.DefaultClient, _ = s.StartRPCNode(tests.WithDhtBootstrapByValidators, nil)
+	s.DefaultClient, _ = s.StartRPCNode(&tests.RpcNodeConfig{
+		WithDhtBootstrapByValidators: true,
+		ArchiveNodes:                 nil,
+	})
 	s.faucetClient, _ = tests.StartFaucetService(s.Context, s.T(), &s.Wg, s.DefaultClient)
 }
 

@@ -49,7 +49,10 @@ func (s *SuiteCliBase) SetupSuite() {
 		CollatorTickPeriodMs: 200,
 	}, s.basePort)
 
-	s.DefaultClient, s.endpoint = s.StartRPCNode(tests.WithDhtBootstrapByValidators, nil)
+	s.DefaultClient, s.endpoint = s.StartRPCNode(&tests.RpcNodeConfig{
+		WithDhtBootstrapByValidators: true,
+		ArchiveNodes:                 nil,
+	})
 	s.cometaEndpoint = rpc.GetSockPathService(s.T(), "cometa")
 
 	var fc *faucet.Client

@@ -15,14 +15,14 @@ import (
 
 var errBlockNotFound = errors.New("block not found")
 
-func (api *LocalShardApi) GetBalance(
+func (api *localShardApiRo) GetBalance(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
 ) (types.Value, error) {
 	shardId := address.ShardId()
-	if shardId != api.ShardId {
-		return types.Value{}, fmt.Errorf("address is not in the shard %d", api.ShardId)
+	if shardId != api.shardId() {
+		return types.Value{}, fmt.Errorf("address is not in the shard %d", api.shard)
 	}
 
 	tx, err := api.db.CreateRoTx(ctx)
@@ -41,14 +41,14 @@ func (api *LocalShardApi) GetBalance(
 	return acc.Balance, nil
 }
 
-func (api *LocalShardApi) GetCode(
+func (api *localShardApiRo) GetCode(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
 ) (types.Code, error) {
 	shardId := address.ShardId()
-	if shardId != api.ShardId {
-		return types.Code{}, fmt.Errorf("address is not in the shard %d", api.ShardId)
+	if shardId != api.shardId() {
+		return types.Code{}, fmt.Errorf("address is not in the shard %d", api.shard)
 	}
 
 	tx, err := api.db.CreateRoTx(ctx)
@@ -75,14 +75,14 @@ func (api *LocalShardApi) GetCode(
 	return code, nil
 }
 
-func (api *LocalShardApi) GetTokens(
+func (api *localShardApiRo) GetTokens(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
 ) (map[types.TokenId]types.Value, error) {
 	shardId := address.ShardId()
-	if shardId != api.ShardId {
-		return nil, fmt.Errorf("address is not in the shard %d", api.ShardId)
+	if shardId != api.shardId() {
+		return nil, fmt.Errorf("address is not in the shard %d", api.shard)
 	}
 
 	tx, err := api.db.CreateRoTx(ctx)
@@ -113,7 +113,7 @@ func (api *LocalShardApi) GetTokens(
 		}), nil
 }
 
-func (api *LocalShardApi) GetContract(
+func (api *localShardApiRo) GetContract(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
@@ -197,7 +197,7 @@ func makeProofBuilder(root *mpt.Reader, key []byte) proofBuilder {
 	}
 }
 
-func (api *LocalShardApi) getRawSmartContract(
+func (api *localShardApiRo) getRawSmartContract(
 	tx db.RoTx,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
@@ -214,7 +214,7 @@ func (api *LocalShardApi) getRawSmartContract(
 		return nil, nil, err
 	}
 
-	root := mpt.NewDbReader(tx, api.ShardId, db.ContractTrieTable)
+	root := mpt.NewDbReader(tx, api.shardId(), db.ContractTrieTable)
 	root.SetRootHash(block.SmartContractsRoot)
 	addressBytes := address.Hash().Bytes()
 	contractRaw, err := root.Get(addressBytes)
@@ -229,7 +229,7 @@ func (api *LocalShardApi) getRawSmartContract(
 	return contractRaw, makeProofBuilder(root, addressBytes), nil
 }
 
-func (api *LocalShardApi) getSmartContract(
+func (api *localShardApiRo) getSmartContract(
 	tx db.RoTx,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
@@ -247,7 +247,7 @@ func (api *LocalShardApi) getSmartContract(
 	return contract, nil
 }
 
-func (api *LocalShardApi) GetTransactionCount(
+func (api *localShardApiRw) GetTransactionCount(
 	ctx context.Context,
 	address types.Address,
 	blockReference rawapitypes.BlockReference,
@@ -265,13 +265,13 @@ func (api *LocalShardApi) GetTransactionCount(
 		blockReference = rawapitypes.NamedBlockIdentifierAsBlockReference(rawapitypes.LatestBlock)
 	}
 
-	tx, err := api.db.CreateRoTx(ctx)
+	tx, err := api.roApi.db.CreateRoTx(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("cannot open tx to find account: %w", err)
 	}
 	defer tx.Rollback()
 
-	acc, err := api.getSmartContract(tx, address, blockReference)
+	acc, err := api.roApi.getSmartContract(tx, address, blockReference)
 	if err != nil {
 		if errors.Is(err, db.ErrKeyNotFound) {
 			return 0, nil

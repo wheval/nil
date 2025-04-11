@@ -9,7 +9,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
-func (api *LocalShardApi) SendTransaction(ctx context.Context, encoded []byte) (txnpool.DiscardReason, error) {
+func (api *localShardApiRw) SendTransaction(ctx context.Context, encoded []byte) (txnpool.DiscardReason, error) {
 	if api.txnpool == nil {
 		return 0, errors.New("transaction pool is not available")
 	}
@@ -26,12 +26,12 @@ func (api *LocalShardApi) SendTransaction(ctx context.Context, encoded []byte) (
 	return reasons[0], nil
 }
 
-func (api *LocalShardApi) GetTxpoolStatus(ctx context.Context) (uint64, error) {
+func (api *localShardApiRw) GetTxpoolStatus(ctx context.Context) (uint64, error) {
 	return uint64(api.txnpool.GetSize()), nil
 }
 
-func (api *LocalShardApi) GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error) {
-	txns, err := api.txnpool.Peek(0)
+func (api *localShardApiRw) GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error) {
+	txns, err := api.txnpool.Peek(api.txnpool.GetSize())
 	if err != nil {
 		return nil, err
 	}

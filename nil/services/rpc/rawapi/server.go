@@ -16,6 +16,8 @@ import (
 
 var errRequestHandlerCreation = errors.New("failed to create request handler")
 
+// NetworkTransportProtocol* is a helper interface for associating the argument and result types of Api methods
+// with their Protobuf representations.
 type NetworkTransportProtocolRo interface {
 	GetBlockHeader(request pb.BlockRequest) pb.RawBlockResponse
 	GetFullBlockData(request pb.BlockRequest) pb.RawFullBlockResponse
@@ -27,7 +29,6 @@ type NetworkTransportProtocolRo interface {
 	GetBalance(request pb.AccountRequest) pb.BalanceResponse
 	GetCode(request pb.AccountRequest) pb.CodeResponse
 	GetTokens(request pb.AccountRequest) pb.TokensResponse
-	GetTransactionCount(pb.AccountRequest) pb.Uint64Response
 	GetContract(request pb.AccountRequest) pb.RawContractResponse
 
 	Call(pb.CallRequest) pb.CallResponse
@@ -37,36 +38,18 @@ type NetworkTransportProtocolRo interface {
 	GetNumShards() pb.Uint64Response
 
 	ClientVersion() pb.StringResponse
+}
+
+type NetworkTransportProtocolRw interface {
+	SendTransaction(pb.SendTransactionRequest) pb.SendTransactionResponse
+	GetTransactionCount(pb.AccountRequest) pb.Uint64Response
 
 	GetTxpoolStatus() pb.Uint64Response
 	GetTxpoolContent() pb.RawTxnsResponse
 }
 
-// NetworkTransportProtocol is a helper interface for associating the argument and result types of Api methods
-// with their Protobuf representations.
-type NetworkTransportProtocol interface {
-	NetworkTransportProtocolRo
-	SendTransaction(pb.SendTransactionRequest) pb.SendTransactionResponse
+type NetworkTransportProtocolDev interface {
 	DoPanicOnShard() pb.Uint64Response
-}
-
-func SetRawApiRequestHandlers(
-	ctx context.Context,
-	shardId types.ShardId,
-	api ShardApi,
-	manager *network.Manager,
-	readonly bool,
-	logger logging.Logger,
-) error {
-	var protocolInterfaceType, apiType reflect.Type
-	if readonly {
-		protocolInterfaceType = reflect.TypeFor[NetworkTransportProtocolRo]()
-		apiType = reflect.TypeFor[ShardApiRo]()
-	} else {
-		protocolInterfaceType = reflect.TypeFor[NetworkTransportProtocol]()
-		apiType = reflect.TypeFor[ShardApi]()
-	}
-	return setRawApiRequestHandlers(ctx, protocolInterfaceType, apiType, api, shardId, "rawapi", manager, logger)
 }
 
 func getRawApiRequestHandlers(
@@ -102,7 +85,7 @@ func setRawApiRequestHandlers(
 	api any,
 	shardId types.ShardId,
 	apiName string,
-	manager *network.Manager,
+	manager network.Manager,
 	logger logging.Logger,
 ) error {
 	requestHandlers, err := getRawApiRequestHandlers(protocolInterfaceType, apiType, api, shardId, apiName)

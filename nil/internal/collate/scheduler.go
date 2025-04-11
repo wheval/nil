@@ -42,7 +42,7 @@ type Scheduler struct {
 	consensus      Consensus
 	txFabric       db.DB
 	validator      *Validator
-	networkManager *network.Manager
+	networkManager network.Manager
 
 	params *Params
 
@@ -55,7 +55,7 @@ func NewScheduler(
 	validator *Validator,
 	txFabric db.DB,
 	consensus Consensus,
-	networkManager *network.Manager,
+	networkManager network.Manager,
 ) *Scheduler {
 	params := validator.params
 	return &Scheduler{
