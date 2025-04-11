@@ -1,12 +1,11 @@
+import { CometaClient } from "../../src/clients/CometaClient.js";
 import type { ContractData } from "../../src/clients/types/CometaTypes.js";
-import { base64ToHex } from "../../src/encoding/toHex.js";
-import {
-  CometaService,
-  type Hex,
-  HttpTransport,
-  convertEthToWei,
-  waitTillCompleted,
-} from "../../src/index.js";
+import { base64ToHex, toHex } from "../../src/encoding/toHex.js";
+import type { SmartAccountV1 } from "../../src/smart-accounts/SmartAccountV1/SmartAccountV1.js";
+import { HttpTransport } from "../../src/transport/HttpTransport.js";
+import type { Hex } from "../../src/types/Hex.js";
+import { convertEthToWei } from "../../src/utils/eth.js";
+import { waitTillCompleted } from "../../src/utils/receipt.js";
 import { testEnv } from "../testEnv.js";
 import { generateTestSmartAccount } from "./helpers.js";
 
@@ -26,18 +25,22 @@ const incrementerContract = `
 
 let contractAdress: Hex;
 let contractCompilationResult: ContractData;
+let sAcc: SmartAccountV1;
 
-const sAcc = await generateTestSmartAccount();
+beforeAll(async () => {
+  sAcc = await generateTestSmartAccount();
+});
 
-const cometaService = new CometaService({
+const cometaClient = new CometaClient({
   transport: new HttpTransport({
     endpoint: testEnv.cometaServiceEndpoint,
+    timeout: 60 * 1000,
   }),
   shardId: 1,
 });
 
 test("compile contract", async () => {
-  const res = await cometaService.compileContract({
+  const res = await cometaClient.compileContract({
     contractName: "Incrementer:Incrementer",
     compilerVersion: "0.8.28",
     settings: {
@@ -57,7 +60,10 @@ test("compile contract", async () => {
 });
 
 test("register contract", async () => {
-  const { address, hash } = await sAcc.deployContract({
+  const {
+    address,
+    tx: { hash },
+  } = await sAcc.deployContract({
     bytecode: base64ToHex(contractCompilationResult.initCode),
     abi: JSON.parse(contractCompilationResult.abi),
     args: [],
@@ -74,42 +80,59 @@ test("register contract", async () => {
   const code = await sAcc.client.getCode(address);
 
   expect(code).toBeDefined();
-  expect(async () => {
-    await cometaService.registerContract(
-      {
-        contractName: "Incrementer:Incrementer",
-        compilerVersion: "0.8.28",
-        settings: {
-          evmVersion: "cancun",
-        },
-        language: "Solidity",
-        sources: {
-          Incrementer: {
-            content: incrementerContract,
-          },
+
+  const a = await cometaClient.registerContract(
+    {
+      contractName: "Incrementer:Incrementer",
+      compilerVersion: "0.8.28",
+      settings: {
+        evmVersion: "cancun",
+      },
+      language: "Solidity",
+      sources: {
+        Incrementer: {
+          content: incrementerContract,
         },
       },
-      address,
-    );
-  }).not.toThrow();
+    },
+    address,
+  );
 });
 
 test("get abi", async () => {
-  const abi = await cometaService.getAbi(contractAdress);
+  const abi = await cometaClient.getAbi(contractAdress);
+
   expect(abi).toBeDefined();
   expect(abi).toBe(contractCompilationResult.abi);
 });
 
 test("get source code", async () => {
-  const sourceCode = await cometaService.getSourceCode(contractAdress);
+  const sourceCode = await cometaClient.getSourceCode(contractAdress);
+
   expect(sourceCode).toBeDefined();
+
   const { Incrementer } = sourceCode;
+
   expect(Incrementer).toBe(incrementerContract);
 });
 
 test("get contract", async () => {
-  const contract = await cometaService.getContract(contractAdress);
+  const contract = await cometaClient.getContract(contractAdress);
+
   expect(contract).toBeDefined();
   expect(contract.name).toBe("Incrementer:Incrementer");
   expect(contract.sourceCode.Incrementer).toBe(incrementerContract);
+});
+
+test("decode transactions calldata", async () => {
+  const incrementFuncSelector = toHex(contractCompilationResult.methodIdentifiers["increment()"]);
+  const txData = await cometaClient.decodeTransactionsCallData([
+    {
+      address: contractAdress,
+      funcId: incrementFuncSelector,
+    },
+  ]);
+
+  expect(txData).toBeDefined();
+  expect(txData.includes("increment()")).toBe(true);
 });

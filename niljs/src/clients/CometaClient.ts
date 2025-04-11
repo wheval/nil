@@ -1,7 +1,7 @@
 import type { Hex } from "../types/Hex.js";
 import { BaseClient } from "./BaseClient.js";
-import type { CometaClientConfig } from "./types/Configs.js";
 import type { ContractData, Location, TransactionData } from "./types/CometaTypes.js";
+import type { CometaClientConfig } from "./types/Configs.js";
 
 /**
  * CometaClient is a client that interacts with the Cometa service.
