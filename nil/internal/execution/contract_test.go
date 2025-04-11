@@ -256,8 +256,8 @@ func TestAsyncCall(t *testing.T) {
 	callTransaction.MaxFeePerGas = defaultMaxFeePerGas
 	callTransaction.Data = calldata
 	callTransaction.To = addrCaller
-	txnHash := callTransaction.Hash()
 	res := state.AddAndHandleTransaction(ctx, callTransaction, dummyPayer{})
+	txnHash := callTransaction.Hash()
 	require.False(t, res.Failed())
 
 	require.Len(t, state.OutTransactions, 1)
@@ -278,8 +278,8 @@ func TestAsyncCall(t *testing.T) {
 	require.NoError(t, err)
 
 	callTransaction.Data = calldata
-	txnHash = callTransaction.Hash()
 	res = state.AddAndHandleTransaction(ctx, callTransaction, dummyPayer{})
+	txnHash = callTransaction.Hash()
 	require.False(t, res.Failed())
 
 	require.Len(t, state.OutTransactions, 2)
@@ -336,8 +336,8 @@ func TestSendTransaction(t *testing.T) {
 	callTransaction.Data = calldata
 	callTransaction.To = addrCaller
 	callTransaction.Seqno = 1
-	tx := callTransaction.Hash()
 	res := state.AddAndHandleTransaction(ctx, callTransaction, dummyPayer{})
+	tx := callTransaction.Hash()
 	require.False(t, res.Failed())
 	require.NotEmpty(t, state.Receipts)
 	require.True(t, state.Receipts[len(state.Receipts)-1].Success)

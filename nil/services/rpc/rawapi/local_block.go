@@ -133,7 +133,9 @@ func (api *LocalShardApi) getBlockByHash(
 	}
 	if withTransactions {
 		result.InTransactions = data.InTransactions()
+		result.InTxCounts = data.InTxCounts()
 		result.OutTransactions = data.OutTransactions()
+		result.OutTxCounts = data.OutTxCounts()
 		result.Receipts = data.Receipts()
 		result.Errors = make(map[common.Hash]string)
 		result.ChildBlocks = data.ChildBlocks()

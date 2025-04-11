@@ -69,20 +69,20 @@ func NewBlockGenerator(
 	ctx context.Context,
 	params BlockGeneratorParams,
 	txFabric db.DB,
-	block *types.Block,
+	prevBlock *types.Block,
 ) (*BlockGenerator, error) {
 	rwTx, err := txFabric.CreateRwTx(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	configAccessor, err := config.NewConfigAccessorFromBlock(ctx, txFabric, block, params.ShardId)
+	configAccessor, err := config.NewConfigAccessorFromBlock(ctx, txFabric, prevBlock, params.ShardId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config accessor: %w", err)
 	}
 
 	executionState, err := NewExecutionState(rwTx, params.ShardId, StateParams{
-		Block:          block,
+		Block:          prevBlock,
 		ConfigAccessor: configAccessor,
 		FeeCalculator:  params.FeeCalculator,
 		Mode:           params.ExecutionMode,
@@ -344,8 +344,14 @@ func (g *BlockGenerator) GenerateBlock(
 	return g.finalize(proposal.PrevBlockId+1, params)
 }
 
-func ValidateInternalTransaction(transaction *types.Transaction) error {
+func (es *ExecutionState) ValidateInternalTransaction(transaction *types.Transaction) error {
 	check.PanicIfNot(transaction.IsInternal())
+
+	nextTx := es.InTxCounts[transaction.From.ShardId()]
+	if transaction.TxId != nextTx {
+		return types.NewError(types.ErrorTxIdGap)
+	}
+	es.InTxCounts[transaction.From.ShardId()] = nextTx + 1
 
 	if transaction.IsDeploy() {
 		return ValidateDeployTransaction(transaction)
@@ -354,7 +360,7 @@ func ValidateInternalTransaction(transaction *types.Transaction) error {
 }
 
 func (g *BlockGenerator) handleInternalInTransaction(txn *types.Transaction) *ExecutionResult {
-	if err := ValidateInternalTransaction(txn); err != nil {
+	if err := g.executionState.ValidateInternalTransaction(txn); err != nil {
 		g.logger.Warn().Err(err).Msg("Invalid internal transaction")
 		return NewExecutionResult().SetError(types.KeepOrWrapError(types.ErrorValidation, err))
 	}
