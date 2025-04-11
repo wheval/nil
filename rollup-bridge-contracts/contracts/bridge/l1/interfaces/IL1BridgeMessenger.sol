@@ -59,12 +59,49 @@ interface IL1BridgeMessenger is IBridgeMessenger, IRelayMessage {
   /// executed on L2.
   error DepositMessageStillInQueue();
 
-   /*//////////////////////////////////////////////////////////////////////////
+  error ErrorInvalidMessageSender();
+
+  error ErrorInvalidMessageTarget();
+
+  error ErrorDuplicateWithdrawalClaim();
+
+  error ErrorInvalidMessageHash();
+
+  error ErrorFailedWithdrawalClaim();
+
+  error ErrorInvalidMessageType();
+
+  /*//////////////////////////////////////////////////////////////////////////
+                             EVENTS
+    //////////////////////////////////////////////////////////////////////////*/
+
+  /// @notice Emitted when a deposit message is cancelled.
+  /// @param messageHash The hash of the deposit message that was cancelled.
+  event DepositMessageCancelled(bytes32 messageHash);
+
+  event WithdrawalClaimed(
+    bytes32 indexed withdrawalMessageHash,
+    uint256 withdrawalMessageNonce,
+    uint256 merkleLeafIndex
+  );
+
+  /*//////////////////////////////////////////////////////////////////////////
                              MESSAGE STRUCTS   
     //////////////////////////////////////////////////////////////////////////*/
 
   struct AddressSlot {
     address value;
+  }
+
+  struct WithdrawalRequestParams {
+    NilConstants.MessageType messageType;
+    address messageSender;
+    address messageTarget;
+    uint256 messageNonce;
+    uint256 merkleLeafIndex;
+    bytes message;
+    bytes32 messageHash;
+    bytes32[] withdrawalProof;
   }
 
   /// @notice Gets the current deposit nonce.
@@ -89,16 +126,21 @@ interface IL1BridgeMessenger is IBridgeMessenger, IRelayMessage {
   /// @return The list of authorized bridge addresses.
   function getAuthorizedBridges() external view returns (address[] memory);
 
-  function computeMessageHash(
+  function computeWithdrawalMessageHash(
+    NilConstants.MessageType messageType,
     address messageSender,
     address messageTarget,
     uint256 messageNonce,
     bytes memory message
-  ) external pure returns (bytes32);
+  ) external view returns (bytes32);
 
-  /// @notice Emitted when a deposit message is cancelled.
-  /// @param messageHash The hash of the deposit message that was cancelled.
-  event DepositMessageCancelled(bytes32 messageHash);
+  function computeDepositMessageHash(
+    NilConstants.MessageType messageType,
+    address messageSender,
+    address messageTarget,
+    uint256 messageNonce,
+    bytes memory message
+  ) external view returns (bytes32);
 
   /*//////////////////////////////////////////////////////////////////////////
                            PUBLIC MUTATING FUNCTIONS
@@ -108,7 +150,9 @@ interface IL1BridgeMessenger is IBridgeMessenger, IRelayMessage {
   /// @param messageHash The hash of the deposit message to cancel.
   function cancelDeposit(bytes32 messageHash) external;
 
-  function claimFailedDeposit(bytes32 messageHash, bytes32[] calldata claimProof) external;
+  function claimFailedDeposit(bytes32 messageHash, uint256 merkleTreeLeafNonce, bytes32[] memory claimProof) external;
+
+  function claimWithdrawal(WithdrawalRequestParams calldata withdrawalRequestParams) external;
 
   /*//////////////////////////////////////////////////////////////////////////
                            RESTRICTED FUNCTIONS
