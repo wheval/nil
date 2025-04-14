@@ -14,7 +14,6 @@ using {
 } for TokenId global;
 
 library Nil {
-    uint private constant SEND_TRANSACTION = 0xfc;
     address private constant ASYNC_CALL = address(0xfd);
     address public constant VERIFY_SIGNATURE = address(0xfe);
     address public constant IS_INTERNAL_TRANSACTION = address(0xff);
@@ -246,21 +245,6 @@ library Nil {
         bytes memory callData
     ) internal {
         __Precompile__(SEND_REQUEST).precompileSendRequest{value: value}(dst, tokens, responseProcessingGas, context, callData);
-    }
-
-    /**
-     * @dev Sends a raw internal transaction using a special precompiled contract.
-     * @param transaction The transaction to be sent.
-     */
-    function sendTransaction(bytes memory transaction) internal {
-        uint transaction_size = transaction.length;
-        assembly {
-            // Call precompiled contract.
-            // Arguments: gas, precompiled address, value, input, input size, output, output size
-            if iszero(call(gas(), SEND_TRANSACTION, 0, add(transaction, 32), transaction_size, 0, 0)) {
-                revert(0, 0)
-            }
-        }
     }
 
     /**
