@@ -12,20 +12,19 @@ type shardApiClientDev struct {
 	shardApiRequestPerformer
 }
 
-var (
-	_ shardApiRequestPerformerSetter = (*shardApiClientDev)(nil)
-	_ ShardApiDev                    = (*shardApiClientDev)(nil)
-)
+var _ ShardApiDev = (*shardApiClientDev)(nil)
 
-func newShardApiClientNetworkDev(shardId types.ShardId, networkManager network.Manager) *shardApiClientDev {
-	client, err := newShardApiClientNetwork[ShardApiDev, NetworkTransportProtocolDev, *shardApiClientDev](
-		shardId, apiNameDev, networkManager)
-	check.PanicIfErr(err)
-	return client
+func constructShardApiClientDev(performer shardApiRequestPerformer) *shardApiClientDev {
+	return &shardApiClientDev{
+		shardApiRequestPerformer: performer,
+	}
 }
 
-func (api *shardApiClientDev) setShardApiRequestPerformer(requestPerformer shardApiRequestPerformer) {
-	api.shardApiRequestPerformer = requestPerformer
+func newShardApiClientNetworkDev(shardId types.ShardId, networkManager network.Manager) *shardApiClientDev {
+	client, err := newShardApiClientNetwork[shardApiClientDev, ShardApiDev, NetworkTransportProtocolDev](
+		constructShardApiClientDev, shardId, apiNameDev, networkManager)
+	check.PanicIfErr(err)
+	return client
 }
 
 func (api *shardApiClientDev) DoPanicOnShard(ctx context.Context) (uint64, error) {

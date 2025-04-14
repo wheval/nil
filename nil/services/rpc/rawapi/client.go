@@ -18,10 +18,6 @@ type shardApiRequestPerformer interface {
 	doApiRequest(ctx context.Context, codec *methodCodec, args ...any) ([]byte, error)
 }
 
-type shardApiRequestPerformerSetter interface {
-	setShardApiRequestPerformer(shardApiRequestPerformer)
-}
-
 func sendRequestAndGetResponseWithCallerMethodName[ResponseType any](
 	ctx context.Context,
 	api shardApiRequestPerformer,

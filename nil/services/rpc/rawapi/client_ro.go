@@ -16,27 +16,26 @@ type shardApiClientRo struct {
 	shardApiRequestPerformer
 }
 
-var (
-	_ shardApiRequestPerformerSetter = (*shardApiClientRo)(nil)
-	_ ShardApiRo                     = (*shardApiClientRo)(nil)
-)
+var _ ShardApiRo = (*shardApiClientRo)(nil)
+
+func constructShardApiClientRo(performer shardApiRequestPerformer) *shardApiClientRo {
+	return &shardApiClientRo{
+		shardApiRequestPerformer: performer,
+	}
+}
 
 func newShardApiClientNetworkRo(shardId types.ShardId, networkManager network.Manager) *shardApiClientRo {
-	client, err := newShardApiClientNetwork[ShardApiRo, NetworkTransportProtocolRo, *shardApiClientRo](
-		shardId, apiNameRo, networkManager)
+	client, err := newShardApiClientNetwork[shardApiClientRo, ShardApiRo, NetworkTransportProtocolRo](
+		constructShardApiClientRo, shardId, apiNameRo, networkManager)
 	check.PanicIfErr(err)
 	return client
 }
 
 func newShardApiClientDirectEmulatorRo(shardApi ShardApiRo) *shardApiClientRo {
-	client, err := newShardApiClientDirectEmulator[ShardApiRo, NetworkTransportProtocolRo, *shardApiClientRo](
-		apiNameRo, shardApi)
+	client, err := newShardApiClientDirectEmulator[shardApiClientRo, ShardApiRo, NetworkTransportProtocolRo](
+		constructShardApiClientRo, apiNameRo, shardApi)
 	check.PanicIfErr(err)
 	return client
-}
-
-func (api *shardApiClientRo) setShardApiRequestPerformer(requestPerformer shardApiRequestPerformer) {
-	api.shardApiRequestPerformer = requestPerformer
 }
 
 func (api *shardApiClientRo) GetBlockHeader(

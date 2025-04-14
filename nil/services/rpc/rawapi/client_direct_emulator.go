@@ -11,17 +11,15 @@ import (
 )
 
 func newShardApiClientDirectEmulator[
+	ClientType shardApiBase,
 	ShardApiType shardApiBase,
 	TransportType any,
-	T interface {
-		~*S
-		shardApiRequestPerformerSetter
-	},
-	S any,
+	F func(shardApiRequestPerformer) *ClientType,
 ](
+	construct F,
 	apiName string,
 	shardApi ShardApiType,
-) (T, error) {
+) (*ClientType, error) {
 	apiType := reflect.TypeFor[ShardApiType]()
 	transportType := reflect.TypeFor[TransportType]()
 
@@ -30,15 +28,15 @@ func newShardApiClientDirectEmulator[
 		return nil, err
 	}
 
-	var rv T = new(S)
-	rv.setShardApiRequestPerformer(&shardApiRequestPerformerDirectEmulator{
+	performer := &shardApiRequestPerformerDirectEmulator{
 		apiName:       apiName,
 		apiType:       apiType,
 		transportType: transportType,
 		shardApi:      shardApi,
 		codec:         codec,
-		derived:       rv,
-	})
+	}
+	rv := construct(performer)
+	performer.derived = rv
 	return rv, nil
 }
 
