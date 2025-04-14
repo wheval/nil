@@ -36,6 +36,7 @@ type Wrapper interface {
 		batchIndex string,
 	) error
 	PrepareBlobs(ctx context.Context, blobs []kzg4844.Blob) (*ethtypes.BlobTxSidecar, types.DataProofs, error)
+	ResetState(ctx context.Context, targetRoot common.Hash) error
 }
 
 type WrapperConfig struct {
@@ -207,6 +208,37 @@ func (r *wrapperImpl) logReceiptDetails(receipt *ethtypes.Receipt) {
 		Msg("transaction receipt received")
 }
 
+// ResetState resets contract state to specified `targetRoot`.
+func (r *wrapperImpl) ResetState(ctx context.Context, targetRoot common.Hash) error {
+	var tx *ethtypes.Transaction
+	if err := r.transactWithCtx(ctx, func(opts *bind.TransactOpts) error {
+		var err error
+		tx, err = r.rollupContract.ResetState(
+			opts,
+			targetRoot,
+		)
+		return err
+	}); err != nil {
+		return fmt.Errorf("ResetState transaction failed: %w", err)
+	}
+	r.logger.Info().
+		Hex("txHash", tx.Hash().Bytes()).
+		Int("gasLimit", int(tx.Gas())).
+		Int("cost", int(tx.Cost().Uint64())).
+		Msg("ResetState transaction sent")
+
+	receipt, err := r.waitForReceipt(ctx, tx.Hash())
+	if err != nil {
+		return fmt.Errorf("error during waiting for receipt: %w", err)
+	}
+	r.logReceiptDetails(receipt)
+	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
+		return errors.New("ResetState tx failed")
+	}
+
+	return err
+}
+
 type noopWrapper struct {
 	logger logging.Logger
 }
@@ -248,5 +280,10 @@ func (w *noopWrapper) CommitBatch(
 	batchIndex string,
 ) error {
 	w.logger.Debug().Msg("CommitBatch noop wrapper method called")
+	return nil
+}
+
+func (w *noopWrapper) ResetState(ctx context.Context, targetRoot common.Hash) error {
+	w.logger.Debug().Msg("ResetState noop wrapper method called")
 	return nil
 }
