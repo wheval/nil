@@ -168,8 +168,7 @@ func NewSendMoneyTransaction(t *testing.T, to types.Address, seqno types.Seqno) 
 
 	m := NewExecutionTransaction(types.MainSmartAccountAddress, types.MainSmartAccountAddress, seqno,
 		contracts.NewSmartAccountSendCallData(t, types.Code{},
-			DefaultGasLimit, DefaultSendValue,
-			[]types.TokenBalance{}, to, types.ExecutionTransactionKind))
+			DefaultSendValue, []types.TokenBalance{}, to))
 	require.NoError(t, m.Sign(MainPrivateKey))
 
 	return m

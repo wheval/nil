@@ -416,7 +416,7 @@ func (c *Client) getSendTransactionViaSmartContractRequest(ctx context.Context, 
 	bytecode types.Code, fee types.FeePack, value types.Value, tokens []types.TokenBalance,
 	contractAddress types.Address, pk *ecdsa.PrivateKey, isDeploy bool, id int,
 ) (*Request, error) {
-	calldataExt, err := client.CreateInternalTransactionPayload(ctx, bytecode, value, tokens, contractAddress, isDeploy)
+	calldataExt, err := client.CreateInternalTransactionPayload(bytecode, value, tokens, contractAddress, isDeploy)
 	if err != nil {
 		return nil, err
 	}

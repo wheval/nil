@@ -402,6 +402,12 @@ func (c *asyncCall) Run(state StateDB, input []byte, value *uint256.Int, caller 
 		return nil, types.NewVmError(types.ErrorPrecompileTooShortCallData)
 	}
 
+	cfgAccessor := state.GetConfigAccessor()
+	nShards, err := config.GetParamNShards(cfgAccessor)
+	if err != nil {
+		return nil, types.NewVmVerboseError(types.ErrorPrecompileConfigGetParamFailed, err.Error())
+	}
+
 	// Unpack arguments, skipping the first 4 bytes (function selector)
 	args, err := getPrecompiledMethod("precompileAsyncCall").Inputs.Unpack(input[4:])
 	if err != nil {
@@ -459,6 +465,10 @@ func (c *asyncCall) Run(state StateDB, input []byte, value *uint256.Int, caller 
 
 	if dst.ShardId().IsMainShard() {
 		return []byte("asyncCall failed: attempt to send transaction to main shard"), ErrTransactionToMainShard
+	}
+
+	if uint32(dst.ShardId()) >= nShards {
+		return nil, ErrShardIdIsTooBig
 	}
 
 	if forwardKind == types.ForwardKindNone {

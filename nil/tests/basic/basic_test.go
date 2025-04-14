@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	ssz "github.com/NilFoundation/fastssz"
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
@@ -141,19 +140,11 @@ func (s *SuiteRpc) TestRpcContractSendTransaction() {
 			callData, err = calleeAbi.Pack("add", val)
 			s.Require().NoError(err)
 
-			transactionToSend := &types.InternalTransactionPayload{
-				Data:      callData,
-				To:        calleeAddr,
-				RefundTo:  callerAddr,
-				BounceTo:  callerAddr,
-				Value:     types.NewValueFromUint64(callValue),
-				FeeCredit: s.GasToValue(feeCredit),
-			}
-			callData, err = transactionToSend.MarshalSSZ()
-			s.Require().NoError(err)
-
-			// now call Caller::send_transaction
-			callData, err = callerAbi.Pack("sendTransaction", callData)
+			// now call Caller::asyncCall
+			callData, err = callerAbi.Pack("asyncCall",
+				calleeAddr, callerAddr, callerAddr, s.GasToValue(feeCredit),
+				uint8(types.ForwardKindNone), types.NewValueFromUint64(callValue), callData,
+			)
 			s.Require().NoError(err)
 		}
 
@@ -269,7 +260,7 @@ func (s *SuiteRpc) TestRpcContractSendTransaction() {
 	})
 }
 
-func (s *SuiteRpc) TestRpcCallWithTransactionSend() { //nolint:maintidx
+func (s *SuiteRpc) TestRpcCallWithTransactionSend() {
 	pk, err := crypto.GenerateKey()
 	s.Require().NoError(err)
 
@@ -322,20 +313,7 @@ func (s *SuiteRpc) TestRpcCallWithTransactionSend() { //nolint:maintidx
 		s.NotZero(txnEstimation.FeeCredit.Uint64())
 	})
 
-	intTxn := &types.InternalTransactionPayload{
-		Data:        addCalldata,
-		To:          counterAddr,
-		FeeCredit:   txnEstimation.FeeCredit,
-		ForwardKind: types.ForwardKindNone,
-		Kind:        types.ExecutionTransactionKind,
-	}
-
-	intTxnData, err := intTxn.MarshalSSZ()
-	s.Require().NoError(err)
-
-	calldata, err := contracts.NewCallData(contracts.NameSmartAccount, "send", intTxnData)
-	s.Require().NoError(err)
-
+	calldata := contracts.NewSmartAccountSendCallData(s.T(), addCalldata, types.Value0, nil, counterAddr)
 	callerSeqno, err := s.Client.GetTransactionCount(s.Context, smartAccountAddr, "pending")
 	s.Require().NoError(err)
 
@@ -397,15 +375,15 @@ func (s *SuiteRpc) TestRpcCallWithTransactionSend() { //nolint:maintidx
 		s.EqualValues(1, contracts.GetCounterValue(s.T(), getRes))
 	})
 
-	s.Run("Override for \"insufficient balance for transfer\"", func() {
-		callArgs.Fee = types.NewFeePackFromFeeCredit(estimation.FeeCredit)
+	s.Run("Override for \"OutOfGas\"", func() {
+		callArgs.Fee = types.NewFeePackFromFeeCredit(types.Value10)
 
 		override := &jsonrpc.StateOverrides{
 			smartAccountAddr: jsonrpc.Contract{Balance: &types.Value{}},
 		}
 		res, err := s.Client.Call(s.Context, callArgs, "latest", override)
 		s.Require().NoError(err)
-		s.Require().EqualError(vm.ErrInsufficientBalance, res.Error)
+		s.Require().EqualError(vm.ErrOutOfGas, res.Error)
 	})
 
 	s.Run("Override several shards", func() {
@@ -422,20 +400,8 @@ func (s *SuiteRpc) TestRpcCallWithTransactionSend() { //nolint:maintidx
 		s.Require().Len(res.OutTransactions, 1)
 	})
 
-	intTxn = &types.InternalTransactionPayload{
-		Data:        contracts.NewCounterAddCallData(s.T(), 5),
-		To:          counterAddr,
-		RefundTo:    smartAccountAddr,
-		FeeCredit:   types.GasToValue(5_000_000),
-		ForwardKind: types.ForwardKindRemaining,
-		Kind:        types.ExecutionTransactionKind,
-	}
-
-	intBytecode, err := intTxn.MarshalSSZ()
-	s.Require().NoError(err)
-
-	extPayload, err := contracts.NewCallData(contracts.NameSmartAccount, "send", intBytecode)
-	s.Require().NoError(err)
+	addCalldata = contracts.NewCounterAddCallData(s.T(), 5)
+	extPayload := contracts.NewSmartAccountSendCallData(s.T(), addCalldata, types.Value0, nil, counterAddr)
 
 	s.Run("Send raw external transaction", func() {
 		extTxn := &types.ExternalTransaction{
@@ -465,6 +431,18 @@ func (s *SuiteRpc) TestRpcCallWithTransactionSend() { //nolint:maintidx
 	})
 
 	s.Run("Send raw internal transaction", func() {
+		intTxn := &types.InternalTransactionPayload{
+			Data:        addCalldata,
+			To:          counterAddr,
+			RefundTo:    smartAccountAddr,
+			FeeCredit:   types.GasToValue(5_000_000),
+			ForwardKind: types.ForwardKindRemaining,
+			Kind:        types.ExecutionTransactionKind,
+		}
+
+		intBytecode, err := intTxn.MarshalSSZ()
+		s.Require().NoError(err)
+
 		callArgs := &jsonrpc.CallArgs{
 			Transaction: (*hexutil.Bytes)(&intBytecode),
 			From:        &smartAccountAddr,
@@ -617,33 +595,14 @@ func (s *SuiteRpc) TestEmptyDeployPayload() {
 	smartAccount := types.MainSmartAccountAddress
 
 	// Deploy contract with invalid payload
-	hash, _, err := s.Client.DeployContract(s.Context, types.BaseShardId, smartAccount, types.DeployPayload{},
-		types.Value{}, types.NewFeePackFromGas(1_000_000), execution.MainPrivateKey)
+	hash, _, err := s.Client.DeployContract(s.Context, types.BaseShardId, smartAccount,
+		types.BuildDeployPayload(nil, common.EmptyHash), types.Value{},
+		types.NewFeePackFromGas(1_000_000), execution.MainPrivateKey)
 	s.Require().NoError(err)
 
 	receipt := s.WaitForReceipt(hash)
 	s.Require().True(receipt.Success)
-	s.Require().False(receipt.OutReceipts[0].Success)
-}
-
-func (s *SuiteRpc) TestInvalidTransactionExternalDeployment() {
-	calldataExt, err := contracts.NewCallData(contracts.NameSmartAccount, "send", []byte{0x0, 0x1, 0x2, 0x3})
-	s.Require().NoError(err)
-
-	smartAccount := types.MainSmartAccountAddress
-	hash, err := s.Client.SendExternalTransaction(
-		s.Context,
-		calldataExt,
-		smartAccount,
-		execution.MainPrivateKey,
-		types.NewFeePackFromGas(100_000))
-	s.Require().NoError(err)
-	s.Require().NotEmpty(hash)
-
-	receipt := s.WaitForReceipt(hash)
-	s.Require().False(receipt.Success)
-	s.Require().Equal(types.ErrorInvalidTransactionInputUnmarshalFailed.String(), receipt.Status)
-	s.Require().Equal("InvalidTransactionInputUnmarshalFailed: "+ssz.ErrSize.Error(), receipt.ErrorMessage)
+	s.Require().True(receipt.OutReceipts[0].Success)
 }
 
 // Test that we remove output transactions if the transaction failed
