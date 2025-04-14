@@ -119,9 +119,9 @@ func (g *BlockGenerator) Rollback() {
 	g.rwTx.Rollback()
 }
 
-func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) []types.Uint256 {
+func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) ([]types.Uint256, error) {
 	if !p.params.ShardId.IsMainShard() {
-		return nil
+		return nil, nil
 	}
 
 	// Basically we load configuration from block.MainShardHash.
@@ -134,7 +134,7 @@ func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) []types
 
 	mainBlock, err := db.ReadBlockByNumber(p.rwTx, types.MainShardId, configBlockId)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	treeShards := NewDbShardBlocksTrieReader(p.rwTx, types.MainShardId, mainBlock.Id)
@@ -153,17 +153,19 @@ func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) []types
 			shardHash = mainBlock.PrevBlock
 		}
 
+		shards[shardId] = *types.DefaultGasPrice.Uint256
+		if shardHash.Empty() {
+			continue
+		}
+
 		block, err := db.ReadBlock(p.rwTx, shardId, shardHash)
 		if err != nil {
-			p.logger.Err(err).
-				Stringer(logging.FieldBlockHash, shardHash).
-				Msg("Get gas price from shard: failed to read block")
-			shards[shardId] = *types.DefaultGasPrice.Uint256
-		} else {
-			shards[shardId] = *block.BaseFee.Uint256
+			return nil, err
 		}
+
+		shards[shardId] = *block.BaseFee.Uint256
 	}
-	return shards
+	return shards, nil
 }
 
 func (g *BlockGenerator) updateGasPrices(gasPrices []types.Uint256) error {
@@ -332,7 +334,10 @@ func (g *BlockGenerator) GenerateBlock(
 	proposal *Proposal,
 	params *types.ConsensusParams,
 ) (*BlockGenerationResult, error) {
-	gasPrices := g.CollectGasPrices(proposal.PrevBlockId)
+	gasPrices, err := g.CollectGasPrices(proposal.PrevBlockId)
+	if err != nil {
+		return nil, err
+	}
 	if err := g.prepareExecutionState(proposal, gasPrices); err != nil {
 		return nil, err
 	}

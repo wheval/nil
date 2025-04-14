@@ -69,19 +69,21 @@ func runCommand() error {
 	runCmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run libp2p relay server",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(*cobra.Command, []string) error {
 			return run(ctx, cfg)
 		},
 	}
 	rootCmd.AddCommand(runCmd)
 
+	outputFile := new(string)
 	genConfigCmd := &cobra.Command{
 		Use:   "gen-config",
 		Short: "Generate default config",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return genConfig(cfg, cfgFileName)
+		RunE: func(*cobra.Command, []string) error {
+			return genConfig(cfg, *outputFile)
 		},
 	}
+	genConfigCmd.Flags().StringVarP(outputFile, "output", "o", "", "Output config file name")
 	rootCmd.AddCommand(genConfigCmd)
 
 	rootCmd.AddCommand(cobrax.VersionCmd("relay"))
@@ -135,7 +137,7 @@ func run(ctx context.Context, cfg *config) error {
 	}
 	defer nm.Close()
 
-	concurrent.RunTickerLoop(ctx, reportPeriod, func(ctx context.Context) {
+	concurrent.RunTickerLoop(ctx, reportPeriod, func(context.Context) {
 		logger.Info().Msg("I am still alive")
 	})
 

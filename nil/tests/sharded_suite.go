@@ -327,6 +327,7 @@ func (s *ShardedSuite) RunArchiveNode(params *ArchiveNodeConfig) (*nilservice.Co
 		HttpUrl:               rpc.GetSockPathService(s.T(), serviceName),
 		RunMode:               nilservice.ArchiveRunMode,
 		ZeroState:             s.Instances[0].Config.ZeroState,
+		CollatorTickPeriodMs:  s.Instances[0].Config.CollatorTickPeriodMs,
 		DisableConsensus:      params.DisableConsensus,
 		SyncTimeoutFactor:     params.SyncTimeoutFactor,
 		NetworkManagerFactory: params.NetworkManagerFactory,
