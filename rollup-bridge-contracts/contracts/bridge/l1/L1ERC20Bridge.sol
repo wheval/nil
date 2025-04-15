@@ -255,7 +255,8 @@ contract L1ERC20Bridge is L1BaseBridge, IL1ERC20Bridge {
   }
 
   /// @dev Internal function to do all the deposit operations.
-  /// @param _depositMessageParams The struct with parameters needed to build the DepositMessage and further processing via BridgeMessenger
+  /// @param _depositMessageParams The struct with parameters needed to build the DepositMessage and further
+  /// processing via BridgeMessenger
   function _deposit(DepositMessageParams memory _depositMessageParams) internal virtual nonReentrant {
     if (_depositMessageParams.l1Token == address(0)) {
       revert ErrorInvalidTokenAddress();
