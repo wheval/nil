@@ -1080,6 +1080,21 @@ func (es *ExecutionState) SendResponseTransaction(txn *types.Transaction, res *E
 	return nil
 }
 
+func (es *ExecutionState) AcceptInternalTransaction(tx *types.Transaction) error {
+	check.PanicIfNot(tx.IsInternal())
+
+	nextTxId := es.InTxCounts[tx.From.ShardId()]
+	if tx.TxId != nextTxId {
+		return types.NewError(types.ErrorTxIdGap)
+	}
+	es.InTxCounts[tx.From.ShardId()] = nextTxId + 1
+
+	if tx.IsDeploy() {
+		return ValidateDeployTransaction(tx)
+	}
+	return nil
+}
+
 func (es *ExecutionState) HandleTransaction(
 	ctx context.Context, txn *types.Transaction, payer Payer,
 ) (retError *ExecutionResult) {
