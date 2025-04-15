@@ -1,4 +1,4 @@
-package rawapi
+package internal
 
 import (
 	"context"
@@ -16,7 +16,7 @@ type shardApiClientRo struct {
 	shardApiRequestPerformer
 }
 
-var _ ShardApiRo = (*shardApiClientRo)(nil)
+var _ shardApiRo = (*shardApiClientRo)(nil)
 
 func constructShardApiClientRo(performer shardApiRequestPerformer) *shardApiClientRo {
 	return &shardApiClientRo{
@@ -25,14 +25,14 @@ func constructShardApiClientRo(performer shardApiRequestPerformer) *shardApiClie
 }
 
 func newShardApiClientNetworkRo(shardId types.ShardId, networkManager network.Manager) *shardApiClientRo {
-	client, err := newShardApiClientNetwork[shardApiClientRo, ShardApiRo, NetworkTransportProtocolRo](
+	client, err := newShardApiClientNetwork[shardApiClientRo, shardApiRo, NetworkTransportProtocolRo](
 		constructShardApiClientRo, shardId, apiNameRo, networkManager)
 	check.PanicIfErr(err)
 	return client
 }
 
-func newShardApiClientDirectEmulatorRo(shardApi ShardApiRo) *shardApiClientRo {
-	client, err := newShardApiClientDirectEmulator[shardApiClientRo, ShardApiRo, NetworkTransportProtocolRo](
+func newShardApiClientDirectEmulatorRo(shardApi shardApiRo) *shardApiClientRo {
+	client, err := newShardApiClientDirectEmulator[shardApiClientRo, shardApiRo, NetworkTransportProtocolRo](
 		constructShardApiClientRo, apiNameRo, shardApi)
 	check.PanicIfErr(err)
 	return client

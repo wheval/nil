@@ -1,4 +1,4 @@
-package rawapi
+package internal
 
 import (
 	"context"
@@ -12,7 +12,7 @@ type shardApiClientDev struct {
 	shardApiRequestPerformer
 }
 
-var _ ShardApiDev = (*shardApiClientDev)(nil)
+var _ shardApiDev = (*shardApiClientDev)(nil)
 
 func constructShardApiClientDev(performer shardApiRequestPerformer) *shardApiClientDev {
 	return &shardApiClientDev{
@@ -21,7 +21,7 @@ func constructShardApiClientDev(performer shardApiRequestPerformer) *shardApiCli
 }
 
 func newShardApiClientNetworkDev(shardId types.ShardId, networkManager network.Manager) *shardApiClientDev {
-	client, err := newShardApiClientNetwork[shardApiClientDev, ShardApiDev, NetworkTransportProtocolDev](
+	client, err := newShardApiClientNetwork[shardApiClientDev, shardApiDev, NetworkTransportProtocolDev](
 		constructShardApiClientDev, shardId, apiNameDev, networkManager)
 	check.PanicIfErr(err)
 	return client
