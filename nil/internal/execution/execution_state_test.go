@@ -637,7 +637,7 @@ func (s *SuiteExecutionState) TestPanic() {
 
 	// Check normal execution is ok
 	txn := NewExecutionTransaction(types.MainSmartAccountAddress, types.MainSmartAccountAddress, 1,
-		contracts.NewSmartAccountSendCallData(s.T(), []byte(""), types.Value0, nil,
+		contracts.NewSmartAccountAsyncCallCallData(s.T(), []byte(""), types.Value0, nil,
 			types.MainSmartAccountAddress))
 	execResult := es.AddAndHandleTransaction(s.ctx, txn, dummyPayer{})
 	s.False(execResult.Failed())

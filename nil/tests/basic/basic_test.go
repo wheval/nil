@@ -314,7 +314,7 @@ func (s *SuiteRpc) TestRpcCallWithTransactionSend() {
 		s.NotZero(txnEstimation.FeeCredit.Uint64())
 	})
 
-	calldata := contracts.NewSmartAccountSendCallData(s.T(), addCalldata, types.Value0, nil, counterAddr)
+	calldata := contracts.NewSmartAccountAsyncCallCallData(s.T(), addCalldata, types.Value0, nil, counterAddr)
 	callerSeqno, err := s.Client.GetTransactionCount(s.Context, smartAccountAddr, "pending")
 	s.Require().NoError(err)
 
@@ -402,7 +402,7 @@ func (s *SuiteRpc) TestRpcCallWithTransactionSend() {
 	})
 
 	addCalldata = contracts.NewCounterAddCallData(s.T(), 5)
-	extPayload := contracts.NewSmartAccountSendCallData(s.T(), addCalldata, types.Value0, nil, counterAddr)
+	extPayload := contracts.NewSmartAccountAsyncCallCallData(s.T(), addCalldata, types.Value0, nil, counterAddr)
 
 	s.Run("Send raw external transaction", func() {
 		extTxn := &types.ExternalTransaction{

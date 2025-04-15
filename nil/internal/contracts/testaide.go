@@ -114,7 +114,7 @@ func GetCounterValue(t *testing.T, data []byte) int32 {
 	return val
 }
 
-func NewSmartAccountSendCallData(t *testing.T, bytecode types.Code,
+func NewSmartAccountAsyncCallCallData(t *testing.T, bytecode types.Code,
 	value types.Value, tokens []types.TokenBalance, contractAddress types.Address,
 ) []byte {
 	t.Helper()

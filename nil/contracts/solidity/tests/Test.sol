@@ -106,7 +106,7 @@ contract Test is NilBase {
         }
     }
 
-    function testForwardingInSendRawTransaction(
+    function testForwardingInAsyncCall(
         address dst,
         uint feeCredit,
         uint8 forwardKind,

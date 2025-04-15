@@ -167,7 +167,7 @@ func NewSendMoneyTransaction(t *testing.T, to types.Address, seqno types.Seqno) 
 	t.Helper()
 
 	m := NewExecutionTransaction(types.MainSmartAccountAddress, types.MainSmartAccountAddress, seqno,
-		contracts.NewSmartAccountSendCallData(t, types.Code{},
+		contracts.NewSmartAccountAsyncCallCallData(t, types.Code{},
 			DefaultSendValue, []types.TokenBalance{}, to))
 	require.NoError(t, m.Sign(MainPrivateKey))
 
