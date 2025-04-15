@@ -90,7 +90,7 @@ func (s *SuiteFaucet) TestDeployContractViaFaucet() {
 
 	code := types.BuildDeployPayload(smartAccountCode, common.EmptyHash)
 	smartAccountAddr := types.CreateAddress(types.FaucetAddress.ShardId(), code)
-	txnHash, err := s.faucetClient.TopUpViaFaucet(types.FaucetAddress, smartAccountAddr, value)
+	txnHash, err := s.faucetClient.TopUpViaFaucet(s.Context, types.FaucetAddress, smartAccountAddr, value)
 	s.Require().NoError(err)
 	receipt := s.WaitIncludedInMain(txnHash)
 	s.Require().True(receipt.AllSuccess())
@@ -132,7 +132,8 @@ func (s *SuiteFaucet) TestTopUpViaFaucet() {
 		s.Require().NoError(err)
 		s.Require().NotEmpty(code)
 
-		mshHash, err := s.faucetClient.TopUpViaFaucet(types.FaucetAddress, address, types.NewValueFromUint64(value))
+		mshHash, err := s.faucetClient.TopUpViaFaucet(
+			s.Context, types.FaucetAddress, address, types.NewValueFromUint64(value))
 		s.Require().NoError(err)
 		receipt = s.WaitIncludedInMain(mshHash)
 		s.Require().NotNil(receipt)
@@ -186,7 +187,7 @@ func (s *SuiteFaucet) TestTopUpTokenViaFaucet() {
 		types.UsdcFaucetAddress,
 	}
 	for _, faucet := range faucetsAddr {
-		mshHash, err := s.faucetClient.TopUpViaFaucet(faucet, address, value)
+		mshHash, err := s.faucetClient.TopUpViaFaucet(s.Context, faucet, address, value)
 		s.Require().NoError(err)
 		receipt = s.WaitIncludedInMain(mshHash)
 		s.Require().NotNil(receipt)
