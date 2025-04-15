@@ -3,6 +3,7 @@ package internal
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/NilFoundation/nil/nil/common"
@@ -33,6 +34,7 @@ func calculateStateChange(newEs, oldEs *execution.ExecutionState) (rpctypes.Stat
 			contract.Balance = &as.Balance
 			contract.Code = (*hexutil.Bytes)(&as.Code)
 			contract.State = (*map[common.Hash]common.Hash)(&as.State)
+			contract.AsyncContext = &as.AsyncContext
 		} else {
 			if as.Seqno != oldAs.Seqno {
 				hasUpdates = true
@@ -67,6 +69,30 @@ func calculateStateChange(newEs, oldEs *execution.ExecutionState) (rpctypes.Stat
 					}
 					(*contract.StateDiff)[key] = value
 				}
+			}
+
+			asyncContextHasUpdates := len(as.AsyncContext) != len(oldAs.AsyncContext)
+			if !asyncContextHasUpdates {
+				for key, value := range as.AsyncContext {
+					oldVal, err := oldAs.GetAsyncContext(key)
+					if err != nil {
+						if !errors.Is(err, db.ErrKeyNotFound) {
+							return nil, err
+						}
+						asyncContextHasUpdates = true
+						break
+					}
+					if !bytes.Equal(value.Data, oldVal.Data) ||
+						(value.ResponseProcessingGas != oldVal.ResponseProcessingGas) {
+						asyncContextHasUpdates = true
+						break
+					}
+				}
+			}
+
+			if asyncContextHasUpdates {
+				hasUpdates = true
+				contract.AsyncContext = &as.AsyncContext
 			}
 		}
 

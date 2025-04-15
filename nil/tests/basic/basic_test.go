@@ -57,6 +57,7 @@ func (s *SuiteRpc) SetupSuite() {
 
 		// NOTE: caching won't work with parallel tests in this module, because global cache will be shared
 		EnableConfigCache: true,
+		DisableConsensus:  true,
 	})
 }
 
@@ -313,7 +314,7 @@ func (s *SuiteRpc) TestRpcCallWithTransactionSend() {
 		s.NotZero(txnEstimation.FeeCredit.Uint64())
 	})
 
-	calldata := contracts.NewSmartAccountSendCallData(s.T(), addCalldata, types.Value0, nil, counterAddr)
+	calldata := contracts.NewSmartAccountAsyncCallCallData(s.T(), addCalldata, types.Value0, nil, counterAddr)
 	callerSeqno, err := s.Client.GetTransactionCount(s.Context, smartAccountAddr, "pending")
 	s.Require().NoError(err)
 
@@ -401,7 +402,7 @@ func (s *SuiteRpc) TestRpcCallWithTransactionSend() {
 	})
 
 	addCalldata = contracts.NewCounterAddCallData(s.T(), 5)
-	extPayload := contracts.NewSmartAccountSendCallData(s.T(), addCalldata, types.Value0, nil, counterAddr)
+	extPayload := contracts.NewSmartAccountAsyncCallCallData(s.T(), addCalldata, types.Value0, nil, counterAddr)
 
 	s.Run("Send raw external transaction", func() {
 		extTxn := &types.ExternalTransaction{
@@ -533,8 +534,8 @@ func (s *SuiteRpc) TestChainCall() {
 	s.EqualValues(22, contracts.GetCounterValue(s.T(), resData), "Final value after two additions is 22")
 }
 
-func (s *SuiteRpc) TestAsyncAwaitCall() {
-	var addrCounter, addrAwait types.Address
+func (s *SuiteRpc) TestSendRequestCall() {
+	var addrCounter, addrSendReq types.Address
 	s.Run("Deploy counter", func() {
 		dpCounter := contracts.CounterDeployPayload(s.T())
 		addrCounter, _ = s.DeployContractViaMainSmartAccount(types.BaseShardId, dpCounter, types.Value{})
@@ -555,39 +556,45 @@ func (s *SuiteRpc) TestAsyncAwaitCall() {
 		s.Require().EqualValues(123, contracts.GetCounterValue(s.T(), res.Data))
 	})
 
-	s.Run("Deploy await", func() {
-		dpAwait := contracts.GetDeployPayload(s.T(), contracts.NameRequestResponseTest)
-		addrAwait, _ = s.DeployContractViaMainSmartAccount(types.BaseShardId, dpAwait, tests.DefaultContractValue)
+	s.Run("Deploy request-response", func() {
+		dp := contracts.GetDeployPayload(s.T(), contracts.NameRequestResponseTest)
+		addrSendReq, _ = s.DeployContractViaMainSmartAccount(types.BaseShardId, dp, tests.DefaultContractValue)
 	})
 
-	abiAwait, err := contracts.GetAbi(contracts.NameRequestResponseTest)
+	abi, err := contracts.GetAbi(contracts.NameRequestResponseTest)
 	s.Require().NoError(err)
 
 	callArgs := &jsonrpc.CallArgs{
-		To:  addrAwait,
+		To:  addrSendReq,
 		Fee: types.NewFeePackFromGas(1_000_000),
 	}
 
-	s.Run("Call await", func() {
-		data := s.AbiPack(abiAwait, "sumCounters", []types.Address{addrCounter})
-		receipt := s.SendExternalTransactionNoCheck(data, addrAwait)
+	var stateOverride *jsonrpc.StateOverrides
+	s.Run("Call sendRequest", func() {
+		data := s.AbiPack(abi, "requestCounterAdd", addrCounter, int32(123))
+		receipt := s.SendExternalTransactionNoCheck(data, addrSendReq)
 		s.Require().True(receipt.AllSuccess())
 
 		callArgs.Data = (*hexutil.Bytes)(&data)
 		res, err := s.Client.Call(s.Context, callArgs, "latest", nil)
 		s.Require().NoError(err)
 		s.Nil(res.Data)
+		stateOverride = &res.StateOverrides
 	})
 
-	s.Run("Call await with result", func() {
-		data := s.AbiPack(abiAwait, "get")
+	s.Run("Call sendRequest with result", func() {
+		data := contracts.NewCounterGetCallData(s.T())
 		callArgs.Data = (*hexutil.Bytes)(&data)
+		callArgs.To = addrCounter
 
 		res, err := s.Client.Call(s.Context, callArgs, "latest", nil)
 		s.Require().NoError(err)
-		value := s.AbiUnpack(abiAwait, "get", res.Data)
-		s.Require().Len(value, 1)
-		s.Require().EqualValues(123, value[0])
+		currValue := contracts.GetCounterValue(s.T(), res.Data)
+
+		res, err = s.Client.Call(s.Context, callArgs, "latest", stateOverride)
+		s.Require().NoError(err)
+		valueAfterSendReq := contracts.GetCounterValue(s.T(), res.Data)
+		s.Require().Equal(currValue+123, valueAfterSendReq)
 	})
 }
 

@@ -163,14 +163,11 @@ const (
 	ErrorPrecompileConfigSetParamFailed
 	// ErrorPrecompileConfigGetParamFailed is returned when the precompile fails to get the config parameter
 	ErrorPrecompileConfigGetParamFailed
-	// ErrorAwaitCallCalledFromNotTopLevel is returned when the await call is called from a contract which was
-	// synchronously called from another contract.
-	ErrorAwaitCallCalledFromNotTopLevel
-	// ErrorAwaitCallTooLowResponseProcessingGas is returned when the response processing gas is too low for the await
+	// ErrorTooLowResponseProcessingGas is returned when the response processing gas is too low for the await
 	// call.
-	ErrorAwaitCallTooLowResponseProcessingGas
-	// ErrorAwaitCallTooShortContextData is returned when the context data is too short for the await call.
-	ErrorAwaitCallTooShortContextData
+	ErrorTooLowResponseProcessingGas
+	// ErrorTooShortContextData is returned when the context data is too short for the await call.
+	ErrorTooShortContextData
 	// ErrorAsyncDeployMustNotHaveToken is returned when the async deploy transaction contains custom token. It is not
 	// allowed to transfer custom tokens within async deploy transaction.
 	ErrorAsyncDeployMustNotHaveToken

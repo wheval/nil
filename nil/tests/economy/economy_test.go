@@ -752,7 +752,7 @@ func (s *SuiteEconomy) TestGasForwardingInSendTransaction() {
 
 	runTest := func(feeCredit types.Value, forwardKind types.ForwardKind) {
 		calldata := s.AbiPack(s.abiTest, "stub", big.NewInt(1))
-		data := s.AbiPack(s.abiTest, "testForwardingInSendRawTransaction", s.testAddress2, feeCredit.ToBig(),
+		data := s.AbiPack(s.abiTest, "testForwardingInAsyncCall", s.testAddress2, feeCredit.ToBig(),
 			uint8(forwardKind), calldata)
 		receipt := s.SendExternalTransaction(data, s.testAddress1)
 		info := s.AnalyzeReceipt(receipt, s.namesMap)
