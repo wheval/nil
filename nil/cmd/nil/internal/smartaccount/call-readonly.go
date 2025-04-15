@@ -2,6 +2,7 @@ package smartaccount
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/NilFoundation/nil/nil/cmd/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/abi"
@@ -97,20 +98,8 @@ func runCallReadonly(cmd *cobra.Command, args []string, cfg *common.Config, para
 		return err
 	}
 
-	intTxn := &types.InternalTransactionPayload{
-		Data:        contractCalldata,
-		To:          address,
-		FeeCredit:   params.Fee.FeeCredit,
-		ForwardKind: types.ForwardKindNone,
-		Kind:        types.ExecutionTransactionKind,
-	}
-
-	intTxnData, err := intTxn.MarshalSSZ()
-	if err != nil {
-		return err
-	}
-
-	smartAccountCalldata, err := contracts.NewCallData(contracts.NameSmartAccount, "send", intTxnData)
+	smartAccountCalldata, err := contracts.NewCallData(contracts.NameSmartAccount, "asyncCall",
+		address, types.EmptyAddress, types.EmptyAddress, []types.TokenBalance{}, big.NewInt(0), contractCalldata)
 	if err != nil {
 		return err
 	}

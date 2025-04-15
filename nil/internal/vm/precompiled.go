@@ -84,22 +84,21 @@ type SimplePrecompiledContract interface {
 }
 
 var (
-	SendRawTransactionAddress = types.BytesToAddress([]byte{0xfc})
-	AsyncCallAddress          = types.BytesToAddress([]byte{0xfd})
-	VerifySignatureAddress    = types.BytesToAddress([]byte{0xfe})
-	CheckIsInternalAddress    = types.BytesToAddress([]byte{0xff})
-	ManageTokenAddress        = types.BytesToAddress([]byte{0xd0})
-	TokenBalanceAddress       = types.BytesToAddress([]byte{0xd1})
-	SendTokensAddress         = types.BytesToAddress([]byte{0xd2})
-	TransactionTokensAddress  = types.BytesToAddress([]byte{0xd3})
-	GetGasPriceAddress        = types.BytesToAddress([]byte{0xd4})
-	PoseidonHashAddress       = types.BytesToAddress([]byte{0xd5})
-	AwaitCallAddress          = types.BytesToAddress([]byte{0xd6})
-	ConfigParamAddress        = types.BytesToAddress([]byte{0xd7})
-	SendRequestAddress        = types.BytesToAddress([]byte{0xd8})
-	CheckIsResponseAddress    = types.BytesToAddress([]byte{0xd9})
-	LogAddress                = types.BytesToAddress([]byte{0xda})
-	GovernanceAddress         = types.BytesToAddress([]byte{0xdb})
+	AsyncCallAddress         = types.BytesToAddress([]byte{0xfd})
+	VerifySignatureAddress   = types.BytesToAddress([]byte{0xfe})
+	CheckIsInternalAddress   = types.BytesToAddress([]byte{0xff})
+	ManageTokenAddress       = types.BytesToAddress([]byte{0xd0})
+	TokenBalanceAddress      = types.BytesToAddress([]byte{0xd1})
+	SendTokensAddress        = types.BytesToAddress([]byte{0xd2})
+	TransactionTokensAddress = types.BytesToAddress([]byte{0xd3})
+	GetGasPriceAddress       = types.BytesToAddress([]byte{0xd4})
+	PoseidonHashAddress      = types.BytesToAddress([]byte{0xd5})
+	AwaitCallAddress         = types.BytesToAddress([]byte{0xd6})
+	ConfigParamAddress       = types.BytesToAddress([]byte{0xd7})
+	SendRequestAddress       = types.BytesToAddress([]byte{0xd8})
+	CheckIsResponseAddress   = types.BytesToAddress([]byte{0xd9})
+	LogAddress               = types.BytesToAddress([]byte{0xda})
+	GovernanceAddress        = types.BytesToAddress([]byte{0xdb})
 )
 
 // PrecompiledContractsPrague contains the set of pre-compiled Ethereum
@@ -126,22 +125,21 @@ var PrecompiledContractsPrague = map[types.Address]PrecompiledContract{
 	types.BytesToAddress([]byte{0x13}): &simple{&bls12381MapG2{}},
 
 	// NilFoundation precompiled contracts
-	SendRawTransactionAddress: &sendRawTransaction{},
-	AsyncCallAddress:          &asyncCall{},
-	VerifySignatureAddress:    &simple{&verifySignature{}},
-	CheckIsInternalAddress:    &checkIsInternal{},
-	ManageTokenAddress:        &manageToken{},
-	TokenBalanceAddress:       &tokenBalance{},
-	SendTokensAddress:         &sendTokenSync{},
-	TransactionTokensAddress:  &getTransactionTokens{},
-	GetGasPriceAddress:        &getGasPrice{},
-	PoseidonHashAddress:       &poseidonHash{},
-	AwaitCallAddress:          &awaitCall{},
-	ConfigParamAddress:        &configParam{},
-	SendRequestAddress:        &sendRequest{},
-	CheckIsResponseAddress:    &checkIsResponse{},
-	LogAddress:                &emitLog{},
-	GovernanceAddress:         &governance{},
+	AsyncCallAddress:         &asyncCall{},
+	VerifySignatureAddress:   &simple{&verifySignature{}},
+	CheckIsInternalAddress:   &checkIsInternal{},
+	ManageTokenAddress:       &manageToken{},
+	TokenBalanceAddress:      &tokenBalance{},
+	SendTokensAddress:        &sendTokenSync{},
+	TransactionTokensAddress: &getTransactionTokens{},
+	GetGasPriceAddress:       &getGasPrice{},
+	PoseidonHashAddress:      &poseidonHash{},
+	AwaitCallAddress:         &awaitCall{},
+	ConfigParamAddress:       &configParam{},
+	SendRequestAddress:       &sendRequest{},
+	CheckIsResponseAddress:   &checkIsResponse{},
+	LogAddress:               &emitLog{},
+	GovernanceAddress:        &governance{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -200,20 +198,12 @@ func (a *simple) Run(
 	return a.contract.Run(input)
 }
 
-type sendRawTransaction struct{}
-
-var _ ReadWritePrecompiledContract = (*sendRawTransaction)(nil)
-
 const (
 	// TODO: Make this dynamically calculated based on the network conditions and current shard gas price
 	ForwardFee                   uint64    = 1_000
 	ExtraForwardFeeStep          uint64    = 100
 	MinGasReserveForAsyncRequest types.Gas = 50_000
 )
-
-func (c *sendRawTransaction) RequiredGas([]byte, StateDBReadOnly) (uint64, error) {
-	return ForwardFee, nil
-}
 
 func extractDstAddress(input []byte, methodName string, argNum int) (types.Address, error) {
 	if len(input) < 4 {
@@ -300,45 +290,6 @@ func getBytesArgCopy(arg any, methodName, paramName string) []byte {
 	return slices.Clone(bytes)
 }
 
-func (c *sendRawTransaction) Run(state StateDB, input []byte, value *uint256.Int, caller ContractRef) ([]byte, error) {
-	payload := new(types.InternalTransactionPayload)
-	if err := payload.UnmarshalSSZ(input); err != nil {
-		return nil, types.NewWrapError(types.ErrorInvalidTransactionInputUnmarshalFailed, err)
-	}
-
-	cfgAccessor := state.GetConfigAccessor()
-	nShards, err := config.GetParamNShards(cfgAccessor)
-	if err != nil {
-		return nil, types.NewVmVerboseError(types.ErrorPrecompileConfigGetParamFailed, err.Error())
-	}
-
-	if uint32(payload.To.ShardId()) >= nShards {
-		return nil, ErrShardIdIsTooBig
-	}
-
-	if payload.To.ShardId().IsMainShard() {
-		return nil, ErrTransactionToMainShard
-	}
-
-	if err := withdrawFunds(state, caller.Address(), payload.Value); err != nil {
-		return []byte("sendRawTransaction: withdraw value failed"), err
-	}
-
-	if payload.ForwardKind == types.ForwardKindNone {
-		if err := withdrawFunds(state, caller.Address(), payload.FeeCredit); err != nil {
-			return []byte("sendRawTransaction: withdraw FeeCredit failed"), err
-		}
-	}
-
-	// TODO: We should consider non-refundable transactions
-	setRefundTo(&payload.RefundTo, state.GetInTransaction())
-	setBounceTo(&payload.BounceTo, state.GetInTransaction())
-
-	_, err = state.AddOutTransaction(caller.Address(), payload)
-
-	return nil, err
-}
-
 var gasScale = types.DefaultGasPrice.Div(types.Value100)
 
 // GetExtraGasForOutboundTransaction returns the extra gas required for sending a transaction to a shard
@@ -402,6 +353,12 @@ func (c *asyncCall) Run(state StateDB, input []byte, value *uint256.Int, caller 
 		return nil, types.NewVmError(types.ErrorPrecompileTooShortCallData)
 	}
 
+	cfgAccessor := state.GetConfigAccessor()
+	nShards, err := config.GetParamNShards(cfgAccessor)
+	if err != nil {
+		return nil, types.NewVmVerboseError(types.ErrorPrecompileConfigGetParamFailed, err.Error())
+	}
+
 	// Unpack arguments, skipping the first 4 bytes (function selector)
 	args, err := getPrecompiledMethod("precompileAsyncCall").Inputs.Unpack(input[4:])
 	if err != nil {
@@ -459,6 +416,10 @@ func (c *asyncCall) Run(state StateDB, input []byte, value *uint256.Int, caller 
 
 	if dst.ShardId().IsMainShard() {
 		return []byte("asyncCall failed: attempt to send transaction to main shard"), ErrTransactionToMainShard
+	}
+
+	if uint32(dst.ShardId()) >= nShards {
+		return nil, ErrShardIdIsTooBig
 	}
 
 	if forwardKind == types.ForwardKindNone {

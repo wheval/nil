@@ -222,14 +222,14 @@ func (s *SuiteCometa) TestMethodList() {
 		},
 		{
 			Address: types.MainSmartAccountAddress,
-			FuncId:  hexutil.Encode(smartAccountAbi.Methods["send"].ID),
+			FuncId:  hexutil.Encode(smartAccountAbi.Methods["asyncCall"].ID),
 		},
 	}
 	res, err := s.cometaClient.DecodeTransactionsCallData(transactions)
 	s.Require().NoError(err)
 	s.Require().Equal("makeFail(int32)", res[0])
 	s.Require().Empty(res[1])
-	s.Require().Equal("send(bytes)", res[2])
+	s.Require().Equal("asyncCall(address,address,address,(address,uint256)[],uint256,bytes)", res[2])
 
 	// Obviously wrong funcId, should return error
 	transactions = []cometa.TransactionInfo{

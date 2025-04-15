@@ -107,9 +107,12 @@ contract Test is NilBase {
     }
 
     function testForwardingInSendRawTransaction(
-        bytes memory transaction
+        address dst,
+        uint feeCredit,
+        uint8 forwardKind,
+        bytes memory callData
     ) public payable {
-        Nil.sendTransaction(transaction);
+        Nil.asyncCall(dst, address(0), address(0), feeCredit, forwardKind, 0, callData);
     }
 
     function stub(uint n) public payable {
