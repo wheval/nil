@@ -1,8 +1,7 @@
-package rawapi
+package internal
 
 import (
 	"context"
-	"reflect"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
@@ -17,31 +16,26 @@ type shardApiClientRo struct {
 	shardApiRequestPerformer
 }
 
-var (
-	_ shardApiRequestPerformerSetter = (*shardApiClientRo)(nil)
-	_ ShardApiRo                     = (*shardApiClientRo)(nil)
-)
+var _ shardApiRo = (*shardApiClientRo)(nil)
+
+func constructShardApiClientRo(performer shardApiRequestPerformer) *shardApiClientRo {
+	return &shardApiClientRo{
+		shardApiRequestPerformer: performer,
+	}
+}
 
 func newShardApiClientNetworkRo(shardId types.ShardId, networkManager network.Manager) *shardApiClientRo {
-	client, err := newShardApiClientNetwork[*shardApiClientRo](
-		shardId,
-		apiNameRo,
-		networkManager,
-		reflect.TypeFor[ShardApiRo](),
-		reflect.TypeFor[NetworkTransportProtocolRo]())
+	client, err := newShardApiClientNetwork[shardApiClientRo, shardApiRo, NetworkTransportProtocolRo](
+		constructShardApiClientRo, shardId, apiNameRo, networkManager)
 	check.PanicIfErr(err)
 	return client
 }
 
-func newShardApiClientDirectEmulatorRo(shardApi ShardApiRo) *shardApiClientRo {
-	client, err := newShardApiClientDirectEmulator[ShardApiRo, *shardApiClientRo](
-		apiNameRo, shardApi, reflect.TypeFor[ShardApiRo](), reflect.TypeFor[NetworkTransportProtocolRo]())
+func newShardApiClientDirectEmulatorRo(shardApi shardApiRo) *shardApiClientRo {
+	client, err := newShardApiClientDirectEmulator[shardApiClientRo, shardApiRo, NetworkTransportProtocolRo](
+		constructShardApiClientRo, apiNameRo, shardApi)
 	check.PanicIfErr(err)
 	return client
-}
-
-func (api *shardApiClientRo) setShardApiRequestPerformer(requestPerformer shardApiRequestPerformer) {
-	api.shardApiRequestPerformer = requestPerformer
 }
 
 func (api *shardApiClientRo) GetBlockHeader(

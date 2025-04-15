@@ -1,4 +1,4 @@
-package rawapi
+package internal
 
 import (
 	"context"
@@ -44,31 +44,27 @@ func (api *shardApiRequestPerformerNetwork) apiCodec() apiCodec {
 }
 
 func newShardApiClientNetwork[
-	T interface {
-		~*S
-		shardApiRequestPerformerSetter
-	},
-	S any,
+	ClientType shardApiBase,
+	ShardApiType shardApiBase,
+	TransportType any,
+	F func(shardApiRequestPerformer) *ClientType,
 ](
+	construct F,
 	shardId types.ShardId,
 	apiName string,
 	networkManager network.Manager,
-	apiType reflect.Type,
-	transportType reflect.Type,
-) (T, error) {
-	codec, err := newApiCodec(apiType, transportType)
+) (*ClientType, error) {
+	codec, err := newApiCodec(reflect.TypeFor[ShardApiType](), reflect.TypeFor[TransportType]())
 	if err != nil {
 		return nil, err
 	}
 
-	var rv T = new(S)
-	rv.setShardApiRequestPerformer(&shardApiRequestPerformerNetwork{
+	return construct(&shardApiRequestPerformerNetwork{
 		shard:          shardId,
 		apiName:        apiName,
 		networkManager: networkManager,
 		codec:          codec,
-	})
-	return rv, nil
+	}), nil
 }
 
 func doNetworkShardApiRequest(

@@ -1,4 +1,4 @@
-package rawapi
+package internal
 
 import (
 	"context"

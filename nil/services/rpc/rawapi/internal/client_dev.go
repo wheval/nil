@@ -1,8 +1,7 @@
-package rawapi
+package internal
 
 import (
 	"context"
-	"reflect"
 
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/internal/network"
@@ -13,24 +12,19 @@ type shardApiClientDev struct {
 	shardApiRequestPerformer
 }
 
-var (
-	_ shardApiRequestPerformerSetter = (*shardApiClientDev)(nil)
-	_ ShardApiDev                    = (*shardApiClientDev)(nil)
-)
+var _ shardApiDev = (*shardApiClientDev)(nil)
 
-func newShardApiClientNetworkDev(shardId types.ShardId, networkManager network.Manager) *shardApiClientDev {
-	client, err := newShardApiClientNetwork[*shardApiClientDev](
-		shardId,
-		apiNameDev,
-		networkManager,
-		reflect.TypeFor[ShardApiDev](),
-		reflect.TypeFor[NetworkTransportProtocolDev]())
-	check.PanicIfErr(err)
-	return client
+func constructShardApiClientDev(performer shardApiRequestPerformer) *shardApiClientDev {
+	return &shardApiClientDev{
+		shardApiRequestPerformer: performer,
+	}
 }
 
-func (api *shardApiClientDev) setShardApiRequestPerformer(requestPerformer shardApiRequestPerformer) {
-	api.shardApiRequestPerformer = requestPerformer
+func newShardApiClientNetworkDev(shardId types.ShardId, networkManager network.Manager) *shardApiClientDev {
+	client, err := newShardApiClientNetwork[shardApiClientDev, shardApiDev, NetworkTransportProtocolDev](
+		constructShardApiClientDev, shardId, apiNameDev, networkManager)
+	check.PanicIfErr(err)
+	return client
 }
 
 func (api *shardApiClientDev) DoPanicOnShard(ctx context.Context) (uint64, error) {

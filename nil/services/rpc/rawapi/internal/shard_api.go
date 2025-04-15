@@ -1,4 +1,4 @@
-package rawapi
+package internal
 
 import (
 	"context"
@@ -13,27 +13,25 @@ import (
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
-type NodeApi interface {
-	GetBlockHeader(
-		ctx context.Context,
-		shardId types.ShardId,
-		blockReference rawapitypes.BlockReference,
-	) (sszx.SSZEncodedData, error)
+type shardApiBase interface {
+	shardId() types.ShardId
+	setNodeApi(nodeApi NodeApi)
+	setAsP2pRequestHandlersIfAllowed(ctx context.Context, networkManager network.Manager, logger logging.Logger) error
+}
+
+const apiNameRo = "rawapi_ro"
+
+type shardApiRo interface {
+	shardApiBase
+
+	GetBlockHeader(ctx context.Context, blockReference rawapitypes.BlockReference) (sszx.SSZEncodedData, error)
 	GetFullBlockData(
-		ctx context.Context,
-		shardId types.ShardId,
-		blockReference rawapitypes.BlockReference,
-	) (*types.RawBlockWithExtractedData, error)
-	GetBlockTransactionCount(
-		ctx context.Context, shardId types.ShardId, blockReference rawapitypes.BlockReference) (uint64, error)
+		ctx context.Context, blockReference rawapitypes.BlockReference) (*types.RawBlockWithExtractedData, error)
+	GetBlockTransactionCount(ctx context.Context, blockReference rawapitypes.BlockReference) (uint64, error)
 
 	GetInTransaction(
-		ctx context.Context,
-		shardId types.ShardId,
-		transactionRequest rawapitypes.TransactionRequest,
-	) (*rawapitypes.TransactionInfo, error)
-	GetInTransactionReceipt(
-		ctx context.Context, shardId types.ShardId, hash common.Hash) (*rawapitypes.ReceiptInfo, error)
+		ctx context.Context, transactionRequest rawapitypes.TransactionRequest) (*rawapitypes.TransactionInfo, error)
+	GetInTransactionReceipt(ctx context.Context, hash common.Hash) (*rawapitypes.ReceiptInfo, error)
 
 	GetBalance(
 		ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (types.Value, error)
@@ -43,8 +41,6 @@ type NodeApi interface {
 		address types.Address,
 		blockReference rawapitypes.BlockReference,
 	) (map[types.TokenId]types.Value, error)
-	GetTransactionCount(
-		ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (uint64, error)
 	GetContract(
 		ctx context.Context,
 		address types.Address,
@@ -58,17 +54,30 @@ type NodeApi interface {
 		overrides *rpctypes.StateOverrides,
 	) (*rpctypes.CallResWithGasPrice, error)
 
-	GasPrice(ctx context.Context, shardId types.ShardId) (types.Value, error)
+	GasPrice(ctx context.Context) (types.Value, error)
 	GetShardIdList(ctx context.Context) ([]types.ShardId, error)
 	GetNumShards(ctx context.Context) (uint64, error)
 
 	ClientVersion(ctx context.Context) (string, error)
+}
 
-	GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (uint64, error)
-	GetTxpoolContent(ctx context.Context, shardId types.ShardId) ([]*types.Transaction, error)
+const apiNameRw = "rawapi_rw"
 
-	SendTransaction(ctx context.Context, shardId types.ShardId, transaction []byte) (txnpool.DiscardReason, error)
-	DoPanicOnShard(ctx context.Context, shardId types.ShardId) (uint64, error)
+type shardApiRw interface {
+	shardApiBase
 
-	SetP2pRequestHandlers(ctx context.Context, networkManager network.Manager, logger logging.Logger) error
+	SendTransaction(ctx context.Context, transaction []byte) (txnpool.DiscardReason, error)
+	GetTransactionCount(
+		ctx context.Context, address types.Address, blockReference rawapitypes.BlockReference) (uint64, error)
+
+	GetTxpoolStatus(ctx context.Context) (uint64, error)
+	GetTxpoolContent(ctx context.Context) ([]*types.Transaction, error)
+}
+
+const apiNameDev = "rawapi_dev"
+
+type shardApiDev interface {
+	shardApiBase
+
+	DoPanicOnShard(ctx context.Context) (uint64, error)
 }

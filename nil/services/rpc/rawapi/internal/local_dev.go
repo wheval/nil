@@ -1,4 +1,4 @@
-package rawapi
+package internal
 
 import (
 	"context"
@@ -14,7 +14,7 @@ type localShardApiDev struct {
 	shard types.ShardId
 }
 
-var _ ShardApiDev = (*localShardApiDev)(nil)
+var _ shardApiDev = (*localShardApiDev)(nil)
 
 func newLocalShardApiDev(shardId types.ShardId) *localShardApiDev {
 	return &localShardApiDev{shard: shardId}
@@ -34,7 +34,7 @@ func (api *localShardApiDev) setAsP2pRequestHandlersIfAllowed(
 	return setRawApiRequestHandlers(
 		ctx,
 		reflect.TypeFor[NetworkTransportProtocolRo](),
-		reflect.TypeFor[ShardApiRo](),
+		reflect.TypeFor[shardApiRo](),
 		api,
 		api.shard,
 		apiNameRo,

@@ -1,4 +1,4 @@
-package rawapi
+package internal
 
 import (
 	"context"
@@ -11,41 +11,41 @@ import (
 )
 
 func newShardApiClientDirectEmulator[
+	ClientType shardApiBase,
 	ShardApiType shardApiBase,
-	T interface {
-		~*S
-		shardApiRequestPerformerSetter
-	},
-	S any,
+	TransportType any,
+	F func(shardApiRequestPerformer) *ClientType,
 ](
+	construct F,
 	apiName string,
 	shardApi ShardApiType,
-	apiType reflect.Type,
-	transportType reflect.Type,
-) (T, error) {
+) (*ClientType, error) {
+	apiType := reflect.TypeFor[ShardApiType]()
+	transportType := reflect.TypeFor[TransportType]()
+
 	codec, err := newApiCodec(apiType, transportType)
 	if err != nil {
 		return nil, err
 	}
 
-	var rv T = new(S)
-	rv.setShardApiRequestPerformer(&shardApiRequestPerformerDirectEmulator[ShardApiType]{
+	performer := &shardApiRequestPerformerDirectEmulator{
 		apiName:       apiName,
 		apiType:       apiType,
 		transportType: transportType,
 		shardApi:      shardApi,
 		codec:         codec,
-		derived:       rv,
-	})
+	}
+	rv := construct(performer)
+	performer.derived = rv
 	return rv, nil
 }
 
-type shardApiRequestPerformerDirectEmulator[RawApiType shardApiBase] struct {
+type shardApiRequestPerformerDirectEmulator struct {
 	apiName       string
 	apiType       reflect.Type
 	transportType reflect.Type
 
-	shardApi RawApiType
+	shardApi shardApiBase
 	codec    apiCodec
 
 	// Reference to a specific type that uses the request performer as part of its implementation,
@@ -53,16 +53,13 @@ type shardApiRequestPerformerDirectEmulator[RawApiType shardApiBase] struct {
 	derived any
 }
 
-var (
-	_ shardApiRequestPerformer = (*shardApiRequestPerformerDirectEmulator[ShardApiRo])(nil)
-	_ shardApiRequestPerformer = (*shardApiRequestPerformerDirectEmulator[ShardApiRw])(nil)
-)
+var _ shardApiRequestPerformer = (*shardApiRequestPerformerDirectEmulator)(nil)
 
-func (api *shardApiRequestPerformerDirectEmulator[RawApiType]) shardId() types.ShardId {
+func (api *shardApiRequestPerformerDirectEmulator) shardId() types.ShardId {
 	return api.shardApi.shardId()
 }
 
-func (api *shardApiRequestPerformerDirectEmulator[RawApiType]) doApiRequest(
+func (api *shardApiRequestPerformerDirectEmulator) doApiRequest(
 	ctx context.Context, codec *methodCodec, args ...any,
 ) ([]byte, error) {
 	apiValue := reflect.ValueOf(api.shardApi)
@@ -88,11 +85,11 @@ func (api *shardApiRequestPerformerDirectEmulator[RawApiType]) doApiRequest(
 	return codec.packResponse(apiCallResults...)
 }
 
-func (api *shardApiRequestPerformerDirectEmulator[RawApiType]) setNodeApi(nodeApi NodeApi) {
+func (api *shardApiRequestPerformerDirectEmulator) setNodeApi(nodeApi NodeApi) {
 	api.shardApi.setNodeApi(nodeApi)
 }
 
-func (api *shardApiRequestPerformerDirectEmulator[RawApiType]) setAsP2pRequestHandlersIfAllowed(
+func (api *shardApiRequestPerformerDirectEmulator) setAsP2pRequestHandlersIfAllowed(
 	ctx context.Context,
 	networkManager network.Manager,
 	logger logging.Logger,
@@ -101,6 +98,6 @@ func (api *shardApiRequestPerformerDirectEmulator[RawApiType]) setAsP2pRequestHa
 		ctx, api.transportType, api.apiType, api.derived, api.shardId(), api.apiName, networkManager, logger)
 }
 
-func (api *shardApiRequestPerformerDirectEmulator[RawApiType]) apiCodec() apiCodec {
+func (api *shardApiRequestPerformerDirectEmulator) apiCodec() apiCodec {
 	return api.codec
 }

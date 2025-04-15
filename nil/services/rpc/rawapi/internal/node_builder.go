@@ -1,4 +1,4 @@
-package rawapi
+package internal
 
 import (
 	"github.com/NilFoundation/nil/nil/common/assert"
@@ -19,9 +19,9 @@ type nodeApiBuilder struct {
 func NodeApiBuilder(db db.DB, networkManager network.Manager) *nodeApiBuilder {
 	return &nodeApiBuilder{
 		nodeApi: &nodeApiOverShardApis{
-			apisRo:  make(map[types.ShardId]ShardApiRo),
-			apisRw:  make(map[types.ShardId]ShardApiRw),
-			apisDev: make(map[types.ShardId]ShardApiDev),
+			apisRo:  make(map[types.ShardId]shardApiRo),
+			apisRw:  make(map[types.ShardId]shardApiRw),
+			apisDev: make(map[types.ShardId]shardApiDev),
 			allApis: make([]shardApiBase, 0),
 		},
 		db:             db,
@@ -39,7 +39,7 @@ func (nb *nodeApiBuilder) BuildAndReset() NodeApi {
 }
 
 func (nb *nodeApiBuilder) WithLocalShardApiRo(shardId types.ShardId) *nodeApiBuilder {
-	var localShardApi ShardApiRo = newLocalShardApiRo(shardId, nb.db)
+	var localShardApi shardApiRo = newLocalShardApiRo(shardId, nb.db)
 	if assert.Enable {
 		localShardApi = newShardApiClientDirectEmulatorRo(localShardApi)
 	}
@@ -49,7 +49,7 @@ func (nb *nodeApiBuilder) WithLocalShardApiRo(shardId types.ShardId) *nodeApiBui
 }
 
 func (nb *nodeApiBuilder) WithLocalShardApiRw(shardId types.ShardId, txnpool txnpool.Pool) *nodeApiBuilder {
-	var localShardApi ShardApiRw = newLocalShardApiRw(newLocalShardApiRo(shardId, nb.db), txnpool)
+	var localShardApi shardApiRw = newLocalShardApiRw(newLocalShardApiRo(shardId, nb.db), txnpool)
 	if assert.Enable {
 		localShardApi = newShardApiClientDirectEmulatorRw(localShardApi)
 	}

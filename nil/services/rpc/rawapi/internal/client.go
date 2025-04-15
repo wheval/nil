@@ -1,4 +1,4 @@
-package rawapi
+package internal
 
 import (
 	"context"
@@ -16,10 +16,6 @@ type shardApiRequestPerformer interface {
 
 	apiCodec() apiCodec
 	doApiRequest(ctx context.Context, codec *methodCodec, args ...any) ([]byte, error)
-}
-
-type shardApiRequestPerformerSetter interface {
-	setShardApiRequestPerformer(shardApiRequestPerformer)
 }
 
 func sendRequestAndGetResponseWithCallerMethodName[ResponseType any](

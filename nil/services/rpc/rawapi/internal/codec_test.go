@@ -1,4 +1,4 @@
-package rawapi
+package internal
 
 import (
 	"context"
@@ -51,7 +51,7 @@ func TestApisCompatibility(t *testing.T) {
 
 	incompatibleApis := map[reflect.Type]string{
 		reflect.TypeFor[apiWithOtherMethod]()://
-		"method OtherMethod not found in rawapi.compatibleNetworkTransportProtocol",
+		"method OtherMethod not found in internal.compatibleNetworkTransportProtocol",
 
 		reflect.TypeFor[apiWithWrongMethodArguments]()://
 		"API method TestMethod requires 2 arguments, but pb.BlockRequest.PackProtoMessage accepts 1 arguments",
