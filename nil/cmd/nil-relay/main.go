@@ -25,7 +25,7 @@ const (
 
 	filePermissions = 0o644
 
-	defaultConfigFileName = "relay.yaml"
+	defaultConfigFileName = "nil-relay.yaml"
 )
 
 var logger = logging.NewLogger("relay")
@@ -54,7 +54,7 @@ func runCommand() error {
 	}
 
 	rootCmd := &cobra.Command{
-		Use:           "relay [flags]",
+		Use:           "nil-relay [flags]",
 		Short:         "relay for nild cluster network",
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -86,7 +86,7 @@ func runCommand() error {
 	genConfigCmd.Flags().StringVarP(outputFile, "output", "o", "", "Output config file name")
 	rootCmd.AddCommand(genConfigCmd)
 
-	rootCmd.AddCommand(cobrax.VersionCmd("relay"))
+	rootCmd.AddCommand(cobrax.VersionCmd("nil-relay"))
 
 	return rootCmd.Execute()
 }
