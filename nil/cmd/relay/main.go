@@ -100,12 +100,6 @@ func genConfig(cfg *config, fileName string) error {
 		fileName = defaultConfigFileName
 	}
 
-	if _, err := os.Stat(fileName); err == nil {
-		return fmt.Errorf("config file %s already exists", fileName)
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("error checking config file %s: %w", fileName, err)
-	}
-
 	if _, err := network.LoadOrGenerateKeys(cfg.Network.KeysPath); err != nil {
 		return fmt.Errorf("failed to ensure keys file %s existence: %w", cfg.Network.KeysPath, err)
 	}
