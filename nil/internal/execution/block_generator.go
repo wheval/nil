@@ -349,23 +349,8 @@ func (g *BlockGenerator) GenerateBlock(
 	return g.finalize(proposal.PrevBlockId+1, params)
 }
 
-func (es *ExecutionState) ValidateInternalTransaction(transaction *types.Transaction) error {
-	check.PanicIfNot(transaction.IsInternal())
-
-	nextTx := es.InTxCounts[transaction.From.ShardId()]
-	if transaction.TxId != nextTx {
-		return types.NewError(types.ErrorTxIdGap)
-	}
-	es.InTxCounts[transaction.From.ShardId()] = nextTx + 1
-
-	if transaction.IsDeploy() {
-		return ValidateDeployTransaction(transaction)
-	}
-	return nil
-}
-
 func (g *BlockGenerator) handleInternalInTransaction(txn *types.Transaction) *ExecutionResult {
-	if err := g.executionState.ValidateInternalTransaction(txn); err != nil {
+	if err := g.executionState.AcceptInternalTransaction(txn); err != nil {
 		g.logger.Warn().Err(err).Msg("Invalid internal transaction")
 		return NewExecutionResult().SetError(types.KeepOrWrapError(types.ErrorValidation, err))
 	}
