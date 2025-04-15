@@ -692,6 +692,17 @@ func (es *ExecutionState) SetState(addr types.Address, key common.Hash, val comm
 	return acc.SetState(key, val)
 }
 
+func (es *ExecutionState) SetAsyncContext(
+	addr types.Address, index types.TransactionIndex, val *types.AsyncContext,
+) error {
+	acc, err := es.getOrNewAccount(addr)
+	if err != nil {
+		return err
+	}
+	acc.SetAsyncContext(index, val)
+	return nil
+}
+
 // SetStorage replaces the entire storage for the specified account with given
 // storage. This function should only be used for debugging.
 func (es *ExecutionState) SetStorage(addr types.Address, storage Storage) error {
