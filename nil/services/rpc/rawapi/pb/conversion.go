@@ -497,7 +497,6 @@ func (ac *AsyncContext) PackProtoMessage(context *types.AsyncContext) {
 		return
 	}
 
-	ac.IsAwait = context.IsAwait
 	ac.Data = context.Data
 	ac.ResponseProcessingGas = context.ResponseProcessingGas.Uint64()
 }
@@ -507,7 +506,6 @@ func (rc *AsyncContext) UnpackProtoMessage() types.AsyncContext {
 		return types.AsyncContext{}
 	}
 	return types.AsyncContext{
-		IsAwait:               rc.IsAwait,
 		Data:                  rc.Data,
 		ResponseProcessingGas: types.Gas(rc.ResponseProcessingGas),
 	}

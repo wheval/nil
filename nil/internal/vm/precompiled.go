@@ -93,7 +93,6 @@ var (
 	TransactionTokensAddress = types.BytesToAddress([]byte{0xd3})
 	GetGasPriceAddress       = types.BytesToAddress([]byte{0xd4})
 	PoseidonHashAddress      = types.BytesToAddress([]byte{0xd5})
-	AwaitCallAddress         = types.BytesToAddress([]byte{0xd6})
 	ConfigParamAddress       = types.BytesToAddress([]byte{0xd7})
 	SendRequestAddress       = types.BytesToAddress([]byte{0xd8})
 	CheckIsResponseAddress   = types.BytesToAddress([]byte{0xd9})
@@ -134,7 +133,6 @@ var PrecompiledContractsPrague = map[types.Address]PrecompiledContract{
 	TransactionTokensAddress: &getTransactionTokens{},
 	GetGasPriceAddress:       &getGasPrice{},
 	PoseidonHashAddress:      &poseidonHash{},
-	AwaitCallAddress:         &awaitCall{},
 	ConfigParamAddress:       &configParam{},
 	SendRequestAddress:       &sendRequest{},
 	CheckIsResponseAddress:   &checkIsResponse{},
@@ -461,7 +459,7 @@ func estimateGasForAsyncRequest(input []byte, precompile string, argnum, argtota
 		return 0
 	}
 
-	// when running `awaitCall` / `sendRequest` the caller specifies exact amount of gas they want to reserve
+	// when running `sendRequest` the caller specifies exact amount of gas they want to reserve
 	// later this gas will be used for processing of response for particular request
 	method := getPrecompiledMethod(precompile)
 
@@ -478,74 +476,6 @@ func estimateGasForAsyncRequest(input []byte, precompile string, argnum, argtota
 
 	responseProcessingGas := extractUintParam(args[argnum], precompile, "responseProcessingGas")
 	return baseFee + responseProcessingGas.Uint64()
-}
-
-type awaitCall struct{}
-
-var _ EvmAccessedPrecompiledContract = (*awaitCall)(nil)
-
-func (c *awaitCall) RequiredGas(input []byte, state StateDBReadOnly) (uint64, error) {
-	dst, err := extractDstAddress(input, "precompileAwaitCall", 0)
-	if err != nil {
-		return math.MaxUint64, err
-	}
-	extraGas := GetExtraGasForOutboundTransaction(state, dst.ShardId())
-
-	return extraGas + estimateGasForAsyncRequest(input, "precompileAwaitCall", 1, 3), nil
-}
-
-func (a *awaitCall) Run(evm *EVM, input []byte, value *uint256.Int, caller ContractRef) ([]byte, error) {
-	if len(input) < 4 {
-		return nil, types.NewVmError(types.ErrorPrecompileTooShortCallData)
-	}
-
-	state := evm.StateDB
-
-	// Only top level functions are allowed to use awaitCall
-	if evm.GetDepth() > 1 {
-		return nil, types.NewVmError(types.ErrorAwaitCallCalledFromNotTopLevel)
-	}
-
-	args, err := precompiledArgs("precompileAwaitCall", input, 3)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get `dst` argument
-	dst, ok := args[0].(types.Address)
-	check.PanicIfNotf(ok, "awaitCall failed: dst argument is not an address")
-
-	// Get `responseProcessingGas` argument
-	responseProcessingGas := types.Gas(extractUintParam(args[1], "awaitCall", "responseProcessingGas").Uint64())
-	if responseProcessingGas < MinGasReserveForAsyncRequest {
-		logging.GlobalLogger.Error().Msgf(
-			"awaitCall failed: responseProcessingGas is too low (%d)", responseProcessingGas)
-		return nil, types.NewVmError(types.ErrorAwaitCallTooLowResponseProcessingGas)
-	}
-
-	// Get `callData` argument
-	callData := getBytesArgCopy(args[2], "awaitCall", "callData")
-
-	// Internal is required for the transaction
-	payload := types.InternalTransactionPayload{
-		Kind:        types.ExecutionTransactionKind,
-		FeeCredit:   types.NewZeroValue(),
-		ForwardKind: types.ForwardKindRemaining,
-		Value:       types.NewValue(value),
-		Token:       nil,
-		To:          dst,
-		BounceTo:    state.GetInTransaction().To,
-		Data:        callData,
-	}
-
-	setRefundTo(&payload.RefundTo, state.GetInTransaction())
-
-	if _, err = state.AddOutRequestTransaction(caller.Address(), &payload, responseProcessingGas, true); err != nil {
-		logging.GlobalLogger.Error().Msgf("AddOutRequestTransaction failed: %s", err)
-		return nil, types.NewVmVerboseError(types.ErrorPrecompileStateDbReturnedError, err.Error())
-	}
-
-	return nil, nil
 }
 
 type sendRequest struct{}
@@ -594,7 +524,7 @@ func (a *sendRequest) Run(state StateDB, input []byte, value *uint256.Int, calle
 	if responseProcessingGas < MinGasReserveForAsyncRequest {
 		logging.GlobalLogger.Error().Msgf(
 			"sendRequest failed: responseProcessingGas is too low (%d)", responseProcessingGas)
-		return nil, types.NewVmError(types.ErrorAwaitCallTooLowResponseProcessingGas)
+		return nil, types.NewVmError(types.ErrorTooLowResponseProcessingGas)
 	}
 
 	// Get `context` argument
@@ -622,7 +552,7 @@ func (a *sendRequest) Run(state StateDB, input []byte, value *uint256.Int, calle
 
 	setRefundTo(&payload.RefundTo, state.GetInTransaction())
 
-	if _, err = state.AddOutRequestTransaction(caller.Address(), &payload, responseProcessingGas, false); err != nil {
+	if _, err = state.AddOutRequestTransaction(caller.Address(), &payload, responseProcessingGas); err != nil {
 		logging.GlobalLogger.Error().Msgf("AddOutRequestTransaction failed: %s", err)
 		return nil, types.NewVmVerboseError(types.ErrorPrecompileStateDbReturnedError, err.Error())
 	}

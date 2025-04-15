@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type SuiteAsyncAwait struct {
+type SuiteRequestResponse struct {
 	tests.ShardedSuite
 
 	testAddress0    types.Address
@@ -29,7 +29,7 @@ type SuiteAsyncAwait struct {
 	accounts        []types.Address
 }
 
-func (s *SuiteAsyncAwait) SetupSuite() {
+func (s *SuiteRequestResponse) SetupSuite() {
 	var err error
 	s.testAddress0, err = contracts.CalculateAddress(contracts.NameRequestResponseTest, 1, []byte{1})
 	s.Require().NoError(err)
@@ -87,7 +87,7 @@ func (s *SuiteAsyncAwait) SetupSuite() {
 	})
 }
 
-func (s *SuiteAsyncAwait) SetupTest() {
+func (s *SuiteRequestResponse) SetupTest() {
 	data := s.AbiPack(s.abiCounter, "set", int32(0))
 	receipt := s.SendExternalTransactionNoCheck(data, s.counterAddress0)
 	s.Require().True(receipt.AllSuccess())
@@ -99,11 +99,11 @@ func (s *SuiteAsyncAwait) SetupTest() {
 	s.Require().True(receipt.AllSuccess())
 }
 
-func (s *SuiteAsyncAwait) TearDownSuite() {
+func (s *SuiteRequestResponse) TearDownSuite() {
 	s.Cancel()
 }
 
-func (s *SuiteAsyncAwait) UpdateBalance() types.Value {
+func (s *SuiteRequestResponse) UpdateBalance() types.Value {
 	s.T().Helper()
 
 	balance := types.NewZeroValue()
@@ -113,46 +113,7 @@ func (s *SuiteAsyncAwait) UpdateBalance() types.Value {
 	return balance
 }
 
-func (s *SuiteAsyncAwait) TestSumCounters() {
-	var (
-		data    []byte
-		receipt *jsonrpc.RPCReceipt
-	)
-
-	data = s.AbiPack(s.abiCounter, "add", int32(11))
-	receipt = s.SendExternalTransactionNoCheck(data, s.counterAddress0)
-	s.Require().True(receipt.AllSuccess())
-
-	data = s.AbiPack(s.abiCounter, "add", int32(456))
-	receipt = s.SendExternalTransactionNoCheck(data, s.counterAddress1)
-	s.Require().True(receipt.AllSuccess())
-
-	initialBalance := s.UpdateBalance()
-
-	data = s.AbiPack(s.abiTest, "sumCounters", []types.Address{s.counterAddress0, s.counterAddress1, s.testAddress0})
-	receipt = s.SendExternalTransactionNoCheck(data, s.testAddress0)
-	s.Require().True(receipt.AllSuccess())
-
-	info := s.AnalyzeReceipt(receipt, map[types.Address]string{})
-	// we use `receipt.GasUsed` field in calculations here
-	// this gives a slightly different result since part of the "spent" gas
-	// in fact is being reserved for the response processing and later is being refunded
-	// TODO: likely we need to introduce `receipt.GasReserved` field as well
-
-	// 3 async calls; 60_000 is value from the RequestResponseTest.sol
-	valueReservedAsync := types.Gas(3 * 60_000).ToValue(types.DefaultGasPrice)
-	s.CheckBalance(info, initialBalance.Add(valueReservedAsync), s.accounts)
-
-	data = s.AbiPack(s.abiTest, "value")
-	data = s.CallGetter(s.testAddress0, data, "latest", nil)
-	nameRes, err := s.abiTest.Unpack("value", data)
-	s.Require().NoError(err)
-	value, ok := nameRes[0].(int32)
-	s.Require().True(ok)
-	s.Require().Equal(int32(467*2), value)
-}
-
-func (s *SuiteAsyncAwait) TestNestedRequest() {
+func (s *SuiteRequestResponse) TestNestedRequest() {
 	var (
 		data    []byte
 		receipt *jsonrpc.RPCReceipt
@@ -163,18 +124,7 @@ func (s *SuiteAsyncAwait) TestNestedRequest() {
 	s.Require().True(receipt.AllSuccess())
 }
 
-func (s *SuiteAsyncAwait) TestNestedAwaitCall() {
-	var (
-		data    []byte
-		receipt *jsonrpc.RPCReceipt
-	)
-
-	data = s.AbiPack(s.abiTest, "sendRequestWithNestedAwaitCall", s.testAddress1)
-	receipt = s.SendExternalTransactionNoCheck(data, s.testAddress0)
-	s.Require().True(receipt.AllSuccess())
-}
-
-func (s *SuiteAsyncAwait) TestSendRequestFromCallback() {
+func (s *SuiteRequestResponse) TestSendRequestFromCallback() {
 	var (
 		data    []byte
 		receipt *jsonrpc.RPCReceipt
@@ -212,90 +162,7 @@ func (s *SuiteAsyncAwait) TestSendRequestFromCallback() {
 	s.Require().False(response.OutReceipts[0].Flags.IsResponse())
 }
 
-func (s *SuiteAsyncAwait) TestFailed() {
-	var (
-		data            []byte
-		receipt         *jsonrpc.RPCReceipt
-		responseReceipt *jsonrpc.RPCReceipt
-		info            tests.ReceiptInfo
-	)
-
-	initialBalance := s.UpdateBalance()
-	// we use `receipt.GasUsed` field in calculations here
-	// this gives a slightly different result since part of the "spent" gas
-	// in fact is being reserved for the response processing and later is being refunded
-	// TODO: likely we need to introduce `receipt.GasReserved` field as well
-
-	valueReservedAsync := types.Gas(50_000).ToValue(types.DefaultGasPrice)
-
-	s.Run("callFailed with false fail flag", func() {
-		data = s.AbiPack(s.abiTest, "callFailed", s.testAddress1, false)
-		receipt = s.SendExternalTransactionNoCheck(data, s.testAddress0)
-		s.Require().True(receipt.AllSuccess())
-
-		info = s.AnalyzeReceipt(receipt, map[types.Address]string{})
-		initialBalance = s.CheckBalance(info, initialBalance.Add(valueReservedAsync), s.accounts)
-
-		responseReceipt = receipt.OutReceipts[0].OutReceipts[0]
-		s.Require().Len(responseReceipt.Logs, 1)
-		s.Require().Equal(s.abiTest.Events["awaitCallResult"].ID.Bytes(), responseReceipt.Logs[0].Topics[0].Bytes())
-		args, err := s.abiTest.Events["awaitCallResult"].Inputs.Unpack(responseReceipt.Logs[0].Data)
-		s.Require().NoError(err)
-		success, ok := args[0].(bool)
-		s.Require().True(ok)
-		s.Require().True(success)
-	})
-
-	s.Run("callFailed with true fail flag", func() {
-		data = s.AbiPack(s.abiTest, "callFailed", s.testAddress1, true)
-		receipt = s.SendExternalTransactionNoCheck(data, s.testAddress0)
-		s.Require().True(receipt.Success)
-		// `checkFail` method should revert
-		s.Require().False(receipt.OutReceipts[0].Success)
-
-		responseReceipt = receipt.OutReceipts[0].OutReceipts[0]
-		s.Require().True(responseReceipt.Success)
-		s.Require().Len(responseReceipt.Logs, 1)
-		args, err := s.abiTest.Events["awaitCallResult"].Inputs.Unpack(responseReceipt.Logs[0].Data)
-		s.Require().NoError(err)
-		success, ok := args[0].(bool)
-		s.Require().True(ok)
-		s.Require().False(success)
-
-		info = s.AnalyzeReceipt(receipt, map[types.Address]string{})
-		s.CheckBalance(info, initialBalance.Add(valueReservedAsync), s.accounts)
-	})
-}
-
-func (s *SuiteAsyncAwait) TestFactorial() {
-	data := s.AbiPack(s.abiTest, "factorial", int32(6))
-	receipt := s.SendExternalTransactionNoCheck(data, s.testAddress0)
-	s.Require().True(receipt.AllSuccess())
-
-	data = s.AbiPack(s.abiTest, "value")
-	data = s.CallGetter(s.testAddress0, data, "latest", nil)
-	nameRes, err := s.abiTest.Unpack("value", data)
-	s.Require().NoError(err)
-	value, ok := nameRes[0].(int32)
-	s.Require().True(ok)
-	s.Require().Equal(int32(720), value)
-}
-
-func (s *SuiteAsyncAwait) TestFibonacci() {
-	data := s.AbiPack(s.abiTest, "fibonacci", int32(4))
-	receipt := s.SendExternalTransactionNoCheck(data, s.testAddress0)
-	s.Require().True(receipt.AllSuccess())
-
-	data = s.AbiPack(s.abiTest, "value")
-	data = s.CallGetter(s.testAddress0, data, "latest", nil)
-	nameRes, err := s.abiTest.Unpack("value", data)
-	s.Require().NoError(err)
-	value, ok := nameRes[0].(int32)
-	s.Require().True(ok)
-	s.Require().Equal(int32(3), value)
-}
-
-func (s *SuiteAsyncAwait) TestTwoRequests() {
+func (s *SuiteRequestResponse) TestTwoRequests() {
 	var (
 		data    []byte
 		receipt *jsonrpc.RPCReceipt
@@ -331,57 +198,21 @@ func (s *SuiteAsyncAwait) TestTwoRequests() {
 	s.Require().EqualValues(11+456, value)
 }
 
-func (s *SuiteAsyncAwait) TestInvalidContext() {
+func (s *SuiteRequestResponse) TestInvalidContext() {
 	data := s.AbiPack(s.abiTest, "makeInvalidContext", s.counterAddress0)
 	receipt := s.SendExternalTransactionNoCheck(data, s.testAddress0)
 	s.Require().True(receipt.Success)
 	s.Require().False(receipt.OutReceipts[0].Success)
 }
 
-func (s *SuiteAsyncAwait) TestInvalidSendRequest() {
+func (s *SuiteRequestResponse) TestInvalidSendRequest() {
 	data := s.AbiPack(s.abiTest, "makeInvalidSendRequest")
 	receipt := s.SendExternalTransactionNoCheck(data, s.testAddress0)
 	s.Require().True(receipt.Success)
 	s.Empty(receipt.OutReceipts)
 }
 
-func (s *SuiteAsyncAwait) TestSumCountersNested() {
-	var (
-		data    []byte
-		receipt *jsonrpc.RPCReceipt
-	)
-
-	data = s.AbiPack(s.abiCounter, "add", int32(11))
-	receipt = s.SendExternalTransactionNoCheck(data, s.counterAddress0)
-	s.Require().True(receipt.AllSuccess())
-
-	data = s.AbiPack(s.abiCounter, "add", int32(22))
-	receipt = s.SendExternalTransactionNoCheck(data, s.counterAddress1)
-	s.Require().True(receipt.AllSuccess())
-
-	data = s.AbiPack(s.abiTest, "sumCountersNested", []types.Address{s.testAddress0, s.testAddress1},
-		[]types.Address{s.counterAddress0, s.counterAddress1})
-	receipt = s.SendExternalTransactionNoCheck(data, s.testAddress0)
-	s.Require().True(receipt.AllSuccess())
-
-	data = s.AbiPack(s.abiTest, "value")
-	data = s.CallGetter(s.testAddress0, data, "latest", nil)
-	nameRes, err := s.abiTest.Unpack("value", data)
-	s.Require().NoError(err)
-	s.Require().NotEmpty(nameRes)
-	value, ok := nameRes[0].(int32)
-	s.Require().True(ok)
-	s.Require().Equal(int32(33), value)
-}
-
-func (s *SuiteAsyncAwait) TestNoneZeroCallDepth() {
-	data := s.AbiPack(s.abiTest, "testNoneZeroCallDepth", s.testAddress0)
-	receipt := s.SendExternalTransactionNoCheck(data, s.testAddress0)
-	s.Require().False(receipt.AllSuccess())
-	s.Require().Equal("AwaitCallCalledFromNotTopLevel", receipt.Status)
-}
-
-func (s *SuiteAsyncAwait) TestRequestResponse() {
+func (s *SuiteRequestResponse) TestRequestResponse() {
 	var info tests.ReceiptInfo
 
 	s.Run("Add to counter", func() {
@@ -508,22 +339,22 @@ func (s *SuiteAsyncAwait) TestRequestResponse() {
 	// })
 }
 
-func (s *SuiteAsyncAwait) TestOnlyResponse() {
+func (s *SuiteRequestResponse) TestOnlyResponse() {
 	data := s.AbiPack(s.abiTest, "responseCounterAdd", true, []byte{}, []byte{})
 	receipt := s.SendExternalTransactionNoCheck(data, s.testAddress0)
 	s.Require().False(receipt.Success)
 	s.Require().Equal("OnlyResponseCheckFailed", receipt.Status)
 }
 
-func (s *SuiteAsyncAwait) checkAsyncContextEmpty(address types.Address) {
+func (s *SuiteRequestResponse) checkAsyncContextEmpty(address types.Address) {
 	s.T().Helper()
 
 	contract := tests.GetContract(s.T(), s.DefaultClient, address)
 	s.Require().Equal(common.EmptyHash, contract.AsyncContextRoot)
 }
 
-func TestAsyncAwait(t *testing.T) {
+func TestRequestResponse(t *testing.T) {
 	t.Parallel()
 
-	suite.Run(t, new(SuiteAsyncAwait))
+	suite.Run(t, new(SuiteRequestResponse))
 }
