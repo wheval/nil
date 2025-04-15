@@ -82,7 +82,7 @@ func New(config *Config, database db.DB) (*ProofProvider, error) {
 		&rpc.TaskListenerConfig{HttpEndpoint: config.TaskListenerRpcEndpoint}, taskScheduler, logger,
 	)
 
-	taskCanclelChecker := scheduler.NewTaskCancelChecker(
+	taskCancelChecker := scheduler.NewTaskCancelChecker(
 		taskRpcClient,
 		taskStorage,
 		taskExecutor.Id(),
@@ -92,7 +92,7 @@ func New(config *Config, database db.DB) (*ProofProvider, error) {
 	return &ProofProvider{
 		Service: srv.NewService(
 			logger,
-			taskExecutor, taskScheduler, taskListener, taskCanclelChecker, taskResultSender,
+			taskExecutor, taskScheduler, taskListener, taskCancelChecker, taskResultSender,
 		),
 	}, nil
 }

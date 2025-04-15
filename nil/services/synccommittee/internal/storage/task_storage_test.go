@@ -349,7 +349,9 @@ func (s *TaskStorageSuite) Test_ProcessTaskResult_Concurrently() {
 
 func (s *TaskStorageSuite) Test_ProcessTaskResult_InvalidStateChange() {
 	taskStatuses := []types.TaskStatus{
-		types.TaskStatusNone,
+		types.WaitingForInput,
+		types.WaitingForExecutor,
+		types.Failed,
 	}
 
 	taskResults := getTestTaskResults(false)
@@ -526,7 +528,8 @@ func (s *TaskStorageSuite) Test_TaskCancelation() {
 	s.Require().NoError(err)
 	s.Require().Equal(uint(0x1), canceledCount)
 
-	emptyEntry, err := s.ts.TryGetTaskEntry(s.ctx, taskEntry.Task.Id)
+	failedEntry, err := s.ts.TryGetTaskEntry(s.ctx, taskEntry.Task.Id)
 	s.Require().NoError(err)
-	s.Require().Nil(emptyEntry)
+	s.Require().Equal(taskEntry.Task, failedEntry.Task)
+	s.Require().Equal(types.Failed, failedEntry.Status)
 }

@@ -67,17 +67,20 @@ func (r *TaskResult) ValidateForTask(entry *TaskEntry) error {
 		return fmt.Errorf("task result's taskId=%s does not match task entry's taskId=%s", r.TaskId, entry.Task.Id)
 	}
 
-	if entry.Status == TaskStatusNone {
-		return errTaskInvalidStatus(entry, "Validate")
+	// Task can be cancelled in any status
+	if r.Error != nil && r.Error.ErrType == TaskErrCancelled {
+		return nil
+	}
+	// Otherwise, it should only be terminated by the current owner
+	if r.Sender == UnknownExecutorId || r.Sender != entry.Owner {
+		return fmt.Errorf(
+			"%w: taskId=%v, taskStatus=%v, taskOwner=%v, requestSenderId=%v",
+			ErrTaskWrongExecutor, entry.Task.Id, entry.Status, entry.Owner, r.Sender,
+		)
 	}
 
-	if entry.Status == Running {
-		if r.Sender == UnknownExecutorId || r.Sender != entry.Owner {
-			return fmt.Errorf(
-				"%w: taskId=%v, taskStatus=%v, taskOwner=%v, requestSenderId=%v",
-				ErrTaskWrongExecutor, entry.Task.Id, entry.Status, entry.Owner, r.Sender,
-			)
-		}
+	if entry.Status != Running {
+		return errTaskInvalidStatus(entry, "Validate")
 	}
 
 	return nil

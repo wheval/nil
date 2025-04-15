@@ -50,7 +50,7 @@ const (
 	// TaskErrOutOfMemory indicated that managed memory allocation failure occurred during the proof generation
 	TaskErrOutOfMemory
 
-	// TaskErrCancelled indicated that child task was cancelled becuse parent task not exists any more
+	// TaskErrCancelled indicated that child task was cancelled
 	TaskErrCancelled
 
 	// TaskErrUnknown indicates an unspecified task error.

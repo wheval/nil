@@ -99,6 +99,20 @@ func (*TaskStorage) extractTaskEntry(tx db.RoTx, id types.TaskId) (*types.TaskEn
 	return entry, nil
 }
 
+// Helper to get and decode failed task entry from DB
+func (*TaskStorage) extractFailedTaskEntry(tx db.RoTx, id types.TaskId) (*types.TaskEntry, error) {
+	encoded, err := tx.Get(failedTaskEntriesTable, id.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	entry := &types.TaskEntry{}
+	if err = gob.NewDecoder(bytes.NewBuffer(encoded)).Decode(&entry); err != nil {
+		return nil, fmt.Errorf("%w: failed to decode task with id %v: %w", ErrSerializationFailed, id, err)
+	}
+	return entry, nil
+}
+
 // Helper to encode and put task entry into DB
 func (st *TaskStorage) putTaskEntry(tx db.RwTx, entry *types.TaskEntry, isFailedTask bool) error {
 	var inputBuffer bytes.Buffer
@@ -174,7 +188,11 @@ func (st *TaskStorage) TryGetTaskEntry(ctx context.Context, id types.TaskId) (*t
 	entry, err := st.extractTaskEntry(tx, id)
 
 	if errors.Is(err, db.ErrKeyNotFound) {
-		return nil, nil
+		// check in the failed task table
+		entry, err = st.extractFailedTaskEntry(tx, id)
+		if errors.Is(err, db.ErrKeyNotFound) {
+			return nil, nil
+		}
 	}
 
 	return entry, err
@@ -401,11 +419,11 @@ func (st *TaskStorage) terminateTaskTx(tx db.RwTx, entry *types.TaskEntry, res *
 	log.NewTaskResultEvent(st.logger, zerolog.DebugLevel, res).
 		Msgf("Task execution is completed with status %s, removing it from the storage", res.StatusStr())
 
+	// We don't keep finished tasks in DB
 	if err := tx.Delete(taskEntriesTable, res.TaskId.Bytes()); err != nil {
 		return err
 	}
 
-	// We don't keep finished tasks in DB
 	if !res.IsSuccess() {
 		if err := st.putTaskEntry(tx, entry, true); err != nil {
 			return err

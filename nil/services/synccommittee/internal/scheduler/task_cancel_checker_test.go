@@ -133,7 +133,9 @@ func (s *TaskCancelCheckerSuite) Test_Check_Dead_Task() {
 	// Checked task was not removed
 	taskEntry, err := s.taskStorage.TryGetTaskEntry(s.ctx, task.Id)
 	s.Require().NoError(err)
-	s.Require().Nil(taskEntry)
+	s.Require().NotNil(taskEntry)
+	s.Require().Equal(taskEntry.Task.Id, expectedTaskEntry.Task.Id)
+	s.Require().Equal(types.Failed, taskEntry.Status)
 }
 
 func (s *TaskCancelCheckerSuite) newTestTaskCancelChecker(handler api.TaskRequestHandler) *TaskCancelChecker {
