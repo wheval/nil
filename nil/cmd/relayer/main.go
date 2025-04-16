@@ -57,7 +57,7 @@ func execute() error {
 		Short: "Run nil L1<->L2 relayer",
 	}
 
-	logLevel := rootCmd.Flags().String("log-level", "info", "app log level")
+	logLevel := rootCmd.PersistentFlags().String("log-level", "info", "app log level")
 	rootCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		logging.SetupGlobalLogger(*logLevel)
 	}
