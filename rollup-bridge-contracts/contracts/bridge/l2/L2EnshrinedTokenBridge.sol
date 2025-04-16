@@ -19,8 +19,6 @@ import { IL2BridgeMessenger } from "./interfaces/IL2BridgeMessenger.sol";
 import { IL2BridgeRouter } from "./interfaces/IL2BridgeRouter.sol";
 import { L2BaseBridge } from "./L2BaseBridge.sol";
 import { NilEnshrinedToken } from "../../common/tokens/NilEnshrinedToken.sol";
-import "@nilfoundation/smart-contracts/contracts/NilTokenBase.sol";
-import "@nilfoundation/smart-contracts/contracts/Nil.sol";
 
 contract L2EnshrinedTokenBridge is L2BaseBridge, IL2EnshrinedTokenBridge, NilBase, NilTokenBase {
   using AddressChecker for address;
