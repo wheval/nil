@@ -92,7 +92,10 @@ abstract class BaseCommand extends Command {
 
     logger.trace("Loaded configuration:", this.configManager.loadConfig());
 
-    const rpcEndpoint = this.configManager.getConfigValue(ConfigKeys.NilSection, ConfigKeys.RpcEndpoint);
+    const rpcEndpoint = this.configManager.getConfigValue(
+      ConfigKeys.NilSection,
+      ConfigKeys.RpcEndpoint,
+    );
     if (rpcEndpoint) {
       this.rpcClient = new PublicClient({
         transport: new HttpTransport({
@@ -101,7 +104,11 @@ abstract class BaseCommand extends Command {
       });
     }
 
-    const faucetEndpoint = this.configManager.getConfigValue(ConfigKeys.NilSection, ConfigKeys.FaucetEndpoint, rpcEndpoint);
+    const faucetEndpoint = this.configManager.getConfigValue(
+      ConfigKeys.NilSection,
+      ConfigKeys.FaucetEndpoint,
+      rpcEndpoint,
+    );
     if (faucetEndpoint) {
       this.faucetClient = new FaucetClient({
         transport: new HttpTransport({
@@ -110,7 +117,11 @@ abstract class BaseCommand extends Command {
       });
     }
 
-    const cometaEndpoint = this.configManager.getConfigValue(ConfigKeys.NilSection, ConfigKeys.CometaEndpoint, rpcEndpoint);
+    const cometaEndpoint = this.configManager.getConfigValue(
+      ConfigKeys.NilSection,
+      ConfigKeys.CometaEndpoint,
+      rpcEndpoint,
+    );
     if (cometaEndpoint) {
       this.cometaClient = new CometaClient({
         transport: new HttpTransport({
