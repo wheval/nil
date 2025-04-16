@@ -3,7 +3,7 @@ import { Flags } from "@oclif/core";
 import { BaseCommand } from "../../base.js";
 import { ConfigKeys } from "../../common/config.js";
 import { logger } from "../../logger.js";
-import { bigintFlag } from "../../types";
+import { bigintFlag } from "../../types.js";
 
 export const DefualtNewSmartAccountAmount = 1_000_000_000_000_000n;
 
