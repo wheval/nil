@@ -74,7 +74,14 @@ compile-bins:
 
 $(BIN_FILES): | compile-bins
 
-compile-contracts: $(BIN_FILES)
+# Solidity debug console
+CONSOLE_SOL := nil/contracts/solidity/lib/console.sol
+CONSOLE_GO  := nil/internal/vm/console/console_generated.go
+$(CONSOLE_SOL) $(CONSOLE_GO): nil/contracts/genlog.py
+	python3 nil/contracts/genlog.py $(CONSOLE_SOL) $(CONSOLE_GO)
+solidity_console: $(CONSOLE_SOL) $(CONSOLE_GO)
+
+compile-contracts: solidity_console $(BIN_FILES)
 
 golangci-lint: gen_rollup_contracts_bindings
 	golangci-lint run
