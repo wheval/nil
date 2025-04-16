@@ -75,7 +75,7 @@ func (s *ProposerTestSuite) SetupSuite() {
 			return []byte{123}, nil
 		},
 		PendingNonceAtFunc:   func(ctx context.Context, account ethcommon.Address) (uint64, error) { return 123, nil },
-		ChainIDFunc:          func(ctx context.Context) (*big.Int, error) { return big.NewInt(0), nil },
+		ChainIDFunc:          func(ctx context.Context) (*big.Int, error) { return big.NewInt(1), nil },
 		SuggestGasTipCapFunc: func(ctx context.Context) (*big.Int, error) { return big.NewInt(123), nil },
 		CodeAtFunc: func(ctx context.Context, contract ethcommon.Address, blockNumber *big.Int) ([]byte, error) {
 			return []byte{123}, nil

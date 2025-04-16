@@ -93,7 +93,6 @@ var (
 	SendTokensAddress        = types.BytesToAddress([]byte{0xd2})
 	TransactionTokensAddress = types.BytesToAddress([]byte{0xd3})
 	GetGasPriceAddress       = types.BytesToAddress([]byte{0xd4})
-	PoseidonHashAddress      = types.BytesToAddress([]byte{0xd5})
 	ConfigParamAddress       = types.BytesToAddress([]byte{0xd7})
 	SendRequestAddress       = types.BytesToAddress([]byte{0xd8})
 	CheckIsResponseAddress   = types.BytesToAddress([]byte{0xd9})
@@ -134,7 +133,6 @@ var PrecompiledContractsPrague = map[types.Address]PrecompiledContract{
 	SendTokensAddress:        &sendTokenSync{},
 	TransactionTokensAddress: &getTransactionTokens{},
 	GetGasPriceAddress:       &getGasPrice{},
-	PoseidonHashAddress:      &poseidonHash{},
 	ConfigParamAddress:       &configParam{},
 	SendRequestAddress:       &sendRequest{},
 	CheckIsResponseAddress:   &checkIsResponse{},
@@ -931,41 +929,6 @@ func (c *getGasPrice) Run(state StateDBReadOnly, input []byte, value *uint256.In
 	}
 
 	return res, nil
-}
-
-type poseidonHash struct{}
-
-var _ ReadOnlyPrecompiledContract = (*poseidonHash)(nil)
-
-func (c *poseidonHash) RequiredGas([]byte, StateDBReadOnly) (uint64, error) {
-	return 10, nil
-}
-
-func (c *poseidonHash) Run(
-	state StateDBReadOnly,
-	input []byte,
-	value *uint256.Int,
-	caller ContractRef,
-) ([]byte, error) {
-	if len(input) < 4 {
-		return nil, types.NewVmError(types.ErrorPrecompileTooShortCallData)
-	}
-
-	method := getPrecompiledMethod("precompileGetPoseidonHash")
-
-	args, err := method.Inputs.Unpack(input[4:])
-	if err != nil {
-		return nil, types.NewVmVerboseError(types.ErrorAbiUnpackFailed, err.Error())
-	}
-	if len(args) != 1 {
-		return nil, types.NewVmError(types.ErrorPrecompileWrongNumberOfArguments)
-	}
-
-	// Get `data` argument
-	data, ok := args[0].([]byte)
-	check.PanicIfNotf(ok, "poseidonHash failed: data is not a bytes: %v", args[0])
-
-	return common.PoseidonHash(data).Bytes(), nil
 }
 
 type configParam struct{}

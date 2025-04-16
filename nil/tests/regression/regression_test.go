@@ -292,22 +292,14 @@ func (s *SuiteRegression) TestAddressCalculation() {
 	abi, err := contracts.GetAbi(contracts.NameTest)
 	s.Require().NoError(err)
 
-	data := tests.GetRandomBytes(s.T(), 65)
-	refHash := common.PoseidonHash(data)
 	salt := tests.GetRandomBytes(s.T(), 32)
 	shardId := types.ShardId(2)
 	address := types.CreateAddress(shardId, types.BuildDeployPayload(code, common.BytesToHash(salt)))
 	address2 := types.CreateAddressForCreate2(address, code, common.BytesToHash(salt))
-	codeHash := common.PoseidonHash(code).Bytes()
-
-	// Test `Nil.getPoseidonHash()` library method
-	calldata, err := abi.Pack("getPoseidonHash", data)
-	s.Require().NoError(err)
-	resHash := s.CallGetter(s.testAddress, calldata, "latest", nil)
-	s.Require().Equal(refHash[:], resHash)
+	codeHash := common.KeccakHash(code).Bytes()
 
 	// Test `Nil.createAddress()` library method
-	calldata, err = abi.Pack("createAddress", big.NewInt(int64(shardId)), []byte(code), big.NewInt(0).SetBytes(salt))
+	calldata, err := abi.Pack("createAddress", big.NewInt(int64(shardId)), []byte(code), big.NewInt(0).SetBytes(salt))
 	s.Require().NoError(err)
 	resAddress := s.CallGetter(s.testAddress, calldata, "latest", nil)
 	s.Require().Equal(address, types.BytesToAddress(resAddress))

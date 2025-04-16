@@ -10,7 +10,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	pb "github.com/NilFoundation/nil/nil/services/synccommittee/prover/proto"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/prover/tracer/internal/constants"
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func TracesFromProto(pbMptTraces *pb.MPTTraces) (*MPTTraces, error) {
@@ -288,5 +288,5 @@ func nodeHash(node mpt.Node) (common.Hash, error) {
 		return common.EmptyHash, nil
 	}
 
-	return common.BytesToHash(poseidon.Sum(data)), nil
+	return common.BytesToHash(crypto.Keccak256(data)), nil
 }

@@ -1,6 +1,6 @@
 import { numberToBytesBE } from "@noble/curves/abstract/utils";
+import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex } from "../encoding/fromBytes.js";
-import { poseidonHash } from "../encoding/poseidon.js";
 import type { IAddress } from "../signers/types/IAddress.js";
 import type { Hex } from "../types/Hex.js";
 import { removeHexPrefix } from "./hex.js";
@@ -51,9 +51,8 @@ const calculateAddress = (shardId: number, code: Uint8Array, salt: Uint8Array): 
   const bytes = new Uint8Array(code.length + 32);
   bytes.set(code);
   bytes.set(salt, code.length);
-  const hash = poseidonHash(bytes);
+  const hashPart = keccak_256(bytes);
   const shardPart = numberToBytesBE(shardId, 2);
-  const hashPart = numberToBytesBE(hash, 32);
 
   return new Uint8Array([...shardPart, ...hashPart.slice(14)]);
 };

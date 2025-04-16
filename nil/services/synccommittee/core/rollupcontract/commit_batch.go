@@ -8,9 +8,9 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/NilFoundation/nil/nil/services/rollup"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -202,7 +202,7 @@ func (r *wrapperImpl) computeTxParams(ctx context.Context, from ethcommon.Addres
 		return nil, fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", gasFeeCap, gasTipCap)
 	}
 
-	blobFee := eip4844.CalcBlobFee(*head.ExcessBlobGas)
+	blobFee := rollup.CalcBlobFee(*head.ExcessBlobGas)
 	gas := ethparams.BlobTxBlobGasPerBlob * uint64(blobCount)
 
 	return &txParams{

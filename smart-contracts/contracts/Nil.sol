@@ -22,7 +22,6 @@ library Nil {
     address private constant SEND_TOKEN_SYNC = address(0xd2);
     address private constant GET_TRANSACTION_TOKENS = address(0xd3);
     address private constant GET_GAS_PRICE = address(0xd4);
-    address private constant GET_POSEIDON_HASH = address(0xd5);
     address private constant CONFIG_PARAM = address(0xd7);
     address private constant SEND_REQUEST = address(0xd8);
     address public constant IS_RESPONSE_TRANSACTION = address(0xd9);
@@ -307,9 +306,9 @@ library Nil {
      * @param salt Salt for the address creation.
      * @return Address of the created contract.
      */
-    function createAddress(uint shardId, bytes memory code, uint256 salt) internal returns(address) {
+    function createAddress(uint shardId, bytes memory code, uint256 salt) internal pure returns(address) {
         require(shardId < 0xffff, "Shard id is too big");
-        uint160 addr = uint160(uint256(getPoseidonHash(abi.encodePacked(code, salt))));
+        uint160 addr = uint160(uint256(keccak256(abi.encodePacked(code, salt))));
         addr &= 0xffffffffffffffffffffffffffffffffffff;
         addr |= uint160(shardId) << (18 * 8);
         return address(addr);
@@ -323,21 +322,12 @@ library Nil {
      * @param codeHash Hash of the contract bytecode.
      * @return Address of the created contract.
      */
-    function createAddress2(uint shardId, address sender, uint256 salt, uint256 codeHash) internal returns(address) {
+    function createAddress2(uint shardId, address sender, uint256 salt, uint256 codeHash) internal pure returns(address) {
         require(shardId < 0xffff, "Shard id is too big");
-        uint160 addr = uint160(uint256(getPoseidonHash(abi.encodePacked(bytes1(0xff), sender, salt, codeHash))));
+        uint160 addr = uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), sender, salt, codeHash))));
         addr &= 0xffffffffffffffffffffffffffffffffffff;
         addr |= uint160(shardId) << (18 * 8);
         return address(addr);
-    }
-
-    /**
-     * @dev Returns the Poseidon hash of the given data.
-     * @param data Data to hash.
-     * @return Poseidon hash of the data.
-     */
-    function getPoseidonHash(bytes memory data) internal returns(uint256) {
-        return __Precompile__(GET_POSEIDON_HASH).precompileGetPoseidonHash(data);
     }
 
     /**
@@ -487,7 +477,6 @@ contract __Precompile__ {
     function precompileSendTokens(address, Nil.Token[] memory) public returns(bool) {}
     function precompileGetTransactionTokens() public returns(Nil.Token[] memory) {}
     function precompileGetGasPrice(uint id) public returns(uint256) {}
-    function precompileGetPoseidonHash(bytes memory data) public returns(uint256) {}
     function precompileConfigParam(bool isSet, string calldata name, bytes calldata data) public returns(bytes memory) {}
     function precompileLog(string memory transaction, int[] memory data) public returns(bool) {}
     function precompileRollback(uint32, uint32, uint32, uint64 /*, uint32, uint32*/) public returns(bool) {}

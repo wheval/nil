@@ -24,7 +24,7 @@ func (c Code) Hash() common.Hash {
 	if len(c) == 0 {
 		return common.EmptyHash
 	}
-	return common.PoseidonHash(c[:])
+	return common.KeccakHash(c[:])
 }
 
 func (c Code) Hex() string {

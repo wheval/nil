@@ -42,20 +42,20 @@ func TestBloom(t *testing.T) {
 func TestBloomExtensively(t *testing.T) {
 	t.Parallel()
 
-	exp := common.HexToHash("09f96160f0da75ea63ed9ff270f994de890e0dce6e6fb532dcc332ab3b90ddbd")
+	exp := common.HexToHash("c8d3ca65cdb4874300a9e39475508f23ed6da09fdbc487f89a2dcf50b09eb263")
 	var b Bloom
 	// Add 100 "random" things
 	for i := range 100 {
 		data := fmt.Sprintf("xxxxxxxxxx data %d yyyyyyyyyyyyyy", i)
 		b.Add([]byte(data))
 	}
-	got := common.PoseidonHash(b.Bytes())
+	got := common.KeccakHash(b.Bytes())
 	if got != exp {
 		t.Errorf("Got %x, exp %x", got, exp)
 	}
 	var b2 Bloom
 	b2.SetBytes(b.Bytes())
-	got2 := common.PoseidonHash(b2.Bytes())
+	got2 := common.KeccakHash(b2.Bytes())
 	if got != got2 {
 		t.Errorf("Got %x, exp %x", got, got2)
 	}

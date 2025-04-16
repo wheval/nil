@@ -307,7 +307,7 @@ func (m *Transaction) Hash() common.Hash {
 	if m.IsExternal() {
 		return m.toExternal().Hash()
 	}
-	return ToShardedHash(common.MustPoseidonSSZ(m), m.To.ShardId())
+	return ToShardedHash(common.MustKeccakSSZ(m), m.To.ShardId())
 }
 
 func (m *Transaction) Sign(key *ecdsa.PrivateKey) error {
@@ -449,7 +449,7 @@ func (m InternalTransactionPayload) ToTransaction(from Address, seqno Seqno) *Tr
 }
 
 func (m *ExternalTransaction) Hash() common.Hash {
-	return ToShardedHash(common.MustPoseidonSSZ(m), m.To.ShardId())
+	return ToShardedHash(common.MustKeccakSSZ(m), m.To.ShardId())
 }
 
 func (m *ExternalTransaction) SigningHash() (common.Hash, error) {
@@ -464,7 +464,7 @@ func (m *ExternalTransaction) SigningHash() (common.Hash, error) {
 		MaxFeePerGas:         m.MaxFeePerGas,
 	}
 
-	return common.PoseidonSSZ(&transactionDigest)
+	return common.KeccakSSZ(&transactionDigest)
 }
 
 func (m ExternalTransaction) ToTransaction() *Transaction {
@@ -485,7 +485,7 @@ func (m ExternalTransaction) ToTransaction() *Transaction {
 }
 
 func (m *Transaction) SigningHash() (common.Hash, error) {
-	return common.PoseidonSSZ(&m.TransactionDigest)
+	return common.KeccakSSZ(&m.TransactionDigest)
 }
 
 func (m *ExternalTransaction) Sign(key *ecdsa.PrivateKey) error {

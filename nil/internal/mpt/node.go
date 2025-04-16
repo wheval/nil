@@ -32,7 +32,7 @@ type Node interface {
 }
 
 func calcNodeKey(data []byte) []byte {
-	return common.PoseidonHash(data).Bytes()
+	return common.KeccakHash(data).Bytes()
 }
 
 type NodeBase struct {

@@ -108,7 +108,7 @@ var (
 )
 
 func (b *Block) Hash(shardId ShardId) common.Hash {
-	return ToShardedHash(common.MustPoseidonSSZ(&b.BlockData), shardId)
+	return ToShardedHash(common.MustKeccakSSZ(&b.BlockData), shardId)
 }
 
 func (b *Block) GetMainShardHash(shardId ShardId) common.Hash {

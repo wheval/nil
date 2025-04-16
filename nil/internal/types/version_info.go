@@ -36,16 +36,16 @@ func NewVersionInfo() *VersionInfo {
 		v := reflect.ValueOf(curStruct)
 		for i := range v.NumField() {
 			t := v.Type()
-			res = append(res, common.PoseidonHash([]byte(t.String())).Bytes()...)
+			res = append(res, common.KeccakHash([]byte(t.String())).Bytes()...)
 
 			name := t.Field(i).Name
-			res = append(res, common.PoseidonHash([]byte(name)).Bytes()...)
+			res = append(res, common.KeccakHash([]byte(name)).Bytes()...)
 
 			value := fmt.Sprintf("%v", v.Field(i).Interface())
-			res = append(res, common.PoseidonHash([]byte(value)).Bytes()...)
+			res = append(res, common.KeccakHash([]byte(value)).Bytes()...)
 		}
 	}
-	return &VersionInfo{Version: common.PoseidonHash(res)}
+	return &VersionInfo{Version: common.KeccakHash(res)}
 }
 
 //go:generate go run github.com/NilFoundation/fastssz/sszgen --path version_info.go -include ../../common/hash.go,../../common/length.go --objs VersionInfo

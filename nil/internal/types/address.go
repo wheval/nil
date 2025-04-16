@@ -199,7 +199,7 @@ func createAddress(shardId ShardId, deployPayload []byte) Address {
 	raw := make([]byte, ShardIdSize, AddrSize)
 	raw = setShardId(raw, shardId)
 	offset := common.HashSize - AddrSize + ShardIdSize
-	raw = append(raw, common.PoseidonHash(deployPayload).Bytes()[offset:]...)
+	raw = append(raw, common.KeccakHash(deployPayload).Bytes()[offset:]...)
 	return BytesToAddress(raw)
 }
 
@@ -214,7 +214,7 @@ func CreateAddressForCreate2(sender Address, code []byte, salt common.Hash) Addr
 	data = append(data, 0xff)
 	data = append(data, sender.Bytes()...)
 	data = append(data, salt.Bytes()...)
-	data = append(data, common.PoseidonHash(code).Bytes()...)
+	data = append(data, common.KeccakHash(code).Bytes()...)
 	return createAddress(sender.ShardId(), data)
 }
 

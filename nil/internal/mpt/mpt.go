@@ -9,7 +9,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type deleteAction int
@@ -51,7 +51,7 @@ func (m *Reader) Get(key []byte) (ret []byte, err error) {
 		return nil, fmt.Errorf("%w: root is nil", db.ErrKeyNotFound)
 	}
 	if len(key) > maxRawKeyLen {
-		key = poseidon.Sum(key)
+		key = crypto.Keccak256(key)
 	}
 	path := newPath(key, false)
 
@@ -80,7 +80,7 @@ func (m *MerklePatriciaTrie) SetBatch(keys [][]byte, values [][]byte) error {
 	for i := range keys {
 		k := keys[i]
 		if len(k) > maxRawKeyLen {
-			k = poseidon.Sum(k)
+			k = crypto.Keccak256(k)
 		}
 		if idx, ok := keyToIndex[string(k)]; ok {
 			vals[idx] = values[i]
@@ -113,7 +113,7 @@ func (m *MerklePatriciaTrie) Delete(key []byte) error {
 		return nil
 	}
 	if len(key) > maxRawKeyLen {
-		key = poseidon.Sum(key)
+		key = crypto.Keccak256(key)
 	}
 	path := newPath(key, false)
 
