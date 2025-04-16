@@ -190,6 +190,8 @@ const (
 	ErrorMaxFeePerGasIsZero
 	// ErrorTransactionExceedsBlockGasLimit is returned when the transaction consumes more than the block gas limit.
 	ErrorTransactionExceedsBlockGasLimit
+	// ErrorConsoleParseInputFailed is returned when the console fails to parse the input of the log function.
+	ErrorConsoleParseInputFailed
 )
 
 type ExecError interface {

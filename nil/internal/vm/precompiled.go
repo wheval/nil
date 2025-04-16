@@ -32,6 +32,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/tracing"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/NilFoundation/nil/nil/internal/vm/console"
 	eth_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/holiman/uint256"
@@ -98,6 +99,7 @@ var (
 	CheckIsResponseAddress   = types.BytesToAddress([]byte{0xd9})
 	LogAddress               = types.BytesToAddress([]byte{0xda})
 	GovernanceAddress        = types.BytesToAddress([]byte{0xdb})
+	ConsoleAddress           = types.HexToAddress("0x00000000000000000000000000000000000dEBa6")
 )
 
 // PrecompiledContractsPrague contains the set of pre-compiled Ethereum
@@ -138,6 +140,7 @@ var PrecompiledContractsPrague = map[types.Address]PrecompiledContract{
 	CheckIsResponseAddress:   &checkIsResponse{},
 	LogAddress:               &emitLog{},
 	GovernanceAddress:        &governance{},
+	ConsoleAddress:           &consolePrecompile{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -1077,6 +1080,29 @@ func (e *emitLog) Run(state StateDB, input []byte, value *uint256.Int, caller Co
 	if err = state.AddDebugLog(debugLog); err != nil {
 		return nil, types.KeepOrWrapError(types.ErrorEmitDebugLogFailed, err)
 	}
+
+	res := make([]byte, 32)
+	res[31] = 1
+
+	return res, nil
+}
+
+var consoleLogger = logging.NewLogger("solidity")
+
+type consolePrecompile struct{}
+
+var _ EvmAccessedPrecompiledContract = (*consolePrecompile)(nil)
+
+func (g *consolePrecompile) RequiredGas([]byte, StateDBReadOnly) (uint64, error) {
+	return 100, nil
+}
+
+func (g *consolePrecompile) Run(evm *EVM, input []byte, value *uint256.Int, caller ContractRef) ([]byte, error) {
+	str, err := console.ProcessLog(input)
+	if err != nil {
+		return nil, types.NewVmVerboseError(types.ErrorConsoleParseInputFailed, err.Error())
+	}
+	consoleLogger.Info().Int(logging.FieldShardId, int(evm.StateDB.GetShardID())).Msg(str)
 
 	res := make([]byte, 32)
 	res[31] = 1

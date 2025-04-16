@@ -888,6 +888,20 @@ func (s *SuiteRpc) TestPanicsInDb() {
 	s.Require().Equal("PanicDuringExecution", receipt.Status)
 }
 
+func (s *SuiteRpc) TestConsoleLog() {
+	abi, err := contracts.GetAbi(contracts.NameTokensTest)
+	s.Require().NoError(err)
+
+	payload := contracts.GetDeployPayload(s.T(), contracts.NameTokensTest)
+
+	addr, receipt := s.DeployContractViaMainSmartAccount(2, payload, tests.DefaultContractValue)
+	s.Require().True(receipt.AllSuccess())
+
+	calldata := s.AbiPack(abi, "testConsole")
+	receipt = s.SendExternalTransaction(calldata, addr)
+	s.Require().True(receipt.AllSuccess())
+}
+
 func TestSuiteRpc(t *testing.T) {
 	t.Parallel()
 
