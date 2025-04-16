@@ -60,7 +60,10 @@ export default class SmartAccountNew extends BaseCommand {
       flags.amount = DefualtNewSmartAccountAmount;
     }
 
-    const privateKey = this.cfg?.[ConfigKeys.PrivateKey];
+    const privateKey = this.configManager?.getConfigValue(
+      ConfigKeys.NilSection,
+      ConfigKeys.PrivateKey,
+    );
     if (!privateKey) {
       throw new Error(
         "Private key not found in config. Perhaps you need to run 'keygen new' first?",
