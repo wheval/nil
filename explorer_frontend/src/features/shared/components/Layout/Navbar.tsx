@@ -1,5 +1,5 @@
 import { useStore, useUnit } from "effector-react";
-import { type ReactNode, memo } from "react";
+import { type ReactNode, memo, useCallback } from "react";
 import { useStyletron } from "styletron-react";
 import { fetchSolidityCompiler } from "../../../../services/compiler";
 import { CodeToolbar } from "../../../code/code-toolbar/CodeToolbar";
@@ -27,6 +27,11 @@ export const Navbar = ({ children, showCodeInteractionButtons }: NavbarProps) =>
   const [isMobile] = useMobile();
   const templateColumns = isMobile ? "93% 1fr" : "1fr 33%";
   const btnTextContent = useCompileButton();
+
+  const cb = useCallback(() => {
+    compile();
+  }, []);
+
   return (
     <nav
       className={css({
@@ -50,7 +55,7 @@ export const Navbar = ({ children, showCodeInteractionButtons }: NavbarProps) =>
           <MemoizedCodeToolbar
             disabled={isDownloading}
             isLoading={isDownloading || compiling}
-            onCompileButtonClick={() => compile()}
+            onCompileButtonClick={cb}
             compileButtonContent={btnTextContent}
           />
         )}

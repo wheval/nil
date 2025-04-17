@@ -1,7 +1,6 @@
-import { sample } from "effector";
-import { combine } from "effector";
+import { combine, sample } from "effector";
 import { $cometaClient } from "../cometa/model";
-import { addressRoute } from "../routing";
+import { addressRoute } from "../routing/routes/addressRoute";
 import { $account, $accountCometaInfo, loadAccountCometaInfoFx, loadAccountStateFx } from "./model";
 
 sample({

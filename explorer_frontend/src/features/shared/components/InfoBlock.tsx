@@ -2,7 +2,7 @@ import { SPACE } from "@nilfoundation/ui-kit";
 import { useStyletron } from "baseui";
 import type { ReactNode } from "react";
 import type { StyleObject } from "styletron-react";
-import { useMobile } from "..";
+import { useMobile } from "../hooks/useMobile";
 
 type InfoBlockProps = { children: ReactNode; className?: string };
 

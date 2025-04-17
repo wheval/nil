@@ -2,7 +2,7 @@ import { HttpTransport, PublicClient, generateSmartAccount } from "@nilfoundatio
 import { TutorialChecksStatus } from "../../../pages/tutorials/model";
 import type { CheckProps } from "../CheckProps";
 
-async function runTutorialCheckFive(props: CheckProps) {
+export async function runTutorialCheckFive(props: CheckProps) {
   const client = new PublicClient({
     transport: new HttpTransport({
       endpoint: props.rpcUrl,
@@ -146,5 +146,3 @@ async function runTutorialCheckFive(props: CheckProps) {
 
   return true;
 }
-
-export default runTutorialCheckFive;

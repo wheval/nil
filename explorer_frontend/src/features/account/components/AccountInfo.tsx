@@ -1,4 +1,5 @@
 import { EditorView } from "@codemirror/view";
+import { isHexString } from "@nilfoundation/niljs";
 import {
   CodeField,
   HeadingXLarge,
@@ -11,8 +12,8 @@ import { useStyletron } from "baseui";
 import { useUnit } from "effector-react";
 import { useEffect } from "react";
 import { $cometaClient } from "../../cometa/model";
-import { addressRoute } from "../../routing";
-import { Divider } from "../../shared";
+import { addressRoute } from "../../routing/routes/addressRoute";
+import { Divider } from "../../shared/components/Divider";
 import { Info } from "../../shared/components/Info";
 import { InfoBlock } from "../../shared/components/InfoBlock";
 import { SolidityCodeField } from "../../shared/components/SolidityCodeField";
@@ -50,7 +51,9 @@ export const AccountInfo = () => {
 
   useEffect(() => {
     loadAccountStateFx(params.address);
-    loadAccountCometaInfoFx({ address: params.address, cometaClient: cometa });
+    if (cometa && isHexString(params.address)) {
+      loadAccountCometaInfoFx({ address: params.address, cometaClient: cometa });
+    }
   }, [params.address, cometa]);
 
   if (isLoading) return <AccountLoading />;
@@ -67,7 +70,7 @@ export const AccountInfo = () => {
           <Info
             label="Source code"
             value={
-              sourceCode?.length > 0 ? (
+              sourceCode?.length ? (
                 <SolidityCodeField
                   code={sourceCode}
                   className={css({ marginTop: "1ch" })}

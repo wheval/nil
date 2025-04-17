@@ -10,7 +10,7 @@ import { TransactionStat } from "../../features/transaction-stat";
 import { explorerContainer } from "../../styleHelpers";
 import { styles } from "./styles";
 
-const ExplorerPage = () => {
+export const ExplorerPage = () => {
   const [css] = useStyletron();
   const [isMobile] = useMobile();
 
@@ -38,5 +38,3 @@ const ExplorerPage = () => {
     </div>
   );
 };
-
-export default ExplorerPage;

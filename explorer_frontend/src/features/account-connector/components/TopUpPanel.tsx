@@ -25,6 +25,7 @@ import {
   resetTopUpError,
   setActiveComponent,
   setTopupInput,
+  topupPanelOpen,
   topupSmartAccountTokenFx,
   topupTokenEvent,
 } from "../model";
@@ -58,7 +59,7 @@ const TopUpPanel = () => {
   ]);
 
   useEffect(() => {
-    setTopupInput({ ...topupInput, amount: "" });
+    topupPanelOpen();
 
     //Reset error when leaving the page
     return () => {

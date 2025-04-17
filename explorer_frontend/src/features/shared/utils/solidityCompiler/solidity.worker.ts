@@ -1,12 +1,10 @@
 declare global {
   interface Worker {
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     Module: any;
   }
 }
 declare function importScripts(...urls: string[]): void;
 function browserSolidityCompiler() {
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   const ctx: Worker = self as any;
   ctx.addEventListener("message", ({ data }) => {
     if (data.version) {

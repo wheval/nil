@@ -1,8 +1,8 @@
-import runTutorialCheckFive from "./checks/tutorialFiveCheck";
-import runTutorialCheckFour from "./checks/tutorialFourCheck";
-import runTutorialCheckOne from "./checks/tutorialOneCheck";
-import runTutorialCheckThree from "./checks/tutorialThreeCheck";
-import runTutorialCheckTwo from "./checks/tutorialTwoCheck";
+import { runTutorialCheckFive } from "./checks/tutorialFiveCheck";
+import { runTutorialCheckFour } from "./checks/tutorialFourCheck";
+import { runTutorialCheckOne } from "./checks/tutorialOneCheck";
+import { runTutorialCheckThree } from "./checks/tutorialThreeCheck";
+import { runTutorialCheckTwo } from "./checks/tutorialTwoCheck";
 
 export const spec = [
   {

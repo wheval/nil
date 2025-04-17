@@ -66,7 +66,6 @@ export class CompileWorker {
       ) {
         const task = this.currentTask;
         if (task) {
-          // biome-ignore lint/style/noNonNullAssertion: i check that task is not null
           const { reject } = this.promiseMap.get(task)!;
           const errorMsg = event.data.errors
             .map((error) => error.formattedMessage)
@@ -80,7 +79,6 @@ export class CompileWorker {
       } else {
         const task = this.currentTask;
         if (task) {
-          // biome-ignore lint/style/noNonNullAssertion: i check that task is not null
           const { resolve } = this.promiseMap.get(task)!;
           resolve(result);
           this.promiseMap.delete(task);

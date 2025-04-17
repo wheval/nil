@@ -6,7 +6,6 @@ import NilAwaitableSol from "@nilfoundation/smart-contracts/contracts/NilAwaitab
 import NilTokBaseSol from "@nilfoundation/smart-contracts/contracts/NilTokenBase.sol?raw";
 import SmartAccountSol from "@nilfoundation/smart-contracts/contracts/SmartAccount.sol?raw";
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export const createCompileInput = async (
   contractBody: string,
   options: any = {},

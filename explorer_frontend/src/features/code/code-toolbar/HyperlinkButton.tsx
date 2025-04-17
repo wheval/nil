@@ -12,7 +12,11 @@ import { useUnit } from "effector-react";
 import { expandProperty } from "inline-style-expand-shorthand";
 import type { FC } from "react";
 import { playgroundWithHashRoute } from "../../routing";
-import { HyperlinkIcon, Link, OverflowEllipsis, StatefulPopover, useMobile } from "../../shared";
+import { HyperlinkIcon } from "../../shared/components/HyperlinkIcon";
+import { Link } from "../../shared/components/Link";
+import { OverflowEllipsis } from "../../shared/components/OverflowEllipsis";
+import { StatefulPopover } from "../../shared/components/Popover";
+import { useMobile } from "../../shared/hooks/useMobile";
 import {
   $codeSnippetHash,
   $shareCodeSnippetError,

@@ -23,7 +23,6 @@ export { ArrowUpRightIcon } from "./components/ArrowUpRightIcon";
 export { InternalPageContainer } from "./components/InternalPageContainer";
 export { Logo } from "./components/Layout/Logo";
 export * from "./components/Popover";
-export * from "./utils/age";
 export * from "./utils/convert";
 export * from "./utils/formatShard";
 export * from "./utils/formatUTCTimestamp";

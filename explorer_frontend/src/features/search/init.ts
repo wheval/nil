@@ -48,7 +48,6 @@ searchFx.use(async (query) => {
           id: block.id,
         },
       });
-      // biome-ignore lint/correctness/noUnusedVariables: <explanation>
     } catch (e) {
       // that's ok
     }

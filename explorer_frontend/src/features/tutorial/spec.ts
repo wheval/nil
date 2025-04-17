@@ -1,4 +1,4 @@
-import { TutorialLevel } from "./model";
+import { TutorialLevel } from "./const";
 import {
   tutorialFiveContracts,
   tutorialFiveIcon,
@@ -17,7 +17,7 @@ import {
   tutorialTwoText,
 } from "./tutorialImports";
 
-async function loadTutorials() {
+export async function loadTutorials() {
   const tutorials = [
     {
       stage: 1,
@@ -78,5 +78,3 @@ async function loadTutorials() {
 
   return tutorials;
 }
-
-export default loadTutorials;

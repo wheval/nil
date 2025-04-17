@@ -75,6 +75,8 @@ export const setTopupInput = createEvent<{
   amount: string;
 }>();
 
+export const topupPanelOpen = createEvent();
+
 export const topupSmartAccountTokenFx = accountConnectorDomain.createEffect<
   {
     smartAccount: SmartAccountV1;
