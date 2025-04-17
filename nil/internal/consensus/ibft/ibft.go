@@ -66,7 +66,7 @@ func (i *backendIBFT) unmarshalProposal(raw []byte) (*execution.ProposalSSZ, err
 }
 
 func (i *backendIBFT) BuildProposal(view *protoIBFT.View) []byte {
-	i.mh.StartBuildProposalMeasurement(i.transportCtx, view.Round)
+	i.mh.StartBuildProposalMeasurement(i.transportCtx, view.GetRound())
 	defer i.mh.EndBuildProposalMeasurement(i.transportCtx)
 
 	proposal, err := i.validator.BuildProposal(i.ctx)
@@ -147,10 +147,10 @@ func (i *backendIBFT) buildSignature(
 }
 
 func (i *backendIBFT) InsertProposal(proposal *protoIBFT.Proposal, committedSeals []*messages.CommittedSeal) {
-	i.mh.StartInsertProposalMeasurement(i.transportCtx, proposal.Round)
+	i.mh.StartInsertProposalMeasurement(i.transportCtx, proposal.GetRound())
 	defer i.mh.EndInsertProposalMeasurement(i.transportCtx)
 
-	proposalBlock, err := i.unmarshalProposal(proposal.RawProposal)
+	proposalBlock, err := i.unmarshalProposal(proposal.GetRawProposal())
 	if err != nil {
 		i.logger.Error().Err(err).Msg("failed to unmarshal proposal")
 		return
@@ -160,7 +160,7 @@ func (i *backendIBFT) InsertProposal(proposal *protoIBFT.Proposal, committedSeal
 
 	logger := i.logger.With().
 		Uint64(logging.FieldHeight, height).
-		Uint64(logging.FieldRound, proposal.Round).
+		Uint64(logging.FieldRound, proposal.GetRound()).
 		Logger()
 
 	logger.Trace().Msg("Inserting proposal")
@@ -171,14 +171,14 @@ func (i *backendIBFT) InsertProposal(proposal *protoIBFT.Proposal, committedSeal
 	}
 
 	prevProposerIndex := i.getPrevProposer(height)
-	_, proposerIndex, err := i.calcProposer(height, proposal.Round, prevProposerIndex)
+	_, proposerIndex, err := i.calcProposer(height, proposal.GetRound(), prevProposerIndex)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to calculate current proposer")
 		return
 	}
 
 	if err := i.validator.InsertProposal(i.ctx, proposalBlock, &types.ConsensusParams{
-		Round:         proposal.Round,
+		Round:         proposal.GetRound(),
 		ProposerIndex: proposerIndex,
 		Signature:     sig,
 	}); err != nil {

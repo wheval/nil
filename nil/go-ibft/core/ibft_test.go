@@ -16,7 +16,7 @@ import (
 )
 
 func proposalMatches(proposal *proto.Proposal, message *proto.IbftMessage) bool {
-	if message == nil || message.Type != proto.MessageType_PREPREPARE {
+	if message == nil || message.GetType() != proto.MessageType_PREPREPARE {
 		return false
 	}
 
@@ -25,34 +25,34 @@ func proposalMatches(proposal *proto.Proposal, message *proto.IbftMessage) bool 
 		return false
 	}
 
-	return proposal.Round == extractedProposal.Round &&
-		bytes.Equal(proposal.RawProposal, extractedProposal.RawProposal)
+	return proposal.GetRound() == extractedProposal.GetRound() &&
+		bytes.Equal(proposal.GetRawProposal(), extractedProposal.GetRawProposal())
 }
 
 func prepareHashMatches(prepareHash []byte, message *proto.IbftMessage) bool {
-	if message == nil || message.Type != proto.MessageType_PREPARE {
+	if message == nil || message.GetType() != proto.MessageType_PREPARE {
 		return false
 	}
 
-	prepareData, ok := message.Payload.(*proto.IbftMessage_PrepareData)
+	prepareData, ok := message.GetPayload().(*proto.IbftMessage_PrepareData)
 	if !ok {
 		return false
 	}
-	extractedPrepareHash := prepareData.PrepareData.ProposalHash
+	extractedPrepareHash := prepareData.PrepareData.GetProposalHash()
 
 	return bytes.Equal(prepareHash, extractedPrepareHash)
 }
 
 func commitHashMatches(commitHash []byte, message *proto.IbftMessage) bool {
-	if message == nil || message.Type != proto.MessageType_COMMIT {
+	if message == nil || message.GetType() != proto.MessageType_COMMIT {
 		return false
 	}
 
-	commitData, ok := message.Payload.(*proto.IbftMessage_CommitData)
+	commitData, ok := message.GetPayload().(*proto.IbftMessage_CommitData)
 	if !ok {
 		return false
 	}
-	extractedCommitHash := commitData.CommitData.ProposalHash
+	extractedCommitHash := commitData.CommitData.GetProposalHash()
 
 	return bytes.Equal(commitHash, extractedCommitHash)
 }
@@ -69,7 +69,7 @@ func generateMessages(count uint64, messageType proto.MessageType) []*proto.Ibft
 			Type: messageType,
 		}
 
-		switch message.Type {
+		switch message.GetType() {
 		case proto.MessageType_PREPREPARE:
 			message.Payload = &proto.IbftMessage_PreprepareData{
 				PreprepareData: &proto.PrePrepareMessage{},
@@ -116,9 +116,9 @@ func generateMessagesWithUniqueSender(count uint64, messageType proto.MessageTyp
 
 func appendProposalHash(messages []*proto.IbftMessage, proposalHash []byte) {
 	for _, message := range messages {
-		switch message.Type {
+		switch message.GetType() {
 		case proto.MessageType_PREPREPARE:
-			ppData, ok := message.Payload.(*proto.IbftMessage_PreprepareData)
+			ppData, ok := message.GetPayload().(*proto.IbftMessage_PreprepareData)
 			if !ok {
 				continue
 			}
@@ -126,7 +126,7 @@ func appendProposalHash(messages []*proto.IbftMessage, proposalHash []byte) {
 
 			payload.ProposalHash = proposalHash
 		case proto.MessageType_PREPARE:
-			pData, ok := message.Payload.(*proto.IbftMessage_PrepareData)
+			pData, ok := message.GetPayload().(*proto.IbftMessage_PrepareData)
 			if !ok {
 				continue
 			}
@@ -244,7 +244,7 @@ func TestRunNewRound_Proposer(t *testing.T) { //nolint:maintidx
 
 				log       = mockLogger{}
 				transport = mockTransport{func(message *proto.IbftMessage) {
-					if message != nil && message.Type == proto.MessageType_PREPREPARE {
+					if message != nil && message.GetType() == proto.MessageType_PREPREPARE {
 						multicastedProposal = message
 					}
 				}}
@@ -332,7 +332,7 @@ func TestRunNewRound_Proposer(t *testing.T) { //nolint:maintidx
 
 				log       = mockLogger{}
 				transport = mockTransport{func(message *proto.IbftMessage) {
-					switch message.Type {
+					switch message.GetType() {
 					case proto.MessageType_PREPREPARE:
 						multicastedPreprepare = message
 					case proto.MessageType_PREPARE:
@@ -469,7 +469,7 @@ func TestRunNewRound_Proposer(t *testing.T) { //nolint:maintidx
 			setRoundForMessages(roundChangeMessages, 1)
 
 			// Make sure at least one RC message has a PC
-			payload, ok := roundChangeMessages[1].Payload.(*proto.IbftMessage_RoundChangeData)
+			payload, ok := roundChangeMessages[1].GetPayload().(*proto.IbftMessage_RoundChangeData)
 			require.True(t, ok)
 			rcData := payload.RoundChangeData
 
@@ -502,7 +502,7 @@ func TestRunNewRound_Proposer(t *testing.T) { //nolint:maintidx
 
 				log       = mockLogger{}
 				transport = mockTransport{func(message *proto.IbftMessage) {
-					switch message.Type {
+					switch message.GetType() {
 					case proto.MessageType_PREPREPARE:
 						multicastedPreprepare = message
 					case proto.MessageType_PREPARE:
@@ -630,7 +630,7 @@ func TestRunNewRound_Validator_Zero(t *testing.T) {
 		log       = mockLogger{}
 		transport = mockTransport{
 			func(message *proto.IbftMessage) {
-				if message != nil && message.Type == proto.MessageType_PREPARE {
+				if message != nil && message.GetType() == proto.MessageType_PREPARE {
 					multicastedPrepare = message
 				}
 			},
@@ -799,7 +799,7 @@ func TestRunNewRound_Validator_NonZero(t *testing.T) {
 				log       = mockLogger{}
 				transport = mockTransport{
 					func(message *proto.IbftMessage) {
-						if message != nil && message.Type == proto.MessageType_PREPARE {
+						if message != nil && message.GetType() == proto.MessageType_PREPARE {
 							multicastedPrepare = message
 						}
 					},
@@ -898,7 +898,7 @@ func TestRunPrepare(t *testing.T) {
 
 				log       = mockLogger{}
 				transport = mockTransport{func(message *proto.IbftMessage) {
-					if message != nil && message.Type == proto.MessageType_COMMIT {
+					if message != nil && message.GetType() == proto.MessageType_COMMIT {
 						multicastedCommit = message
 					}
 				}}
@@ -1016,7 +1016,7 @@ func TestRunCommit(t *testing.T) {
 				transport = mockTransport{}
 				backend   = mockBackend{
 					insertProposalFn: func(proposal *proto.Proposal, committedSeals []*messages.CommittedSeal) {
-						insertedProposal = proposal.RawProposal
+						insertedProposal = proposal.GetRawProposal()
 						insertedCommittedSeals = committedSeals
 					},
 					getVotingPowerFn: testCommonGetVotingPowertFnForCnt(1),
@@ -1101,7 +1101,7 @@ func TestRunCommit(t *testing.T) {
 			assert.Equal(t, fin, i.state.name)
 
 			// Make sure the inserted proposal was the one present
-			assert.Equal(t, insertedProposal, correctRoundMessage.proposal.RawProposal)
+			assert.Equal(t, insertedProposal, correctRoundMessage.proposal.GetRawProposal())
 
 			// Make sure the inserted committed seals were correct
 			assert.Equal(t, insertedCommittedSeals, committedSeals)
@@ -1147,8 +1147,8 @@ func TestIBFT_IsAcceptableMessage(t *testing.T) {
 		{
 			name: "higher height, same round number",
 			msgView: &proto.View{
-				Height: baseView.Height + 100,
-				Round:  baseView.Round,
+				Height: baseView.GetHeight() + 100,
+				Round:  baseView.GetRound(),
 			},
 			stateView:     baseView,
 			invalidSender: false,
@@ -1157,12 +1157,12 @@ func TestIBFT_IsAcceptableMessage(t *testing.T) {
 		{
 			name: "higher height, lower round number",
 			msgView: &proto.View{
-				Height: baseView.Height + 100,
-				Round:  baseView.Round,
+				Height: baseView.GetHeight() + 100,
+				Round:  baseView.GetRound(),
 			},
 			stateView: &proto.View{
-				Height: baseView.Height,
-				Round:  baseView.Round + 1,
+				Height: baseView.GetHeight(),
+				Round:  baseView.GetRound() + 1,
 			},
 			invalidSender: false,
 			acceptable:    true,
@@ -1170,8 +1170,8 @@ func TestIBFT_IsAcceptableMessage(t *testing.T) {
 		{
 			name: "same heights, higher round number",
 			msgView: &proto.View{
-				Height: baseView.Height,
-				Round:  baseView.Round + 1,
+				Height: baseView.GetHeight(),
+				Round:  baseView.GetRound() + 1,
 			},
 			stateView:     baseView,
 			invalidSender: false,
@@ -1180,12 +1180,12 @@ func TestIBFT_IsAcceptableMessage(t *testing.T) {
 		{
 			name: "same heights, lower round number",
 			msgView: &proto.View{
-				Height: baseView.Height,
-				Round:  baseView.Round + 1,
+				Height: baseView.GetHeight(),
+				Round:  baseView.GetRound() + 1,
 			},
 			stateView: &proto.View{
-				Height: baseView.Height,
-				Round:  baseView.Round + 2,
+				Height: baseView.GetHeight(),
+				Round:  baseView.GetRound() + 2,
 			},
 			invalidSender: false,
 			acceptable:    false,
@@ -1194,8 +1194,8 @@ func TestIBFT_IsAcceptableMessage(t *testing.T) {
 			name:    "lower height number",
 			msgView: baseView,
 			stateView: &proto.View{
-				Height: baseView.Height + 1,
-				Round:  baseView.Round,
+				Height: baseView.GetHeight() + 1,
+				Round:  baseView.GetRound(),
 			},
 			invalidSender: false,
 			acceptable:    false,
@@ -1365,7 +1365,7 @@ func TestIBFT_FutureProposal(t *testing.T) {
 		view *proto.View,
 		roundChangeMessages []*proto.IbftMessage,
 	) *proto.IbftMessage {
-		correctRoundMessage := newCorrectRoundMessage(view.Round)
+		correctRoundMessage := newCorrectRoundMessage(view.GetRound())
 
 		return &proto.IbftMessage{
 			View: view,
@@ -1440,7 +1440,7 @@ func TestIBFT_FutureProposal(t *testing.T) {
 						return nodeID
 					},
 					isValidProposalHashFn: func(p *proto.Proposal, hash []byte) bool {
-						if bytes.Equal(p.RawProposal, correctRoundMessage.proposal.RawProposal) {
+						if bytes.Equal(p.GetRawProposal(), correctRoundMessage.proposal.GetRawProposal()) {
 							return bytes.Equal(hash, correctRoundMessage.hash)
 						}
 
@@ -1686,8 +1686,8 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 		}
 
 		// Make sure the proposal has a different hash than the prepare messages
-		appendProposalHash([]*proto.IbftMessage{certificate.ProposalMessage}, []byte("proposal hash 1"))
-		appendProposalHash(certificate.PrepareMessages, []byte("proposal hash 2"))
+		appendProposalHash([]*proto.IbftMessage{certificate.GetProposalMessage()}, []byte("proposal hash 1"))
+		appendProposalHash(certificate.GetPrepareMessages(), []byte("proposal hash 2"))
 
 		assert.False(t, i.validPC(certificate, 0, 0))
 	})
@@ -1717,7 +1717,8 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 		}
 
 		// Make sure they all have the same proposal hash
-		allMessages := append([]*proto.IbftMessage{certificate.ProposalMessage}, certificate.PrepareMessages...)
+		allMessages := append([]*proto.IbftMessage{certificate.GetProposalMessage()},
+			certificate.GetPrepareMessages()...)
 		appendProposalHash(
 			allMessages,
 			correctRoundMessage.hash,
@@ -1759,7 +1760,8 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 		}
 
 		// Make sure they all have the same proposal hash
-		allMessages := append([]*proto.IbftMessage{certificate.ProposalMessage}, certificate.PrepareMessages...)
+		allMessages := append([]*proto.IbftMessage{certificate.GetProposalMessage()},
+			certificate.GetPrepareMessages()...)
 		appendProposalHash(
 			allMessages,
 			correctRoundMessage.hash,
@@ -1798,7 +1800,8 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 		}
 
 		// Make sure they all have the same proposal hash
-		allMessages := append([]*proto.IbftMessage{certificate.ProposalMessage}, certificate.PrepareMessages...)
+		allMessages := append([]*proto.IbftMessage{certificate.GetProposalMessage()},
+			certificate.GetPrepareMessages()...)
 		appendProposalHash(
 			allMessages,
 			correctRoundMessage.hash,
@@ -1806,8 +1809,8 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 
 		setRoundForMessages(allMessages, rLimit-1)
 		// Make sure the round is invalid for some random message
-		randomIndex := rand.Intn(len(certificate.PrepareMessages)) //nolint:gosec
-		randomPrepareMessage := certificate.PrepareMessages[randomIndex]
+		randomIndex := rand.Intn(len(certificate.GetPrepareMessages())) //nolint:gosec
+		randomPrepareMessage := certificate.GetPrepareMessages()[randomIndex]
 		randomPrepareMessage.View.Round = 0
 
 		assert.False(t, i.validPC(certificate, rLimit, 0))
@@ -1841,7 +1844,8 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 		}
 
 		// Make sure they all have the same proposal hash
-		allMessages := append([]*proto.IbftMessage{certificate.ProposalMessage}, certificate.PrepareMessages...)
+		allMessages := append([]*proto.IbftMessage{certificate.GetProposalMessage()},
+			certificate.GetPrepareMessages()...)
 		appendProposalHash(
 			allMessages,
 			correctRoundMessage.hash,
@@ -1869,7 +1873,7 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 				},
 				IsValidValidatorFn: func(message *proto.IbftMessage) bool {
 					// One of the messages will be invalid
-					return !bytes.Equal(message.From, []byte("node 1"))
+					return !bytes.Equal(message.GetFrom(), []byte("node 1"))
 				},
 			}
 		)
@@ -1884,7 +1888,8 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 		}
 
 		// Make sure they all have the same proposal hash
-		allMessages := append([]*proto.IbftMessage{certificate.ProposalMessage}, certificate.PrepareMessages...)
+		allMessages := append([]*proto.IbftMessage{certificate.GetProposalMessage()},
+			certificate.GetPrepareMessages()...)
 		appendProposalHash(
 			allMessages,
 			correctRoundMessage.hash,
@@ -1912,7 +1917,7 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 				},
 				IsValidValidatorFn: func(message *proto.IbftMessage) bool {
 					// Proposer is invalid
-					return !bytes.Equal(message.From, sender)
+					return !bytes.Equal(message.GetFrom(), sender)
 				},
 			}
 		)
@@ -1927,7 +1932,8 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 		}
 
 		// Make sure they all have the same proposal hash
-		allMessages := append([]*proto.IbftMessage{certificate.ProposalMessage}, certificate.PrepareMessages...)
+		allMessages := append([]*proto.IbftMessage{certificate.GetProposalMessage()},
+			certificate.GetPrepareMessages()...)
 		appendProposalHash(
 			allMessages,
 			correctRoundMessage.hash,
@@ -1966,7 +1972,8 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 		}
 
 		// Make sure they all have the same proposal hash
-		allMessages := append([]*proto.IbftMessage{certificate.ProposalMessage}, certificate.PrepareMessages...)
+		allMessages := append([]*proto.IbftMessage{certificate.GetProposalMessage()},
+			certificate.GetPrepareMessages()...)
 		appendProposalHash(
 			allMessages,
 			correctRoundMessage.hash,
@@ -2008,7 +2015,8 @@ func TestIBFT_ValidPC(t *testing.T) { //nolint:maintidx
 		}
 
 		// Make sure they all have the same proposal hash
-		allMessages := append([]*proto.IbftMessage{certificate.ProposalMessage}, certificate.PrepareMessages...)
+		allMessages := append([]*proto.IbftMessage{certificate.GetProposalMessage()},
+			certificate.GetPrepareMessages()...)
 		appendProposalHash(
 			allMessages,
 			correctRoundMessage.hash,
@@ -2048,7 +2056,7 @@ func TestIBFT_ValidateProposal(t *testing.T) { //nolint:maintidx
 			Payload: &proto.IbftMessage_PreprepareData{
 				PreprepareData: &proto.PrePrepareMessage{
 					Proposal: &proto.Proposal{
-						Round: baseView.Round,
+						Round: baseView.GetRound(),
 					},
 				},
 			},
@@ -2122,7 +2130,7 @@ func TestIBFT_ValidateProposal(t *testing.T) { //nolint:maintidx
 			Payload: &proto.IbftMessage_PreprepareData{
 				PreprepareData: &proto.PrePrepareMessage{
 					Proposal: &proto.Proposal{
-						Round: baseView.Round,
+						Round: baseView.GetRound(),
 					},
 				},
 			},
@@ -2207,7 +2215,7 @@ func TestIBFT_ValidateProposal(t *testing.T) { //nolint:maintidx
 						RoundChangeMessages: messages,
 					},
 					Proposal: &proto.Proposal{
-						Round: baseView.Round,
+						Round: baseView.GetRound(),
 					},
 				},
 			},
@@ -2336,7 +2344,7 @@ func TestIBFT_ValidateProposal(t *testing.T) { //nolint:maintidx
 			Payload: &proto.IbftMessage_PreprepareData{
 				PreprepareData: &proto.PrePrepareMessage{
 					Proposal: &proto.Proposal{
-						Round: baseView.Round,
+						Round: baseView.GetRound(),
 					},
 					Certificate: &proto.RoundChangeCertificate{
 						RoundChangeMessages: generateMessages(quorum, proto.MessageType_ROUND_CHANGE),
@@ -2610,7 +2618,7 @@ func TestIBFT_ValidateProposal(t *testing.T) { //nolint:maintidx
 					return bytes.Equal(proposer, uniqueNode)
 				},
 				IsValidValidatorFn: func(m *proto.IbftMessage) bool {
-					return !bytes.Equal(m.From, nonValidator)
+					return !bytes.Equal(m.GetFrom(), nonValidator)
 				},
 			}
 			transport = mockTransport{}
@@ -2697,12 +2705,12 @@ func TestIBFT_ValidateProposal(t *testing.T) { //nolint:maintidx
 					return bytes.Equal(proposer, proposers[round])
 				},
 				IsValidValidatorFn: func(m *proto.IbftMessage) bool {
-					return !bytes.Equal(m.From, nonValidator)
+					return !bytes.Equal(m.GetFrom(), nonValidator)
 				},
 				isValidProposalHashFn: func(p *proto.Proposal, b []byte) bool {
 					return bytes.Equal(
 						b,
-						hashFn(p.RawProposal, p.Round),
+						hashFn(p.GetRawProposal(), p.GetRound()),
 					)
 				},
 			}
@@ -2858,7 +2866,7 @@ func TestIBFT_WatchForFutureRCC(t *testing.T) {
 					return nil
 				}
 
-				round := messages[0].View.Round
+				round := messages[0].GetView().GetRound()
 				if !isValidRCC(round, messages) {
 					return nil
 				}
@@ -2977,8 +2985,8 @@ func TestIBFT_RunSequence_NewProposal(t *testing.T) {
 	assert.Equal(t, ev.proposalMessage, i.state.proposalMessage)
 
 	// Make sure the correct round was moved to
-	assert.Equal(t, ev.round, i.state.view.Round)
-	assert.Equal(t, height, i.state.view.Height)
+	assert.Equal(t, ev.round, i.state.view.GetRound())
+	assert.Equal(t, height, i.state.view.GetHeight())
 
 	// Make sure the round has been started
 	assert.True(t, i.state.roundStarted)
@@ -3026,8 +3034,8 @@ func TestIBFT_RunSequence_FutureRCC(t *testing.T) {
 	assert.Nil(t, i.state.proposalMessage)
 
 	// Make sure the correct round was moved to
-	assert.Equal(t, round, i.state.view.Round)
-	assert.Equal(t, height, i.state.view.Height)
+	assert.Equal(t, round, i.state.view.GetRound())
+	assert.Equal(t, height, i.state.view.GetHeight())
 
 	// Make sure the new round has been started
 	assert.True(t, i.state.roundStarted)
@@ -3129,7 +3137,7 @@ func TestIBFT_AddMessage(t *testing.T) {
 		)
 
 		backend.IsValidValidatorFn = func(m *proto.IbftMessage) bool {
-			return bytes.Equal(m.From, validSender)
+			return bytes.Equal(m.GetFrom(), validSender)
 		}
 
 		backend.getVotingPowerFn = testCommonGetVotingPowertFnForCnt(quorumSize)

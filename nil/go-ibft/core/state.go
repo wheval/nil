@@ -61,8 +61,8 @@ func (s *state) getView() *proto.View {
 	defer s.RUnlock()
 
 	return &proto.View{
-		Height: s.view.Height,
-		Round:  s.view.Round,
+		Height: s.view.GetHeight(),
+		Round:  s.view.GetRound(),
 	}
 }
 
@@ -122,14 +122,14 @@ func (s *state) getRound() uint64 {
 	s.RLock()
 	defer s.RUnlock()
 
-	return s.view.Round
+	return s.view.GetRound()
 }
 
 func (s *state) getHeight() uint64 {
 	s.RLock()
 	defer s.RUnlock()
 
-	return s.view.Height
+	return s.view.GetHeight()
 }
 
 func (s *state) getProposal() *proto.Proposal {
@@ -147,7 +147,7 @@ func (s *state) getRawDataFromProposal() []byte {
 	proposal := s.getProposal()
 
 	if proposal != nil {
-		return proposal.RawProposal
+		return proposal.GetRawProposal()
 	}
 
 	return nil

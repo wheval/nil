@@ -130,7 +130,7 @@ func (s *ApiServerTestSuite) TestValidResponse() {
 	var pbResponse pb.RawBlockResponse
 	err = proto.Unmarshal(response, &pbResponse)
 	s.Require().NoError(err)
-	s.Require().EqualValues(1, types.BytesToTransactionIndex(pbResponse.GetData().BlockSSZ))
+	s.Require().EqualValues(1, types.BytesToTransactionIndex(pbResponse.GetData().GetBlockSSZ()))
 }
 
 func (s *ApiServerTestSuite) TestNilResponse() {
@@ -147,7 +147,7 @@ func (s *ApiServerTestSuite) TestNilResponse() {
 	err = proto.Unmarshal(response, &pbResponse)
 	s.Require().NoError(err)
 	s.Require().NotNil(pbResponse.GetError())
-	s.Require().Equal("block should not be nil", pbResponse.GetError().Message)
+	s.Require().Equal("block should not be nil", pbResponse.GetError().GetMessage())
 }
 
 func (s *ApiServerTestSuite) TestInvalidSchemaRequest() {
@@ -166,7 +166,7 @@ func (s *ApiServerTestSuite) TestInvalidSchemaRequest() {
 	err = proto.Unmarshal(response, &pbResponse)
 	s.Require().NoError(err)
 	s.Require().NotNil(pbResponse.GetError())
-	s.Require().Contains(pbResponse.GetError().Message, "cannot parse invalid wire-format data")
+	s.Require().Contains(pbResponse.GetError().GetMessage(), "cannot parse invalid wire-format data")
 }
 
 func (s *ApiServerTestSuite) TestInvalidDataRequest() {
@@ -183,7 +183,7 @@ func (s *ApiServerTestSuite) TestInvalidDataRequest() {
 	err = proto.Unmarshal(response, &pbResponse)
 	s.Require().NoError(err)
 	s.Require().NotNil(pbResponse.GetError())
-	s.Require().Equal("unexpected block reference type", pbResponse.GetError().Message)
+	s.Require().Equal("unexpected block reference type", pbResponse.GetError().GetMessage())
 }
 
 func (s *ApiServerTestSuite) TestHandlerPanic() {

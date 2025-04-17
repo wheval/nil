@@ -219,7 +219,7 @@ func SetBlockRequestHandler(
 			WithChildBlocks().
 			WithConfig()
 
-		for id := blockReq.Id; ; id++ {
+		for id := blockReq.GetId(); ; id++ {
 			resp, err := acc.ByNumber(types.BlockNumber(id))
 			if err != nil {
 				if !errors.Is(err, db.ErrKeyNotFound) {

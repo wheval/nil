@@ -21,7 +21,7 @@ func ExtractCommittedSeals(commitMessages []*proto.IbftMessage) ([]*CommittedSea
 	committedSeals := make([]*CommittedSeal, 0)
 
 	for _, commitMessage := range commitMessages {
-		if commitMessage.Type != proto.MessageType_COMMIT {
+		if commitMessage.GetType() != proto.MessageType_COMMIT {
 			// safe check
 			return nil, ErrWrongCommitMessageType
 		}
@@ -34,112 +34,112 @@ func ExtractCommittedSeals(commitMessages []*proto.IbftMessage) ([]*CommittedSea
 
 // ExtractCommittedSeal extracts the committed seal from the passed in message
 func ExtractCommittedSeal(commitMessage *proto.IbftMessage) *CommittedSeal {
-	commitData, ok := commitMessage.Payload.(*proto.IbftMessage_CommitData)
+	commitData, ok := commitMessage.GetPayload().(*proto.IbftMessage_CommitData)
 	if !ok {
 		return nil
 	}
 
 	return &CommittedSeal{
-		Signer:    commitMessage.From,
-		Signature: commitData.CommitData.CommittedSeal,
+		Signer:    commitMessage.GetFrom(),
+		Signature: commitData.CommitData.GetCommittedSeal(),
 	}
 }
 
 // ExtractCommitHash extracts the commit proposal hash from the passed in message
 func ExtractCommitHash(commitMessage *proto.IbftMessage) []byte {
-	if commitMessage.Type != proto.MessageType_COMMIT {
+	if commitMessage.GetType() != proto.MessageType_COMMIT {
 		return nil
 	}
 
-	commitData, ok := commitMessage.Payload.(*proto.IbftMessage_CommitData)
+	commitData, ok := commitMessage.GetPayload().(*proto.IbftMessage_CommitData)
 	if !ok {
 		return nil
 	}
 
-	return commitData.CommitData.ProposalHash
+	return commitData.CommitData.GetProposalHash()
 }
 
 // ExtractProposal extracts the (rawData,r) proposal from the passed in message
 func ExtractProposal(proposalMessage *proto.IbftMessage) *proto.Proposal {
-	if proposalMessage.Type != proto.MessageType_PREPREPARE {
+	if proposalMessage.GetType() != proto.MessageType_PREPREPARE {
 		return nil
 	}
 
-	preprepareData, ok := proposalMessage.Payload.(*proto.IbftMessage_PreprepareData)
+	preprepareData, ok := proposalMessage.GetPayload().(*proto.IbftMessage_PreprepareData)
 	if !ok {
 		return nil
 	}
 
-	return preprepareData.PreprepareData.Proposal
+	return preprepareData.PreprepareData.GetProposal()
 }
 
 // ExtractProposalHash extracts the proposal hash from the passed in message
 func ExtractProposalHash(proposalMessage *proto.IbftMessage) []byte {
-	if proposalMessage.Type != proto.MessageType_PREPREPARE {
+	if proposalMessage.GetType() != proto.MessageType_PREPREPARE {
 		return nil
 	}
 
-	preprepareData, ok := proposalMessage.Payload.(*proto.IbftMessage_PreprepareData)
+	preprepareData, ok := proposalMessage.GetPayload().(*proto.IbftMessage_PreprepareData)
 	if !ok {
 		return nil
 	}
 
-	return preprepareData.PreprepareData.ProposalHash
+	return preprepareData.PreprepareData.GetProposalHash()
 }
 
 // ExtractRoundChangeCertificate extracts the RCC from the passed in message
 func ExtractRoundChangeCertificate(proposalMessage *proto.IbftMessage) *proto.RoundChangeCertificate {
-	if proposalMessage.Type != proto.MessageType_PREPREPARE {
+	if proposalMessage.GetType() != proto.MessageType_PREPREPARE {
 		return nil
 	}
 
-	preprepareData, ok := proposalMessage.Payload.(*proto.IbftMessage_PreprepareData)
+	preprepareData, ok := proposalMessage.GetPayload().(*proto.IbftMessage_PreprepareData)
 	if !ok {
 		return nil
 	}
 
-	return preprepareData.PreprepareData.Certificate
+	return preprepareData.PreprepareData.GetCertificate()
 }
 
 // ExtractPrepareHash extracts the prepare proposal hash from the passed in message
 func ExtractPrepareHash(prepareMessage *proto.IbftMessage) []byte {
-	if prepareMessage.Type != proto.MessageType_PREPARE {
+	if prepareMessage.GetType() != proto.MessageType_PREPARE {
 		return nil
 	}
 
-	prepareData, ok := prepareMessage.Payload.(*proto.IbftMessage_PrepareData)
+	prepareData, ok := prepareMessage.GetPayload().(*proto.IbftMessage_PrepareData)
 	if !ok {
 		return nil
 	}
 
-	return prepareData.PrepareData.ProposalHash
+	return prepareData.PrepareData.GetProposalHash()
 }
 
 // ExtractLatestPC extracts the latest PC from the passed in message
 func ExtractLatestPC(roundChangeMessage *proto.IbftMessage) *proto.PreparedCertificate {
-	if roundChangeMessage.Type != proto.MessageType_ROUND_CHANGE {
+	if roundChangeMessage.GetType() != proto.MessageType_ROUND_CHANGE {
 		return nil
 	}
 
-	rcData, ok := roundChangeMessage.Payload.(*proto.IbftMessage_RoundChangeData)
+	rcData, ok := roundChangeMessage.GetPayload().(*proto.IbftMessage_RoundChangeData)
 	if !ok {
 		return nil
 	}
 
-	return rcData.RoundChangeData.LatestPreparedCertificate
+	return rcData.RoundChangeData.GetLatestPreparedCertificate()
 }
 
 // ExtractLastPreparedProposal extracts the latest prepared proposal from the passed in message
 func ExtractLastPreparedProposal(roundChangeMessage *proto.IbftMessage) *proto.Proposal {
-	if roundChangeMessage.Type != proto.MessageType_ROUND_CHANGE {
+	if roundChangeMessage.GetType() != proto.MessageType_ROUND_CHANGE {
 		return nil
 	}
 
-	rcData, ok := roundChangeMessage.Payload.(*proto.IbftMessage_RoundChangeData)
+	rcData, ok := roundChangeMessage.GetPayload().(*proto.IbftMessage_RoundChangeData)
 	if !ok {
 		return nil
 	}
-	return rcData.RoundChangeData.LastPreparedProposal
+	return rcData.RoundChangeData.GetLastPreparedProposal()
 }
 
 // HasUniqueSenders checks if the messages have unique senders
@@ -151,7 +151,7 @@ func HasUniqueSenders(messages []*proto.IbftMessage) bool {
 	senderMap := make(map[string]struct{}, len(messages))
 
 	for _, message := range messages {
-		key := string(message.From)
+		key := string(message.GetFrom())
 		if _, exists := senderMap[key]; exists {
 			return false
 		}
@@ -168,19 +168,19 @@ func AreValidPCMessages(messages []*proto.IbftMessage, height uint64, roundLimit
 		return false
 	}
 
-	round := messages[0].View.Round
+	round := messages[0].GetView().GetRound()
 	senderMap := make(map[string]struct{})
 
 	var hash []byte
 
 	for _, message := range messages {
 		// all messages must have the same height
-		if message.View.Height != height {
+		if message.GetView().GetHeight() != height {
 			return false
 		}
 
 		// all messages must have the same round that is not greater than round limit
-		if message.View.Round != round || message.View.Round >= roundLimit {
+		if message.GetView().GetRound() != round || message.GetView().GetRound() >= roundLimit {
 			return false
 		}
 
@@ -198,7 +198,7 @@ func AreValidPCMessages(messages []*proto.IbftMessage, height uint64, roundLimit
 		}
 
 		// all messages must have unique senders
-		key := string(message.From)
+		key := string(message.GetFrom())
 		if _, exists := senderMap[key]; exists {
 			return false
 		}
@@ -216,7 +216,7 @@ func AllHaveLowerRound(messages []*proto.IbftMessage, round uint64) bool {
 	}
 
 	for _, message := range messages {
-		if message.View.Round >= round {
+		if message.GetView().GetRound() >= round {
 			return false
 		}
 	}
@@ -226,7 +226,7 @@ func AllHaveLowerRound(messages []*proto.IbftMessage, round uint64) bool {
 
 // extractPCMessageHash extracts the hash from a PC message
 func extractPCMessageHash(message *proto.IbftMessage) ([]byte, bool) {
-	switch message.Type {
+	switch message.GetType() {
 	case proto.MessageType_PREPREPARE:
 		return ExtractProposalHash(message), true
 	case proto.MessageType_PREPARE:

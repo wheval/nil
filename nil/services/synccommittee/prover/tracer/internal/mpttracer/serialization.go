@@ -16,20 +16,21 @@ import (
 func TracesFromProto(pbMptTraces *pb.MPTTraces) (*MPTTraces, error) {
 	check.PanicIfNot(pbMptTraces != nil)
 
-	addrToStorageTraces := make(map[types.Address][]StorageTrieUpdateTrace, len(pbMptTraces.StorageTracesByAccount))
-	for addr, pbStorageTrace := range pbMptTraces.StorageTracesByAccount {
-		storageTraces := make([]StorageTrieUpdateTrace, len(pbStorageTrace.UpdatesTraces))
-		for i, pbStorageUpdateTrace := range pbStorageTrace.UpdatesTraces {
-			proof, err := protoToGoProof(pbStorageUpdateTrace.SszProof)
+	addrToStorageTraces := make(map[types.Address][]StorageTrieUpdateTrace,
+		len(pbMptTraces.GetStorageTracesByAccount()))
+	for addr, pbStorageTrace := range pbMptTraces.GetStorageTracesByAccount() {
+		storageTraces := make([]StorageTrieUpdateTrace, len(pbStorageTrace.GetUpdatesTraces()))
+		for i, pbStorageUpdateTrace := range pbStorageTrace.GetUpdatesTraces() {
+			proof, err := protoToGoProof(pbStorageUpdateTrace.GetSszProof())
 			if err != nil {
 				return nil, err
 			}
 			storageTraces[i] = StorageTrieUpdateTrace{
-				Key:         common.HexToHash(pbStorageUpdateTrace.Key),
-				RootBefore:  common.HexToHash(pbStorageUpdateTrace.RootBefore),
-				RootAfter:   common.HexToHash(pbStorageUpdateTrace.RootAfter),
-				ValueBefore: pb.ProtoUint256ToUint256(pbStorageUpdateTrace.ValueBefore),
-				ValueAfter:  pb.ProtoUint256ToUint256(pbStorageUpdateTrace.ValueAfter),
+				Key:         common.HexToHash(pbStorageUpdateTrace.GetKey()),
+				RootBefore:  common.HexToHash(pbStorageUpdateTrace.GetRootBefore()),
+				RootAfter:   common.HexToHash(pbStorageUpdateTrace.GetRootAfter()),
+				ValueBefore: pb.ProtoUint256ToUint256(pbStorageUpdateTrace.GetValueBefore()),
+				ValueAfter:  pb.ProtoUint256ToUint256(pbStorageUpdateTrace.GetValueAfter()),
 				Proof:       proof,
 				// PathBefore: // Unused
 				// PathAfter:  // Unused
@@ -38,18 +39,18 @@ func TracesFromProto(pbMptTraces *pb.MPTTraces) (*MPTTraces, error) {
 		addrToStorageTraces[types.HexToAddress(addr)] = storageTraces
 	}
 
-	contractTrieTraces := make([]ContractTrieUpdateTrace, len(pbMptTraces.ContractTrieTraces))
-	for i, pbContractTrieUpdate := range pbMptTraces.ContractTrieTraces {
-		proof, err := protoToGoProof(pbContractTrieUpdate.SszProof)
+	contractTrieTraces := make([]ContractTrieUpdateTrace, len(pbMptTraces.GetContractTrieTraces()))
+	for i, pbContractTrieUpdate := range pbMptTraces.GetContractTrieTraces() {
+		proof, err := protoToGoProof(pbContractTrieUpdate.GetSszProof())
 		if err != nil {
 			return nil, err
 		}
 		contractTrieTraces[i] = ContractTrieUpdateTrace{
-			Key:         common.HexToHash(pbContractTrieUpdate.Key),
-			RootBefore:  common.HexToHash(pbContractTrieUpdate.RootBefore),
-			RootAfter:   common.HexToHash(pbContractTrieUpdate.RootAfter),
-			ValueBefore: smartContractFromProto(pbContractTrieUpdate.ValueBefore),
-			ValueAfter:  smartContractFromProto(pbContractTrieUpdate.ValueAfter),
+			Key:         common.HexToHash(pbContractTrieUpdate.GetKey()),
+			RootBefore:  common.HexToHash(pbContractTrieUpdate.GetRootBefore()),
+			RootAfter:   common.HexToHash(pbContractTrieUpdate.GetRootAfter()),
+			ValueBefore: smartContractFromProto(pbContractTrieUpdate.GetValueBefore()),
+			ValueAfter:  smartContractFromProto(pbContractTrieUpdate.GetValueAfter()),
 			Proof:       proof,
 			// PathBefore: // Unused
 			// PathAfter:  // Unused
@@ -156,20 +157,20 @@ func smartContractFromProto(pbSmartContract *pb.SmartContract) *types.SmartContr
 	}
 
 	var balance types.Value
-	if pbSmartContract.Balance != nil {
-		b := pb.ProtoUint256ToUint256(pbSmartContract.Balance)
+	if pbSmartContract.GetBalance() != nil {
+		b := pb.ProtoUint256ToUint256(pbSmartContract.GetBalance())
 		balance = types.NewValue(b.Int())
 	}
 	return &types.SmartContract{
-		Address:          types.HexToAddress(pbSmartContract.Address),
+		Address:          types.HexToAddress(pbSmartContract.GetAddress()),
 		Balance:          types.NewValue(balance.Int()),
-		TokenRoot:        common.HexToHash(pbSmartContract.TokenRoot),
-		StorageRoot:      common.HexToHash(pbSmartContract.StorageRoot),
-		CodeHash:         common.HexToHash(pbSmartContract.CodeHash),
-		AsyncContextRoot: common.HexToHash(pbSmartContract.AsyncContextRoot),
-		Seqno:            types.Seqno(pbSmartContract.Seqno),
-		ExtSeqno:         types.Seqno(pbSmartContract.ExtSeqno),
-		RequestId:        pbSmartContract.RequestId,
+		TokenRoot:        common.HexToHash(pbSmartContract.GetTokenRoot()),
+		StorageRoot:      common.HexToHash(pbSmartContract.GetStorageRoot()),
+		CodeHash:         common.HexToHash(pbSmartContract.GetCodeHash()),
+		AsyncContextRoot: common.HexToHash(pbSmartContract.GetAsyncContextRoot()),
+		Seqno:            types.Seqno(pbSmartContract.GetSeqno()),
+		ExtSeqno:         types.Seqno(pbSmartContract.GetExtSeqno()),
+		RequestId:        pbSmartContract.GetRequestId(),
 	}
 }
 

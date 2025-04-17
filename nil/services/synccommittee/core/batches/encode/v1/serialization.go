@@ -16,7 +16,7 @@ func uint256ToProtoUint256(u coreTypes.Uint256) *proto.Uint256 {
 
 func protoUint256ToUint256(pb *proto.Uint256) coreTypes.Uint256 {
 	var u coreTypes.Uint256
-	copy(u[:], pb.WordParts)
+	copy(u[:], pb.GetWordParts())
 	return u
 }
 
@@ -55,8 +55,8 @@ func ConvertToProto(batch *types.PrunedBatch) *proto.Batch {
 			}
 			b.Transactions = append(b.Transactions, tx)
 		}
-		lastTs = max(lastTs, b.Timestamp)
-		totalTxCount += uint64(len(b.Transactions))
+		lastTs = max(lastTs, b.GetTimestamp())
+		totalTxCount += uint64(len(b.GetTransactions()))
 		protoBlocks = append(protoBlocks, b)
 	}
 
@@ -68,29 +68,29 @@ func ConvertToProto(batch *types.PrunedBatch) *proto.Batch {
 }
 
 func ConvertFromProto(batch *proto.Batch) (*types.PrunedBatch, error) {
-	blocks := make([]*types.PrunedBlock, 0, len(batch.Blocks))
-	for _, pblk := range batch.Blocks {
+	blocks := make([]*types.PrunedBlock, 0, len(batch.GetBlocks()))
+	for _, pblk := range batch.GetBlocks() {
 		b := &types.PrunedBlock{
-			ShardId:       coreTypes.ShardId(pblk.ShardId),
-			BlockNumber:   coreTypes.BlockNumber(pblk.BlockNumber),
-			Timestamp:     pblk.Timestamp,
-			PrevBlockHash: common.BytesToHash(pblk.PrevBlockHash),
+			ShardId:       coreTypes.ShardId(pblk.GetShardId()),
+			BlockNumber:   coreTypes.BlockNumber(pblk.GetBlockNumber()),
+			Timestamp:     pblk.GetTimestamp(),
+			PrevBlockHash: common.BytesToHash(pblk.GetPrevBlockHash()),
 		}
-		for _, ptx := range pblk.Transactions {
+		for _, ptx := range pblk.GetTransactions() {
 			tx := types.PrunedTransaction{
 				Flags: coreTypes.NewTransactionFlagsFromBits(uint8(ptx.GetFlags())),
 				Seqno: hexutil.Uint64(ptx.GetSeqNo()),
-				From:  coreTypes.BytesToAddress(ptx.AddrFrom.AddressBytes),
-				To:    coreTypes.BytesToAddress(ptx.AddrTo.AddressBytes),
+				From:  coreTypes.BytesToAddress(ptx.GetAddrFrom().GetAddressBytes()),
+				To:    coreTypes.BytesToAddress(ptx.GetAddrTo().GetAddressBytes()),
 				Data:  ptx.GetData(),
 			}
-			pValue := protoUint256ToUint256(ptx.Value)
+			pValue := protoUint256ToUint256(ptx.GetValue())
 			tx.Value = coreTypes.Value{Uint256: &pValue}
-			if ptx.AddrRefundTo != nil {
-				tx.RefundTo = coreTypes.BytesToAddress(ptx.AddrFrom.AddressBytes)
+			if ptx.GetAddrRefundTo() != nil {
+				tx.RefundTo = coreTypes.BytesToAddress(ptx.GetAddrFrom().GetAddressBytes())
 			}
-			if ptx.AddrBounceTo != nil {
-				tx.BounceTo = coreTypes.BytesToAddress(ptx.AddrFrom.AddressBytes)
+			if ptx.GetAddrBounceTo() != nil {
+				tx.BounceTo = coreTypes.BytesToAddress(ptx.GetAddrFrom().GetAddressBytes())
 			}
 			b.Transactions = append(b.Transactions, tx)
 		}
@@ -98,7 +98,7 @@ func ConvertFromProto(batch *proto.Batch) (*types.PrunedBatch, error) {
 	}
 
 	var id types.BatchId
-	if err := id.UnmarshalText([]byte(batch.BatchId)); err != nil {
+	if err := id.UnmarshalText([]byte(batch.GetBatchId())); err != nil {
 		return nil, err
 	}
 	return &types.PrunedBatch{BatchId: id, Blocks: blocks}, nil

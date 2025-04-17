@@ -132,7 +132,7 @@ func (m mockBackend) IsProposer(id []byte, sequence, round uint64) bool {
 
 func (m mockBackend) BuildProposal(view *proto.View) []byte {
 	if m.buildProposalFn != nil {
-		return m.buildProposalFn(view.Height)
+		return m.buildProposalFn(view.GetHeight())
 	}
 
 	return nil
@@ -193,8 +193,8 @@ func (m mockBackend) BuildRoundChangeMessage(
 
 	return &proto.IbftMessage{
 		View: &proto.View{
-			Height: view.Height,
-			Round:  view.Round,
+			Height: view.GetHeight(),
+			Round:  view.GetRound(),
 		},
 		Type:    proto.MessageType_ROUND_CHANGE,
 		Payload: nil,

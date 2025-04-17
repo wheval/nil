@@ -52,8 +52,8 @@ func TestEventSubscription_EventSupported(t *testing.T) {
 			signalDetails{
 				commonDetails.MessageType,
 				&proto.View{
-					Height: commonDetails.View.Height,
-					Round:  commonDetails.View.Round + 1,
+					Height: commonDetails.View.GetHeight(),
+					Round:  commonDetails.View.GetRound() + 1,
 				},
 				commonDetails.MinNumMessages,
 			},
@@ -80,8 +80,8 @@ func TestEventSubscription_EventSupported(t *testing.T) {
 			signalDetails{
 				commonDetails.MessageType,
 				&proto.View{
-					Height: commonDetails.View.Height,
-					Round:  commonDetails.View.Round + 1,
+					Height: commonDetails.View.GetHeight(),
+					Round:  commonDetails.View.GetRound() + 1,
 				},
 				commonDetails.MinNumMessages,
 			},
@@ -92,8 +92,8 @@ func TestEventSubscription_EventSupported(t *testing.T) {
 			SubscriptionDetails{
 				MessageType: commonDetails.MessageType,
 				View: &proto.View{
-					Height: commonDetails.View.Height,
-					Round:  commonDetails.View.Round + 10,
+					Height: commonDetails.View.GetHeight(),
+					Round:  commonDetails.View.GetRound() + 10,
 				},
 				MinNumMessages: commonDetails.MinNumMessages,
 				HasMinRound:    true,
@@ -101,8 +101,8 @@ func TestEventSubscription_EventSupported(t *testing.T) {
 			signalDetails{
 				commonDetails.MessageType,
 				&proto.View{
-					Height: commonDetails.View.Height,
-					Round:  commonDetails.View.Round + 10 - 1,
+					Height: commonDetails.View.GetHeight(),
+					Round:  commonDetails.View.GetRound() + 10 - 1,
 				},
 				commonDetails.MinNumMessages,
 			},
@@ -124,8 +124,8 @@ func TestEventSubscription_EventSupported(t *testing.T) {
 			signalDetails{
 				commonDetails.MessageType,
 				&proto.View{
-					Height: commonDetails.View.Height + 1,
-					Round:  commonDetails.View.Round,
+					Height: commonDetails.View.GetHeight() + 1,
+					Round:  commonDetails.View.GetRound(),
 				},
 				commonDetails.MinNumMessages,
 			},
