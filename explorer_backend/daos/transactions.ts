@@ -117,7 +117,7 @@ export const getTransactionsByBlockHash = async (hash: string): Promise<Transact
           block_id DESC,
           transaction_index ASC,
           seqno DESC,
-          outgoing ASC,
+          outgoing ASC
         `,
     query_params: {
       hash,
@@ -143,7 +143,7 @@ export const getTransactionsByBlock = async (
           block_id DESC,
           transaction_index ASC,
           seqno DESC,
-          outgoing ASC,
+          outgoing ASC
         `,
     query_params: {
       shard,
