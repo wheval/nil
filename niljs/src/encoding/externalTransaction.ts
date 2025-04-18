@@ -1,4 +1,5 @@
 import { numberToBytesBE } from "@noble/curves/abstract/utils";
+import { keccak_256 } from "@noble/hashes/sha3";
 import type { PublicClient } from "../clients/PublicClient.js";
 import type { ISigner } from "../signers/types/ISigner.js";
 import type { ExternalTransaction } from "../types/ExternalTransaction.js";
@@ -6,7 +7,6 @@ import type { IDeployData } from "../types/IDeployData.js";
 import { getShardIdFromAddress } from "../utils/address.js";
 import { prepareDeployPart } from "./deployPart.js";
 import { bytesToHex } from "./fromBytes.js";
-import { poseidonHash } from "./poseidon.js";
 import { SszSignedTransactionSchema, SszTransactionSchema } from "./ssz.js";
 
 /**
@@ -133,7 +133,7 @@ export class ExternalTransactionEnvelope {
   public hash(): Uint8Array {
     const raw = this.encode();
     const shardIdPart = numberToBytesBE(getShardIdFromAddress(bytesToHex(this.to)), 2);
-    const hashPart = numberToBytesBE(poseidonHash(raw), 32);
+    const hashPart = keccak_256(raw);
     return new Uint8Array([...shardIdPart, ...hashPart.slice(2)]);
   }
   /**
@@ -154,7 +154,7 @@ export class ExternalTransactionEnvelope {
       data: this.data,
       deploy: this.isDeploy,
     });
-    return numberToBytesBE(poseidonHash(raw), 32);
+    return keccak_256(raw);
   }
   /**
    * Encodes the external transaction with its signature.
@@ -184,7 +184,7 @@ export class ExternalTransactionEnvelope {
       authData: signature,
     });
     const shardIdPart = numberToBytesBE(getShardIdFromAddress(bytesToHex(this.to)), 2);
-    const hashPart = numberToBytesBE(poseidonHash(raw), 32);
+    const hashPart = keccak_256(raw);
     const hash = new Uint8Array([...shardIdPart, ...hashPart.slice(2)]);
     return { raw, hash };
   }

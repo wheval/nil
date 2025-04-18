@@ -156,16 +156,11 @@ contract Test is NilBase {
         require(value != 0, "Value must be non-zero");
     }
 
-    function getPoseidonHash(bytes memory data) public returns (uint256) {
-        uint256 hash = Nil.getPoseidonHash(data);
-        return hash;
-    }
-
     function createAddress(
         uint shardId,
         bytes memory code,
         uint256 salt
-    ) public returns (address) {
+    ) public pure returns (address) {
         return Nil.createAddress(shardId, code, salt);
     }
 
@@ -174,7 +169,7 @@ contract Test is NilBase {
         address addr,
         uint256 salt,
         uint256 codeHash
-    ) public returns (address) {
+    ) public pure returns (address) {
         return Nil.createAddress2(shardId, addr, salt, codeHash);
     }
 

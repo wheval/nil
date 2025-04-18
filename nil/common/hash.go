@@ -11,8 +11,8 @@ import (
 	ssz "github.com/NilFoundation/fastssz"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/holiman/uint256"
-	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
 type Hash [HashSize]byte
@@ -31,24 +31,21 @@ func BytesToHash(b []byte) Hash {
 	return h
 }
 
-// PoseidonHash returns 32-bytes poseidon hash of b bytes.
-func PoseidonHash(b []byte) Hash {
-	if len(b) == 0 {
-		return EmptyHash
-	}
-	return BytesToHash(poseidon.Sum(b))
+// KeccakHash returns 32-bytes keccak hash of b bytes.
+func KeccakHash(b []byte) Hash {
+	return BytesToHash(crypto.Keccak256(b))
 }
 
-func PoseidonSSZ(data ssz.Marshaler) (Hash, error) {
+func KeccakSSZ(data ssz.Marshaler) (Hash, error) {
 	buf, err := data.MarshalSSZ()
 	if err != nil {
 		return EmptyHash, err
 	}
-	return PoseidonHash(buf), nil
+	return KeccakHash(buf), nil
 }
 
-func MustPoseidonSSZ(data ssz.Marshaler) Hash {
-	h, err := PoseidonSSZ(data)
+func MustKeccakSSZ(data ssz.Marshaler) Hash {
+	h, err := KeccakSSZ(data)
 	check.PanicIfErr(err)
 	return h
 }

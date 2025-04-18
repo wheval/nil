@@ -8,7 +8,7 @@ import (
 	ssz "github.com/NilFoundation/fastssz"
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/db"
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type MPTOperation uint32
@@ -33,7 +33,7 @@ type Proof struct {
 // If no common path is found, the root node is included to prove that the key does not exist in the trie.
 func BuildProof(tree *Reader, key []byte, op MPTOperation) (Proof, error) {
 	if len(key) > maxRawKeyLen {
-		key = poseidon.Sum(key)
+		key = crypto.Keccak256(key)
 	}
 	p := Proof{operation: op, key: key}
 
@@ -63,7 +63,7 @@ verifies the merkle proof for read operation
 */
 func (p *Proof) VerifyRead(key []byte, value []byte, rootHash common.Hash) (bool, error) {
 	if len(key) > maxRawKeyLen {
-		key = poseidon.Sum(key)
+		key = crypto.Keccak256(key)
 	}
 	if p.operation != ReadMPTOperation || !bytes.Equal(p.key, key) {
 		return false, nil
@@ -100,7 +100,7 @@ verifies the merkle proof for delete operation
 */
 func (p *Proof) VerifyDelete(key []byte, deleted bool, rootHash, newRootHash common.Hash) (bool, error) {
 	if len(key) > maxRawKeyLen {
-		key = poseidon.Sum(key)
+		key = crypto.Keccak256(key)
 	}
 	if p.operation != DeleteMPTOperation || !bytes.Equal(p.key, key) {
 		return false, nil
@@ -135,7 +135,7 @@ verifies the merkle proof for set operation
 */
 func (p *Proof) VerifySet(key []byte, value []byte, rootHash, newRootHash common.Hash) (bool, error) {
 	if len(key) > maxRawKeyLen {
-		key = poseidon.Sum(key)
+		key = crypto.Keccak256(key)
 	}
 	if p.operation != SetMPTOperation || !bytes.Equal(p.key, key) {
 		return false, nil

@@ -32,7 +32,7 @@ func (i *backendIBFT) Multicast(msg *proto.IbftMessage) {
 	if err := i.transport.Multicast(msg); err != nil {
 		i.logger.Error().Err(err).Msg("Fail to gossip")
 	}
-	i.mh.IncSentMessages(i.transportCtx, msg.Type.String())
+	i.mh.IncSentMessages(i.transportCtx, msg.GetType().String())
 }
 
 func (i *backendIBFT) getProto() string {
@@ -81,17 +81,17 @@ func (i *backendIBFT) setupTransport(ctx context.Context) error {
 				}
 
 				event := i.logger.Debug().
-					Hex("addr", msg.From).
-					Stringer(logging.FieldType, msg.Type).
+					Hex("addr", msg.GetFrom()).
+					Stringer(logging.FieldType, msg.GetType()).
 					Str(logging.FieldTopic, protocol)
 				if view := msg.GetView(); view != nil {
-					event = event.Uint64(logging.FieldHeight, view.Height).
-						Uint64(logging.FieldRound, view.Round)
+					event = event.Uint64(logging.FieldHeight, view.GetHeight()).
+						Uint64(logging.FieldRound, view.GetRound())
 				}
 				event.Msg("Validator message received")
 
 				i.consensus.AddMessage(msg)
-				i.mh.IncReceivedMessages(ctx, msg.Type.String())
+				i.mh.IncReceivedMessages(ctx, msg.GetType().String())
 			}
 		}
 	}(ctx)

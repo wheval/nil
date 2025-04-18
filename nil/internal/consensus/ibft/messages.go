@@ -17,8 +17,8 @@ func (i *backendIBFT) signMessage(msg *protoIBFT.IbftMessage) *protoIBFT.IbftMes
 		event := i.logger.Error().Err(err).
 			Stringer("type", msg.GetType())
 		if view := msg.GetView(); view != nil {
-			event = event.Uint64(logging.FieldHeight, view.Height).
-				Uint64(logging.FieldRound, view.Round)
+			event = event.Uint64(logging.FieldHeight, view.GetHeight()).
+				Uint64(logging.FieldRound, view.GetRound())
 		}
 		event.Msg("Failed to sign a message")
 		return nil
@@ -33,7 +33,7 @@ func (i *backendIBFT) BuildPrePrepareMessage(
 ) *protoIBFT.IbftMessage {
 	proposalMsg := &protoIBFT.Proposal{
 		RawProposal: rawProposal,
-		Round:       view.Round,
+		Round:       view.GetRound(),
 	}
 
 	proposal, err := i.unmarshalProposal(rawProposal)

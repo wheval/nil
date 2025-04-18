@@ -126,7 +126,7 @@ func storeData(ctx context.Context, click *Clickhouse, data []Event) error {
 
 func (s *LogServer) processResourceLog(resourceLog *v12.ResourceLogs) ([]Event, error) {
 	var res []Event
-	for _, scopeLog := range resourceLog.ScopeLogs {
+	for _, scopeLog := range resourceLog.GetScopeLogs() {
 		log, err := s.processScopeLog(scopeLog)
 		if err != nil {
 			return nil, err
@@ -138,7 +138,7 @@ func (s *LogServer) processResourceLog(resourceLog *v12.ResourceLogs) ([]Event, 
 
 func (s *LogServer) processScopeLog(scopeLog *v12.ScopeLogs) ([]Event, error) {
 	var res []Event
-	for _, logRecord := range scopeLog.LogRecords {
+	for _, logRecord := range scopeLog.GetLogRecords() {
 		log, err := s.processLogRecord(logRecord)
 		if err != nil {
 			return nil, err
@@ -154,7 +154,7 @@ func (s *LogServer) processLogRecord(logRecord *v12.LogRecord) (Event, error) {
 	var jsonData *v1.AnyValue
 	var hostname string
 	var unit string
-	for _, kv := range logRecord.Body.GetKvlistValue().GetValues() {
+	for _, kv := range logRecord.GetBody().GetKvlistValue().GetValues() {
 		switch kv.GetKey() {
 		case "JSON":
 			jsonData = kv.GetValue()
@@ -192,7 +192,7 @@ func (s *LogServer) Export(
 	ctx context.Context, req *logs.ExportLogsServiceRequest,
 ) (*logs.ExportLogsServiceResponse, error) {
 	var eventsToStore []Event
-	for _, resourceLog := range req.ResourceLogs {
+	for _, resourceLog := range req.GetResourceLogs() {
 		log, err := s.processResourceLog(resourceLog)
 		if err != nil {
 			return nil, err

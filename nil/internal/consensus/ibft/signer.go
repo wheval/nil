@@ -15,7 +15,7 @@ type Signer struct {
 }
 
 func getHash(data []byte) []byte {
-	return common.PoseidonHash(data).Bytes()
+	return common.KeccakHash(data).Bytes()
 }
 
 func NewSigner(privateKey bls.PrivateKey) *Signer {

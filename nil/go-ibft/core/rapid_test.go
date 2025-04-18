@@ -233,12 +233,12 @@ func TestProperty(t *testing.T) {
 		// required for Transport, for all nodes
 		commonTransportCallback := func(transport *mockTransport, nodeIndex int) {
 			transport.multicastFn = func(message *proto.IbftMessage) {
-				if message.Type == proto.MessageType_ROUND_CHANGE {
-					setup.setRound(nodeIndex, message.View.Round)
+				if message.GetType() == proto.MessageType_ROUND_CHANGE {
+					setup.setRound(nodeIndex, message.GetView().GetRound())
 				}
 
 				// If node is silent, don't send a message
-				if setup.getEventAt(message.View.Height, message.View.Round).isSilent(nodeIndex) {
+				if setup.getEventAt(message.GetView().GetHeight(), message.GetView().GetRound()).isSilent(nodeIndex) {
 					return
 				}
 
@@ -269,14 +269,14 @@ func TestProperty(t *testing.T) {
 			backend.isValidProposalFn = func(rawProposal []byte) bool {
 				message := setup.getEvent(nodeIndex).getMessage(nodeIndex)
 
-				return bytes.Equal(rawProposal, message.proposal.RawProposal)
+				return bytes.Equal(rawProposal, message.proposal.GetRawProposal())
 			}
 
 			// Make sure the proposal hash matches
 			backend.isValidProposalHashFn = func(proposal *proto.Proposal, hash []byte) bool {
 				message := setup.getEvent(nodeIndex).getMessage(nodeIndex)
 
-				return bytes.Equal(proposal.RawProposal, message.proposal.RawProposal) &&
+				return bytes.Equal(proposal.GetRawProposal(), message.proposal.GetRawProposal()) &&
 					bytes.Equal(hash, message.hash)
 			}
 
@@ -286,7 +286,7 @@ func TestProperty(t *testing.T) {
 				certificate *proto.RoundChangeCertificate,
 				view *proto.View,
 			) *proto.IbftMessage {
-				message := setup.getEventAt(view.Height, view.Round).getMessage(nodeIndex)
+				message := setup.getEventAt(view.GetHeight(), view.GetRound()).getMessage(nodeIndex)
 
 				return buildBasicPreprepareMessage(
 					proposal,
@@ -299,14 +299,14 @@ func TestProperty(t *testing.T) {
 
 			// Make sure the prepare message is built correctly
 			backend.buildPrepareMessageFn = func(proposal []byte, view *proto.View) *proto.IbftMessage {
-				message := setup.getEventAt(view.Height, view.Round).getMessage(nodeIndex)
+				message := setup.getEventAt(view.GetHeight(), view.GetRound()).getMessage(nodeIndex)
 
 				return buildBasicPrepareMessage(message.hash, nodes[nodeIndex], view)
 			}
 
 			// Make sure the commit message is built correctly
 			backend.buildCommitMessageFn = func(proposal []byte, view *proto.View) *proto.IbftMessage {
-				message := setup.getEventAt(view.Height, view.Round).getMessage(nodeIndex)
+				message := setup.getEventAt(view.GetHeight(), view.GetRound()).getMessage(nodeIndex)
 
 				return buildBasicCommitMessage(message.hash, message.seal, nodes[nodeIndex], view)
 			}
@@ -322,7 +322,7 @@ func TestProperty(t *testing.T) {
 
 			// Make sure the inserted proposal is noted
 			backend.insertProposalFn = func(proposal *proto.Proposal, _ []*messages.CommittedSeal) {
-				insertedProposals.insertProposal(nodeIndex, proposal.RawProposal)
+				insertedProposals.insertProposal(nodeIndex, proposal.GetRawProposal())
 			}
 
 			// Make sure the proposal can be built
@@ -381,7 +381,7 @@ func TestProperty(t *testing.T) {
 
 					// Make sure inserted block value is correct
 					for _, val := range proposalMap {
-						assert.Equal(t, correctRoundMessage.proposal.RawProposal, val)
+						assert.Equal(t, correctRoundMessage.proposal.GetRawProposal(), val)
 					}
 				} else {
 					// There should not be inserted blocks in bad nodes

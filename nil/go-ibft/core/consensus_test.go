@@ -39,7 +39,7 @@ func buildBasicPreprepareMessage(
 			PreprepareData: &proto.PrePrepareMessage{
 				Proposal: &proto.Proposal{
 					RawProposal: rawProposal,
-					Round:       view.Round,
+					Round:       view.GetRound(),
 				},
 				Certificate:  certificate,
 				ProposalHash: proposalHash,
@@ -172,7 +172,7 @@ func TestConsensus_ValidFlow(t *testing.T) {
 		// Make sure the proposal hash matches
 		backend.isValidProposalHashFn = func(proposal *proto.Proposal, proposalHash []byte) bool {
 			return bytes.Equal(proposal.GetRawProposal(), correctRoundMessage.proposal.GetRawProposal()) &&
-				proposal.Round == correctRoundMessage.proposal.Round &&
+				proposal.GetRound() == correctRoundMessage.proposal.GetRound() &&
 				bytes.Equal(proposalHash, correctRoundMessage.hash)
 		}
 
@@ -211,7 +211,7 @@ func TestConsensus_ValidFlow(t *testing.T) {
 
 		// Make sure the inserted proposal is noted
 		backend.insertProposalFn = func(proposal *proto.Proposal, _ []*messages.CommittedSeal) {
-			insertedBlocks[nodeIndex] = proposal.RawProposal
+			insertedBlocks[nodeIndex] = proposal.GetRawProposal()
 		}
 
 		// Set the proposal creation method
@@ -310,7 +310,7 @@ func TestConsensus_InvalidBlock(t *testing.T) {
 
 		// Make sure the proposal hash matches
 		backend.isValidProposalHashFn = func(proposal *proto.Proposal, proposalHash []byte) bool {
-			if bytes.Equal(proposal.RawProposal, proposals[0]) {
+			if bytes.Equal(proposal.GetRawProposal(), proposals[0]) {
 				return bytes.Equal(proposalHash, proposalHashes[0])
 			}
 
@@ -325,7 +325,7 @@ func TestConsensus_InvalidBlock(t *testing.T) {
 		) *proto.IbftMessage {
 			return buildBasicPreprepareMessage(
 				rawProposal,
-				proposalHashes[view.Round],
+				proposalHashes[view.GetRound()],
 				certificate,
 				nodes[nodeIndex],
 				view,
@@ -334,12 +334,12 @@ func TestConsensus_InvalidBlock(t *testing.T) {
 
 		// Make sure the prepare message is built correctly
 		backend.buildPrepareMessageFn = func(proposal []byte, view *proto.View) *proto.IbftMessage {
-			return buildBasicPrepareMessage(proposalHashes[view.Round], nodes[nodeIndex], view)
+			return buildBasicPrepareMessage(proposalHashes[view.GetRound()], nodes[nodeIndex], view)
 		}
 
 		// Make sure the commit message is built correctly
 		backend.buildCommitMessageFn = func(proposal []byte, view *proto.View) *proto.IbftMessage {
-			return buildBasicCommitMessage(proposalHashes[view.Round], committedSeal, nodes[nodeIndex], view)
+			return buildBasicCommitMessage(proposalHashes[view.GetRound()], committedSeal, nodes[nodeIndex], view)
 		}
 
 		// Make sure the round change message is built correctly
@@ -353,7 +353,7 @@ func TestConsensus_InvalidBlock(t *testing.T) {
 
 		// Make sure the inserted proposal is noted
 		backend.insertProposalFn = func(proposal *proto.Proposal, _ []*messages.CommittedSeal) {
-			insertedBlocks[nodeIndex] = proposal.RawProposal
+			insertedBlocks[nodeIndex] = proposal.GetRawProposal()
 		}
 
 		// Build proposal function

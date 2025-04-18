@@ -27,9 +27,9 @@ func TestUint256SSZ(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "8e8e010000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(res[:]))
 
-	h, err := common.PoseidonSSZ(value)
+	h, err := common.KeccakSSZ(value)
 	require.NoError(t, err)
-	assert.Equal(t, "0912604ab702e08cf1173ee710b035d3efae416bf8ebb5fccb04a0fc8cc5d1a0", hex.EncodeToString(h[:]))
+	assert.Equal(t, "3fa5449386ef45c61db8db3b8dba50dc4b899b5ea9afa02267d309fa92233c12", hex.EncodeToString(h[:]))
 }
 
 func TestUint256Json(t *testing.T) {

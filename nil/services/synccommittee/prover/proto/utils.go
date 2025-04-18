@@ -18,6 +18,6 @@ func ProtoUint256ToUint256(pb *Uint256) *types.Uint256 {
 		return nil
 	}
 	var u types.Uint256
-	copy(u[:], pb.WordParts)
+	copy(u[:], pb.GetWordParts())
 	return &u
 }

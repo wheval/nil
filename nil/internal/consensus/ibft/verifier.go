@@ -51,12 +51,12 @@ func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 	}
 
 	var height uint64
-	loggerCtx := i.logger.With().Hex(logging.FieldPublicKey, msg.From)
+	loggerCtx := i.logger.With().Hex(logging.FieldPublicKey, msg.GetFrom())
 	if view := msg.GetView(); view != nil {
 		loggerCtx = loggerCtx.
-			Uint64(logging.FieldHeight, view.Height).
-			Uint64(logging.FieldRound, view.Round)
-		height = view.Height
+			Uint64(logging.FieldHeight, view.GetHeight()).
+			Uint64(logging.FieldRound, view.GetRound())
+		height = view.GetHeight()
 	}
 	logger := loggerCtx.Logger()
 
@@ -77,14 +77,14 @@ func (i *backendIBFT) IsValidValidator(msg *protoIBFT.IbftMessage) bool {
 		return false
 	}
 
-	_, ok := params.PublicKeys.Find(config.Pubkey(msg.From))
+	_, ok := params.PublicKeys.Find(config.Pubkey(msg.GetFrom()))
 	if !ok {
 		logger.Error().
 			Msg("public key not found in validators list")
 		return false
 	}
 
-	if err := i.signer.VerifyWithKey(msg.From, msgNoSig, msg.Signature); err != nil {
+	if err := i.signer.VerifyWithKey(msg.GetFrom(), msgNoSig, msg.GetSignature()); err != nil {
 		logger.Err(err).Msg("Failed to verify signature")
 		return false
 	}
@@ -122,7 +122,7 @@ func (i *backendIBFT) IsProposer(id []byte, height, round uint64) bool {
 }
 
 func (i *backendIBFT) IsValidProposalHash(proposal *protoIBFT.Proposal, hash []byte) bool {
-	p, err := i.unmarshalProposal(proposal.RawProposal)
+	p, err := i.unmarshalProposal(proposal.GetRawProposal())
 	if err != nil {
 		return false
 	}
@@ -131,7 +131,7 @@ func (i *backendIBFT) IsValidProposalHash(proposal *protoIBFT.Proposal, hash []b
 		i.logger.Error().
 			Stringer("expected", p.BlockHash).
 			Hex("got", hash).
-			Uint64(logging.FieldRound, proposal.Round).
+			Uint64(logging.FieldRound, proposal.GetRound()).
 			Uint64(logging.FieldHeight, uint64(p.PrevBlockId)+1).
 			Msg("Invalid proposal hash")
 		return false

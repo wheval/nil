@@ -114,8 +114,7 @@ func (s *SuiteEthFilters) TestLogs() {
 	var logs []any
 	s.Require().Eventually(func() bool {
 		logs, err = s.api.GetFilterChanges(s.ctx, id1)
-		s.Require().NoError(err)
-		return len(logs) == 2
+		return err == nil && len(logs) == 2
 	}, ManagerWaitTimeout, ManagerPollInterval)
 
 	log0, ok := logs[0].(*RPCLog)

@@ -61,5 +61,4 @@ export * from "./encoding/deployPart.js";
 export * from "./encoding/fromBytes.js";
 export * from "./encoding/externalTransaction.js";
 export * from "./encoding/fromHex.js";
-export * from "./encoding/poseidon.js";
 export * from "./encoding/toHex.js";

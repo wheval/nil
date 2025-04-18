@@ -1,9 +1,4 @@
 import {
-  hashObjectToUint8Array,
-  setHasher,
-  uint8ArrayToHashObject,
-} from "@chainsafe/persistent-merkle-tree";
-import {
   BooleanType,
   ByteListType,
   ByteVectorType,
@@ -11,29 +6,6 @@ import {
   UintBigintType,
   UintNumberType,
 } from "@chainsafe/ssz";
-import { concatBytes } from "@noble/curves/abstract/utils";
-import { poseidonHash } from "./poseidon.js";
-
-setHasher({
-  digest64(a, b) {
-    const hash = poseidonHash(concatBytes(a, b));
-    const arr = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-      // Shift the BigInt to the right by 8 * i bits, then take the 8 least significant bits
-      arr[31 - i] = Number((hash >> BigInt(i * 8)) & BigInt(0xff));
-    }
-    return arr;
-  },
-  digest64HashObjects(a, b) {
-    const hash = poseidonHash(concatBytes(hashObjectToUint8Array(a), hashObjectToUint8Array(b)));
-    const arr = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-      // Shift the BigInt to the right by 8 * i bits, then take the 8 least significant bits
-      arr[31 - i] = Number((hash >> BigInt(i * 8)) & BigInt(0xff));
-    }
-    return uint8ArrayToHashObject(arr);
-  },
-});
 
 /**
  * The basic types used in the library.

@@ -57,7 +57,7 @@ var (
 )
 
 func (s *SmartContract) Hash() common.Hash {
-	return common.MustPoseidonSSZ(s)
+	return common.MustKeccakSSZ(s)
 }
 
 type TokensMap = map[TokenId]Value

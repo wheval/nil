@@ -47,19 +47,19 @@ func (es *eventSubscription) eventSupported(
 	view *proto.View,
 ) bool {
 	// The heights must match
-	if view.Height != es.details.View.Height {
+	if view.GetHeight() != es.details.View.GetHeight() {
 		return false
 	}
 
 	// Check the round constraints
 	if es.details.HasMinRound {
 		// The round can be treated as a min round (message round can be equal or higher)
-		if view.Round < es.details.View.Round {
+		if view.GetRound() < es.details.View.GetRound() {
 			return false
 		}
 	} else {
 		// The rounds must match
-		if view.Round != es.details.View.Round {
+		if view.GetRound() != es.details.View.GetRound() {
 			return false
 		}
 	}
@@ -78,7 +78,7 @@ func (es *eventSubscription) pushEvent(
 	}
 
 	select {
-	case es.notifyCh <- view.Round: // Notify the worker thread
+	case es.notifyCh <- view.GetRound(): // Notify the worker thread
 	default:
 	}
 }
