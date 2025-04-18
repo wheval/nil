@@ -10,6 +10,7 @@ import { NilConstants } from "../../common/libraries/NilConstants.sol";
 import { StorageUtils } from "../../common/libraries/StorageUtils.sol";
 import { INilGasPriceOracle } from "./interfaces/INilGasPriceOracle.sol";
 import { NilAccessControlUpgradeable } from "../../NilAccessControlUpgradeable.sol";
+import { L1BridgeMessengerEvents } from "../libraries/L1BridgeMessengerEvents.sol";
 
 // solhint-disable reason-string
 contract NilGasPriceOracle is OwnableUpgradeable, PausableUpgradeable, NilAccessControlUpgradeable, INilGasPriceOracle {
@@ -162,7 +163,7 @@ contract NilGasPriceOracle is OwnableUpgradeable, PausableUpgradeable, NilAccess
     uint256 nilGasLimit,
     uint256 userMaxFeePerGas,
     uint256 userMaxPriorityFeePerGas
-  ) public view returns (FeeCreditData memory) {
+  ) public view returns (L1BridgeMessengerEvents.FeeCreditData memory) {
     if (nilGasLimit == 0) {
       revert ErrorInvalidGasLimitForFeeCredit();
     }
@@ -180,7 +181,7 @@ contract NilGasPriceOracle is OwnableUpgradeable, PausableUpgradeable, NilAccess
     }
 
     return
-      FeeCreditData({
+      L1BridgeMessengerEvents.FeeCreditData({
         nilGasLimit: nilGasLimit,
         maxFeePerGas: _maxFeePerGas,
         maxPriorityFeePerGas: _maxPriorityFeePerGas,

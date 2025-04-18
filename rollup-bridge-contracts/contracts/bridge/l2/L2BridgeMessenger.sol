@@ -14,6 +14,7 @@ import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerklePr
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IL2BridgeMessenger } from "./interfaces/IL2BridgeMessenger.sol";
 import { IBridgeMessenger } from "../interfaces/IBridgeMessenger.sol";
+import { IRelayMessage } from "./interfaces/IRelayMessage.sol";
 import { IL2Bridge } from "./interfaces/IL2Bridge.sol";
 import { IBridge } from "../interfaces/IBridge.sol";
 import { NilMerkleTree } from "./libraries/NilMerkleTree.sol";
@@ -234,7 +235,7 @@ contract L2BridgeMessenger is
       _sendMessage(SendMessageParams({ messageType: messageType, messageTarget: messageTarget, message: message }));
   }
 
-  /// @inheritdoc IL2BridgeMessenger
+  /// @inheritdoc IRelayMessage
   function relayMessage(
     address messageSender,
     address messageTarget,
