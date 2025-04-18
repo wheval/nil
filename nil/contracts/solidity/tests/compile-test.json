@@ -14,6 +14,9 @@
     },
     "lib/Nil.sol": {
       "urls": ["../lib/Nil.sol"]
+    },
+    "lib/NilAwaitable.sol": {
+      "urls": ["../lib/NilAwaitable.sol"]
     }
   }
 }
