@@ -10,9 +10,6 @@ import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgr
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { NilAccessControlUpgradeable } from "../../NilAccessControlUpgradeable.sol";
 import { NilConstants } from "../../common/libraries/NilConstants.sol";
-import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IRelayMessage } from "./interfaces/IRelayMessage.sol";
 import { ErrorInvalidMessageType } from "../../common/NilErrorConstants.sol";
 import { AddressChecker } from "../../common/libraries/AddressChecker.sol";
@@ -45,11 +42,11 @@ contract L2BridgeMessenger is
     //////////////////////////////////////////////////////////////////////////*/
 
   /// @notice address of the bridgeMessenger from counterpart (L1) chain
-  address public counterpartyBridgeMessenger;
+  address public override counterpartyBridgeMessenger;
 
-  address public nilMessageTree;
+  address public override nilMessageTree;
 
-  uint256 public messageExpiryDelta;
+  uint256 public override messageExpiryDelta;
 
   /// @notice  Holds the addresses of authorised bridges that can interact to send messages.
   EnumerableSet.AddressSet private authorisedBridges;
@@ -66,7 +63,7 @@ contract L2BridgeMessenger is
 
   /// @notice the aggregated hash for all message-hash values received by the l2BridgeMessenger
   /// @dev initialize with the genesis state Hash during the contract initialisation
-  bytes32 public l1MessageHash;
+  bytes32 public override l1MessageHash;
 
   /// @dev The storage slots for future usage.
   uint256[50] private __gap;

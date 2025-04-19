@@ -119,6 +119,14 @@ interface IL2BridgeMessenger is IBridgeMessenger, IRelayMessage {
   /// @return The current withdrawal nonce.
   function withdrawalNonce() external view returns (uint256);
 
+  function counterpartyBridgeMessenger() external view returns (address);
+
+  function nilMessageTree() external view returns (address);
+
+  function messageExpiryDelta() external view returns (uint256);
+
+  function l1MessageHash() external view returns (bytes32);
+
   /*//////////////////////////////////////////////////////////////////////////
                          PUBLIC MUTATION FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*/
