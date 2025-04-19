@@ -172,65 +172,65 @@ func DeserializeFromFile(baseFileName string, mode MarshalMode) (*ExecutionTrace
 
 func FromProto(traces *PbTracesSet) (*ExecutionTraces, error) {
 	ep := &ExecutionTraces{
-		StackOps:          make([]StackOp, len(traces.rw.StackOps)),
-		MemoryOps:         make([]MemoryOp, len(traces.rw.MemoryOps)),
-		StorageOps:        make([]StorageOp, len(traces.rw.StorageOps)),
-		ExpOps:            make([]ExpOp, len(traces.exp.ExpOps)),
-		ZKEVMStates:       make([]ZKEVMState, len(traces.zkevm.ZkevmStates)),
-		ContractsBytecode: make(map[types.Address][]byte, len(traces.bytecode.ContractBytecodes)),
-		CopyEvents:        make([]CopyEvent, len(traces.copy.CopyEvents)),
-		KeccakTraces:      make([]KeccakBuffer, len(traces.keccaks.HashedBuffers)),
+		StackOps:          make([]StackOp, len(traces.rw.GetStackOps())),
+		MemoryOps:         make([]MemoryOp, len(traces.rw.GetMemoryOps())),
+		StorageOps:        make([]StorageOp, len(traces.rw.GetStorageOps())),
+		ExpOps:            make([]ExpOp, len(traces.exp.GetExpOps())),
+		ZKEVMStates:       make([]ZKEVMState, len(traces.zkevm.GetZkevmStates())),
+		ContractsBytecode: make(map[types.Address][]byte, len(traces.bytecode.GetContractBytecodes())),
+		CopyEvents:        make([]CopyEvent, len(traces.copy.GetCopyEvents())),
+		KeccakTraces:      make([]KeccakBuffer, len(traces.keccaks.GetHashedBuffers())),
 	}
 
-	for i, pbStackOp := range traces.rw.StackOps {
+	for i, pbStackOp := range traces.rw.GetStackOps() {
 		ep.StackOps[i] = StackOp{
-			IsRead: pbStackOp.IsRead,
-			Idx:    int(pbStackOp.Index),
-			Value:  *pb.ProtoUint256ToUint256(pbStackOp.Value),
-			PC:     pbStackOp.Pc,
-			TxnId:  uint(pbStackOp.TxnId),
-			RwIdx:  uint(pbStackOp.RwIdx),
+			IsRead: pbStackOp.GetIsRead(),
+			Idx:    int(pbStackOp.GetIndex()),
+			Value:  *pb.ProtoUint256ToUint256(pbStackOp.GetValue()),
+			PC:     pbStackOp.GetPc(),
+			TxnId:  uint(pbStackOp.GetTxnId()),
+			RwIdx:  uint(pbStackOp.GetRwIdx()),
 		}
 	}
 
-	for i, pbMemOp := range traces.rw.MemoryOps {
+	for i, pbMemOp := range traces.rw.GetMemoryOps() {
 		ep.MemoryOps[i] = MemoryOp{
-			IsRead: pbMemOp.IsRead,
-			Idx:    int(pbMemOp.Index),
-			Value:  pbMemOp.Value[0],
-			PC:     pbMemOp.Pc,
-			TxnId:  uint(pbMemOp.TxnId),
-			RwIdx:  uint(pbMemOp.RwIdx),
+			IsRead: pbMemOp.GetIsRead(),
+			Idx:    int(pbMemOp.GetIndex()),
+			Value:  pbMemOp.GetValue()[0],
+			PC:     pbMemOp.GetPc(),
+			TxnId:  uint(pbMemOp.GetTxnId()),
+			RwIdx:  uint(pbMemOp.GetRwIdx()),
 		}
 	}
 
-	for i, pbStorageOp := range traces.rw.StorageOps {
+	for i, pbStorageOp := range traces.rw.GetStorageOps() {
 		ep.StorageOps[i] = StorageOp{
-			IsRead:    pbStorageOp.IsRead,
-			Key:       common.HexToHash(pbStorageOp.Key),
-			Value:     *pb.ProtoUint256ToUint256(pbStorageOp.Value),
-			PrevValue: *pb.ProtoUint256ToUint256(pbStorageOp.PrevValue),
-			PC:        pbStorageOp.Pc,
-			TxnId:     uint(pbStorageOp.TxnId),
-			RwIdx:     uint(pbStorageOp.RwIdx),
-			Addr:      types.HexToAddress(pbStorageOp.Address.String()),
+			IsRead:    pbStorageOp.GetIsRead(),
+			Key:       common.HexToHash(pbStorageOp.GetKey()),
+			Value:     *pb.ProtoUint256ToUint256(pbStorageOp.GetValue()),
+			PrevValue: *pb.ProtoUint256ToUint256(pbStorageOp.GetPrevValue()),
+			PC:        pbStorageOp.GetPc(),
+			TxnId:     uint(pbStorageOp.GetTxnId()),
+			RwIdx:     uint(pbStorageOp.GetRwIdx()),
+			Addr:      types.HexToAddress(pbStorageOp.GetAddress().String()),
 		}
 	}
 
-	for i, pbExpOp := range traces.exp.ExpOps {
-		base := pb.ProtoUint256ToUint256(pbExpOp.Base)
-		exponent := pb.ProtoUint256ToUint256(pbExpOp.Exponent)
-		result := pb.ProtoUint256ToUint256(pbExpOp.Result)
+	for i, pbExpOp := range traces.exp.GetExpOps() {
+		base := pb.ProtoUint256ToUint256(pbExpOp.GetBase())
+		exponent := pb.ProtoUint256ToUint256(pbExpOp.GetExponent())
+		result := pb.ProtoUint256ToUint256(pbExpOp.GetResult())
 		ep.ExpOps[i] = ExpOp{
 			Base:     (*uint256.Int)(base),
 			Exponent: (*uint256.Int)(exponent),
 			Result:   (*uint256.Int)(result),
-			PC:       pbExpOp.Pc,
-			TxnId:    uint(pbExpOp.TxnId),
+			PC:       pbExpOp.GetPc(),
+			TxnId:    uint(pbExpOp.GetTxnId()),
 		}
 	}
 
-	for i, pbKeccakOp := range traces.keccaks.HashedBuffers {
+	for i, pbKeccakOp := range traces.keccaks.GetHashedBuffers() {
 		hash := pb.ProtoUint256ToUint256(pbKeccakOp.GetKeccakHash())
 		ep.KeccakTraces[i] = KeccakBuffer{
 			buf:  pbKeccakOp.GetBuffer(),
@@ -238,44 +238,44 @@ func FromProto(traces *PbTracesSet) (*ExecutionTraces, error) {
 		}
 	}
 
-	for i, pbZKEVMState := range traces.zkevm.ZkevmStates {
+	for i, pbZKEVMState := range traces.zkevm.GetZkevmStates() {
 		ep.ZKEVMStates[i] = ZKEVMState{
-			TxHash:          common.HexToHash(pbZKEVMState.TxHash),
-			TxId:            int(pbZKEVMState.CallId),
-			PC:              pbZKEVMState.Pc,
-			Gas:             pbZKEVMState.Gas,
-			RwIdx:           uint(pbZKEVMState.RwIdx),
-			BytecodeHash:    common.HexToHash(pbZKEVMState.BytecodeHash),
-			OpCode:          vm.OpCode(pbZKEVMState.Opcode),
-			AdditionalInput: *pb.ProtoUint256ToUint256(pbZKEVMState.AdditionalInput),
-			StackSize:       pbZKEVMState.StackSize,
-			MemorySize:      pbZKEVMState.MemorySize,
-			TxFinish:        pbZKEVMState.TxFinish,
-			StackSlice:      make([]types.Uint256, len(pbZKEVMState.StackSlice)),
+			TxHash:          common.HexToHash(pbZKEVMState.GetTxHash()),
+			TxId:            int(pbZKEVMState.GetCallId()),
+			PC:              pbZKEVMState.GetPc(),
+			Gas:             pbZKEVMState.GetGas(),
+			RwIdx:           uint(pbZKEVMState.GetRwIdx()),
+			BytecodeHash:    common.HexToHash(pbZKEVMState.GetBytecodeHash()),
+			OpCode:          vm.OpCode(pbZKEVMState.GetOpcode()),
+			AdditionalInput: *pb.ProtoUint256ToUint256(pbZKEVMState.GetAdditionalInput()),
+			StackSize:       pbZKEVMState.GetStackSize(),
+			MemorySize:      pbZKEVMState.GetMemorySize(),
+			TxFinish:        pbZKEVMState.GetTxFinish(),
+			StackSlice:      make([]types.Uint256, len(pbZKEVMState.GetStackSlice())),
 			MemorySlice:     make(map[uint64]uint8),
 			StorageSlice:    make(map[types.Uint256]types.Uint256),
 		}
 
-		for j, stackVal := range pbZKEVMState.StackSlice {
+		for j, stackVal := range pbZKEVMState.GetStackSlice() {
 			ep.ZKEVMStates[i].StackSlice[j] = *pb.ProtoUint256ToUint256(stackVal)
 		}
-		for addr, memVal := range pbZKEVMState.MemorySlice {
+		for addr, memVal := range pbZKEVMState.GetMemorySlice() {
 			ep.ZKEVMStates[i].MemorySlice[addr] = uint8(memVal)
 		}
-		for _, entry := range pbZKEVMState.StorageSlice {
-			key := pb.ProtoUint256ToUint256(entry.Key)
-			ep.ZKEVMStates[i].StorageSlice[*key] = *pb.ProtoUint256ToUint256(entry.Value)
+		for _, entry := range pbZKEVMState.GetStorageSlice() {
+			key := pb.ProtoUint256ToUint256(entry.GetKey())
+			ep.ZKEVMStates[i].StorageSlice[*key] = *pb.ProtoUint256ToUint256(entry.GetValue())
 		}
 	}
 
 	for i, pbCopyEventTrace := range traces.copy.GetCopyEvents() {
-		ep.CopyEvents[i].From = copyParticipantFromProto(pbCopyEventTrace.From)
-		ep.CopyEvents[i].To = copyParticipantFromProto(pbCopyEventTrace.To)
-		ep.CopyEvents[i].RwIdx = uint(pbCopyEventTrace.RwIdx)
+		ep.CopyEvents[i].From = copyParticipantFromProto(pbCopyEventTrace.GetFrom())
+		ep.CopyEvents[i].To = copyParticipantFromProto(pbCopyEventTrace.GetTo())
+		ep.CopyEvents[i].RwIdx = uint(pbCopyEventTrace.GetRwIdx())
 		ep.CopyEvents[i].Data = pbCopyEventTrace.GetData()
 	}
 
-	for pbContractAddr, pbContractBytecode := range traces.bytecode.ContractBytecodes {
+	for pbContractAddr, pbContractBytecode := range traces.bytecode.GetContractBytecodes() {
 		ep.ContractsBytecode[types.HexToAddress(pbContractAddr)] = pbContractBytecode
 	}
 
@@ -450,8 +450,8 @@ var protoCopyLocationMap = common.ReverseMap(copyLocationToProtoMap)
 
 func copyParticipantFromProto(participant *pb.CopyParticipant) CopyParticipant {
 	ret := CopyParticipant{
-		Location:   protoCopyLocationMap[participant.Location],
-		MemAddress: participant.MemAddress,
+		Location:   protoCopyLocationMap[participant.GetLocation()],
+		MemAddress: participant.GetMemAddress(),
 	}
 	switch id := participant.GetId().(type) {
 	case *pb.CopyParticipant_CallId:

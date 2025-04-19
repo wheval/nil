@@ -6,13 +6,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/sszx"
-	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	indexerdriver "github.com/NilFoundation/nil/nil/services/indexer/driver"
 	indexertypes "github.com/NilFoundation/nil/nil/services/indexer/types"
@@ -23,6 +21,8 @@ type ClickhouseDriver struct {
 	insertConn driver.Conn
 	options    clickhouse.Options
 }
+
+var _ indexerdriver.IndexerDriver = &ClickhouseDriver{}
 
 func (d *ClickhouseDriver) FetchBlock(ctx context.Context, id types.ShardId, number types.BlockNumber) (*types.Block, error) {
 	row := d.conn.QueryRow(ctx, `
@@ -59,31 +59,27 @@ func (d *ClickhouseDriver) FetchLatestProcessedBlockId(ctx context.Context, id t
 	if err != nil {
 		return nil, err
 	}
-	if blockNum == types.InvalidBlockNumber {
-		return nil, nil
-	}
 	return &blockNum, nil
 }
 
 func (d *ClickhouseDriver) FetchAddressActions(
 	ctx context.Context,
 	address types.Address,
-	timestamp db.Timestamp,
+	since types.BlockNumber,
 ) ([]indexertypes.AddressAction, error) {
 	rows, err := d.conn.Query(context.Background(), `
-		SELECT 
+		SELECT
 			t.hash,
 			t.from,
 			t.to,
 			t.value as amount,
-			t.timestamp,
 			t.block_id,
 			t.success,
 			t.binary
 		FROM transactions t
-		WHERE (t.from = $1 OR t.to = $1) AND t.timestamp >= $2
-		ORDER BY t.timestamp ASC
-	`, address, timestamp)
+		WHERE (t.from = $1 OR t.to = $1) AND t.block_id >= $2
+		ORDER BY t.block_id ASC
+	`, address, since)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query transactions: %w", err)
 	}
@@ -99,7 +95,6 @@ func (d *ClickhouseDriver) FetchAddressActions(
 			&action.From,
 			&action.To,
 			&action.Amount,
-			&action.Timestamp,
 			&action.BlockId,
 			&success,
 			&txnBinary,
@@ -166,7 +161,6 @@ type TransactionWithBinary struct {
 	ShardId           types.ShardId          `ch:"shard_id"`
 	TransactionIndex  types.TransactionIndex `ch:"transaction_index"`
 	Outgoing          bool                   `ch:"outgoing"`
-	Timestamp         uint64                 `ch:"timestamp"`
 	ParentTransaction common.Hash            `ch:"parent_transaction"`
 	ErrorMessage      string                 `ch:"error_message"`
 	FailedPc          uint32                 `ch:"failed_pc"`
@@ -182,6 +176,10 @@ func NewTransactionWithBinary(
 	shardId types.ShardId,
 ) *TransactionWithBinary {
 	hash := transaction.Hash()
+	status := "pending"
+	if receipt != nil {
+		status = receipt.Status.String()
+	}
 	res := &TransactionWithBinary{
 		Transaction:      *transaction,
 		Binary:           transactionBinary,
@@ -190,8 +188,8 @@ func NewTransactionWithBinary(
 		Hash:             hash,
 		ShardId:          shardId,
 		TransactionIndex: idx,
-		Timestamp:        block.Timestamp,
 		ErrorMessage:     block.Errors[hash],
+		Status:           status,
 	}
 	if receipt != nil {
 		res.Success = receipt.Success
@@ -287,21 +285,19 @@ func (d *ClickhouseDriver) SetupScheme(ctx context.Context, params indexerdriver
 	}
 
 	if !params.AllowDbDrop {
-		return fmt.Errorf("version mismatch: blockchain %x, exporter %x", params.Version, version)
+		return fmt.Errorf("version mismatch: blockchain %x, indexer %x", params.Version, version)
 	}
 
 	if version.Empty() {
 		logger.Info().Msg("Database is empty. Recreating...")
 	} else {
-		logger.Info().Msgf("Version mismatch: blockchain %x, exporter %x. Dropping database...", params.Version, version)
+		logger.Info().Msgf("Version mismatch: blockchain %x, indexer %x. Dropping database...", params.Version, version)
 	}
 
-	if err := d.conn.Exec(ctx, "DROP DATABASE IF EXISTS "+d.options.Auth.Database); err != nil {
-		return fmt.Errorf("failed to drop database: %w", err)
-	}
-
-	if err := d.conn.Exec(ctx, "CREATE DATABASE "+d.options.Auth.Database); err != nil {
-		return fmt.Errorf("failed to create database: %w", err)
+	for table := range getTableScheme() {
+		if err := d.conn.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s.%s", d.options.Auth.Database, table)); err != nil {
+			return fmt.Errorf("failed to drop table %s: %w", table, err)
+		}
 	}
 
 	return setupSchemes(ctx, d.conn)
@@ -478,6 +474,22 @@ func exportTransactionsAndLogs(ctx context.Context, conn driver.Conn, blocks []b
 
 	if err = logBatch.Send(); err != nil {
 		return fmt.Errorf("failed to send logs batch: %w", err)
+	}
+	return nil
+}
+
+func (d *ClickhouseDriver) IndexTxPool(ctx context.Context, txPoolStatuses []*indexerdriver.TxPoolStatus) error {
+	batch, err := d.insertConn.PrepareBatch(ctx, "INSERT INTO txpool_status")
+	if err != nil {
+		return fmt.Errorf("failed to prepare batch: %w", err)
+	}
+	for _, tx := range txPoolStatuses {
+		if err := batch.AppendStruct(tx); err != nil {
+			return fmt.Errorf("failed to append txpool status to batch: %w", err)
+		}
+	}
+	if err = batch.Send(); err != nil {
+		return fmt.Errorf("failed to send txpool status batch: %w", err)
 	}
 	return nil
 }

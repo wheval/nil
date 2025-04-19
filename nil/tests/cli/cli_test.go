@@ -49,11 +49,14 @@ func (s *SuiteCliBase) SetupSuite() {
 		CollatorTickPeriodMs: 200,
 	}, s.basePort)
 
-	s.DefaultClient, s.endpoint = s.StartRPCNode(tests.WithDhtBootstrapByValidators, nil)
+	s.DefaultClient, s.endpoint = s.StartRPCNode(&tests.RpcNodeConfig{
+		WithDhtBootstrapByValidators: true,
+		ArchiveNodes:                 nil,
+	})
 	s.cometaEndpoint = rpc.GetSockPathService(s.T(), "cometa")
 
 	var fc *faucet.Client
-	fc, s.faucetEndpoint = tests.StartFaucetService(s.T(), s.Context, &s.Wg, s.DefaultClient)
+	fc, s.faucetEndpoint = tests.StartFaucetService(s.Context, s.T(), &s.Wg, s.DefaultClient)
 	s.cli = cliservice.NewService(s.Context, s.DefaultClient, execution.MainPrivateKey, fc)
 	s.Require().NotNil(s.cli)
 }
@@ -62,7 +65,7 @@ func (s *SuiteCliBase) TearDownSuite() {
 	s.Cancel()
 }
 
-func (s *SuiteCliBase) toJSON(v interface{}) string {
+func (s *SuiteCliBase) toJSON(v any) string {
 	s.T().Helper()
 
 	data, err := json.MarshalIndent(v, "", "  ")
@@ -327,7 +330,7 @@ func (s *SuiteCliExec) TestCliSmartAccount() {
 rpc_endpoint = {{ .HttpUrl }}
 faucet_endpoint = {{ .FaucetUrl }}
 `
-	iniData, err := common.ParseTemplate(iniDataTmpl, map[string]interface{}{
+	iniData, err := common.ParseTemplate(iniDataTmpl, map[string]any{
 		"HttpUrl":   s.endpoint,
 		"FaucetUrl": s.faucetEndpoint,
 	})
@@ -405,6 +408,16 @@ faucet_endpoint = {{ .FaucetUrl }}
 		s.Contains(res, "uint256: 123321")
 	})
 
+	s.Run("Call read-only 'get' function of contract", func() {
+		res := s.RunCli("-c", cfgPath, "contract", addr)
+		s.Contains(res, "Hash: ")
+		s.Contains(res, "Address: "+addr)
+		s.Contains(res, "Balance: 0")
+		s.Contains(res, "Seqno: 2")
+		s.Contains(res, "ExtSeqno: 0")
+		s.Contains(res, "StorageRoot: ")
+	})
+
 	s.Run("Estimate fee", func() {
 		isNum := func(str string) {
 			s.T().Helper()
@@ -457,7 +470,7 @@ faucet_endpoint = {{ .FaucetUrl }}
 	})
 
 	s.Run("Check overrides file content", func() {
-		res := make(map[string]interface{})
+		res := make(map[string]any)
 		data, err := os.ReadFile(overridesFile)
 		s.Require().NoError(err)
 		s.Require().NoError(json.Unmarshal(data, &res))
@@ -584,7 +597,7 @@ func (s *SuiteCliExec) TestCliCometa() {
 		out := s.RunCliCfg("debug", txnHash)
 		result := parseCometaOutput(out)
 		s.Require().Len(result, 3)
-		s.Require().Equal("2bb1ae7c00", result[0]["CallData"][:10])
+		s.Require().Equal("0eec02cb00", result[0]["CallData"][:10])
 		s.Require().Contains(result[0]["Transaction"], txnHash)
 		s.Require().Equal("Counter", result[1]["Contract"])
 		s.Require().Equal("get()", result[1]["CallData"])

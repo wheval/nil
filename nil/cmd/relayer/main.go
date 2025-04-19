@@ -57,7 +57,7 @@ func execute() error {
 		Short: "Run nil L1<->L2 relayer",
 	}
 
-	logLevel := rootCmd.Flags().String("log-level", "info", "app log level")
+	logLevel := rootCmd.PersistentFlags().String("log-level", "info", "app log level")
 	rootCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		logging.SetupGlobalLogger(*logLevel)
 	}
@@ -134,6 +134,13 @@ func addRunCommandFlags(runCmd *cobra.Command, cfg *Config) error {
 	)
 
 	runCmd.Flags().StringVar(
+		&cfg.L2ContractConfig.PrivateKeyPath,
+		"l2-private-key-path",
+		cfg.L2ContractConfig.PrivateKeyPath,
+		"Path to private key file for L2 smart account",
+	)
+
+	runCmd.Flags().StringVar(
 		&cfg.L2ContractConfig.Endpoint, "l2-endpoint", "", "URL for nil L2 client",
 	)
 	runCmd.Flags().StringVar(
@@ -147,12 +154,6 @@ func addRunCommandFlags(runCmd *cobra.Command, cfg *Config) error {
 		"l2-smart-account-addr",
 		cfg.L2ContractConfig.SmartAccountAddress,
 		"Smart account address for relayer to operate on L2",
-	)
-	runCmd.Flags().StringVar(
-		&cfg.L2ContractConfig.ContractABIPath,
-		"l2-contract-abi-path",
-		cfg.L2ContractConfig.ContractABIPath,
-		"ABI of nil L2BridgeMessenger contract",
 	)
 	runCmd.Flags().DurationVar(
 		&cfg.TransactionSenderConfig.DbPollInterval,
@@ -180,10 +181,7 @@ func addRunCommandFlags(runCmd *cobra.Command, cfg *Config) error {
 		"Faucet address for L2 transaction sender (debug-only)",
 	)
 
-	if err := viper.BindPFlags(runCmd.Flags()); err != nil {
-		return err
-	}
-	return nil
+	return viper.BindPFlags(runCmd.Flags())
 }
 
 func runService(ctx context.Context, cfg *Config) error {

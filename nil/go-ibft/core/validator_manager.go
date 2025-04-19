@@ -107,19 +107,19 @@ func (vm *ValidatorManager) HasPrepareQuorum(stateName stateType, proposalMessag
 		return false
 	}
 
-	proposerAddress := proposalMessage.From
+	proposerAddress := proposalMessage.GetFrom()
 	sendersAddressesMap := map[string]struct{}{
 		string(proposerAddress): {},
 	}
 
 	for _, message := range msgs {
-		if bytes.Equal(message.From, proposerAddress) {
+		if bytes.Equal(message.GetFrom(), proposerAddress) {
 			vm.log.Error("HasPrepareQuorum - proposer is among signers but it is not expected to be")
 
 			return false
 		}
 
-		sendersAddressesMap[string(message.From)] = struct{}{}
+		sendersAddressesMap[string(message.GetFrom())] = struct{}{}
 	}
 
 	return vm.HasQuorum(sendersAddressesMap)
@@ -147,7 +147,7 @@ func convertMessageToAddressSet(messages []*proto.IbftMessage) map[string]struct
 	result := make(map[string]struct{}, len(messages))
 
 	for _, x := range messages {
-		result[string(x.From)] = struct{}{}
+		result[string(x.GetFrom())] = struct{}{}
 	}
 
 	return result

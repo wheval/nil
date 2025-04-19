@@ -12,8 +12,8 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/core/fetching"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/core/rollupcontract"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
-	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/rollupcontract"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/srv"
 	scTypes "github.com/NilFoundation/nil/nil/services/synccommittee/internal/types"
 )
@@ -142,14 +142,14 @@ func (p *proposer) updateStateIfReady(ctx context.Context) error {
 
 	err = p.updateState(ctx, data)
 	if err != nil {
-		if errors.Is(err, rollupcontract.ErrBatchAlreadyFinalized) {
-			// another actor has already sent an update for this batch, we need to refetch state from contract
-			p.logger.Warn().Msg("batch is already finalized, skipping UpdateState tx")
-			if err := p.updateStoredStateRootFromContract(ctx); err != nil {
-				return err
-			}
-		} else {
+		if !errors.Is(err, rollupcontract.ErrBatchAlreadyFinalized) {
 			return fmt.Errorf("failed to send proof to L1 for batch with id=%s: %w", data.BatchId, err)
+		}
+
+		// another actor has already sent an update for this batch, we need to refetch state from contract
+		p.logger.Warn().Msg("batch is already finalized, skipping UpdateState tx")
+		if err := p.updateStoredStateRootFromContract(ctx); err != nil {
+			return err
 		}
 	}
 

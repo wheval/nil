@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/client"
-	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/indexer/driver"
 	indexertypes "github.com/NilFoundation/nil/nil/services/indexer/types"
@@ -89,8 +88,7 @@ func (s *SuiteServiceTest) TestGetAddressActions() {
 			BlockWithExtractedData: &types.BlockWithExtractedData{
 				Block: &types.Block{
 					BlockData: types.BlockData{
-						Id:        1,
-						Timestamp: 1000,
+						Id: 1,
 					},
 				},
 				InTransactions: []*types.Transaction{tx1},
@@ -102,8 +100,7 @@ func (s *SuiteServiceTest) TestGetAddressActions() {
 			BlockWithExtractedData: &types.BlockWithExtractedData{
 				Block: &types.Block{
 					BlockData: types.BlockData{
-						Id:        2,
-						Timestamp: 2000,
+						Id: 2,
 					},
 				},
 				InTransactions: []*types.Transaction{tx2},
@@ -121,7 +118,7 @@ func (s *SuiteServiceTest) TestGetAddressActions() {
 	tests := []struct {
 		name     string
 		address  types.Address
-		since    db.Timestamp
+		since    types.BlockNumber
 		expected []indexertypes.AddressAction
 	}{
 		{
@@ -130,41 +127,38 @@ func (s *SuiteServiceTest) TestGetAddressActions() {
 			since:   0,
 			expected: []indexertypes.AddressAction{
 				{
-					Hash:      tx1Hash,
-					From:      addr1,
-					To:        addr2,
-					Amount:    types.NewValueFromUint64(100),
-					Timestamp: 1000,
-					BlockId:   1,
-					Type:      indexertypes.SendEth,
-					Status:    indexertypes.Success,
+					Hash:    tx1Hash,
+					From:    addr1,
+					To:      addr2,
+					Amount:  types.NewValueFromUint64(100),
+					BlockId: 1,
+					Type:    indexertypes.SendEth,
+					Status:  indexertypes.Success,
 				},
 				{
-					Hash:      tx2Hash,
-					From:      addr2,
-					To:        addr1,
-					Amount:    types.NewValueFromUint64(200),
-					Timestamp: 2000,
-					BlockId:   2,
-					Type:      indexertypes.ReceiveEth,
-					Status:    indexertypes.Success,
+					Hash:    tx2Hash,
+					From:    addr2,
+					To:      addr1,
+					Amount:  types.NewValueFromUint64(200),
+					BlockId: 2,
+					Type:    indexertypes.ReceiveEth,
+					Status:  indexertypes.Success,
 				},
 			},
 		},
 		{
 			name:    "Get actions for addr1 since timestamp 1500",
 			address: addr1,
-			since:   1500,
+			since:   2,
 			expected: []indexertypes.AddressAction{
 				{
-					Hash:      tx2Hash,
-					From:      addr2,
-					To:        addr1,
-					Amount:    types.NewValueFromUint64(200),
-					Timestamp: 2000,
-					BlockId:   2,
-					Type:      indexertypes.ReceiveEth,
-					Status:    indexertypes.Success,
+					Hash:    tx2Hash,
+					From:    addr2,
+					To:      addr1,
+					Amount:  types.NewValueFromUint64(200),
+					BlockId: 2,
+					Type:    indexertypes.ReceiveEth,
+					Status:  indexertypes.Success,
 				},
 			},
 		},

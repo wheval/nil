@@ -69,18 +69,37 @@ func (seqno Seqno) String() string {
 
 type TransactionIndex uint64
 
-func (mi TransactionIndex) Bytes() []byte {
-	return ssz.MarshalUint64(nil, uint64(mi))
+const TransactionIndexSize = 8
+
+func (ti TransactionIndex) Bytes() []byte {
+	return ssz.MarshalUint64(nil, uint64(ti))
 }
 
-func (mi *TransactionIndex) SetBytes(b []byte) {
-	*mi = TransactionIndex(ssz.UnmarshallUint64(b))
+func (ti *TransactionIndex) SetBytes(b []byte) {
+	*ti = TransactionIndex(ssz.UnmarshallUint64(b))
+}
+
+func (ti *TransactionIndex) MarshalSSZ() ([]byte, error) {
+	return ti.Bytes(), nil
+}
+
+func (ti *TransactionIndex) MarshalSSZTo(buf []byte) ([]byte, error) {
+	return ssz.MarshalUint64(buf, uint64(*ti)), nil
+}
+
+func (ti *TransactionIndex) SizeSSZ() int {
+	return TransactionIndexSize
+}
+
+func (ti *TransactionIndex) UnmarshalSSZ(b []byte) error {
+	ti.SetBytes(b)
+	return nil
 }
 
 func BytesToTransactionIndex(b []byte) TransactionIndex {
-	var mi TransactionIndex
-	mi.SetBytes(b)
-	return mi
+	var ti TransactionIndex
+	ti.SetBytes(b)
+	return ti
 }
 
 type TransactionFlags struct {
@@ -91,8 +110,8 @@ func NewTransactionFlagsFromBits(bits uint8) TransactionFlags {
 	return TransactionFlags{BitFlags: BitFlags[uint8]{Bits: bits}}
 }
 
-func (flags TransactionFlags) Value() (driver.Value, error) {
-	return flags.Bits, nil
+func (m TransactionFlags) Value() (driver.Value, error) {
+	return m.Bits, nil
 }
 
 var _ driver.Value = new(TransactionFlags)
@@ -165,11 +184,12 @@ type TransactionDigest struct {
 
 type Transaction struct {
 	TransactionDigest
-	From     Address        `json:"from,omitempty" ch:"from"`
-	RefundTo Address        `json:"refundTo,omitempty" ch:"refund_to"`
-	BounceTo Address        `json:"bounceTo,omitempty" ch:"bounce_to"`
-	Value    Value          `json:"value,omitempty" ch:"value" ssz-size:"32"`
-	Token    []TokenBalance `json:"token,omitempty" ch:"token" ssz-max:"256"`
+	From     Address          `json:"from,omitempty" ch:"from"`
+	TxId     TransactionIndex `json:"txId,omitempty" ch:"tx_id"`
+	RefundTo Address          `json:"refundTo,omitempty" ch:"refund_to"`
+	BounceTo Address          `json:"bounceTo,omitempty" ch:"bounce_to"`
+	Value    Value            `json:"value,omitempty" ch:"value" ssz-size:"32"`
+	Token    []TokenBalance   `json:"token,omitempty" ch:"token" ssz-max:"256"`
 
 	// These fields are needed for async requests
 	RequestId    uint64              `json:"requestId,omitempty" ch:"request_id"`
@@ -254,10 +274,9 @@ type AsyncResponsePayload struct {
 	ReturnData []byte `ssz-max:"10000000"`
 }
 
-// AsyncContext contains context of the request. For await requests it contains VM state, which will be restored upon
-// the response. For callback requests it contains captured variables(not implemented yet).
+// AsyncContext contains the context of the request. For await requests, it contains the VM state, which will be
+// restored upon receiving the response. For callback requests, it contains captured variables.
 type AsyncContext struct {
-	IsAwait               bool   `json:"isAwait"`
 	Data                  []byte `ssz-max:"10000000" json:"data"`
 	ResponseProcessingGas Gas    `json:"gas"`
 }
@@ -288,7 +307,7 @@ func (m *Transaction) Hash() common.Hash {
 	if m.IsExternal() {
 		return m.toExternal().Hash()
 	}
-	return ToShardedHash(common.MustPoseidonSSZ(m), m.To.ShardId())
+	return ToShardedHash(common.MustKeccakSSZ(m), m.To.ShardId())
 }
 
 func (m *Transaction) Sign(key *ecdsa.PrivateKey) error {
@@ -406,7 +425,7 @@ func (m *Transaction) TransactionGasPrice(baseFeePerGas Value) (Value, error) {
 	return gasPrice, nil
 }
 
-func (m *InternalTransactionPayload) ToTransaction(from Address, seqno Seqno) *Transaction {
+func (m InternalTransactionPayload) ToTransaction(from Address, seqno Seqno) *Transaction {
 	txn := &Transaction{
 		TransactionDigest: TransactionDigest{
 			Flags:     TransactionFlagsFromKind(true, m.Kind),
@@ -430,7 +449,7 @@ func (m *InternalTransactionPayload) ToTransaction(from Address, seqno Seqno) *T
 }
 
 func (m *ExternalTransaction) Hash() common.Hash {
-	return ToShardedHash(common.MustPoseidonSSZ(m), m.To.ShardId())
+	return ToShardedHash(common.MustKeccakSSZ(m), m.To.ShardId())
 }
 
 func (m *ExternalTransaction) SigningHash() (common.Hash, error) {
@@ -445,7 +464,7 @@ func (m *ExternalTransaction) SigningHash() (common.Hash, error) {
 		MaxFeePerGas:         m.MaxFeePerGas,
 	}
 
-	return common.PoseidonSSZ(&transactionDigest)
+	return common.KeccakSSZ(&transactionDigest)
 }
 
 func (m ExternalTransaction) ToTransaction() *Transaction {
@@ -466,7 +485,7 @@ func (m ExternalTransaction) ToTransaction() *Transaction {
 }
 
 func (m *Transaction) SigningHash() (common.Hash, error) {
-	return common.PoseidonSSZ(&m.TransactionDigest)
+	return common.KeccakSSZ(&m.TransactionDigest)
 }
 
 func (m *ExternalTransaction) Sign(key *ecdsa.PrivateKey) error {

@@ -3,6 +3,7 @@ package main
 import (
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/contracts"
@@ -53,8 +54,8 @@ func (s *SuiteRegression) SetupSuite() {
 		RunMode:   nilservice.CollatorsOnlyRunMode,
 		ZeroState: zeroState,
 	})
-	tests.WaitShardTick(s.T(), s.Context, s.Client, types.MainShardId)
-	tests.WaitShardTick(s.T(), s.Context, s.Client, types.BaseShardId)
+	tests.WaitShardTick(s.T(), s.Client, types.MainShardId)
+	tests.WaitShardTick(s.T(), s.Client, types.BaseShardId)
 }
 
 func (s *SuiteRegression) TearDownSuite() {
@@ -142,7 +143,7 @@ func (s *SuiteRegression) TestProposerOutOfGas() {
 	s.Require().True(receipt.Success)
 	s.Require().Equal("Success", receipt.Status)
 	s.Require().Len(receipt.OutReceipts, 1)
-	s.Require().Equal("OutOfGasDynamic", receipt.OutReceipts[0].Status)
+	s.Require().Equal("TransactionExceedsBlockGasLimit", receipt.OutReceipts[0].Status)
 }
 
 func (s *SuiteRegression) TestInsufficientFundsIncExtSeqno() {
@@ -180,7 +181,7 @@ func (s *SuiteRegression) TestInsufficientFundsIncExtSeqno() {
 	s.Require().False(receipt.Success)
 	s.Require().Equal("InsufficientFunds", receipt.Status)
 
-	tests.WaitShardTick(s.T(), s.Context, s.Client, types.BaseShardId)
+	tests.WaitShardTick(s.T(), s.Client, types.BaseShardId)
 
 	txn.Seqno++
 	txHash, err = s.Client.SendTransaction(s.T().Context(), txn)
@@ -291,22 +292,14 @@ func (s *SuiteRegression) TestAddressCalculation() {
 	abi, err := contracts.GetAbi(contracts.NameTest)
 	s.Require().NoError(err)
 
-	data := tests.GetRandomBytes(s.T(), 65)
-	refHash := common.PoseidonHash(data)
 	salt := tests.GetRandomBytes(s.T(), 32)
 	shardId := types.ShardId(2)
 	address := types.CreateAddress(shardId, types.BuildDeployPayload(code, common.BytesToHash(salt)))
 	address2 := types.CreateAddressForCreate2(address, code, common.BytesToHash(salt))
-	codeHash := common.PoseidonHash(code).Bytes()
-
-	// Test `Nil.getPoseidonHash()` library method
-	calldata, err := abi.Pack("getPoseidonHash", data)
-	s.Require().NoError(err)
-	resHash := s.CallGetter(s.testAddress, calldata, "latest", nil)
-	s.Require().Equal(refHash[:], resHash)
+	codeHash := common.KeccakHash(code).Bytes()
 
 	// Test `Nil.createAddress()` library method
-	calldata, err = abi.Pack("createAddress", big.NewInt(int64(shardId)), []byte(code), big.NewInt(0).SetBytes(salt))
+	calldata, err := abi.Pack("createAddress", big.NewInt(int64(shardId)), []byte(code), big.NewInt(0).SetBytes(salt))
 	s.Require().NoError(err)
 	resAddress := s.CallGetter(s.testAddress, calldata, "latest", nil)
 	s.Require().Equal(address, types.BytesToAddress(resAddress))
@@ -363,6 +356,110 @@ func (s *SuiteRegression) TestNonRevertedErrDecoding() {
 	receipt = s.SendExternalTransactionNoCheck(calldata, contractAddr)
 	s.Require().False(receipt.Success)
 	s.Require().Equal("ExecutionReverted: Revert is true", receipt.ErrorMessage)
+}
+
+func (s *SuiteRegression) TestBigTransactions() {
+	abi, err := contracts.GetAbi(contracts.NameStresser)
+	s.Require().NoError(err)
+
+	stresserCode, err := contracts.GetCode(contracts.NameStresser)
+	s.Require().NoError(err)
+
+	addr, receipt := s.DeployContractViaMainSmartAccount(3,
+		types.BuildDeployPayload(stresserCode, common.EmptyHash), types.GasToValue(1_000_000_000))
+
+	n := (types.DefaultMaxGasInBlock + 10000) / 529
+	calldata := s.AbiPack(abi, "gasConsumer", big.NewInt(int64(n)))
+
+	s.Run("Internal big transaction", func() {
+		txHash, err := s.Client.SendTransactionViaSmartAccount(
+			s.Context,
+			types.MainSmartAccountAddress,
+			calldata,
+			types.NewFeePackFromGas(50_000_000),
+			types.Value0,
+			nil,
+			addr,
+			execution.MainPrivateKey,
+		)
+		s.Require().NoError(err)
+
+		// Use longer timeout because it can fail in CI tests
+		s.Require().Eventually(func() bool {
+			receipt, err = s.Client.GetInTransactionReceipt(s.Context, txHash)
+			s.Require().NoError(err)
+			return receipt.IsComplete()
+		}, 30*time.Second, 1000*time.Millisecond)
+
+		s.Require().NoError(err)
+
+		s.Require().True(receipt.Success)
+		s.Require().Len(receipt.OutReceipts, 1)
+		s.Require().False(receipt.OutReceipts[0].Success)
+		s.Require().Equal("TransactionExceedsBlockGasLimit", receipt.OutReceipts[0].Status)
+	})
+
+	s.Run("External big transaction", func() {
+		txHash, err := s.Client.SendExternalTransaction(s.Context, calldata, addr, nil,
+			types.NewFeePackFromGas(50_000_000))
+		s.Require().NoError(err)
+
+		// Use longer timeout because it can fail in CI tests
+		s.Require().Eventually(func() bool {
+			receipt, err = s.Client.GetInTransactionReceipt(s.Context, txHash)
+			s.Require().NoError(err)
+			return receipt.IsComplete()
+		}, 30*time.Second, 1000*time.Millisecond)
+
+		s.Require().False(receipt.Success)
+		s.Require().Equal("TransactionExceedsBlockGasLimit", receipt.Status)
+		txpool, err := s.Client.GetTxpoolStatus(s.Context, addr.ShardId())
+		s.Require().NoError(err)
+		s.Require().Zero(txpool.Pending)
+		s.Require().Zero(txpool.Queued)
+	})
+
+	s.Run("Big deploy transaction", func() {
+		payload, err := contracts.CreateDeployPayload("tests/HeavyConstructor", nil,
+			big.NewInt(int64((types.DefaultMaxGasInBlock+10000)/529)))
+		s.Require().NoError(err)
+
+		txHash, _, err := s.Client.DeployContract(
+			s.Context,
+			types.BaseShardId,
+			types.MainSmartAccountAddress,
+			payload,
+			types.Value0,
+			types.NewFeePackFromGas(50_000_000),
+			execution.MainPrivateKey)
+		s.Require().NoError(err)
+		receipt := s.WaitForReceipt(txHash)
+		s.Require().True(receipt.Success)
+		s.Require().Len(receipt.OutReceipts, 1)
+		s.Require().False(receipt.OutReceipts[0].Success)
+		s.Require().Equal("TransactionExceedsBlockGasLimit", receipt.OutReceipts[0].Status)
+	})
+}
+
+func (s *SuiteRegression) TestDeployFromContract() {
+	abi, err := contracts.GetAbi(contracts.NameTest)
+	s.Require().NoError(err)
+
+	calldata, err := abi.Pack("deployContract")
+	s.Require().NoError(err)
+
+	receipt := s.SendExternalTransactionNoCheck(calldata, s.testAddress)
+	s.Require().True(receipt.Success)
+
+	contractAddr1, err := abi.Unpack("newContract", receipt.Logs[0].Data)
+	s.Require().NoError(err)
+
+	receipt = s.SendExternalTransactionNoCheck(calldata, s.testAddress)
+	s.Require().True(receipt.Success)
+
+	contractAddr2, err := abi.Unpack("newContract", receipt.Logs[0].Data)
+	s.Require().NoError(err)
+	s.NotEqual(contractAddr1, contractAddr2)
 }
 
 func TestRegression(t *testing.T) {

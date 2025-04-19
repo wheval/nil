@@ -10,6 +10,7 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
+	indexerdriver "github.com/NilFoundation/nil/nil/services/indexer/driver"
 )
 
 var tableSchemeCache map[string]reflectedScheme = nil
@@ -19,16 +20,19 @@ func initSchemeCache() map[string]reflectedScheme {
 
 	blockScheme, err := reflectSchemeToClickhouse(&BlockWithBinary{})
 	check.PanicIfErr(err)
-
 	tableScheme["blocks"] = blockScheme
+
 	transactionScheme, err := reflectSchemeToClickhouse(&TransactionWithBinary{})
 	check.PanicIfErr(err)
-
 	tableScheme["transactions"] = transactionScheme
+
 	logScheme, err := reflectSchemeToClickhouse(&LogWithBinary{})
 	check.PanicIfErr(err)
-
 	tableScheme["logs"] = logScheme
+
+	txpoolStatusScheme, err := reflectSchemeToClickhouse(&indexerdriver.TxPoolStatus{})
+	check.PanicIfErr(err)
+	tableScheme["txpool_status"] = txpoolStatusScheme
 
 	return tableScheme
 }
@@ -37,13 +41,16 @@ func getTableScheme() map[string]reflectedScheme {
 	if tableSchemeCache == nil {
 		tableSchemeCache = initSchemeCache()
 	}
-
 	return tableSchemeCache
 }
 
+func getScheme(name string) (reflectedScheme, bool) {
+	scheme, ok := getTableScheme()[name]
+	return scheme, ok
+}
+
 func setupScheme(ctx context.Context, conn driver.Conn, tableName string, keys []string) error {
-	tableScheme := getTableScheme()
-	scheme, ok := tableScheme[tableName]
+	scheme, ok := getScheme(tableName)
 	if !ok {
 		return fmt.Errorf("scheme for %s not found", tableName)
 	}
@@ -72,6 +79,20 @@ func setupSchemes(ctx context.Context, conn driver.Conn) error {
 		return err
 	}
 
+	if scheme, ok := getScheme("txpool_status"); ok {
+		query := createTableQuery(
+			"txpool_status",
+			scheme.Fields(),
+			"MergeTree",
+			[]string{"timestamp"},
+			[]string{"timestamp"})
+		if err := conn.Exec(ctx, query); err != nil {
+			return fmt.Errorf("failed to create table txpool_status: %w", err)
+		}
+	} else {
+		return fmt.Errorf("scheme for txpool_status not found")
+	}
+
 	return nil
 }
 
@@ -83,7 +104,6 @@ func createTableQuery(tableName, fields, engine string, primaryKeys, orderKeys [
 		PRIMARY KEY (%s)
 		ORDER BY (%s)
 `, tableName, fields, engine, strings.Join(primaryKeys, ", "), strings.Join(orderKeys, ", "))
-	logger.Debug().Msgf("CreateTableQuery: %s", query)
 	return query
 }
 

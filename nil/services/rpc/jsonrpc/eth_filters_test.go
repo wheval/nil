@@ -33,7 +33,7 @@ func (s *SuiteEthFilters) SetupTest() {
 	s.db, err = db.NewBadgerDbInMemory()
 	s.Require().NoError(err)
 
-	s.api = NewTestEthAPI(s.T(), s.ctx, s.db, 1)
+	s.api = NewTestEthAPI(s.ctx, s.T(), s.db, 1)
 }
 
 func (s *SuiteEthFilters) TearDownTest() {
@@ -114,8 +114,7 @@ func (s *SuiteEthFilters) TestLogs() {
 	var logs []any
 	s.Require().Eventually(func() bool {
 		logs, err = s.api.GetFilterChanges(s.ctx, id1)
-		s.Require().NoError(err)
-		return len(logs) == 2
+		return err == nil && len(logs) == 2
 	}, ManagerWaitTimeout, ManagerPollInterval)
 
 	log0, ok := logs[0].(*RPCLog)

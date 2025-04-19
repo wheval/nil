@@ -45,7 +45,7 @@ func TestDropAllAndRecover(t *testing.T) {
 						buildRoundChangeMessageFn: node.buildRoundChange,
 
 						insertProposalFn: func(proposal *proto.Proposal, _ []*messages.CommittedSeal) {
-							insertedBlocks[i] = proposal.RawProposal
+							insertedBlocks[i] = proposal.GetRawProposal()
 						},
 						getVotingPowerFn: testCommonGetVotingPowertFnForNodes(c.nodes),
 					},
@@ -178,7 +178,7 @@ func TestAllFailAndGraduallyRecover(t *testing.T) {
 						buildRoundChangeMessageFn: node.buildRoundChange,
 
 						insertProposalFn: func(proposal *proto.Proposal, _ []*messages.CommittedSeal) {
-							insertedBlocks[nodeIndex] = proposal.RawProposal
+							insertedBlocks[nodeIndex] = proposal.GetRawProposal()
 						},
 						getVotingPowerFn: testCommonGetVotingPowertFnForNodes(c.nodes),
 					},

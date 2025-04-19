@@ -33,10 +33,10 @@ func TestSszBlock(t *testing.T) {
 	require.Equal(t, block2.PrevBlock, block.PrevBlock)
 	require.Equal(t, block2.SmartContractsRoot, block.SmartContractsRoot)
 
-	h, err := common.PoseidonSSZ(&block2)
+	h, err := common.KeccakSSZ(&block2)
 	require.NoError(t, err)
 
-	h2, err := hex.DecodeString("305b9ab7546ad01a500dd57f29935bc43648d3f428b8b3a8869ab33c543940db")
+	h2, err := hex.DecodeString("779f6a69c773f7f733693ecc1cf1553bc1742f613a256255dc116171178c2033")
 	require.NoError(t, err)
 
 	require.Equal(t, common.BytesToHash(h2), common.BytesToHash(h[:]))
@@ -69,10 +69,10 @@ func TestSszTransaction(t *testing.T) {
 	require.Equal(t, transaction2.Seqno, transaction.Seqno)
 	require.True(t, bytes.Equal(transaction2.Signature, transaction.Signature))
 
-	h, err := common.PoseidonSSZ(&transaction2)
+	h, err := common.KeccakSSZ(&transaction2)
 	require.NoError(t, err)
 
-	h2 := common.HexToHash("2d3efc5c6f1d6ade476e0ed2641cde7e863434f7eb2429d59cc1844a0144ff38")
+	h2 := common.HexToHash("b8b1bf259d73e8116afa33bdad2fea245c73d90320241a96feb3777dd845d591")
 	require.Equal(t, h2, h)
 }
 
@@ -100,10 +100,10 @@ func TestSszSmc(t *testing.T) {
 	require.Equal(t, smc.CodeHash, smc2.CodeHash)
 	require.Equal(t, smc.Seqno, smc2.Seqno)
 
-	h, err := common.PoseidonSSZ(&smc2)
+	h, err := common.KeccakSSZ(&smc2)
 	require.NoError(t, err)
 
-	h2 := common.HexToHash("0x2cb178ec91a69c6f1373cf97931d32de124f1352deea5fc12b9b7e7e4e40b2c2")
+	h2 := common.HexToHash("0x7e49c6eb880af1b4bbab01fcac2efe8a5d1105f1ecabf6ddcc7210c069b6f1e2")
 	require.Equal(t, h2, common.BytesToHash(h[:]))
 }
 

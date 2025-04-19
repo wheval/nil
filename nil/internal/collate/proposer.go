@@ -21,9 +21,8 @@ import (
 )
 
 const (
-	defaultMaxInternalTxns               = 1000
 	defaultMaxGasInBlock                 = types.DefaultMaxGasInBlock
-	maxTxnsFromPool                      = 1000
+	maxTxnsFromPool                      = 10_000
 	defaultMaxForwardTransactionsInBlock = 200
 
 	validatorPatchLevel = 1
@@ -48,9 +47,6 @@ type proposer struct {
 func newProposer(params *Params, topology ShardTopology, pool TxnPool, logger logging.Logger) *proposer {
 	if params.MaxGasInBlock == 0 {
 		params.MaxGasInBlock = defaultMaxGasInBlock
-	}
-	if params.MaxInternalTransactionsInBlock == 0 {
-		params.MaxInternalTransactionsInBlock = defaultMaxInternalTxns
 	}
 	if params.MaxForwardTransactionsInBlock == 0 {
 		params.MaxForwardTransactionsInBlock = defaultMaxForwardTransactionsInBlock
@@ -195,7 +191,9 @@ func (p *proposer) handleL1Attributes(tx db.RoTx, mainShardHash common.Hash) err
 		}
 	}
 
-	txn, err := CreateL1BlockUpdateTransaction(block)
+	txId := p.executionState.InTxCounts[types.MainShardId]
+	p.executionState.InTxCounts[types.MainShardId] = txId + 1
+	txn, err := CreateL1BlockUpdateTransaction(block, txId)
 	if err != nil {
 		return fmt.Errorf("failed to create L1 block update transaction: %w", err)
 	}
@@ -228,7 +226,7 @@ func CreateRollbackCalldata(params *execution.RollbackParams) ([]byte, error) {
 	return calldata, nil
 }
 
-func CreateL1BlockUpdateTransaction(header *l1types.Header) (*types.Transaction, error) {
+func CreateL1BlockUpdateTransaction(header *l1types.Header, txId types.TransactionIndex) (*types.Transaction, error) {
 	abi, err := contracts.GetAbi(contracts.NameL1BlockInfo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get L1BlockInfo ABI: %w", err)
@@ -258,6 +256,7 @@ func CreateL1BlockUpdateTransaction(header *l1types.Header) (*types.Transaction,
 			MaxPriorityFeePerGas: types.Value0,
 			Data:                 calldata,
 		},
+		TxId: txId,
 		From: types.L1BlockInfoAddress,
 	}
 
@@ -327,11 +326,11 @@ func (p *proposer) handleTransactionsFromPool() error {
 		if ok, err := handle(txn); err != nil {
 			return err
 		} else if ok {
+			p.proposal.ExternalTxns = append(p.proposal.ExternalTxns, txn.Transaction)
 			if p.executionState.GasUsed > p.params.MaxGasInBlock {
+				unverified = append(unverified, txn.Hash())
 				break
 			}
-
-			p.proposal.ExternalTxns = append(p.proposal.ExternalTxns, txn.Transaction)
 		}
 	}
 
@@ -351,10 +350,6 @@ func (p *proposer) handleTransactionsFromPool() error {
 	return nil
 }
 
-func (p *proposer) isTxProcessed(dbTx db.RoTx, txHash common.Hash) (bool, error) {
-	return dbTx.ExistsInShard(p.params.ShardId, db.BlockHashAndInTransactionIndexByTransactionHash, txHash.Bytes())
-}
-
 func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 	state, err := db.ReadCollatorState(tx, p.params.ShardId)
 	if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
@@ -367,7 +362,6 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 
 	checkLimits := func() bool {
 		return p.executionState.GasUsed < p.params.MaxGasInBlock &&
-			len(p.proposal.InternalTxnRefs) < p.params.MaxInternalTransactionsInBlock &&
 			len(p.proposal.ForwardTxnRefs) < p.params.MaxForwardTransactionsInBlock
 	}
 
@@ -381,6 +375,7 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 			state.Neighbors = append(state.Neighbors, types.Neighbor{ShardId: neighborId})
 		}
 		neighbor := &state.Neighbors[position]
+		nextTx := p.executionState.InTxCounts[neighborId]
 
 		var lastBlockNumber types.BlockNumber
 		lastBlock, _, err := db.ReadLastBlock(tx, neighborId)
@@ -438,17 +433,19 @@ func (p *proposer) handleTransactionsFromNeighbors(tx db.RoTx) error {
 				}
 
 				if txn.To.ShardId() == p.params.ShardId {
-					txnHash := txn.Hash()
-					// TODO: Temporary workaround to prevent transaction duplication
-					isProcessed, err := p.isTxProcessed(tx, txnHash)
-					if err != nil {
-						return err
-					}
-					if isProcessed {
+					if txn.TxId < nextTx {
+						// When we become proposer, we start with an outdated CollatorState,
+						// so we need to skip transactions that were already processed.
+						p.logger.Debug().
+							Uint64("txId", uint64(txn.TxId)).Uint64("nextTx", uint64(nextTx)).
+							Msg("Already processed transaction")
 						continue
 					}
+					nextTx++
 
-					if err := execution.ValidateInternalTransaction(txn); err != nil {
+					txnHash := txn.Hash()
+
+					if err := p.executionState.AcceptInternalTransaction(txn); err != nil {
 						p.logger.Warn().Err(err).
 							Stringer(logging.FieldTransactionHash, txnHash).
 							Msg("Invalid internal transaction")

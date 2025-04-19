@@ -58,7 +58,7 @@ func (s *SuiteReadThroughDb) initCache() {
 		return db
 	}
 
-	s.num += 1
+	s.num++
 	s.cfg.HttpUrl = rpc.GetSockPathIdx(s.T(), s.num)
 	s.cache.Start(s.cfg)
 }

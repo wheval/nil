@@ -2,6 +2,7 @@ package smartaccount
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/NilFoundation/nil/nil/cmd/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/abi"
@@ -13,13 +14,17 @@ import (
 )
 
 func CallReadonlyCommand(cfg *common.Config) *cobra.Command {
+	params := &smartAccountParams{
+		Params: &common.Params{},
+	}
+
 	cmd := &cobra.Command{
 		Use:   "call-readonly [address] [calldata or method] [args...]",
 		Short: "Perform a read-only call to a smart contract",
 		Long:  "Perform a read-only call to the smart contract with the given address and calldata",
 		Args:  cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCallReadonly(cmd, args, cfg)
+			return runCallReadonly(cmd, args, cfg, params)
 		},
 		SilenceUsage: true,
 	}
@@ -69,7 +74,7 @@ func CallReadonlyCommand(cfg *common.Config) *cobra.Command {
 	return cmd
 }
 
-func runCallReadonly(cmd *cobra.Command, args []string, cfg *common.Config) error {
+func runCallReadonly(cmd *cobra.Command, args []string, cfg *common.Config, params *smartAccountParams) error {
 	service := cliservice.NewService(cmd.Context(), common.GetRpcClient(), cfg.PrivateKey, nil)
 
 	var address types.Address
@@ -82,7 +87,7 @@ func runCallReadonly(cmd *cobra.Command, args []string, cfg *common.Config) erro
 	if len(params.AbiPath) > 0 {
 		contractAbi, abiErr = common.ReadAbiFromFile(params.AbiPath)
 	} else {
-		contractAbi, abiErr = common.FetchAbiFromCometa(address)
+		contractAbi, abiErr = common.FetchAbiFromCometa(cmd.Context(), address)
 	}
 	if abiErr != nil {
 		return fmt.Errorf("failed to fetch ABI: %w", abiErr)
@@ -93,20 +98,8 @@ func runCallReadonly(cmd *cobra.Command, args []string, cfg *common.Config) erro
 		return err
 	}
 
-	intTxn := &types.InternalTransactionPayload{
-		Data:        contractCalldata,
-		To:          address,
-		FeeCredit:   params.Fee.FeeCredit,
-		ForwardKind: types.ForwardKindNone,
-		Kind:        types.ExecutionTransactionKind,
-	}
-
-	intTxnData, err := intTxn.MarshalSSZ()
-	if err != nil {
-		return err
-	}
-
-	smartAccountCalldata, err := contracts.NewCallData(contracts.NameSmartAccount, "send", intTxnData)
+	smartAccountCalldata, err := contracts.NewCallData(contracts.NameSmartAccount, "asyncCall",
+		address, types.EmptyAddress, types.EmptyAddress, []types.TokenBalance{}, big.NewInt(0), contractCalldata)
 	if err != nil {
 		return err
 	}

@@ -27,9 +27,8 @@ type Consensus interface {
 type Params struct {
 	execution.BlockGeneratorParams
 
-	MaxGasInBlock                  types.Gas
-	MaxInternalTransactionsInBlock int
-	MaxForwardTransactionsInBlock  int
+	MaxGasInBlock                 types.Gas
+	MaxForwardTransactionsInBlock int
 
 	CollatorTickPeriod time.Duration
 	Timeout            time.Duration
@@ -43,7 +42,7 @@ type Scheduler struct {
 	consensus      Consensus
 	txFabric       db.DB
 	validator      *Validator
-	networkManager *network.Manager
+	networkManager network.Manager
 
 	params *Params
 
@@ -56,7 +55,7 @@ func NewScheduler(
 	validator *Validator,
 	txFabric db.DB,
 	consensus Consensus,
-	networkManager *network.Manager,
+	networkManager network.Manager,
 ) *Scheduler {
 	params := validator.params
 	return &Scheduler{
@@ -76,11 +75,8 @@ func (s *Scheduler) Validator() *Validator {
 	return s.validator
 }
 
-func (s *Scheduler) Run(ctx context.Context, consensus Consensus) error {
+func (s *Scheduler) Run(ctx context.Context) error {
 	s.logger.Info().Msg("Starting collation...")
-
-	// Enable handler for blocks relaying
-	SetRequestHandler(ctx, s.networkManager, s.params.ShardId, s.txFabric, s.logger)
 
 	tickPeriodMs := s.params.CollatorTickPeriod.Milliseconds()
 	for {
@@ -113,44 +109,44 @@ func (s *Scheduler) doCollate(ctx context.Context) error {
 		}
 
 		return s.validator.InsertProposal(ctx, proposal, &types.ConsensusParams{})
-	} else {
-		block, _, err := s.validator.GetLastBlock(ctx)
-		if err != nil {
-			return err
-		}
+	}
 
-		subId, syncCh := s.validator.Subscribe()
-		defer s.validator.Unsubscribe(subId)
+	block, _, err := s.validator.GetLastBlock(ctx)
+	if err != nil {
+		return err
+	}
 
-		ctx, cancelFn := context.WithCancel(ctx)
-		defer cancelFn()
+	subId, syncCh := s.validator.Subscribe()
+	defer s.validator.Unsubscribe(subId)
 
-		height := block.Id.Uint64() + 1
-		consCh := make(chan error, 1)
-		go func() {
-			consCh <- s.consensus.RunSequence(ctx, height)
-		}()
+	ctx, cancelFn := context.WithCancel(ctx)
+	defer cancelFn()
 
-		for {
-			select {
-			case event := <-syncCh:
-				if event.evType != replayType || event.blockNumber < types.BlockNumber(height) {
-					continue
-				}
+	height := block.Id.Uint64() + 1
+	consCh := make(chan error, 1)
+	go func() {
+		consCh <- s.consensus.RunSequence(ctx, height)
+	}()
 
-				// We receive new block via syncer.
-				// We need to interrupt current sequence and start new one.
-				cancelFn()
-				err := <-consCh
-				s.logger.Debug().
-					Uint64(logging.FieldHeight, height).
-					Uint64(logging.FieldBlockNumber, uint64(event.blockNumber)).
-					Err(err).
-					Msg("Consensus interrupted by syncer")
-				return nil
-			case err := <-consCh:
-				return err
+	for {
+		select {
+		case event := <-syncCh:
+			if event.evType != replayType || event.blockNumber < types.BlockNumber(height) {
+				continue
 			}
+
+			// We receive new block via syncer.
+			// We need to interrupt current sequence and start new one.
+			cancelFn()
+			err := <-consCh
+			s.logger.Debug().
+				Uint64(logging.FieldHeight, height).
+				Uint64(logging.FieldBlockNumber, uint64(event.blockNumber)).
+				Err(err).
+				Msg("Consensus interrupted by syncer")
+			return nil
+		case err := <-consCh:
+			return err
 		}
 	}
 }

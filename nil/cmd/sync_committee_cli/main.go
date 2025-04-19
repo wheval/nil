@@ -9,9 +9,12 @@ import (
 	"github.com/NilFoundation/nil/nil/cmd/sync_committee_cli/internal/flags"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/logging"
+	"github.com/NilFoundation/nil/nil/internal/cobrax"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/public"
 	"github.com/spf13/cobra"
 )
+
+const appTitle = "=nil; Sync Committee CLI"
 
 func main() {
 	check.PanicIfErr(execute())
@@ -35,11 +38,14 @@ func execute() error {
 	if err != nil {
 		return err
 	}
-	rootCmd.AddCommand(getTaskTreeCmd)
+	resetContractCmd, err := buildResetContractCmd(executorParams, logger)
+	if err != nil {
+		return err
+	}
 
 	decodeBatchCmd := buildDecodeBatchCmd(executorParams, logger)
-	rootCmd.AddCommand(decodeBatchCmd)
-
+	versionCmd := cobrax.VersionCmd(appTitle)
+	rootCmd.AddCommand(getTaskTreeCmd, decodeBatchCmd, resetContractCmd, versionCmd)
 	return rootCmd.Execute()
 }
 
@@ -51,7 +57,7 @@ func buildGetTasksCmd(commonParam *commands.ExecutorParams, logger logging.Logge
 	}
 
 	cmd := &cobra.Command{
-		Use:   "get_tasks",
+		Use:   "get-tasks",
 		Short: "Get tasks from the node's storage based on provided filter and ordering parameters",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return commands.NewExecutor(os.Stdout, cmdParams, logger).Run(commands.GetTasks)
@@ -93,7 +99,7 @@ func buildGetTaskTreeCmd(commonParam *commands.ExecutorParams, logger logging.Lo
 	}
 
 	cmd := &cobra.Command{
-		Use:   "get_task_tree",
+		Use:   "get-task-tree",
 		Short: "Retrieve full task tree structure for a specific task",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			eventLoop := commands.NewExecutor(os.Stdout, cmdParams, logger)
@@ -132,6 +138,52 @@ func buildDecodeBatchCmd(_ *commands.ExecutorParams, logger logging.Logger) *cob
 	cmd.Flags().StringVar(&params.OutputFile, "output-file", "", "target file to keep decoded batch data")
 
 	return cmd
+}
+
+func buildResetContractCmd(_ *commands.ExecutorParams, logger logging.Logger) (*cobra.Command, error) {
+	params := &commands.ResetStateParams{}
+
+	cmd := &cobra.Command{
+		Use:   "reset-state",
+		Short: "Reset L1 state to specified root",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return commands.ResetState(context.Background(), params, logger)
+		},
+	}
+
+	endpointFlag := "l1-endpoint"
+	cmd.Flags().StringVar(
+		&params.Endpoint,
+		endpointFlag,
+		params.Endpoint,
+		"L1 endpoint")
+	privateKeyFlag := "l1-private-key"
+	cmd.Flags().StringVar(
+		&params.PrivateKeyHex,
+		privateKeyFlag,
+		params.PrivateKeyHex,
+		"L1 account private key")
+	addressFlag := "l1-contract-address"
+	cmd.Flags().StringVar(
+		&params.ContractAddressHex,
+		addressFlag,
+		params.ContractAddressHex,
+		"L1 update state contract address")
+	targetRootFlag := "target-root"
+	cmd.Flags().StringVar(
+		&params.TargetStateRoot,
+		"target-root",
+		params.TargetStateRoot,
+		"target state root in HEX")
+
+	// make all flags required
+	for _, flagId := range []string{endpointFlag, privateKeyFlag, addressFlag, targetRootFlag} {
+		if err := cmd.MarkFlagRequired(flagId); err != nil {
+			return nil, err
+		}
+	}
+
+	return cmd, nil
 }
 
 func addCommonFlags(cmd *cobra.Command, params *commands.ExecutorParams) {

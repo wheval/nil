@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: ["ibft", "heavy", "nil", "nildocs", "niljs", "nilexplorer", "uniswap", "rollup-bridge-contracts", "clijs", "walletextension"]
+        check: ["ibft", "heavy", "nil", "nildocs", "niljs", "nilexplorer", "uniswap", "rollup-bridge-contracts", "clijs", "walletextension", "nilhardhat"]
     steps:
       - name: checkout local actions
         uses: actions/checkout@v3
@@ -102,11 +102,12 @@ jobs:
           brew install go solidity protobuf coreutils
           go install golang.org/x/tools/cmd/stringer@latest
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          python3 -m pip install safe-pysha3 --break-system-packages
 
       - name: build binaries
         run: |
           export PATH=$PATH:$(go env GOPATH)/bin
-          make
+          make nild nil
 
       - name: Upload nil binary as artifact
         if: github.event_name == 'workflow_dispatch'

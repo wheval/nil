@@ -40,7 +40,7 @@ type TokenBalance struct {
 }
 
 func (token TokenBalance) Value() (driver.Value, error) {
-	return []interface{}{token.Token, token.Balance.ToBig()}, nil
+	return []any{token.Token, token.Balance.ToBig()}, nil
 }
 
 func TokenIdForAddress(a Address) *TokenId {
@@ -57,7 +57,7 @@ var (
 )
 
 func (s *SmartContract) Hash() common.Hash {
-	return common.MustPoseidonSSZ(s)
+	return common.MustKeccakSSZ(s)
 }
 
 type TokensMap = map[TokenId]Value

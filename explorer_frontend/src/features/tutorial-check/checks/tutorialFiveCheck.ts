@@ -1,9 +1,4 @@
-import {
-  HttpTransport,
-  PublicClient,
-  generateSmartAccount,
-  waitTillCompleted,
-} from "@nilfoundation/niljs";
+import { HttpTransport, PublicClient, generateSmartAccount } from "@nilfoundation/niljs";
 import { TutorialChecksStatus } from "../../../pages/tutorials/model";
 import type { CheckProps } from "../CheckProps";
 
@@ -66,7 +61,7 @@ async function runTutorialCheckFive(props: CheckProps) {
     feeCredit: gasPrice * 500_000n,
   });
 
-  const resMinting = await waitTillCompleted(client, mintRequest);
+  const resMinting = await mintRequest.wait();
 
   const checkMinting = await resMinting.some((receipt) => !receipt.success);
 
@@ -92,7 +87,7 @@ async function runTutorialCheckFive(props: CheckProps) {
     feeCredit: gasPrice * 500_000n,
   });
 
-  const resSecondMinting = await waitTillCompleted(client, secondMintRequest);
+  const resSecondMinting = await secondMintRequest.wait();
 
   const checkSecondMinting = await resSecondMinting.some((receipt) => !receipt.success);
 
@@ -117,7 +112,7 @@ async function runTutorialCheckFive(props: CheckProps) {
     args: [resultReceiver.address],
   });
 
-  const resSending = await waitTillCompleted(client, sendRequest);
+  const resSending = await sendRequest.wait();
 
   const checkSending = await resSending.some((receipt) => !receipt.success);
 

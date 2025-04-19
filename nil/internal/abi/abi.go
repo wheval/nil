@@ -17,7 +17,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
-//nolint:goconst
 package abi
 
 import (
@@ -63,7 +62,7 @@ func JSON(reader io.Reader) (ABI, error) {
 // of 4 bytes and arguments are all 32 bytes.
 // Method ids are created from the first 4 bytes of the hash of the
 // methods string signature. (signature = baz(uint32,string32))
-func (abi ABI) Pack(name string, args ...interface{}) ([]byte, error) {
+func (abi ABI) Pack(name string, args ...any) ([]byte, error) {
 	// Fetch the ABI of the requested method
 	if name == "" {
 		// constructor
@@ -105,7 +104,7 @@ func (abi ABI) getArguments(name string, data []byte) (Arguments, error) {
 }
 
 // Unpack unpacks the output according to the abi specification.
-func (abi ABI) Unpack(name string, data []byte) ([]interface{}, error) {
+func (abi ABI) Unpack(name string, data []byte) ([]any, error) {
 	args, err := abi.getArguments(name, data)
 	if err != nil {
 		return nil, err
@@ -116,7 +115,7 @@ func (abi ABI) Unpack(name string, data []byte) ([]interface{}, error) {
 // UnpackIntoInterface unpacks the output in v according to the abi specification.
 // It performs an additional copy. Please only use, if you want to unpack into a
 // structure that does not strictly conform to the abi structure (e.g. has additional arguments)
-func (abi ABI) UnpackIntoInterface(v interface{}, name string, data []byte) error {
+func (abi ABI) UnpackIntoInterface(v any, name string, data []byte) error {
 	args, err := abi.getArguments(name, data)
 	if err != nil {
 		return err
@@ -128,8 +127,8 @@ func (abi ABI) UnpackIntoInterface(v interface{}, name string, data []byte) erro
 	return args.Copy(v, unpacked)
 }
 
-// UnpackIntoMap unpacks a log into the provided map[string]interface{}.
-func (abi ABI) UnpackIntoMap(v map[string]interface{}, name string, data []byte) (err error) {
+// UnpackIntoMap unpacks a log into the provided map[string]any.
+func (abi ABI) UnpackIntoMap(v map[string]any, name string, data []byte) (err error) {
 	args, err := abi.getArguments(name, data)
 	if err != nil {
 		return err
@@ -186,14 +185,14 @@ func (abi *ABI) UnmarshalJSON(data []byte) error {
 				field.Payable,
 				field.Inputs,
 				field.Outputs)
-		case "fallback":
+		case "fallback": //nolint:goconst
 			// New introduced function type in v0.6.0, check more detail
 			// here https://solidity.readthedocs.io/en/v0.6.0/contracts.html#fallback-function
 			if abi.HasFallback() {
 				return errors.New("only single fallback is allowed")
 			}
 			abi.Fallback = NewMethod("", "", Fallback, field.StateMutability, field.Constant, field.Payable, nil, nil)
-		case "receive":
+		case "receive": //nolint:goconst
 			// New introduced function type in v0.6.0, check more detail
 			// here https://solidity.readthedocs.io/en/v0.6.0/contracts.html#fallback-function
 			if abi.HasReceive() {
@@ -299,5 +298,9 @@ func UnpackRevert(data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return unpacked[0].(string), nil //nolint:forcetypeassert
+	res, ok := unpacked[0].(string)
+	if !ok {
+		return "", nil
+	}
+	return res, nil
 }

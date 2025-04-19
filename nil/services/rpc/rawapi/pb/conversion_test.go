@@ -241,7 +241,7 @@ func TestErrorMap_PackUnpack(t *testing.T) {
 	var unpacked RawFullBlock
 	require.NoError(t, proto.Unmarshal(data, &unpacked))
 
-	errorsUnpacked := unpackErrorMap(unpacked.Errors)
+	errorsUnpacked := unpackErrorMap(unpacked.GetErrors())
 	assert.Equal(t, errorMap, errorsUnpacked)
 
 	errorMap = map[common.Hash]string{

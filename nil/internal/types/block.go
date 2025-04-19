@@ -47,7 +47,6 @@ type BlockData struct {
 	ChildBlocksRootHash common.Hash      `json:"childBlocksRootHash" ch:"child_blocks_root_hash"`
 	MainShardHash       common.Hash      `json:"mainShardHash" ch:"main_chain_hash"`
 	ConfigRoot          common.Hash      `json:"configRoot" ch:"config_root"`
-	Timestamp           uint64           `json:"timestamp" ch:"timestamp"`
 	BaseFee             Value            `json:"gasPrice" ch:"gas_price"`
 	GasUsed             Gas              `json:"gasUsed" ch:"gas_used"`
 	L1BlockNumber       uint64           `json:"l1BlockNumber" ch:"l1_block_number"`
@@ -74,7 +73,9 @@ type Block struct {
 type RawBlockWithExtractedData struct {
 	Block           sszx.SSZEncodedData
 	InTransactions  []sszx.SSZEncodedData
+	InTxCounts      []sszx.SSZEncodedData
 	OutTransactions []sszx.SSZEncodedData
+	OutTxCounts     []sszx.SSZEncodedData
 	Receipts        []sszx.SSZEncodedData
 	Errors          map[common.Hash]string
 	ChildBlocks     []common.Hash
@@ -82,10 +83,17 @@ type RawBlockWithExtractedData struct {
 	Config          map[string][]byte
 }
 
+type TxCountSSZ struct {
+	ShardId uint16           `json:"shardId"`
+	Count   TransactionIndex `json:"count"`
+}
+
 type BlockWithExtractedData struct {
 	*Block
 	InTransactions  []*Transaction           `json:"inTransactions"`
+	InTxCounts      []*TxCountSSZ            `json:"inTxCounts"`
 	OutTransactions []*Transaction           `json:"outTransactions"`
+	OutTxCounts     []*TxCountSSZ            `json:"outTxCounts"`
 	Receipts        []*Receipt               `json:"receipts"`
 	Errors          map[common.Hash]string   `json:"errors,omitempty"`
 	ChildBlocks     []common.Hash            `json:"childBlocks"`
@@ -100,7 +108,7 @@ var (
 )
 
 func (b *Block) Hash(shardId ShardId) common.Hash {
-	return ToShardedHash(common.MustPoseidonSSZ(&b.BlockData), shardId)
+	return ToShardedHash(common.MustKeccakSSZ(&b.BlockData), shardId)
 }
 
 func (b *Block) GetMainShardHash(shardId ShardId) common.Hash {
@@ -119,7 +127,15 @@ func (b *RawBlockWithExtractedData) DecodeSSZ() (*BlockWithExtractedData, error)
 	if err != nil {
 		return nil, err
 	}
+	inTxCounts, err := sszx.DecodeContainer[*TxCountSSZ](b.InTxCounts)
+	if err != nil {
+		return nil, err
+	}
 	outTransactions, err := sszx.DecodeContainer[*Transaction](b.OutTransactions)
+	if err != nil {
+		return nil, err
+	}
+	outTxCounts, err := sszx.DecodeContainer[*TxCountSSZ](b.OutTxCounts)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +146,9 @@ func (b *RawBlockWithExtractedData) DecodeSSZ() (*BlockWithExtractedData, error)
 	return &BlockWithExtractedData{
 		Block:           block,
 		InTransactions:  inTransactions,
+		InTxCounts:      inTxCounts,
 		OutTransactions: outTransactions,
+		OutTxCounts:     outTxCounts,
 		Receipts:        receipts,
 		Errors:          b.Errors,
 		ChildBlocks:     b.ChildBlocks,
@@ -150,7 +168,15 @@ func (b *BlockWithExtractedData) EncodeSSZ() (*RawBlockWithExtractedData, error)
 	if err != nil {
 		return nil, err
 	}
+	inTxCounts, err := sszx.EncodeContainer(b.InTxCounts)
+	if err != nil {
+		return nil, err
+	}
 	outTransactions, err := sszx.EncodeContainer(b.OutTransactions)
+	if err != nil {
+		return nil, err
+	}
+	outTxCounts, err := sszx.EncodeContainer(b.OutTxCounts)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +187,9 @@ func (b *BlockWithExtractedData) EncodeSSZ() (*RawBlockWithExtractedData, error)
 	return &RawBlockWithExtractedData{
 		Block:           block,
 		InTransactions:  inTransactions,
+		InTxCounts:      inTxCounts,
 		OutTransactions: outTransactions,
+		OutTxCounts:     outTxCounts,
 		Receipts:        receipts,
 		Errors:          b.Errors,
 		ChildBlocks:     b.ChildBlocks,
@@ -197,4 +225,4 @@ func (b *Block) VerifySignature(pubkeys []bls.PublicKey, shardId ShardId) error 
 
 const InvalidDbTimestamp uint64 = math.MaxUint64
 
-//go:generate go run github.com/NilFoundation/fastssz/sszgen --path block.go -include ../../common/hexutil/bytes.go,../../common/length.go,signature.go,address.go,code.go,shard.go,bloom.go,log.go,value.go,transaction.go,gas.go,../../common/hash.go --objs BlockData,Block
+//go:generate go run github.com/NilFoundation/fastssz/sszgen --path block.go -include ../../common/hexutil/bytes.go,../../common/length.go,signature.go,address.go,code.go,shard.go,bloom.go,log.go,value.go,transaction.go,gas.go,../../common/hash.go --objs BlockData,Block,TxCountSSZ

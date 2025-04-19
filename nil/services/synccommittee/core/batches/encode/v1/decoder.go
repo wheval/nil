@@ -59,6 +59,9 @@ func (d *decoder) DecodeIntermediate(from io.Reader, to io.Writer) error {
 		return err
 	}
 
-	d.logger.Debug().Int("bytes_written", n).Str("batch_id", protoBatch.BatchId).Msg("serialized batch to protojson")
+	d.logger.Debug().
+		Int("bytes_written", n).
+		Str("batch_id", protoBatch.GetBatchId()).
+		Msg("serialized batch to protojson")
 	return nil
 }

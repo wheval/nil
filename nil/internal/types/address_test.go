@@ -14,8 +14,8 @@ func TestCreateAddressShardId(t *testing.T) {
 	shardId1 := ShardId(2)
 	shardId2 := ShardId(65000)
 
-	addr1 := HexToAddress("0x0002F09EC9F5cCA264eba822BB887f5c900c6e71")
-	addr2 := HexToAddress("0xfDE82e88Dc6ccABA63a4c5C23f530011c7F1A2e5")
+	addr1 := HexToAddress("0x000212bb4dedda9f93e8ed812e62249a94af1060")
+	addr2 := HexToAddress("0xfde8f65ce915f47fc79477a70f69b12abf516c22")
 
 	payload := BuildDeployPayload([]byte{12, 34}, common.EmptyHash)
 	addr := CreateAddress(shardId1, payload)

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strconv"
 	"sync"
@@ -119,10 +120,23 @@ func (h *handler) shouldLogRequestParams(method string, lvl zerolog.Level) bool 
 	return true
 }
 
-func (h *handler) log(lvl zerolog.Level, msg *Message, logMsg string, duration time.Duration) {
+func (h *handler) log(ctx context.Context, lvl zerolog.Level, msg *Message, logMsg string, duration time.Duration) {
+	headers, ok := ctx.Value(HeadersContextKey).(http.Header)
+	if !ok {
+		failedHeaderMsg := "failed to extract headers from context"
+		headers = http.Header{
+			"Client-Type":    {failedHeaderMsg},
+			"Client-Version": {failedHeaderMsg},
+			"X-UID":          {failedHeaderMsg},
+		}
+	}
+
 	l := h.logger.WithLevel(lvl).
 		Stringer(logging.FieldReqId, idForLog(msg.ID)).
-		Str(logging.FieldRpcMethod, msg.Method)
+		Str(logging.FieldRpcMethod, msg.Method).
+		Str(logging.FieldClientType, headers.Get("Client-Type")).
+		Str(logging.FieldClientVersion, headers.Get("Client-Version")).
+		Str(logging.FieldUid, headers.Get("X-UID")) //nolint:canonicalheader
 
 	if h.shouldLogRequestParams(msg.Method, lvl) {
 		trim := func(s string) string {
@@ -170,7 +184,7 @@ func (h *handler) handleBatch(msgs []*Message) {
 
 	// Process calls on a goroutine because they may block indefinitely:
 	// All goroutines will place results right to this array. Because requests order must match reply orders.
-	answers := make([]interface{}, len(msgs))
+	answers := make([]any, len(msgs))
 	// Bounded parallelism pattern explanation https://blog.golang.org/pipelines#TOC_9.
 	boundedConcurrency := make(chan struct{}, h.maxBatchConcurrency)
 	defer close(boundedConcurrency)
@@ -222,7 +236,7 @@ func (h *handler) handleCallMsg(ctx context.Context, msg *Message, stream *jsoni
 			doSlowLog = h.isRpcMethodNeedsCheck(msg.Method)
 			if doSlowLog {
 				slowTimer := time.AfterFunc(h.slowLogThreshold, func() {
-					h.log(zerolog.InfoLevel, msg, "Slow running request", time.Since(start))
+					h.log(ctx, zerolog.InfoLevel, msg, "Slow running request", time.Since(start))
 				})
 				defer slowTimer.Stop()
 			}
@@ -233,19 +247,19 @@ func (h *handler) handleCallMsg(ctx context.Context, msg *Message, stream *jsoni
 
 		if doSlowLog {
 			if requestDuration > h.slowLogThreshold {
-				h.log(zerolog.InfoLevel, msg, "Slow request finished.", requestDuration)
+				h.log(ctx, zerolog.InfoLevel, msg, "Slow request finished.", requestDuration)
 			}
 		}
 
 		if resp != nil && resp.Error != nil {
-			h.log(zerolog.ErrorLevel, msg, "Served with error: "+resp.Error.Message, requestDuration)
+			h.log(ctx, zerolog.ErrorLevel, msg, "Served with error: "+resp.Error.Message, requestDuration)
 		}
 
 		if resp != nil && resp.Result != nil {
 			msg.Result = resp.Result
 		}
 
-		h.log(h.requestLoggingLevel(), msg, "Served: "+msg.Method, requestDuration)
+		h.log(ctx, h.requestLoggingLevel(), msg, "Served: "+msg.Method, requestDuration)
 
 		return resp
 	case msg.hasValidID():

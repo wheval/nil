@@ -47,14 +47,17 @@ func (s *SuiteCliTestCall) SetupSuite() {
 		ZeroState:            zeroState,
 	}, 10525)
 
-	s.client, s.endpoint = s.StartRPCNode(tests.WithDhtBootstrapByValidators, nil)
+	s.client, s.endpoint = s.StartRPCNode(&tests.RpcNodeConfig{
+		WithDhtBootstrapByValidators: true,
+		ArchiveNodes:                 nil,
+	})
 
 	iniDataTmpl := `[nil]
 rpc_endpoint = {{ .HttpUrl }}
 private_key = {{ .PrivateKey }}
 address = {{ .Address }}
 `
-	iniData, err := common.ParseTemplate(iniDataTmpl, map[string]interface{}{
+	iniData, err := common.ParseTemplate(iniDataTmpl, map[string]any{
 		"HttpUrl":    s.endpoint,
 		"PrivateKey": nilcrypto.PrivateKeyToEthereumFormat(execution.MainPrivateKey),
 		"Address":    types.MainSmartAccountAddress.Hex(),

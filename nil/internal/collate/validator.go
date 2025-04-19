@@ -54,12 +54,13 @@ type Validator struct {
 
 	txFabric       db.DB
 	pool           TxnPool
-	networkManager *network.Manager      // +checklocksignore: thread safe
+	networkManager network.Manager       // +checklocksignore: thread safe
 	blockVerifier  *signer.BlockVerifier // +checklocksignore: thread safe
 
 	mutex         sync.RWMutex
-	lastBlock     *types.Block // +checklocks:mutex
-	lastBlockHash common.Hash  // +checklocks:mutex
+	lastBlock     *types.Block    // +checklocks:mutex
+	lastBlockHash common.Hash     // +checklocks:mutex
+	metrics       *MetricsHandler // +checklocks:mutex
 
 	subsMutex sync.Mutex
 	subsId    uint64                 // +checklocks:subsMutex
@@ -69,8 +70,13 @@ type Validator struct {
 }
 
 func NewValidator(
-	params *Params, mainShardValidator *Validator, txFabric db.DB, pool TxnPool, nm *network.Manager,
-) *Validator {
+	params *Params, mainShardValidator *Validator, txFabric db.DB, pool TxnPool, nm network.Manager,
+) (*Validator, error) {
+	metrics, err := NewMetricsHandler(params.ShardId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create metrics handler: %w", err)
+	}
+
 	return &Validator{
 		params:             params,
 		mainShardValidator: mainShardValidator,
@@ -82,7 +88,8 @@ func NewValidator(
 		logger: logging.NewLogger("validator").With().
 			Stringer(logging.FieldShardId, params.ShardId).
 			Logger(),
-	}
+		metrics: metrics,
+	}, nil
 }
 
 // +checklocksread:s.mutex
@@ -175,7 +182,10 @@ func (s *Validator) buildBlockHashByProposal(ctx context.Context, proposal *exec
 	}
 	defer gen.Rollback()
 
-	gasPrices := gen.CollectGasPrices(proposal.PrevBlockId)
+	gasPrices, err := gen.CollectGasPrices(proposal.PrevBlockId)
+	if err != nil {
+		return common.EmptyHash, fmt.Errorf("failed to collect gas prices: %w", err)
+	}
 	res, err := gen.BuildBlock(proposal, gasPrices)
 	if err != nil {
 		return common.EmptyHash, fmt.Errorf("failed to generate block: %w", err)
@@ -247,10 +257,12 @@ func (s *Validator) insertProposalUnlocked(
 	}
 	defer gen.Rollback()
 
+	s.metrics.StartProcessingMeasurement()
 	res, err := gen.GenerateBlock(p, consensusParams)
 	if err != nil {
 		return fmt.Errorf("failed to generate block: %w", err)
 	}
+	s.metrics.EndProcessingMeasurement(ctx, res.Counters)
 
 	s.onBlockCommitUnlocked(ctx, res, p, commitType)
 
@@ -260,7 +272,7 @@ func (s *Validator) insertProposalUnlocked(
 		OutTransactions: res.OutTxns,
 		ChildBlocks:     proposal.ShardHashes,
 		Config: common.TransformMap(res.ConfigParams, func(k string, v []byte) (string, hexutil.Bytes) {
-			return k, hexutil.Bytes(v)
+			return k, v
 		}),
 	})
 }
@@ -270,6 +282,8 @@ func (s *Validator) onBlockCommitUnlocked(
 	ctx context.Context, res *execution.BlockGenerationResult, proposal *execution.Proposal, evType eventType,
 ) {
 	s.setLastBlockUnlocked(res.Block, res.BlockHash)
+
+	s.metrics.RecordBlockId(ctx, res.Block.Id)
 
 	if !reflect.ValueOf(s.pool).IsNil() {
 		if err := s.pool.OnCommitted(ctx, res.Block.BaseFee, proposal.ExternalTxns); err != nil {
@@ -447,7 +461,6 @@ func (s *Validator) replayBlockUnlocked(ctx context.Context, block *types.BlockW
 			s.logger.Error().
 				Uint64(logging.FieldBlockNumber, uint64(block.Id)).
 				Stringer(logging.FieldBlockHash, block.Hash(s.params.ShardId)).
-				Stringer(logging.FieldShardId, s.params.ShardId).
 				Stringer(logging.FieldSignature, block.Signature).
 				Err(err).
 				Msg("Failed to verify block signature")

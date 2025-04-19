@@ -14,23 +14,27 @@ import (
 )
 
 func DeployCommand(cfg *common.Config) *cobra.Command {
+	params := &smartAccountParams{
+		Params: &common.Params{},
+	}
+
 	cmd := &cobra.Command{
 		Use:   "deploy [path to file] [args...]",
 		Short: "Deploy a smart contract",
 		Long:  "Deploy the smart contract with the specified hex-bytecode from stdin or from file",
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDeploy(cmd, args, cfg)
+			return runDeploy(cmd, args, cfg, params)
 		},
 		SilenceUsage: true,
 	}
 
-	setDeployFlags(cmd)
+	setDeployFlags(cmd, params)
 
 	return cmd
 }
 
-func setDeployFlags(cmd *cobra.Command) {
+func setDeployFlags(cmd *cobra.Command, params *smartAccountParams) {
 	cmd.Flags().Var(
 		types.NewShardId(&params.shardId, types.BaseShardId),
 		shardIdFlag,
@@ -81,7 +85,7 @@ func setDeployFlags(cmd *cobra.Command) {
 	)
 }
 
-func runDeploy(cmd *cobra.Command, cmdArgs []string, cfg *common.Config) error {
+func runDeploy(cmd *cobra.Command, cmdArgs []string, cfg *common.Config, params *smartAccountParams) error {
 	if !params.token.IsZero() && params.noWait {
 		return errors.New("the \"no-wait\" flag cannot be used with the \"token\" flag")
 	}
@@ -102,7 +106,7 @@ func runDeploy(cmd *cobra.Command, cmdArgs []string, cfg *common.Config) error {
 	var contractData *cometa.ContractData
 
 	if len(params.compileInput) != 0 {
-		contractData, err = cm.CompileContract(params.compileInput)
+		contractData, err = cm.CompileContract(cmd.Context(), params.compileInput)
 		if err != nil {
 			return fmt.Errorf("failed to compile the contract: %w", err)
 		}
@@ -164,7 +168,7 @@ https://ethereum.org/en/developers/tutorials/downsizing-contracts-to-fight-the-c
 	}
 
 	if len(params.compileInput) != 0 {
-		if err = cm.RegisterContractData(contractData, contractAddr); err != nil {
+		if err = cm.RegisterContractData(cmd.Context(), contractData, contractAddr); err != nil {
 			return fmt.Errorf("failed to register the contract: %w", err)
 		}
 	}

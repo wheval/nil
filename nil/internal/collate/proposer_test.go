@@ -80,7 +80,7 @@ func (s *ProposerTestSuite) TestBlockGas() {
 	})
 
 	s.Run("MaxGasInBlockFor1Txn", func() {
-		params.MaxGasInBlock = 12000
+		params.MaxGasInBlock = 2000
 		p := newTestProposer(params, pool)
 
 		proposal := s.generateProposal(p)
@@ -124,52 +124,41 @@ func (s *ProposerTestSuite) TestCollator() {
 
 	balance := s.getMainBalance()
 	txnValue := execution.DefaultSendValue
-	feeCredit := execution.DefaultGasCredit
 
 	m1 := execution.NewSendMoneyTransaction(s.T(), to, 0)
 	m2 := execution.NewSendMoneyTransaction(s.T(), to, 1)
+	var r1, r2 *types.Receipt
 
 	s.Run("SendTokens", func() {
 		pool.Reset()
 		pool.Add(m1, m2)
 
 		proposal := generateBlock()
-		r1 := s.checkReceipt(shardId, m1)
-		r2 := s.checkReceipt(shardId, m2)
+		r1 = s.checkReceipt(shardId, m1)
+		r2 = s.checkReceipt(shardId, m2)
 		s.Equal(pool.Txns, proposal.ExternalTxns)
 
 		// Each transaction subtracts its value + actual gas used from the balance.
 		balance = balance.
-			Sub(txnValue).Sub(r1.GasUsed.ToValue(types.DefaultGasPrice)).Sub(feeCredit).
-			Sub(txnValue).Sub(r2.GasUsed.ToValue(types.DefaultGasPrice)).Sub(feeCredit)
+			Sub(txnValue).Sub(r1.GasUsed.ToValue(types.DefaultGasPrice)).Sub(r1.Forwarded).
+			Sub(txnValue).Sub(r2.GasUsed.ToValue(types.DefaultGasPrice)).Sub(r2.Forwarded)
 		s.Equal(balance, s.getMainBalance())
 		s.Equal(types.Value{}, s.getBalance(shardId, to))
 	})
 
-	// Now process internal transactions by one to test queueing.
-	p.params.MaxInternalTransactionsInBlock = 1
 	pool.Reset()
 
 	s.Run("ProcessInternalTransaction1", func() {
 		generateBlock()
 
 		s.Equal(balance, s.getMainBalance())
-		s.Equal(txnValue, s.getBalance(shardId, to))
+		s.Equal(txnValue.Mul(types.NewValueFromUint64(2)), s.getBalance(shardId, to))
 	})
-
-	s.Run("ProcessInternalTransaction2", func() {
-		generateBlock()
-
-		s.Equal(balance, s.getMainBalance())
-		s.Equal(txnValue.Add(txnValue), s.getBalance(shardId, to))
-	})
-
-	p.params.MaxInternalTransactionsInBlock = defaultMaxInternalTxns
 
 	s.Run("ProcessRefundTransactions", func() {
 		generateBlock()
 
-		balance = balance.Add(feeCredit).Add(feeCredit)
+		balance = balance.Add(r1.Forwarded).Add(r2.Forwarded)
 		s.Equal(balance, s.getMainBalance())
 
 		s.checkSeqno(shardId)
@@ -277,7 +266,7 @@ func (s *ProposerTestSuite) checkSeqno(shardId types.ShardId) {
 		seqno := txns[0].Seqno
 		for _, m := range txns {
 			s.Require().Equal(seqno, m.Seqno)
-			seqno += 1
+			seqno++
 		}
 	}
 

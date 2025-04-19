@@ -32,6 +32,15 @@ func NewBlockGeneratorParams(shardId types.ShardId, nShards uint32) BlockGenerat
 	}
 }
 
+type BlockGeneratorCounters struct {
+	InternalTransactions int64
+	ExternalTransactions int64
+	DeployTransactions   int64
+	ExecTransactions     int64
+	CoinsUsed            types.Value
+	GasPrice             types.Value
+}
+
 type BlockGenerator struct {
 	ctx    context.Context
 	params BlockGeneratorParams
@@ -41,7 +50,6 @@ type BlockGenerator struct {
 	executionState *ExecutionState
 
 	logger   logging.Logger
-	mh       *MetricsHandler
 	counters *BlockGeneratorCounters
 }
 
@@ -53,26 +61,28 @@ type BlockGenerationResult struct {
 	OutTxns      []*types.Transaction
 	OutTxnHashes []common.Hash
 	ConfigParams map[string][]byte
+
+	Counters *BlockGeneratorCounters
 }
 
 func NewBlockGenerator(
 	ctx context.Context,
 	params BlockGeneratorParams,
 	txFabric db.DB,
-	block *types.Block,
+	prevBlock *types.Block,
 ) (*BlockGenerator, error) {
 	rwTx, err := txFabric.CreateRwTx(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	configAccessor, err := config.NewConfigAccessorFromBlock(ctx, txFabric, block, params.ShardId)
+	configAccessor, err := config.NewConfigAccessorFromBlock(ctx, txFabric, prevBlock, params.ShardId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config accessor: %w", err)
 	}
 
 	executionState, err := NewExecutionState(rwTx, params.ShardId, StateParams{
-		Block:          block,
+		Block:          prevBlock,
 		ConfigAccessor: configAccessor,
 		FeeCalculator:  params.FeeCalculator,
 		Mode:           params.ExecutionMode,
@@ -92,12 +102,6 @@ func NewBlockGeneratorWithEs(
 	rwTx db.RwTx,
 	es *ExecutionState,
 ) (*BlockGenerator, error) {
-	const mhName = "github.com/NilFoundation/nil/nil/internal/execution"
-	mh, err := NewMetricsHandler(mhName, params.ShardId)
-	if err != nil {
-		return nil, err
-	}
-
 	return &BlockGenerator{
 		ctx:            ctx,
 		params:         params,
@@ -107,8 +111,7 @@ func NewBlockGeneratorWithEs(
 		logger: logging.NewLogger("block-gen").With().
 			Stringer(logging.FieldShardId, params.ShardId).
 			Logger(),
-		mh:       mh,
-		counters: NewBlockGeneratorCounters(),
+		counters: &BlockGeneratorCounters{},
 	}, nil
 }
 
@@ -116,9 +119,9 @@ func (g *BlockGenerator) Rollback() {
 	g.rwTx.Rollback()
 }
 
-func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) []types.Uint256 {
+func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) ([]types.Uint256, error) {
 	if !p.params.ShardId.IsMainShard() {
-		return nil
+		return nil, nil
 	}
 
 	// Basically we load configuration from block.MainShardHash.
@@ -131,7 +134,7 @@ func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) []types
 
 	mainBlock, err := db.ReadBlockByNumber(p.rwTx, types.MainShardId, configBlockId)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	treeShards := NewDbShardBlocksTrieReader(p.rwTx, types.MainShardId, mainBlock.Id)
@@ -150,18 +153,19 @@ func (p *BlockGenerator) CollectGasPrices(prevBlockId types.BlockNumber) []types
 			shardHash = mainBlock.PrevBlock
 		}
 
+		shards[shardId] = *types.DefaultGasPrice.Uint256
+		if shardHash.Empty() {
+			continue
+		}
+
 		block, err := db.ReadBlock(p.rwTx, shardId, shardHash)
 		if err != nil {
-			p.logger.Err(err).
-				Stringer(logging.FieldShardId, shardId).
-				Stringer(logging.FieldBlockHash, shardHash).
-				Msg("Get gas price from shard: failed to read block")
-			shards[shardId] = *types.DefaultGasPrice.Uint256
-		} else {
-			shards[shardId] = *block.BaseFee.Uint256
+			return nil, err
 		}
+
+		shards[shardId] = *block.BaseFee.Uint256
 	}
-	return shards
+	return shards, nil
 }
 
 func (g *BlockGenerator) updateGasPrices(gasPrices []types.Uint256) error {
@@ -262,6 +266,9 @@ func (g *BlockGenerator) prepareExecutionState(proposal *Proposal, gasPrices []t
 	for i, shardHash := range proposal.ShardHashes {
 		g.executionState.ChildShardBlocks[types.ShardId(i+1)] = shardHash
 	}
+
+	g.counters.GasPrice = g.executionState.GasPrice
+
 	return nil
 }
 
@@ -327,15 +334,13 @@ func (g *BlockGenerator) GenerateBlock(
 	proposal *Proposal,
 	params *types.ConsensusParams,
 ) (*BlockGenerationResult, error) {
-	g.mh.StartProcessingMeasurement(g.ctx, proposal.PrevBlockId+1)
-	defer func() { g.mh.EndProcessingMeasurement(g.ctx, g.counters) }()
-
-	gasPrices := g.CollectGasPrices(proposal.PrevBlockId)
+	gasPrices, err := g.CollectGasPrices(proposal.PrevBlockId)
+	if err != nil {
+		return nil, err
+	}
 	if err := g.prepareExecutionState(proposal, gasPrices); err != nil {
 		return nil, err
 	}
-
-	g.mh.RecordGasPrice(g.ctx, g.executionState.GasPrice)
 
 	if err := db.WriteCollatorState(g.rwTx, g.params.ShardId, proposal.CollatorState); err != nil {
 		return nil, fmt.Errorf("failed to write collator state: %w", err)
@@ -344,17 +349,8 @@ func (g *BlockGenerator) GenerateBlock(
 	return g.finalize(proposal.PrevBlockId+1, params)
 }
 
-func ValidateInternalTransaction(transaction *types.Transaction) error {
-	check.PanicIfNot(transaction.IsInternal())
-
-	if transaction.IsDeploy() {
-		return ValidateDeployTransaction(transaction)
-	}
-	return nil
-}
-
 func (g *BlockGenerator) handleInternalInTransaction(txn *types.Transaction) *ExecutionResult {
-	if err := ValidateInternalTransaction(txn); err != nil {
+	if err := g.executionState.AcceptInternalTransaction(txn); err != nil {
 		g.logger.Warn().Err(err).Msg("Invalid internal transaction")
 		return NewExecutionResult().SetError(types.KeepOrWrapError(types.ErrorValidation, err))
 	}
@@ -418,6 +414,8 @@ func (g *BlockGenerator) finalize(
 	if err != nil {
 		return nil, err
 	}
+
+	blockRes.Counters = g.counters
 
 	return blockRes, g.Finalize(blockRes, params)
 }

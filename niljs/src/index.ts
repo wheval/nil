@@ -34,6 +34,7 @@ export * from "./utils/smart-account.js";
 export * from "./utils/refiners.js";
 export * from "./utils/receipt.js";
 export * from "./utils/eth.js";
+export * from "./utils/transaction.js";
 
 export * from "./types/CallArgs.js";
 export * from "./types/Hex.js";
@@ -60,5 +61,4 @@ export * from "./encoding/deployPart.js";
 export * from "./encoding/fromBytes.js";
 export * from "./encoding/externalTransaction.js";
 export * from "./encoding/fromHex.js";
-export * from "./encoding/poseidon.js";
 export * from "./encoding/toHex.js";

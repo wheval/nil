@@ -50,6 +50,9 @@ const (
 	// TaskErrOutOfMemory indicated that managed memory allocation failure occurred during the proof generation
 	TaskErrOutOfMemory
 
+	// TaskErrCancelled indicated that child task was cancelled
+	TaskErrCancelled
+
 	// TaskErrUnknown indicates an unspecified task error.
 	TaskErrUnknown
 )
@@ -80,7 +83,7 @@ func NewTaskExecError(errType TaskErrType, errText string) *TaskExecError {
 	return &TaskExecError{ErrType: errType, ErrText: errText}
 }
 
-func NewTaskExecErrorf(errType TaskErrType, format string, args ...interface{}) *TaskExecError {
+func NewTaskExecErrorf(errType TaskErrType, format string, args ...any) *TaskExecError {
 	return &TaskExecError{ErrType: errType, ErrText: fmt.Sprintf(format, args...)}
 }
 

@@ -165,7 +165,7 @@ func TestMessages_Prune(t *testing.T) {
 	}
 
 	// Prune out the messages from this view
-	messages.PruneByHeight(views[1].Height + 1)
+	messages.PruneByHeight(views[1].GetHeight() + 1)
 
 	// Make sure the round 1 messages are pruned out
 	assert.Equal(t, 0, messages.numMessages(views[0], messageType))
@@ -272,8 +272,8 @@ func TestMessages_GetExtendedRCC(t *testing.T) {
 	t.Parallel()
 
 	var (
-		height uint64 = 0
-		quorum        = 5
+		height uint64
+		quorum = 5
 	)
 
 	messages := NewMessages()
@@ -367,7 +367,7 @@ func TestMessages_GetMostRoundChangeMessages(t *testing.T) {
 		t.Fatalf("Invalid number of round change messages, %d", len(roundChangeMessages))
 	}
 
-	assert.Equal(t, mostMessagesRound, roundChangeMessages[0].View.Round)
+	assert.Equal(t, mostMessagesRound, roundChangeMessages[0].GetView().GetRound())
 }
 
 // TestMessages_EventManager checks that the event manager
@@ -397,7 +397,7 @@ func TestMessages_EventManager(t *testing.T) {
 	randomMessages := generateRandomMessages(numMessages, baseView, messageType)
 	for _, message := range randomMessages {
 		messages.AddMessage(message)
-		messages.SignalEvent(message.Type, message.View)
+		messages.SignalEvent(message.GetType(), message.GetView())
 	}
 
 	// Wait for the subscription event to happen

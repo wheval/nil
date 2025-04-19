@@ -75,7 +75,7 @@ type AccountState struct {
 
 // FetchRequestId returns unique request id.
 func (as *AccountState) FetchRequestId() uint64 {
-	as.requestId += 1
+	as.requestId++
 	return as.requestId
 }
 
@@ -261,6 +261,14 @@ func (as *AccountState) SetAsyncContext(index types.TransactionIndex, ctx *types
 		requestId: index,
 	})
 	as.AsyncContext[index] = ctx
+}
+
+func (as *AccountState) GetAsyncContext(index types.TransactionIndex) (*types.AsyncContext, error) {
+	ctx, exists := as.AsyncContext[index]
+	if exists {
+		return ctx, nil
+	}
+	return as.AsyncContextTree.Fetch(index)
 }
 
 func (as *AccountState) GetAndRemoveAsyncContext(index types.TransactionIndex) (*types.AsyncContext, error) {

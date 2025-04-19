@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"encoding/binary"
 	"errors"
 	"math/big"
 	"sync/atomic"
@@ -108,7 +109,6 @@ func NewEVM(
 	statedb StateDB,
 	origin types.Address,
 	gasPrice types.Value,
-	state *EvmRestoreData,
 ) *EVM {
 	evm := &EVM{
 		Context: blockContext,
@@ -119,7 +119,7 @@ func NewEVM(
 		},
 		chainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 	}
-	evm.interpreter = NewEVMInterpreter(evm, state)
+	evm.interpreter = NewEVMInterpreter(evm)
 	return evm
 }
 
@@ -517,7 +517,21 @@ func (evm *EVM) Create(
 	gas uint64,
 	value *uint256.Int,
 ) (ret []byte, contractAddr types.Address, leftOverGas uint64, err error) {
-	payload := types.BuildDeployPayload(code, common.EmptyHash)
+	addr := caller.Address()
+	seqno, err := evm.StateDB.GetSeqno(addr)
+	if err != nil {
+		return nil, types.Address{}, gas, err
+	}
+	extSeqno, err := evm.StateDB.GetExtSeqno(addr)
+	if err != nil {
+		return nil, types.Address{}, gas, err
+	}
+
+	var salt common.Hash
+	copy(salt[0:16], addr[4:])
+	binary.BigEndian.PutUint64(salt[16:24], seqno.Uint64())
+	binary.BigEndian.PutUint64(salt[24:32], extSeqno.Uint64())
+	payload := types.BuildDeployPayload(code, salt)
 	contractAddr = types.CreateAddress(caller.Address().ShardId(), payload)
 	return evm.create(caller, code, gas, value, contractAddr)
 }
@@ -601,11 +615,6 @@ func (evm *EVM) GetDepth() int {
 
 func (evm *EVM) SetTokenTransfer(tokens []types.TokenBalance) {
 	evm.tokenTransfer = tokens
-}
-
-func (evm *EVM) StopAndDumpState(continuationGasCredit types.Gas) {
-	evm.interpreter.stopAndDumpState = true
-	evm.interpreter.continuationGasCredit = continuationGasCredit
 }
 
 // GetVMContext provides context about the block being executed as well as state

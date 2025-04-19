@@ -23,12 +23,14 @@ func GetCommand() *cobra.Command {
 }
 
 func GetRegisterCommand() *cobra.Command {
+	params := &cometaParams{}
+
 	cmd := &cobra.Command{
 		Use:   "register [options] address",
 		Short: "Register contract metadata",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRegisterCommand(cmd)
+			return runRegisterCommand(cmd, params)
 		},
 	}
 
@@ -43,12 +45,14 @@ func GetRegisterCommand() *cobra.Command {
 }
 
 func GetInfoCommand() *cobra.Command {
+	params := &cometaParams{}
+
 	cmd := &cobra.Command{
 		Use:   "info",
 		Short: "Acquire the metadata for a contract",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInfoCommand(cmd)
+			return runInfoCommand(cmd, params)
 		},
 	}
 
@@ -62,7 +66,7 @@ func GetInfoCommand() *cobra.Command {
 	return cmd
 }
 
-func runRegisterCommand(_ *cobra.Command) error {
+func runRegisterCommand(cmd *cobra.Command, params *cometaParams) error {
 	cometaClient := common.GetCometaRpcClient()
 
 	inputJsonData, err := os.ReadFile(params.inputJsonFile)
@@ -75,7 +79,7 @@ func runRegisterCommand(_ *cobra.Command) error {
 		return fmt.Errorf("failed to normalize the input JSON file: %w", err)
 	}
 
-	err = cometaClient.RegisterContract(inputJson, params.address)
+	err = cometaClient.RegisterContract(cmd.Context(), inputJson, params.address)
 	if err != nil {
 		return fmt.Errorf("failed to register the contract: %w", err)
 	}
@@ -100,10 +104,10 @@ func normalizeCompileInput(inputJson, inputJsonFile string) (string, error) {
 	return string(data), err
 }
 
-func runInfoCommand(_ *cobra.Command) error {
+func runInfoCommand(cmd *cobra.Command, params *cometaParams) error {
 	cometa := common.GetCometaRpcClient()
 
-	contract, err := cometa.GetContract(params.address)
+	contract, err := cometa.GetContract(cmd.Context(), params.address)
 	if err != nil {
 		return fmt.Errorf("failed to get the contract: %w", err)
 	}

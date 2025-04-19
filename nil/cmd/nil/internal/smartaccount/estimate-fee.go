@@ -3,20 +3,24 @@ package smartaccount
 import (
 	"fmt"
 
+	"github.com/NilFoundation/nil/nil/client"
 	"github.com/NilFoundation/nil/nil/cmd/nil/common"
-	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/cliservice"
 	"github.com/spf13/cobra"
 )
 
 func GetEstimateFeeCommand(cfg *common.Config) *cobra.Command {
+	params := &smartAccountParams{
+		Params: &common.Params{},
+	}
+
 	cmd := &cobra.Command{
 		Use:   "estimate-fee [address] [calldata or method] [args...]",
 		Short: "Get the recommended fees (internal and external) for a transaction sent by the smart account",
 		Args:  cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runEstimateFee(cmd, args, cfg)
+			return runEstimateFee(cmd, args, cfg, params)
 		},
 		SilenceUsage: true,
 	}
@@ -28,7 +32,7 @@ func GetEstimateFeeCommand(cfg *common.Config) *cobra.Command {
 	return cmd
 }
 
-func runEstimateFee(cmd *cobra.Command, args []string, cfg *common.Config) error {
+func runEstimateFee(cmd *cobra.Command, args []string, cfg *common.Config, params *smartAccountParams) error {
 	service := cliservice.NewService(cmd.Context(), common.GetRpcClient(), cfg.PrivateKey, nil)
 
 	var address types.Address
@@ -46,25 +50,8 @@ func runEstimateFee(cmd *cobra.Command, args []string, cfg *common.Config) error
 		return err
 	}
 
-	kind := types.ExecutionTransactionKind
-	if params.deploy {
-		kind = types.DeployTransactionKind
-	}
-
-	intTxn := &types.InternalTransactionPayload{
-		Data:        calldata,
-		To:          address,
-		ForwardKind: types.ForwardKindRemaining,
-		Kind:        kind,
-		Value:       params.value,
-	}
-
-	intTxnData, err := intTxn.MarshalSSZ()
-	if err != nil {
-		return err
-	}
-
-	smartAccountCalldata, err := contracts.NewCallData(contracts.NameSmartAccount, "send", intTxnData)
+	smartAccountCalldata, err := client.CreateInternalTransactionPayload(
+		calldata, params.value, nil, address, params.deploy)
 	if err != nil {
 		return err
 	}

@@ -52,23 +52,23 @@ func NewMessages() *Messages {
 
 // AddMessage adds a new message to the message queue
 func (ms *Messages) AddMessage(message *proto.IbftMessage) {
-	mux := ms.muxMap[message.Type]
+	mux := ms.muxMap[message.GetType()]
 	mux.Lock()
 	defer mux.Unlock()
 
 	// Get the corresponding height map
-	heightMsgMap := ms.getMessageMap(message.Type)
+	heightMsgMap := ms.getMessageMap(message.GetType())
 
 	// Append the message to the appropriate queue
-	messages := heightMsgMap.getViewMessages(message.View)
-	messages[string(message.From)] = message
+	messages := heightMsgMap.getViewMessages(message.GetView())
+	messages[string(message.GetFrom())] = message
 }
 
 // SignalEvent signals event
 func (ms *Messages) SignalEvent(messageType proto.MessageType, view *proto.View) {
 	ms.eventManager.signalEvent(messageType, &proto.View{
-		Height: view.Height,
-		Round:  view.Round,
+		Height: view.GetHeight(),
+		Round:  view.GetRound(),
 	})
 }
 
@@ -105,13 +105,13 @@ func (ms *Messages) numMessages(
 	heightMsgMap := ms.getMessageMap(messageType)
 
 	// Check if the round map is present
-	roundMsgMap, found := heightMsgMap[view.Height]
+	roundMsgMap, found := heightMsgMap[view.GetHeight()]
 	if !found {
 		return 0
 	}
 
 	// Check if the messages array is present
-	messages, found := roundMsgMap[view.Round]
+	messages, found := roundMsgMap[view.GetRound()]
 	if !found {
 		return 0
 	}
@@ -157,12 +157,12 @@ func (ms *Messages) getProtoMessages(
 	heightMsgMap := ms.getMessageMap(messageType)
 
 	// Check if the round map is present
-	roundMsgMap, found := heightMsgMap[view.Height]
+	roundMsgMap, found := heightMsgMap[view.GetHeight()]
 	if !found {
 		return nil
 	}
 
-	return roundMsgMap[view.Round]
+	return roundMsgMap[view.GetRound()]
 }
 
 // GetValidMessages fetches all messages of a specific type for the specified view,
@@ -300,8 +300,8 @@ type protoMessages map[string]*proto.IbftMessage
 // It will initialize a new message array if it's not found
 func (m heightMessageMap) getViewMessages(view *proto.View) protoMessages {
 	var (
-		height = view.Height
-		round  = view.Round
+		height = view.GetHeight()
+		round  = view.GetRound()
 	)
 
 	// Check if the height is present

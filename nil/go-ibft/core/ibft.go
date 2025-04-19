@@ -275,8 +275,8 @@ func (i *IBFT) signalNewProposal(ctx context.Context, event newProposalEvent) {
 func (i *IBFT) watchForFutureProposal(ctx context.Context) {
 	var (
 		view      = i.state.getView()
-		height    = view.Height
-		nextRound = view.Round + 1
+		height    = view.GetHeight()
+		nextRound = view.GetRound() + 1
 
 		sub = i.subscribe(
 			messages.SubscriptionDetails{
@@ -324,8 +324,8 @@ func (i *IBFT) watchForRoundChangeCertificates(ctx context.Context) {
 
 	var (
 		view   = i.state.getView()
-		height = view.Height
-		round  = view.Round
+		height = view.GetHeight()
+		round  = view.GetRound()
 
 		sub = i.subscribe(messages.SubscriptionDetails{
 			MessageType: proto.MessageType_ROUND_CHANGE,
@@ -354,7 +354,7 @@ func (i *IBFT) watchForRoundChangeCertificates(ctx context.Context) {
 				continue
 			}
 
-			newRound := rcc.RoundChangeMessages[0].View.Round
+			newRound := rcc.GetRoundChangeMessages()[0].GetView().GetRound()
 
 			//	we received a valid RCC for a higher round
 			i.signalNewRCC(ctx, newRound)
@@ -387,9 +387,9 @@ func (i *IBFT) RunSequence(ctx context.Context, h uint64) {
 	for {
 		view := i.state.getView()
 
-		i.log.Info("round started", "round", view.Round)
+		i.log.Info("round started", "round", view.GetRound())
 
-		currentRound := view.Round
+		currentRound := view.GetRound()
 		ctxRound, cancelRound := context.WithCancel(ctx)
 
 		i.wg.Add(4)
@@ -462,7 +462,7 @@ func (i *IBFT) startRound(ctx context.Context) {
 	)
 
 	// Check if any block needs to be proposed
-	if i.backend.IsProposer(id, view.Height, view.Round) {
+	if i.backend.IsProposer(id, view.GetHeight(), view.GetRound()) {
 		i.log.Info("we are the proposer")
 
 		proposalMessage := i.buildProposal(ctx, view)
@@ -524,7 +524,7 @@ func (i *IBFT) waitForRCC(
 // and constructs a RCC if possible
 func (i *IBFT) handleRoundChangeMessage(view *proto.View) *proto.RoundChangeCertificate {
 	var (
-		height              = view.Height
+		height              = view.GetHeight()
 		hasAcceptedProposal = i.state.getProposal() != nil
 	)
 
@@ -533,7 +533,7 @@ func (i *IBFT) handleRoundChangeMessage(view *proto.View) *proto.RoundChangeCert
 		certificate := messages.ExtractLatestPC(msg)
 
 		// Check if the prepared certificate is valid
-		if !i.validPC(certificate, msg.View.Round, height) {
+		if !i.validPC(certificate, msg.GetView().GetRound(), height) {
 			return false
 		}
 
@@ -544,7 +544,7 @@ func (i *IBFT) handleRoundChangeMessage(view *proto.View) *proto.RoundChangeCert
 	isValidRCCFn := func(round uint64, msgs []*proto.IbftMessage) bool {
 		// In case of that ROUND-CHANGE message's round match validator's round
 		// Accept such messages only if the validator has not accepted a proposal at the round
-		if round == view.Round && hasAcceptedProposal {
+		if round == view.GetRound() && hasAcceptedProposal {
 			return false
 		}
 
@@ -585,11 +585,11 @@ func (i *IBFT) proposalMatchesCertificate(
 	hashesInCertificate := make([][]byte, 0)
 
 	//	collect hash from pre-prepare message
-	proposalHash := messages.ExtractProposalHash(certificate.ProposalMessage)
+	proposalHash := messages.ExtractProposalHash(certificate.GetProposalMessage())
 	hashesInCertificate = append(hashesInCertificate, proposalHash)
 
 	//	collect hashes from prepare messages
-	for _, msg := range certificate.PrepareMessages {
+	for _, msg := range certificate.GetPrepareMessages() {
 		proposalHash := messages.ExtractPrepareHash(msg)
 
 		hashesInCertificate = append(hashesInCertificate, proposalHash)
@@ -685,20 +685,20 @@ func (i *IBFT) runNewRound(ctx context.Context) error {
 // matter the round
 func (i *IBFT) validateProposalCommon(msg *proto.IbftMessage, view *proto.View) bool {
 	var (
-		height = view.Height
-		round  = view.Round
+		height = view.GetHeight()
+		round  = view.GetRound()
 
 		proposal     = messages.ExtractProposal(msg)
 		proposalHash = messages.ExtractProposalHash(msg)
 	)
 
 	//	round matches
-	if proposal.Round != view.Round {
+	if proposal.GetRound() != view.GetRound() {
 		return false
 	}
 
 	//	is proposer
-	if !i.backend.IsProposer(msg.From, height, round) {
+	if !i.backend.IsProposer(msg.GetFrom(), height, round) {
 		return false
 	}
 
@@ -714,12 +714,12 @@ func (i *IBFT) validateProposalCommon(msg *proto.IbftMessage, view *proto.View) 
 // validateProposal0 validates the proposal for round 0
 func (i *IBFT) validateProposal0(msg *proto.IbftMessage, view *proto.View) bool {
 	var (
-		height = view.Height
-		round  = view.Round
+		height = view.GetHeight()
+		round  = view.GetRound()
 	)
 
 	//	proposal must be for round 0
-	if msg.View.Round != 0 {
+	if msg.GetView().GetRound() != 0 {
 		return false
 	}
 
@@ -739,8 +739,8 @@ func (i *IBFT) validateProposal0(msg *proto.IbftMessage, view *proto.View) bool 
 // validateProposal validates a proposal for round > 0
 func (i *IBFT) validateProposal(msg *proto.IbftMessage, view *proto.View) bool {
 	var (
-		height = view.Height
-		round  = view.Round
+		height = view.GetHeight()
+		round  = view.GetRound()
 
 		proposal = messages.ExtractProposal(msg)
 		rcc      = messages.ExtractRoundChangeCertificate(msg)
@@ -757,12 +757,12 @@ func (i *IBFT) validateProposal(msg *proto.IbftMessage, view *proto.View) bool {
 	}
 
 	// Make sure all the messages have the unique sender
-	if !messages.HasUniqueSenders(rcc.RoundChangeMessages) {
+	if !messages.HasUniqueSenders(rcc.GetRoundChangeMessages()) {
 		return false
 	}
 
 	// Make sure there are Quorum RCC
-	if !i.hasQuorumByMsgType(rcc.RoundChangeMessages, proto.MessageType_ROUND_CHANGE) {
+	if !i.hasQuorumByMsgType(rcc.GetRoundChangeMessages(), proto.MessageType_ROUND_CHANGE) {
 		return false
 	}
 
@@ -772,19 +772,19 @@ func (i *IBFT) validateProposal(msg *proto.IbftMessage, view *proto.View) bool {
 	}
 
 	// Make sure all messages in the RCC are valid Round Change messages
-	for _, rc := range rcc.RoundChangeMessages {
+	for _, rc := range rcc.GetRoundChangeMessages() {
 		// Make sure the message is a Round Change message
-		if rc.Type != proto.MessageType_ROUND_CHANGE {
+		if rc.GetType() != proto.MessageType_ROUND_CHANGE {
 			return false
 		}
 
 		// Height of the message matches height of the proposal
-		if rc.View.Height != height {
+		if rc.GetView().GetHeight() != height {
 			return false
 		}
 
 		// Round of the message matches round of the proposal
-		if rc.View.Round != round {
+		if rc.GetView().GetRound() != round {
 			return false
 		}
 
@@ -803,15 +803,15 @@ func (i *IBFT) validateProposal(msg *proto.IbftMessage, view *proto.View) bool {
 
 	roundsAndPreparedBlockHashes := make([]roundHashTuple, 0)
 
-	for _, rcMessage := range rcc.RoundChangeMessages {
+	for _, rcMessage := range rcc.GetRoundChangeMessages() {
 		cert := messages.ExtractLatestPC(rcMessage)
 
 		// Check if there is a certificate, and if it's a valid PC
-		if cert != nil && i.validPC(cert, msg.View.Round, height) {
-			hash := messages.ExtractProposalHash(cert.ProposalMessage)
+		if cert != nil && i.validPC(cert, msg.GetView().GetRound(), height) {
+			hash := messages.ExtractProposalHash(cert.GetProposalMessage())
 
 			roundsAndPreparedBlockHashes = append(roundsAndPreparedBlockHashes, roundHashTuple{
-				round: cert.ProposalMessage.View.Round,
+				round: cert.GetProposalMessage().GetView().GetRound(),
 				hash:  hash,
 			})
 		}
@@ -837,7 +837,7 @@ func (i *IBFT) validateProposal(msg *proto.IbftMessage, view *proto.View) bool {
 	// Make sure hash of (EB, maxR) matches expected hash
 	return i.backend.IsValidProposalHash(
 		&proto.Proposal{
-			RawProposal: proposal.RawProposal,
+			RawProposal: proposal.GetRawProposal(),
 			Round:       maxRound,
 		},
 		expectedHash,
@@ -848,7 +848,7 @@ func (i *IBFT) validateProposal(msg *proto.IbftMessage, view *proto.View) bool {
 // a transition to PREPARE state, if the proposal is valid
 func (i *IBFT) handlePrePrepare(view *proto.View) *proto.IbftMessage {
 	isValidPrePrepare := func(message *proto.IbftMessage) bool {
-		if view.Round == 0 {
+		if view.GetRound() == 0 {
 			//	proposal must be for round 0
 			return i.validateProposal0(message, view)
 		}
@@ -1013,7 +1013,7 @@ func (i *IBFT) handleCommit(view *proto.View) bool {
 	commitSeals, err := messages.ExtractCommittedSeals(commitMessages)
 	if err != nil {
 		// safe check
-		i.log.Error("failed to extract committed seals from commit messages: %+v", err)
+		i.log.Error("failed to extract committed seals from commit messages", "error", err)
 
 		return false
 	}
@@ -1065,8 +1065,8 @@ func (i *IBFT) moveToNewRound(round uint64) {
 
 func (i *IBFT) buildProposal(ctx context.Context, view *proto.View) *proto.IbftMessage {
 	var (
-		height = view.Height
-		round  = view.Round
+		height = view.GetHeight()
+		round  = view.GetRound()
 	)
 
 	if round == 0 {
@@ -1090,6 +1090,7 @@ func (i *IBFT) buildProposal(ctx context.Context, view *proto.View) *proto.IbftM
 	rcc := i.waitForRCC(ctx, height, round)
 	if rcc == nil {
 		// Timeout occurred
+		i.log.Error("no valid RCC received, timeout expired")
 		return nil
 	}
 
@@ -1100,14 +1101,14 @@ func (i *IBFT) buildProposal(ctx context.Context, view *proto.View) *proto.IbftM
 	)
 
 	// take previous proposal among the round change messages for the highest round
-	for _, msg := range rcc.RoundChangeMessages {
+	for _, msg := range rcc.GetRoundChangeMessages() {
 		latestPC := messages.ExtractLatestPC(msg)
 		if latestPC == nil {
 			continue
 		}
 
-		proposal := messages.ExtractProposal(latestPC.ProposalMessage)
-		round := proposal.Round
+		proposal := messages.ExtractProposal(latestPC.GetProposalMessage())
+		round := proposal.GetRound()
 
 		// skip if message's round is equals to/less than maxRound
 		if previousProposal != nil && round <= maxRound {
@@ -1119,30 +1120,22 @@ func (i *IBFT) buildProposal(ctx context.Context, view *proto.View) *proto.IbftM
 			continue
 		}
 
-		previousProposal = lastPB.RawProposal
+		previousProposal = lastPB.GetRawProposal()
 		maxRound = round
 	}
 
-	if previousProposal == nil {
+	proposal := previousProposal
+	if proposal == nil {
 		//	build new proposal
-		proposal := i.backend.BuildProposal(
+		proposal = i.backend.BuildProposal(
 			&proto.View{
 				Height: height,
 				Round:  round,
 			})
-
-		return i.backend.BuildPrePrepareMessage(
-			proposal,
-			rcc,
-			&proto.View{
-				Height: height,
-				Round:  round,
-			},
-		)
 	}
 
 	return i.backend.BuildPrePrepareMessage(
-		previousProposal,
+		proposal,
 		rcc,
 		&proto.View{
 			Height: height,
@@ -1171,13 +1164,13 @@ func (i *IBFT) AddMessage(message *proto.IbftMessage) {
 
 		// Signal event if the quorum is reached. Since the subscriptions refer to the state height,
 		// no need to call this if the message height is not equal to the state height
-		if message.View.Height == i.state.getHeight() {
+		if message.GetView().GetHeight() == i.state.getHeight() {
 			msgs := i.messages.GetValidMessages(
-				message.View,
-				message.Type,
+				message.GetView(),
+				message.GetType(),
 				func(_ *proto.IbftMessage) bool { return true })
-			if i.hasQuorumByMsgType(msgs, message.Type) {
-				i.messages.SignalEvent(message.Type, message.View)
+			if i.hasQuorumByMsgType(msgs, message.GetType()) {
+				i.messages.SignalEvent(message.GetType(), message.GetView())
 			}
 		}
 	}
@@ -1186,13 +1179,13 @@ func (i *IBFT) AddMessage(message *proto.IbftMessage) {
 // isAcceptableMessage checks if the message can even be accepted
 func (i *IBFT) isAcceptableMessage(message *proto.IbftMessage) bool {
 	// Invalid messages are discarded
-	if message.View == nil {
+	if message.GetView() == nil {
 		return false
 	}
 
 	// Make sure the message is in accordance with
 	// the current state height, or greater
-	if i.state.getHeight() > message.View.Height {
+	if i.state.getHeight() > message.GetView().GetHeight() {
 		return false
 	}
 
@@ -1202,8 +1195,8 @@ func (i *IBFT) isAcceptableMessage(message *proto.IbftMessage) bool {
 	}
 
 	// Make sure if the heights are the same, the message round is >= the current state round
-	if i.state.getHeight() == message.View.Height {
-		return message.View.Round >= i.state.getRound()
+	if i.state.getHeight() == message.GetView().GetHeight() {
+		return message.GetView().GetRound() >= i.state.getRound()
 	}
 
 	return true
@@ -1226,13 +1219,13 @@ func (i *IBFT) validPC(
 	}
 
 	// Make sure that either both the proposal message and the prepare messages are set together
-	if certificate.ProposalMessage == nil || certificate.PrepareMessages == nil {
+	if certificate.GetProposalMessage() == nil || certificate.PrepareMessages == nil {
 		return false
 	}
 
 	allMessages := append(
-		[]*proto.IbftMessage{certificate.ProposalMessage},
-		certificate.PrepareMessages...,
+		[]*proto.IbftMessage{certificate.GetProposalMessage()},
+		certificate.GetPrepareMessages()...,
 	)
 
 	// Make sure there are at least Quorum (PP + P) messages
@@ -1242,13 +1235,13 @@ func (i *IBFT) validPC(
 	}
 
 	// Make sure the proposal message is a Preprepare message
-	if certificate.ProposalMessage.Type != proto.MessageType_PREPREPARE {
+	if certificate.GetProposalMessage().GetType() != proto.MessageType_PREPREPARE {
 		return false
 	}
 
 	// Make sure all messages in the PC are Prepare messages
-	for _, message := range certificate.PrepareMessages {
-		if message.Type != proto.MessageType_PREPARE {
+	for _, message := range certificate.GetPrepareMessages() {
+		if message.GetType() != proto.MessageType_PREPARE {
 			return false
 		}
 	}
@@ -1260,8 +1253,8 @@ func (i *IBFT) validPC(
 
 	// Make sure the proposal message is sent by the proposer
 	// for the round
-	proposal := certificate.ProposalMessage
-	if !i.backend.IsProposer(proposal.From, proposal.View.Height, proposal.View.Round) {
+	proposal := certificate.GetProposalMessage()
+	if !i.backend.IsProposer(proposal.GetFrom(), proposal.GetView().GetHeight(), proposal.GetView().GetRound()) {
 		return false
 	}
 
@@ -1271,14 +1264,14 @@ func (i *IBFT) validPC(
 	}
 
 	// Make sure the Prepare messages are validators, apart from the proposer
-	for _, message := range certificate.PrepareMessages {
+	for _, message := range certificate.GetPrepareMessages() {
 		// Make sure the sender is part of the validator set
 		if !i.backend.IsValidValidator(message) {
 			return false
 		}
 
 		// Make sure the current node is not the proposer
-		if i.backend.IsProposer(message.From, message.View.Height, message.View.Round) {
+		if i.backend.IsProposer(message.GetFrom(), message.GetView().GetHeight(), message.GetView().GetRound()) {
 			return false
 		}
 	}

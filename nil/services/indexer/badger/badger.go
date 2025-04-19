@@ -133,13 +133,12 @@ func (b *BadgerDriver) indexBlockTransactions(
 		}
 
 		baseAction := indexertypes.AddressAction{
-			Hash:      hash,
-			From:      txn.From,
-			To:        txn.To,
-			Amount:    txn.Value,
-			Timestamp: db.Timestamp(block.Timestamp),
-			BlockId:   block.Id,
-			Status:    getTransactionStatus(receipt.decoded),
+			Hash:    hash,
+			From:    txn.From,
+			To:      txn.To,
+			Amount:  txn.Value,
+			BlockId: block.Id,
+			Status:  getTransactionStatus(receipt.decoded),
 		}
 
 		logger := logging.NewLogger("indexer-badger")
@@ -162,6 +161,10 @@ func (b *BadgerDriver) indexBlockTransactions(
 	return nil
 }
 
+func (d *BadgerDriver) IndexTxPool(ctx context.Context, txPoolStatuses []*driver.TxPoolStatus) error {
+	return errors.New("not implemented")
+}
+
 func getTransactionStatus(receipt *types.Receipt) indexertypes.AddressActionStatus {
 	if receipt.Success {
 		return indexertypes.Success
@@ -170,7 +173,7 @@ func getTransactionStatus(receipt *types.Receipt) indexertypes.AddressActionStat
 }
 
 func storeAddressAction(tx db.RwTx, address types.Address, action *indexertypes.AddressAction) error {
-	key := makeAddressActionKey(address, uint64(action.Timestamp), action.Hash)
+	key := makeAddressActionKey(address, uint64(action.BlockId), action.Hash)
 	value, err := json.Marshal(action)
 	if err != nil {
 		return fmt.Errorf("failed to serialize address action: %w", err)
@@ -196,7 +199,7 @@ func makeAddressActionTimestampKey(address types.Address, timestamp uint64) []by
 func (b *BadgerDriver) FetchAddressActions(
 	ctx context.Context,
 	address types.Address,
-	since db.Timestamp,
+	since types.BlockNumber,
 ) ([]indexertypes.AddressAction, error) {
 	actions := make([]indexertypes.AddressAction, 0)
 	const limit = 100
@@ -267,8 +270,6 @@ func (b *BadgerDriver) FetchBlock(
 	}
 	if blockWithSSZ.Decoded != nil {
 		block = blockWithSSZ.Decoded.Block
-	} else {
-		return nil, err
 	}
 
 	return block, nil
@@ -387,7 +388,7 @@ func (b *BadgerDriver) HaveBlock(ctx context.Context, id types.ShardId, number t
 }
 
 func (b *BadgerDriver) FetchEarliestAbsentBlockId(ctx context.Context, id types.ShardId) (types.BlockNumber, error) {
-	var earliestAbsent types.BlockNumber = 0
+	var earliestAbsent types.BlockNumber
 
 	tx, err := b.db.CreateRoTx(ctx)
 	if err != nil {
@@ -411,7 +412,7 @@ func (b *BadgerDriver) FetchNextPresentBlockId(
 	id types.ShardId,
 	number types.BlockNumber,
 ) (types.BlockNumber, error) {
-	var nextPresent types.BlockNumber = 0
+	var nextPresent types.BlockNumber
 
 	tx, err := b.db.CreateRoTx(ctx)
 	if err != nil {

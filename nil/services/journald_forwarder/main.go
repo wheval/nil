@@ -43,6 +43,18 @@ func NewLogServer(click *Clickhouse, logger logging.Logger) *LogServer {
 
 var fieldStoreClickhouseTyped = logging.FieldStoreToClickhouse + logging.GetAbbreviation("bool")
 
+func createUniqueColumnsEvent(events []Event) Event {
+	uniqueColumns := Event{}
+	for _, event := range events {
+		for key, value := range event {
+			if _, exists := uniqueColumns[key]; !exists {
+				uniqueColumns[key] = value
+			}
+		}
+	}
+	return uniqueColumns
+}
+
 func extractLogColumns(data map[string]any) Event {
 	res := Event{}
 	for key, value := range data {
@@ -95,15 +107,8 @@ func storeData(ctx context.Context, click *Clickhouse, data []Event) error {
 	if len(data) == 0 {
 		return nil
 	}
-
-	index := 0
-	for i, d := range data {
-		if len(d) > len(data[index]) {
-			index = i
-		}
-	}
-
-	names := data[index].GetColumnNames()
+	uniqueEvent := createUniqueColumnsEvent(data)
+	names := uniqueEvent.GetColumnNames()
 	values := make([][]any, len(data))
 	for i, d := range data {
 		values[i] = make([]any, 0, len(d))
@@ -121,7 +126,7 @@ func storeData(ctx context.Context, click *Clickhouse, data []Event) error {
 
 func (s *LogServer) processResourceLog(resourceLog *v12.ResourceLogs) ([]Event, error) {
 	var res []Event
-	for _, scopeLog := range resourceLog.ScopeLogs {
+	for _, scopeLog := range resourceLog.GetScopeLogs() {
 		log, err := s.processScopeLog(scopeLog)
 		if err != nil {
 			return nil, err
@@ -133,7 +138,7 @@ func (s *LogServer) processResourceLog(resourceLog *v12.ResourceLogs) ([]Event, 
 
 func (s *LogServer) processScopeLog(scopeLog *v12.ScopeLogs) ([]Event, error) {
 	var res []Event
-	for _, logRecord := range scopeLog.LogRecords {
+	for _, logRecord := range scopeLog.GetLogRecords() {
 		log, err := s.processLogRecord(logRecord)
 		if err != nil {
 			return nil, err
@@ -149,7 +154,7 @@ func (s *LogServer) processLogRecord(logRecord *v12.LogRecord) (Event, error) {
 	var jsonData *v1.AnyValue
 	var hostname string
 	var unit string
-	for _, kv := range logRecord.Body.GetKvlistValue().GetValues() {
+	for _, kv := range logRecord.GetBody().GetKvlistValue().GetValues() {
 		switch kv.GetKey() {
 		case "JSON":
 			jsonData = kv.GetValue()
@@ -187,7 +192,7 @@ func (s *LogServer) Export(
 	ctx context.Context, req *logs.ExportLogsServiceRequest,
 ) (*logs.ExportLogsServiceResponse, error) {
 	var eventsToStore []Event
-	for _, resourceLog := range req.ResourceLogs {
+	for _, resourceLog := range req.GetResourceLogs() {
 		log, err := s.processResourceLog(resourceLog)
 		if err != nil {
 			return nil, err
@@ -206,23 +211,19 @@ func (s *LogServer) Export(
 		return nil, err
 	}
 
-	diffColumns := Event{}
-	for _, event := range eventsToStore {
-		for key, value := range event {
-			if _, exists := existColumns[key]; !exists && diffColumns[key] == (Record{}) {
-				diffColumns[key] = value
-			}
-		}
+	uniqueEvent := createUniqueColumnsEvent(eventsToStore)
+	for key := range existColumns {
+		delete(uniqueEvent, key)
 	}
 
-	if len(diffColumns) == 0 {
+	if len(uniqueEvent) == 0 {
 		s.logger.Error().Err(insertErr).Msgf("Error inserting data: %+v", eventsToStore)
 		return nil, err
 	}
 
-	diffNames := make([]string, 0, len(diffColumns))
-	diffTypes := make([]string, 0, len(diffColumns))
-	for key, value := range diffColumns {
+	diffNames := make([]string, 0, len(uniqueEvent))
+	diffTypes := make([]string, 0, len(uniqueEvent))
+	for key, value := range uniqueEvent {
 		chType, err := logging.GetClickhouseByAbbreviation(value.Type)
 		if err != nil {
 			s.logger.Error().Err(err).Msgf("Clickhouse type error: log %+v", eventsToStore)
