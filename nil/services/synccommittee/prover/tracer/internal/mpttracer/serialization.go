@@ -195,7 +195,7 @@ func smartContractToProto(smartContract *types.SmartContract) *pb.SmartContract 
 	}
 }
 
-func proofPathToProto(pathToNode mpt.ProofPath) (*pb.HumanReadableProof, error) {
+func proofPathToProto(pathToNode mpt.SimpleProof) (*pb.HumanReadableProof, error) {
 	nodes := make([]*pb.Node, len(pathToNode))
 	for i, node := range pathToNode {
 		pbNode, err := nodeToProto(node)

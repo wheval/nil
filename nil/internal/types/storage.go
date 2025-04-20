@@ -4,10 +4,9 @@ import (
 	"fmt"
 
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/holiman/uint256"
 )
 
-type Storage map[common.Hash]uint256.Int
+type Storage map[common.Hash]Uint256
 
 func (s Storage) String() (str string) {
 	for key, value := range s {
