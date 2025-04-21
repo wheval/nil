@@ -845,6 +845,9 @@ importers:
 
   rollup-bridge-contracts:
     dependencies:
+      '@nilfoundation/hardhat-nil-plugin':
+        specifier: workspace:*
+        version: link:../hardhat-plugin
       '@nilfoundation/niljs':
         specifier: workspace:*
         version: link:../niljs
