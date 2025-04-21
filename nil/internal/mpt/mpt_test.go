@@ -215,6 +215,43 @@ func TestDeleteLots(t *testing.T) {
 	require.Equal(t, trie.RootHash(), common.EmptyHash)
 }
 
+func TestDeleteSmall(t *testing.T) {
+	t.Parallel()
+
+	holder := NewInMemHolder()
+	trie := NewMPTFromMap(holder)
+	const size uint32 = 2
+
+	require.Equal(t, trie.RootHash(), common.EmptyHash)
+
+	var keys [size][]byte
+	var values [size][]byte
+	for i := range size {
+		keys[i] = binary.LittleEndian.AppendUint64(keys[i], rand.Uint64()) //nolint:gosec
+		values[i] = binary.LittleEndian.AppendUint32(values[i], i)
+	}
+
+	require.NoError(t, trie.SetBatch(keys[:], values[:]))
+	require.NotEqual(t, trie.RootHash(), common.EmptyHash)
+
+	require.NoError(t, trie.Delete(keys[0]))
+
+	data := make(map[string][]byte)
+	for k, v := range trie.Iterate() {
+		data[string(k)] = v
+	}
+	require.Len(t, data, 1)
+
+	trie2 := NewMPTFromMap(holder)
+	trie2.SetRootHash(trie.RootHash())
+	data2 := make(map[string][]byte)
+	for k, v := range trie2.Iterate() {
+		data2[string(k)] = v
+	}
+	require.Len(t, data2, 1)
+	require.Equal(t, trie.RootHash(), trie2.RootHash())
+}
+
 func TestTrieFromOldRoot(t *testing.T) {
 	t.Parallel()
 
