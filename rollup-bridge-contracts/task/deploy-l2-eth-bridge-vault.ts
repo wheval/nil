@@ -1,6 +1,6 @@
 import { task } from "hardhat/config";
-
-import fs from "node:fs";
+import { Wallet, ethers } from 'ethers';
+import * as fs from "fs";
 import {
   FaucetClient,
   HttpTransport,

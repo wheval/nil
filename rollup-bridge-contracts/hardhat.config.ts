@@ -5,7 +5,7 @@ import "hardhat-preprocessor";
 import "hardhat-deploy";
 require('@openzeppelin/hardhat-upgrades');
 import { resolve } from "path";
-import fs from "fs";
+import * as fs from "fs";
 
 dotenv.config();
 
