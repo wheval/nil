@@ -21,6 +21,8 @@ const remappings = getRemappings();
 
 console.log("Remappings:", remappings);
 
+import "./task/deploy-l2-eth-bridge-vault";
+
 
 const config: HardhatUserConfig = {
   ignition: {

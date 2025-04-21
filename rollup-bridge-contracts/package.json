@@ -69,7 +69,9 @@
     "solidity-coverage": "^0.8.5",
     "ts-node": "^10.9.1",
     "typechain": "^8.3.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "@nilfoundation/niljs": "workspace:*",
+    "@nilfoundation/smart-contracts": "workspace:*"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.1.0",
