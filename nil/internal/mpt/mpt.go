@@ -135,6 +135,14 @@ func (m *MerklePatriciaTrie) Delete(key []byte) error {
 	default:
 		return ErrInvalidAction
 	}
+
+	// We always save short root node in the storage, because `RootHash()` widens root to 32 bytes.
+	// So next time we want to read the root node, it will be 32-bytes width and thus will be fetched from the storage.
+	if m.root != nil && len(m.root) < 32 {
+		if err := m.setter.Set(m.RootHash().Bytes(), m.root); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
