@@ -1,4 +1,4 @@
-package mpt
+package mpt_test
 
 import (
 	"encoding/binary"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/NilFoundation/nil/nil/common"
+	"github.com/NilFoundation/nil/nil/internal/mpt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +40,7 @@ func generateTestCase(gen *rand.Rand, numOps int, minKeyLen, maxKeyLen int, alph
 	return res
 }
 
-func getValue(t *testing.T, trie *MerklePatriciaTrie, key []byte) []byte {
+func getValue(t *testing.T, trie *mpt.MerklePatriciaTrie, key []byte) []byte {
 	t.Helper()
 
 	value, err := trie.Get(key)
@@ -50,7 +51,7 @@ func getValue(t *testing.T, trie *MerklePatriciaTrie, key []byte) []byte {
 func TestInsertGetOneShort(t *testing.T) {
 	t.Parallel()
 
-	trie := NewInMemMPT()
+	trie := mpt.NewInMemMPT()
 	key := []byte("key")
 	value := []byte("value")
 
@@ -65,7 +66,7 @@ func TestInsertGetOneShort(t *testing.T) {
 func TestInsertGetOneLong(t *testing.T) {
 	t.Parallel()
 
-	trie := NewInMemMPT()
+	trie := mpt.NewInMemMPT()
 
 	key := []byte("key_0000000000000000000000000000000000000000000000000000000000000000")
 	value := []byte("value_0000000000000000000000000000000000000000000000000000000000000000")
@@ -76,7 +77,7 @@ func TestInsertGetOneLong(t *testing.T) {
 func TestInsertGetMany(t *testing.T) {
 	t.Parallel()
 
-	trie := NewInMemMPT()
+	trie := mpt.NewInMemMPT()
 
 	cases := []struct {
 		k string
@@ -100,7 +101,7 @@ func TestInsertGetMany(t *testing.T) {
 func TestIterate(t *testing.T) {
 	t.Parallel()
 
-	trie := NewInMemMPT()
+	trie := mpt.NewInMemMPT()
 	// Check iteration on the empty trie
 	//nolint: revive
 	for range trie.Iterate() {
@@ -125,7 +126,7 @@ func TestIterate(t *testing.T) {
 func TestInsertGetLots(t *testing.T) {
 	t.Parallel()
 
-	trie := NewInMemMPT()
+	trie := mpt.NewInMemMPT()
 	const size uint32 = 100
 
 	var keys [size][]byte
@@ -148,7 +149,7 @@ func TestInsertGetLots(t *testing.T) {
 func TestDeleteOne(t *testing.T) {
 	t.Parallel()
 
-	trie := NewInMemMPT()
+	trie := mpt.NewInMemMPT()
 
 	require.NoError(t, trie.Set([]byte("key"), []byte("value")))
 	require.NoError(t, trie.Delete([]byte("key")))
@@ -161,7 +162,7 @@ func TestDeleteOne(t *testing.T) {
 func TestDeleteMany(t *testing.T) {
 	t.Parallel()
 
-	trie := NewInMemMPT()
+	trie := mpt.NewInMemMPT()
 
 	require.NoError(t, trie.Set([]byte("do"), []byte("verb")))
 	require.NoError(t, trie.Set([]byte("dog"), []byte("puppy")))
@@ -190,7 +191,7 @@ func TestDeleteMany(t *testing.T) {
 func TestDeleteLots(t *testing.T) {
 	t.Parallel()
 
-	trie := NewInMemMPT()
+	trie := mpt.NewInMemMPT()
 	const size uint32 = 100
 
 	require.Equal(t, trie.RootHash(), common.EmptyHash)
@@ -218,8 +219,8 @@ func TestDeleteLots(t *testing.T) {
 func TestDeleteSmall(t *testing.T) {
 	t.Parallel()
 
-	holder := NewInMemHolder()
-	trie := NewMPTFromMap(holder)
+	holder := mpt.NewInMemHolder()
+	trie := mpt.NewMPTFromMap(holder)
 	const size uint32 = 2
 
 	require.Equal(t, trie.RootHash(), common.EmptyHash)
@@ -242,7 +243,7 @@ func TestDeleteSmall(t *testing.T) {
 	}
 	require.Len(t, data, 1)
 
-	trie2 := NewMPTFromMap(holder)
+	trie2 := mpt.NewMPTFromMap(holder)
 	trie2.SetRootHash(trie.RootHash())
 	data2 := make(map[string][]byte)
 	for k, v := range trie2.Iterate() {
@@ -255,7 +256,7 @@ func TestDeleteSmall(t *testing.T) {
 func TestTrieFromOldRoot(t *testing.T) {
 	t.Parallel()
 
-	trie := NewInMemMPT()
+	trie := mpt.NewInMemMPT()
 
 	require.NoError(t, trie.Set([]byte("do"), []byte("verb")))
 	require.NoError(t, trie.Set([]byte("dog"), []byte("puppy")))
@@ -280,16 +281,16 @@ func TestTrieFromOldRoot(t *testing.T) {
 func TestSmallRootHash(t *testing.T) {
 	t.Parallel()
 
-	holder := NewInMemHolder()
+	holder := mpt.NewInMemHolder()
 
-	trie := NewMPTFromMap(holder)
+	trie := mpt.NewMPTFromMap(holder)
 	key := []byte("key")
 	value := []byte("value")
 
 	require.NoError(t, trie.Set(key, value))
 	assert.Equal(t, value, getValue(t, trie, key))
 
-	trie2 := NewMPTFromMap(holder)
+	trie2 := mpt.NewMPTFromMap(holder)
 	trie2.SetRootHash(trie.RootHash())
 
 	assert.Equal(t, value, getValue(t, trie2, key))
@@ -302,8 +303,8 @@ func TestInsertBatch(t *testing.T) {
 	// pick short alphabet and short keys to increase key collisions count
 	treeOps := generateTestCase(gen, 1000, 1, 8, "abcdefgh")
 
-	trie := NewInMemMPT()
-	trieBatch := NewInMemMPT()
+	trie := mpt.NewInMemMPT()
+	trieBatch := mpt.NewInMemMPT()
 
 	checkTreesEqual := func(t *testing.T) {
 		t.Helper()
@@ -360,7 +361,7 @@ func TestInsertBatch(t *testing.T) {
 
 func BenchmarkTreeInsertions(b *testing.B) {
 	b.Run("simple insert", func(b *testing.B) {
-		trie := NewInMemMPT()
+		trie := mpt.NewInMemMPT()
 		gen := newRandGen()
 
 		// long keys and alphabet to increase key uniqueness
@@ -389,7 +390,7 @@ func BenchmarkTreeInsertions(b *testing.B) {
 	})
 
 	b.Run("batch insert", func(b *testing.B) {
-		trie := NewInMemMPT()
+		trie := mpt.NewInMemMPT()
 		gen := newRandGen()
 
 		// long keys and alphabet to increase key uniqueness
