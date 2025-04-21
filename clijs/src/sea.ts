@@ -1,5 +1,6 @@
 import { type Command, type Interfaces, execute } from "@oclif/core";
 
+import oclifrc from "../.oclifrc.json" assert { type: "json" };
 import pjson from "../package.json" assert { type: "json" };
 
 import Keygen from "./commands/keygen/index.js";
@@ -62,6 +63,7 @@ export const COMMANDS: Record<string, Command.Class> = {
 
 export async function run() {
   const patchedPjson = pjson as unknown as Interfaces.PJSON;
+  patchedPjson.oclif = oclifrc;
   patchedPjson.oclif.commands = {
     strategy: "explicit",
     target: COMMANDS_FILE,

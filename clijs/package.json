@@ -45,24 +45,10 @@
   "license": "MIT",
   "main": "dist/index.js",
   "type": "module",
-  "oclif": {
-    "bin": "clijs",
-    "dirname": "nil",
-    "commands": "./dist/src/commands",
-    "plugins": [],
-    "topicSeparator": " ",
-    "topics": {
-      "hello": {
-        "description": "Say hello to the world and others"
-      }
-    },
-    "macos": {
-      "identifier": "com.nilfoundation.clijs"
-    }
-  },
   "repository": "nil-blockchain/clijs",
   "scripts": {
     "build": "rimraf dist && tsc -b",
+    "build-to": "_() { rimraf $1 && tsc --outDir $1; }; _",
     "bundle": "rimraf dist && tsc -b && node ./bin/bundle.js",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
