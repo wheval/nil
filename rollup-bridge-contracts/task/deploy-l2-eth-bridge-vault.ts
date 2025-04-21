@@ -66,6 +66,9 @@ async function getSmartAccount(): Promise<SmartAccountV1> {
   }
 
   console.log("✅ Smart Account Funded (0.01 ETH)");
+
+  // update 
+
   return smartAccount;
 }
 
