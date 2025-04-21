@@ -11,7 +11,7 @@ $(root_relayer)/embed_l2_abi:
 
 .PHONY: $(root_relayer)/embed_l1_abi
 $(root_relayer)/embed_l1_abi:
-	cp $(root_services)/rollup-bridge-contracts-compiled-abi/contracts/bridge/l1/L1BridgeMessenger.sol/L1BridgeMessengerEvents.abi $(root_relayer)/internal/l1/L1BridgeMessenger.json.abi
+	cp $(root_services)/rollup-bridge-contracts-compiled-abi/contracts/bridge/l1/L1BridgeMessenger.sol/IRelayMessage.abi $(root_relayer)/internal/l1/L1BridgeMessenger.json.abi
 
 .PHONY: $(root_relayer)/generate_l1_abi
 $(root_relayer)/generate_l1_abi: $(root_relayer)/embed_l1_abi

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { NilConstants } from "../../common/libraries/NilConstants.sol";
+import { NilConstants } from "../../../common/libraries/NilConstants.sol";
 
-library L1BridgeMessengerEvents {
+interface IRelayMessage {
 
   struct FeeCreditData {
     uint256 nilGasLimit;
@@ -66,26 +66,22 @@ library L1BridgeMessengerEvents {
     FeeCreditData feeCreditData
   );
 
-  /// @notice Emitted when a deposit message is cancelled.
-  /// @param messageHash The hash of the deposit message that was cancelled.
-  event DepositMessageCancelled(bytes32 messageHash);
-
-
-  function emitMessage(SendMessageParams memory params,
-                       DepositMessage memory depositMessage,
-                       bytes32 messageHash,
-                       address messageSender) internal {
-    emit MessageSent(
-      messageSender,
-      params.messageTarget,
-      depositMessage.nonce,
-      params.message,
-      messageHash,
-      params.messageType,
-      block.timestamp,
-      depositMessage.expiryTime,
-      params.l2FeeRefundAddress,
-      params.feeCreditData
-    );
-  }
+  /// @notice Send cross chain message from L1 to L2 or L2 to L1.
+  /// @param messageType The messageType enum value
+  /// @param messageTarget The address of contract/account who receive the message.
+  /// @param message The content of the message.
+  /// @param l1DepositRefundAddress The address of recipient for the deposit-cancellation or claim failed deposit
+  /// @param l2FeeRefundAddress The address of the feeRefundRecipient on L2.
+  /// @param feeCreditData The feeCreditData for l2-Transaction-fee
+  function sendMessage(
+    NilConstants.MessageType messageType,
+    address messageTarget,
+    bytes calldata message,
+    address tokenAddress,
+    address depositorAddress,
+    uint256 depositAmount,
+    address l1DepositRefundAddress,
+    address l2FeeRefundAddress,
+    FeeCreditData memory feeCreditData
+  ) external payable;
 }

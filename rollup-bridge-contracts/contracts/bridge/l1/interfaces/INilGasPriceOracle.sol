@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import { L1BridgeMessengerEvents } from "../../libraries/L1BridgeMessengerEvents.sol";
+import { IRelayMessage } from "./IRelayMessage.sol";
 
 interface INilGasPriceOracle is IERC165 {
   /// @dev Invalid owner address.
@@ -37,5 +37,5 @@ interface INilGasPriceOracle is IERC165 {
     uint256 gasLimit,
     uint256 userMaxFeePerGas,
     uint256 userMaxPriorityFeePerGas
-  ) external view returns (L1BridgeMessengerEvents.FeeCreditData memory);
+  ) external view returns (IRelayMessage.FeeCreditData memory);
 }

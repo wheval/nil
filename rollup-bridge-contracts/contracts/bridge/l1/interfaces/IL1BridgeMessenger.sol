@@ -3,13 +3,13 @@ pragma solidity 0.8.28;
 
 import { IBridgeMessenger } from "../../interfaces/IBridgeMessenger.sol";
 import { NilConstants } from "../../../common/libraries/NilConstants.sol";
-import { L1BridgeMessengerEvents } from "../../libraries/L1BridgeMessengerEvents.sol";
+import { IRelayMessage } from "./IRelayMessage.sol";
 
 /// @title IL1BridgeMessenger
 /// @notice Interface for the L1BridgeMessenger contract which handles cross-chain messaging between L1 and L2.
 /// @dev This interface defines the functions and events for managing deposit messages, sending messages, and canceling
 /// deposits.
-interface IL1BridgeMessenger is IBridgeMessenger {
+interface IL1BridgeMessenger is IBridgeMessenger, IRelayMessage {
   /*//////////////////////////////////////////////////////////////////////////
                              ERRORS
     //////////////////////////////////////////////////////////////////////////*/
@@ -83,7 +83,7 @@ interface IL1BridgeMessenger is IBridgeMessenger {
   /// @notice Gets the deposit message for a given message hash.
   /// @param msgHash The hash of the deposit message.
   /// @return depositMessage The deposit message details.
-  function getDepositMessage(bytes32 msgHash) external view returns (L1BridgeMessengerEvents.DepositMessage memory depositMessage);
+  function getDepositMessage(bytes32 msgHash) external view returns (DepositMessage memory depositMessage);
 
   /// @notice Get the list of authorized bridges
   /// @return The list of authorized bridge addresses.
@@ -96,28 +96,13 @@ interface IL1BridgeMessenger is IBridgeMessenger {
     bytes memory message
   ) external pure returns (bytes32);
 
+  /// @notice Emitted when a deposit message is cancelled.
+  /// @param messageHash The hash of the deposit message that was cancelled.
+  event DepositMessageCancelled(bytes32 messageHash);
+
   /*//////////////////////////////////////////////////////////////////////////
                            PUBLIC MUTATING FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*/
-
-  /// @notice Send cross chain message from L1 to L2 or L2 to L1.
-  /// @param messageType The messageType enum value
-  /// @param messageTarget The address of contract/account who receive the message.
-  /// @param message The content of the message.
-  /// @param l1DepositRefundAddress The address of recipient for the deposit-cancellation or claim failed deposit
-  /// @param l2FeeRefundAddress The address of the feeRefundRecipient on L2.
-  /// @param feeCreditData The feeCreditData for l2-Transaction-fee
-  function sendMessage(
-    NilConstants.MessageType messageType,
-    address messageTarget,
-    bytes calldata message,
-    address tokenAddress,
-    address depositorAddress,
-    uint256 depositAmount,
-    address l1DepositRefundAddress,
-    address l2FeeRefundAddress,
-    L1BridgeMessengerEvents.FeeCreditData memory feeCreditData
-  ) external payable;
 
   /// @notice Cancels a deposit message.
   /// @param messageHash The hash of the deposit message to cancel.

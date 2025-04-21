@@ -15,7 +15,7 @@ import { IL1BridgeMessenger } from "./interfaces/IL1BridgeMessenger.sol";
 import { INilGasPriceOracle } from "./interfaces/INilGasPriceOracle.sol";
 import { NilAccessControlUpgradeable } from "../../NilAccessControlUpgradeable.sol";
 import { L1BaseBridge } from "./L1BaseBridge.sol";
-import { L1BridgeMessengerEvents } from "../libraries/L1BridgeMessengerEvents.sol";
+import { IRelayMessage } from "./interfaces/IRelayMessage.sol";
 
 /// @title L1ETHBridge
 /// @notice The `L1ETHBridge` contract for ETH bridging from L1.
@@ -136,7 +136,7 @@ contract L1ETHBridge is L1BaseBridge, IL1ETHBridge {
     address caller = _msgSender();
 
     // get DepositMessageDetails
-    L1BridgeMessengerEvents.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(
+    IRelayMessage.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(
       messageHash
     );
 
@@ -166,7 +166,7 @@ contract L1ETHBridge is L1BaseBridge, IL1ETHBridge {
     bytes32 messageHash,
     bytes32[] memory claimProof
   ) public override nonReentrant whenNotPaused {
-    L1BridgeMessengerEvents.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(
+    IRelayMessage.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(
       messageHash
     );
 

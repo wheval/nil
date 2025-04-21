@@ -18,7 +18,7 @@ import { IBridge } from "../interfaces/IBridge.sol";
 import { IL1BridgeMessenger } from "./interfaces/IL1BridgeMessenger.sol";
 import { INilGasPriceOracle } from "./interfaces/INilGasPriceOracle.sol";
 import { L1BaseBridge } from "./L1BaseBridge.sol";
-import { L1BridgeMessengerEvents } from "../libraries/L1BridgeMessengerEvents.sol";
+import { IRelayMessage } from "./interfaces/IRelayMessage.sol";
 
 /// @title L1ERC20Bridge
 /// @notice The `L1ERC20Bridge` contract for ERC20Bridging in L1.
@@ -132,7 +132,7 @@ contract L1ERC20Bridge is L1BaseBridge, IL1ERC20Bridge {
     address caller = _msgSender();
 
     // get DepositMessageDetails
-    L1BridgeMessengerEvents.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(
+    IRelayMessage.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(
       messageHash
     );
 
@@ -163,7 +163,7 @@ contract L1ERC20Bridge is L1BaseBridge, IL1ERC20Bridge {
     bytes32 messageHash,
     bytes32[] memory claimProof
   ) public override nonReentrant whenNotPaused {
-    L1BridgeMessengerEvents.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(
+    IRelayMessage.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(
       messageHash
     );
 
