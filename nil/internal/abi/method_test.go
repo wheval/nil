@@ -139,9 +139,9 @@ func TestMethodString(t *testing.T) {
 	for _, test := range table {
 		var got string
 		switch test.method {
-		case "fallback":
+		case fallback:
 			got = abi.Fallback.String()
-		case "receive":
+		case receive:
 			got = abi.Receive.String()
 		default:
 			got = abi.Methods[test.method].String()
