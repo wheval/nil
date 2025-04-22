@@ -25,14 +25,17 @@ func TestConfigYamlSerialization(t *testing.T) {
 			addrInfo1,
 			addrInfo2,
 		},
+		RelayPublicAddress: addrInfo1,
 	}
 
 	data, err := yaml.Marshal(config)
 	require.NoError(t, err)
 
-	expectedYaml := `dhtBootstrapPeers:
-- /ip4/127.0.0.1/tcp/1500/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yf
-- /ip4/192.168.1.1/tcp/4002/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yg
+	expectedYaml := `---
+dhtBootstrapPeers:
+  - /ip4/127.0.0.1/tcp/1500/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yf
+  - /ip4/192.168.1.1/tcp/4002/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yg
+relayPublicAddress: /ip4/127.0.0.1/tcp/1500/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yf
 `
 	require.YAMLEq(t, expectedYaml, string(data))
 
@@ -53,15 +56,14 @@ func TestAddrInfoStringRepresentation(t *testing.T) {
 		"/ip4/192.168.0.10/tcp/4002/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yf")
 	require.NoError(t, err)
 
-	_, id := peer.SplitAddr(addr1)
+	transport1, id := peer.SplitAddr(addr1)
+	transport2, _ := peer.SplitAddr(addr2)
 	addrInfo := AddrInfo{
 		ID:    id,
-		Addrs: []ma.Multiaddr{addr1, addr2},
+		Addrs: []ma.Multiaddr{transport1, transport2},
 	}
 
-	expectedString := "/ip4/127.0.0.1/tcp/1500/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yf" +
-		"/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yf," +
-		"/ip4/192.168.0.10/tcp/4002/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yf" +
-		"/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yf"
+	expectedString := "/ip4/127.0.0.1/tcp/1500/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yf," +
+		"/ip4/192.168.0.10/tcp/4002/p2p/16Uiu2HAmQctkUi9y7WfUtYa9rPon1m5TRBtXSvUwi2VtpbWZj4yf"
 	require.Equal(t, expectedString, addrInfo.String())
 }

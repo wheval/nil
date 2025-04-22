@@ -15,6 +15,7 @@ func AddNetwork(fset *pflag.FlagSet, cfg *network.Config) {
 
 	fset.BoolVar(&cfg.ServeRelay, "serve-relay", cfg.ServeRelay, "enable relay")
 	fset.Var(&cfg.Relays, "relays", "relay peers")
+	fset.Var(&cfg.RelayPublicAddress, "relay-public-address", "public address of relay")
 
 	fset.BoolVar(&cfg.DHTEnabled, "with-discovery", cfg.DHTEnabled, "enable discovery (with Kademlia DHT)")
 	fset.Var(&cfg.DHTBootstrapPeers, "discovery-bootstrap-peers", "bootstrap peers for discovery")

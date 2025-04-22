@@ -23,6 +23,8 @@ type Config struct {
 
 	ServeRelay bool          `yaml:"serveRelay,omitempty"`
 	Relays     AddrInfoSlice `yaml:"relays,omitempty"`
+	// RelayPublicAddress is the public relay address used to wrap the node's own address in BootstrapConfig if set.
+	RelayPublicAddress AddrInfo `yaml:"relayPublicAddress,omitempty"`
 
 	DHTEnabled        bool          `yaml:"dhtEnabled,omitempty"`
 	DHTBootstrapPeers AddrInfoSlice `yaml:"dhtBootstrapPeers,omitempty"`

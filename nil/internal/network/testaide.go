@@ -11,28 +11,14 @@ import (
 	"time"
 
 	"github.com/NilFoundation/nil/nil/common"
-	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 )
-
-func CalcAddress(m Manager) AddrInfo {
-	addr, err := peer.AddrInfoFromString(hostAddress(m))
-	check.PanicIfErr(err)
-	return AddrInfo(*addr)
-}
-
-func hostAddress(m Manager) string {
-	return m.getHost().Addrs()[0].String() + "/p2p/" + m.getHost().ID().String()
-}
 
 func NewTestManagerWithBaseConfig(ctx context.Context, t *testing.T, conf *Config) *BasicManager {
 	t.Helper()
 
 	conf = common.CopyPtr(conf)
-	if conf.IPV4Address == "" {
-		conf.IPV4Address = "127.0.0.1"
-	}
 	if conf.PrivateKey == nil {
 		privateKey, err := GeneratePrivateKey()
 		require.NoError(t, err)
