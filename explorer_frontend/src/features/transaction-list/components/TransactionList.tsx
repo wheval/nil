@@ -10,6 +10,7 @@ import { InfoContainer, OverflowEllipsis, addHexPrefix, formatShard } from "../.
 import { Card } from "../../shared/components/Card";
 import { Link } from "../../shared/components/Link";
 import { MobileConvertableTable } from "../../shared/components/MobileConvertableTable";
+import { useMobile } from "../../shared/hooks/useMobile";
 import { measure } from "../../shared/utils/measure";
 import { formatMethod } from "../../shared/utils/method";
 import {
@@ -18,7 +19,6 @@ import {
   fetchTransactionListFx,
   showList,
 } from "../model";
-
 export const TransactionList = ({ type, identifier, view }: TransactionListProps) => {
   const [isMobile] = useMobile();
   const [css] = useStyletron();
