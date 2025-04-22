@@ -21,8 +21,8 @@ const remappings = getRemappings();
 
 console.log("Remappings:", remappings);
 
-import "./task/deploy-l2-eth-bridge-vault";
-
+import "./task/generate-nil-smart-account";
+import "./task/deploy-nil-message-tree";
 
 const config: HardhatUserConfig = {
   ignition: {
@@ -82,7 +82,7 @@ const config: HardhatUserConfig = {
       url: process.env.SEPOLIA_RPC_ENDPOINT,
       accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
       gas: 1000000
-    }
+    },
   },
   namedAccounts: {
     deployer: {

@@ -2,8 +2,8 @@
   "networks": {
     "local": {
       "l2Common": {
-        "owner": "",
-        "admin": "",
+        "owner": "0x00018026b25579652d9fe718acfb6bcb1bc0d331",
+        "admin": "0x00018026b25579652d9fe718acfb6bcb1bc0d331",
         "enshrined_tokens": [
           {
             "name": "USD Coin",
@@ -25,33 +25,42 @@
           }
         ]
       },
-      "l2BridgeRouterConfig": {
-        "owner": "",
-        "admin": "",
-        "proxyAdmin": "",
-        "l2BridgeRouterProxy": "",
-        "l2BridgeRouterImplementation": ""
+      "nilMessageTree": {
+        "nilMessageTreeContracts": {
+          "nilMessageTreeImplementationAddress": ""
+        }
       },
-      "l2BridgeMessengerConfig": {
-        "owner": "",
-        "admin": "",
-        "proxyAdmin": "",
-        "l2BridgeMessengerProxy": "",
-        "l2BridgeMessengerImplementation": ""
+      "l2ETHBridgeVault": {
+        "l2BridgeMessengerContracts": {
+          "proxyAdmin": "",
+          "l2ETHBridgeVaultProxy": "",
+          "l2ETHBridgeVaultImplementation": ""
+        }
       },
-      "l2EnshrinedTokenBridge": {
-        "owner": "",
-        "admin": "",
-        "proxyAdmin": "",
-        "l2EnshrinedTokenBridgeProxy": "",
-        "l1EnshrinedTokenBridgeImplementation": ""
+      "l2BridgeMessenger": {
+        "l2BridgeMessengerContracts": {
+          "proxyAdmin": "",
+          "l2BridgeMessengerProxy": "",
+          "l2BridgeMessengerImplementation": ""
+        },
+        "l2BridgeMessengerDeployerConfig": {
+          "relayerAddress": "",
+          "messageExpiryDeltaValue": 10000
+        }
+      },
+      "l2EnshrinedTokenBridgeConfig": {
+        "l2EnshrinedTokenBridgeContracts": {
+          "proxyAdmin": "",
+          "l2EnshrinedTokenBridgeProxy": "",
+          "l1EnshrinedTokenBridgeImplementation": ""
+        }
       },
       "l2ETHBridgeConfig": {
-        "owner": "",
-        "admin": "",
-        "proxyAdmin": "",
-        "l2ETHBridgeProxy": "",
-        "l2ETHBridgeImplementation": ""
+        "l2ETHBridgeContracts": {
+          "proxyAdmin": "",
+          "l2ETHBridgeProxy": "",
+          "l2ETHBridgeImplementation": ""
+        }
       }
     }
   }

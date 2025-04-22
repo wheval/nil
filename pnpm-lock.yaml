@@ -860,6 +860,9 @@ importers:
       '@openzeppelin/hardhat-upgrades':
         specifier: ^3.8.0
         version: 3.9.0(@nomicfoundation/hardhat-ethers@3.0.8(ethers@6.13.5)(hardhat@2.22.19(ts-node@10.9.2(@types/node@22.13.14)(typescript@5.8.2))(typescript@5.8.2)))(@nomicfoundation/hardhat-verify@2.0.13(hardhat@2.22.19(ts-node@10.9.2(@types/node@22.13.14)(typescript@5.8.2))(typescript@5.8.2)))(encoding@0.1.13)(ethers@6.13.5)(hardhat@2.22.19(ts-node@10.9.2(@types/node@22.13.14)(typescript@5.8.2))(typescript@5.8.2))
+      abitype:
+        specifier: ^1.0.7
+        version: 1.0.8(typescript@5.8.2)(zod@3.24.2)
       dotenv:
         specifier: ^16.4.5
         version: 16.4.7
