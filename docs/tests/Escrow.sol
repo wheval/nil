@@ -4,8 +4,9 @@
 pragma solidity ^0.8.9;
 
 import "@nilfoundation/smart-contracts/contracts/Nil.sol";
+import "@nilfoundation/smart-contracts/contracts/NilAwaitable.sol";
 
-contract Escrow is NilBase {
+contract Escrow is NilBase, NilAwaitable {
     using Nil for address;
     mapping(address => uint256) private deposits;
 
@@ -18,8 +19,7 @@ contract Escrow is NilBase {
         address participantOne,
         address participantTwo
     ) public payable {
-        bytes memory context = abi.encodeWithSelector(
-            this.resolve.selector,
+        bytes memory context = abi.encode(
             participantOne,
             participantTwo,
             msg.value
@@ -29,12 +29,13 @@ contract Escrow is NilBase {
             participantOne,
             participantTwo
         );
-        Nil.sendRequest(
+        sendRequest(
             validator,
             0,
             Nil.ASYNC_REQUEST_MIN_GAS,
             context,
-            callData
+            callData,
+            resolve
         );
     }
 

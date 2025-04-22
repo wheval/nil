@@ -103,7 +103,7 @@ func TestSszSmc(t *testing.T) {
 	h, err := common.KeccakSSZ(&smc2)
 	require.NoError(t, err)
 
-	h2 := common.HexToHash("0x7e49c6eb880af1b4bbab01fcac2efe8a5d1105f1ecabf6ddcc7210c069b6f1e2")
+	h2 := common.HexToHash("0x42f74e491aa2671a10dcb3ab8b1a2a4fc62531dd550bba1b8f1d97ee10ce00bc")
 	require.Equal(t, h2, common.BytesToHash(h[:]))
 }
 

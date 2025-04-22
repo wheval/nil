@@ -2,8 +2,9 @@
 pragma solidity ^0.8.9;
 
 import "@nilfoundation/smart-contracts/contracts/Nil.sol";
+import "@nilfoundation/smart-contracts/contracts/NilAwaitable.sol";
 
-contract CheckEffectsInteractionParent is NilBase {
+contract CheckEffectsInteractionParent is NilBase, NilAwaitable {
     mapping(address => uint) exampleBalances;
     uint public exampleBalance = exampleBalances[msg.sender];
 
@@ -22,17 +23,14 @@ contract CheckEffectsInteractionParent is NilBase {
         // Effects
         exampleBalance -= amount;
 
-        bytes memory context = abi.encodeWithSelector(
-            this.callback.selector,
-            amount
-        );
+        bytes memory context = abi.encode(amount);
         bytes memory callData = abi.encodeWithSignature(
             "executed(bool)",
             value
         );
 
         // Interaction
-        Nil.sendRequest(dst, 0, Nil.ASYNC_REQUEST_MIN_GAS, context, callData);
+        sendRequest(dst, 0, Nil.ASYNC_REQUEST_MIN_GAS, context, callData, callback);
     }
 
     function callback(

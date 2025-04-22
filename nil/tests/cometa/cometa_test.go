@@ -183,7 +183,7 @@ func (s *SuiteCometa) TestGeneratedCode() {
 
 	loc, err = s.cometaClient.GetLocation(s.Context, testAddress, uint64(receipt.FailedPc))
 	s.Require().NoError(err)
-	s.Require().Equal("Test.sol:7, function: #function_selector", loc.String())
+	s.Require().Equal("Test.sol:8, function: #function_selector", loc.String())
 
 	data = s.AbiPack(testAbi, "makeFail", int32(1))
 	receipt = s.SendExternalTransactionNoCheck(data, testAddress)

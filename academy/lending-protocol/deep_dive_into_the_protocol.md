@@ -55,11 +55,11 @@ The **`sendRequest`** and **`sendRequestWithTokens`** functions are used to send
 Example of using `sendRequest`:
 
 ```solidity
-bytes memory callData = abi.encodeWithSignature("getPrice(address)", borrowToken);
+bytes memory callData = abi.encode(borrowToken);
 bytes memory context = abi.encodeWithSelector(
     this.processLoan.selector, msg.sender, amount, borrowToken, collateralToken
 );
-Nil.sendRequest(oracle, 0, 9_000_000, context, callData);
+sendRequest(oracle, 0, 9_000_000, context, callData, getPrice);
 ```
 
 **Key Points:**
