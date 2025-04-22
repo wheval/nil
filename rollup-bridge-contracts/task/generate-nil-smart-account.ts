@@ -16,7 +16,7 @@ import { decodeFunctionResult, encodeFunctionData } from "viem";
 import { L2NetworkConfig, loadNilNetworkConfig, saveNilNetworkConfig } from "../deploy/config/config-helper";
 import { generateNilSmartAccount } from "./nil-smart-account";
 
-let smartAccount: SmartAccountV1 | null = null;
+let deployerAccount: SmartAccountV1 | null = null;
 
 // npx hardhat generate-nil-smart-account --networkname local
 task("generate-nil-smart-account", "Deploys a SmartAccount on Nil Chain")
@@ -25,6 +25,6 @@ task("generate-nil-smart-account", "Deploys a SmartAccount on Nil Chain")
     const networkName = taskArgs.networkname;
     console.log(`Running task on network: ${networkName}`);
 
-    const deployerAccount = await generateNilSmartAccount(networkName);
-    if (!smartAccount) throw new Error("SmartAccount is not initialized.");
+    deployerAccount = await generateNilSmartAccount(networkName);
+    if (!deployerAccount) throw new Error("SmartAccount is not initialized.");
   });
