@@ -6,6 +6,7 @@ import {
     LocalECDSAKeySigner,
     PublicClient,
     SmartAccountV1,
+    getContract,
     convertEthToWei,
     Transaction,
     generateRandomPrivateKey,
@@ -85,63 +86,18 @@ task("deploy-my-logic", "Deploys MyLogic contract on Nil Chain")
         console.log("Waiting 5 seconds...");
         await new Promise((res) => setTimeout(res, 10000));
 
-        const fetchAdminCall = encodeFunctionData({
-            abi: TransparentUpgradeableProxy.default.abi,
-            functionName: "fetchAdmin",
-            args: [],
-        });
+        console.log(`abi is: ${JSON.stringify(MyLogicJson.default.abi)}`);
 
-        const adminResult = await deployerAccount.client.call({
-            to: addressProxy,
-            data: fetchAdminCall,
-            from: deployerAccount.address,
-        }, "latest");
-
-        console.log(`adminResult queried is: ${JSON.stringify(adminResult)}`);
-
-        const proxyAdminAddress = decodeFunctionResult({
-            abi: TransparentUpgradeableProxy.default.abi,
-            functionName: "fetchAdmin",
-            data: adminResult.data,
-        }) as string;
-
-        console.log("✅ ProxyAdmin Address:", proxyAdminAddress);
-
-        const owner = encodeFunctionData({
-            abi: ProxyAdmin.default.abi,
-            functionName: "owner",
-            args: [],
-        })
-
-        const ownerResult = await deployerAccount.client.call({
-            to: proxyAdminAddress as `0x${string}`,
-            data: owner,
-            from: deployerAccount.address,
-        }, "latest");
-
-        const proxyAdminOwner = decodeFunctionResult({
-            abi: ProxyAdmin.default.abi,
-            functionName: "owner",
-            data: ownerResult.data,
-        }) as string;
-
-        console.log("✅ ProxyAdmin Owner:", proxyAdminOwner);
-
-        const getValueData = encodeFunctionData({
+        const myLogicContractInstance = getContract({
             abi: MyLogicJson.default.abi,
-            functionName: "value",
-            args: [],
+            address: addressProxy,
+            client: deployerAccount.client,
+            smartAccount: deployerAccount,
         });
-        const getValueCall = await deployerAccount.client.call({
-            to: addressProxy,
-            from: deployerAccount.address,
-            data: getValueData,
-        }, "latest");
 
-        const getValue = decodeFunctionResult({
-            abi: MyLogicJson.default.abi,
-            functionName: "value",
-            data: getValueCall.data,
-        });
-        console.log("✅ Current value in Logic contract:", getValue);
+        console.log("Properties of myLogicContractInstance:", Object.keys(myLogicContractInstance.read));
+
+        const value = await myLogicContractInstance.read.getImplementation();
+
+        console.log(`value from MyLogic is: ${value}`);
     });

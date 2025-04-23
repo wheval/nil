@@ -34,4 +34,12 @@ contract MyLogic is OwnableUpgradeable, PausableUpgradeable, NilAccessControlUpg
   function setValue(uint256 _value) public {
     value = _value;
   }
+
+  function getValue() public view returns (uint256) {
+    return value;
+  }
+
+  function getImplementation() public view returns (address) {
+    return StorageUtils.getImplementationAddress(NilConstants.IMPLEMENTATION_SLOT);
+  }
 }
