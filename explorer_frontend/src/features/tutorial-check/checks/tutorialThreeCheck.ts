@@ -3,7 +3,7 @@ import { TutorialChecksStatus } from "../../../pages/tutorials/model";
 import { deploySmartContractFx } from "../../contracts/models/base";
 import type { CheckProps } from "../CheckProps";
 
-async function runTutorialCheckThree(props: CheckProps) {
+export async function runTutorialCheckThree(props: CheckProps) {
   const client = new PublicClient({
     transport: new HttpTransport({
       endpoint: props.rpcUrl,
@@ -106,5 +106,3 @@ async function runTutorialCheckThree(props: CheckProps) {
 
   return true;
 }
-
-export default runTutorialCheckThree;

@@ -77,8 +77,10 @@
     "serve": "^14.2.4",
     "solc": "^0.8.29",
     "vite-bundle-visualizer": "^1.1.0",
+    "vite-plugin-circular-dependency": "0.5.0",
     "vite-plugin-string": "^1.2.3",
     "vitest": "^3.1.1",
+    "vitest-canvas-mock": "0.3.3",
     "wait-on": "^8.0.1"
   }
 }

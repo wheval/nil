@@ -5,7 +5,7 @@ import { Layout } from "../../features/shared/components/Layout";
 import { Transaction } from "../../features/transaction";
 import { explorerContainer } from "../../styleHelpers";
 
-const TransactionPage = () => {
+export const TransactionPage = () => {
   const [css] = useStyletron();
   return (
     <div className={css(explorerContainer)}>
@@ -18,5 +18,3 @@ const TransactionPage = () => {
     </div>
   );
 };
-
-export default TransactionPage;

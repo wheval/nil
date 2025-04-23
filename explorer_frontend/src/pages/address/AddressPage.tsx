@@ -4,7 +4,7 @@ import type { TabsOverrides } from "baseui/tabs";
 import { type Store, combine } from "effector";
 import { useUnit } from "effector-react";
 import { AccountInfo } from "../../features/account";
-import { addressRoute, addressTransactionsRoute } from "../../features/routing";
+import { addressRoute, addressTransactionsRoute } from "../../features/routing/routes/addressRoute";
 import { Layout, Meta } from "../../features/shared";
 import { InternalPageContainer } from "../../features/shared";
 import { TransactionList } from "../../features/transaction-list";

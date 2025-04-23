@@ -1,11 +1,10 @@
-import type { FC, ReactNode } from "react";
 import { useStyletron } from "styletron-react";
 
 type InternalPageContainerProps = {
-  children: ReactNode;
+  children: JSX.Element | JSX.Element[];
 };
 
-export const InternalPageContainer: FC<InternalPageContainerProps> = ({ children }) => {
+export const InternalPageContainer = ({ children }: InternalPageContainerProps) => {
   const [css] = useStyletron();
 
   return (

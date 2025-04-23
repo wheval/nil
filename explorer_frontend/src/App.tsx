@@ -3,7 +3,7 @@ import { RouterProvider } from "atomic-router-react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useStyletron } from "styletron-react";
 import { router } from "./features/routing";
-import { RoutesView } from "./features/routing";
+import { RoutesView } from "./features/routing/components/RoutesView";
 import type { StylesObject } from "./features/shared";
 
 const styles: StylesObject = {

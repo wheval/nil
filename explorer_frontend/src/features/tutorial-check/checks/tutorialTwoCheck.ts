@@ -4,7 +4,7 @@ import type { CheckProps } from "../CheckProps";
 
 const CUSTOM_TOKEN_AMOUNT = 30_000n;
 
-async function runTutorialCheckTwo(props: CheckProps) {
+export async function runTutorialCheckTwo(props: CheckProps) {
   const client = new PublicClient({
     transport: new HttpTransport({
       endpoint: props.rpcUrl,
@@ -134,5 +134,3 @@ async function runTutorialCheckTwo(props: CheckProps) {
 
   return true;
 }
-
-export default runTutorialCheckTwo;
