@@ -13,9 +13,6 @@ import {
 } from "@nilfoundation/niljs";
 import { loadNilSmartAccount } from "./nil-smart-account";
 import { L2NetworkConfig, loadNilNetworkConfig, saveNilNetworkConfig } from "../deploy/config/config-helper";
-import * as L2BridgeMessengerJson from "../artifacts/contracts/bridge/l2/L2BridgeMessenger.sol/L2BridgeMessenger.json";
-import * as TransparentUpgradeableProxy from "../artifacts/contracts/common/TransparentUpgradeableProxy.sol/MyTransparentUpgradeableProxy.json";
-import * as ProxyAdmin from "../artifacts/node_modules/@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol/ProxyAdmin.json";
 import { decodeFunctionResult, encodeFunctionData } from "viem";
 
 // npx hardhat deploy-l2-bridge-messenger --networkname local
@@ -23,7 +20,12 @@ task("deploy-l2-bridge-messenger", "Deploys L2BridgeMessenger contract on Nil Ch
     .addParam("networkname", "The network to use") // Mandatory parameter
     .setAction(async (taskArgs) => {
 
-        if (!L2BridgeMessengerJson || !L2BridgeMessengerJson.abi || !L2BridgeMessengerJson.bytecode) {
+        // Dynamically load artifacts
+        const L2BridgeMessengerJson = await import("../artifacts/contracts/bridge/l2/L2BridgeMessenger.sol/L2BridgeMessenger.json");
+        const TransparentUpgradeableProxy = await import("../artifacts/contracts/common/TransparentUpgradeableProxy.sol/MyTransparentUpgradeableProxy.json");
+        const ProxyAdmin = await import("../artifacts/node_modules/@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol/ProxyAdmin.json");
+
+        if (!L2BridgeMessengerJson || !L2BridgeMessengerJson.default || !L2BridgeMessengerJson.default.abi || !L2BridgeMessengerJson.default.bytecode) {
             throw Error(`Invalid L2BridgeMessengerJson ABI`);
         }
 
@@ -49,8 +51,8 @@ task("deploy-l2-bridge-messenger", "Deploys L2BridgeMessenger contract on Nil Ch
 
         const { address: nilMessengerImplementationAddress, hash: nilMessengerImplementationDeploymentTxHash } = await deployerAccount.deployContract({
             shardId: 1,
-            bytecode: L2BridgeMessengerJson.bytecode,
-            abi: L2BridgeMessengerJson.abi,
+            bytecode: L2BridgeMessengerJson.default.bytecode,
+            abi: L2BridgeMessengerJson.default.abi,
             args: [],
             salt: BigInt(Math.floor(Math.random() * 10000)),
             feeCredit: BigInt("19340180000000"),
@@ -73,7 +75,7 @@ task("deploy-l2-bridge-messenger", "Deploys L2BridgeMessenger contract on Nil Ch
         l2NetworkConfig.l2BridgeMessenger.l2BridgeMessengerContracts.l2BridgeMessengerImplementation = nilMessengerImplementationAddress;
 
         const initData = encodeFunctionData({
-            abi: L2BridgeMessengerJson.abi,
+            abi: L2BridgeMessengerJson.default.abi,
             functionName: "initialize",
             args: [l2NetworkConfig.l2Common.owner, l2NetworkConfig.l2Common.admin,
             l2NetworkConfig.l2BridgeMessenger.l2BridgeMessengerDeployerConfig.relayerAddress,
@@ -88,8 +90,8 @@ task("deploy-l2-bridge-messenger", "Deploys L2BridgeMessenger contract on Nil Ch
 
         const { address: addressProxy, hash: hashProxy } = await deployerAccount.deployContract({
             shardId: 1,
-            bytecode: TransparentUpgradeableProxy.bytecode,
-            abi: TransparentUpgradeableProxy.abi,
+            bytecode: TransparentUpgradeableProxy.default.bytecode,
+            abi: TransparentUpgradeableProxy.default.abi,
             args: [nilMessengerImplementationAddress, deployerAccount.address, initData],
             salt: BigInt(Math.floor(Math.random() * 10000)),
             feeCredit: convertEthToWei(0.001),
@@ -103,7 +105,7 @@ task("deploy-l2-bridge-messenger", "Deploys L2BridgeMessenger contract on Nil Ch
         await new Promise((res) => setTimeout(res, 5000));
 
         const fetchImplementationCall = encodeFunctionData({
-            abi: TransparentUpgradeableProxy.abi,
+            abi: TransparentUpgradeableProxy.default.abi,
             functionName: "fetchImplementation",
             args: [],
         });
@@ -117,7 +119,7 @@ task("deploy-l2-bridge-messenger", "Deploys L2BridgeMessenger contract on Nil Ch
         console.log(`L2BridgeMessengerProxy has fetch-implementation-result: ${JSON.stringify(fetchImplementationResult)}`);
 
         const proxyImplementationAddress = decodeFunctionResult({
-            abi: TransparentUpgradeableProxy.abi,
+            abi: TransparentUpgradeableProxy.default.abi,
             functionName: "fetchImplementation",
             data: fetchImplementationResult.data,
         }) as string;
@@ -125,7 +127,7 @@ task("deploy-l2-bridge-messenger", "Deploys L2BridgeMessenger contract on Nil Ch
         console.log("✅ proxyImplementationAddress Address:", proxyImplementationAddress);
 
         const fetchAdminCall = encodeFunctionData({
-            abi: TransparentUpgradeableProxy.abi,
+            abi: TransparentUpgradeableProxy.default.abi,
             functionName: "fetchAdmin",
             args: [],
         });
@@ -139,7 +141,7 @@ task("deploy-l2-bridge-messenger", "Deploys L2BridgeMessenger contract on Nil Ch
         console.log(`L2BridgeMessengerProxy has admin-result: ${JSON.stringify(adminResult)}`);
 
         const proxyAdminAddress = decodeFunctionResult({
-            abi: TransparentUpgradeableProxy.abi,
+            abi: TransparentUpgradeableProxy.default.abi,
             functionName: "fetchAdmin",
             data: adminResult.data,
         }) as string;
