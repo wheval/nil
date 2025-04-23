@@ -66,7 +66,7 @@ describe("Tutorial Two tests", async () => {
     const testProps: CheckProps = { ...TEST_PROPS, contracts };
 
 
-    const testRes = await runTutorialCheckΤwo(testProps);
+    const testRes = await runTutorialCheckTwo(testProps);
     expect(testRes).toBe(true);
   })
 }, 45000);
