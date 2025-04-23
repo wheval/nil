@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ethers } from 'ethers';
-
+import * as ethers from 'ethers';
 
 /**
  * L1 CONFIG SCHEMA
@@ -27,6 +26,7 @@ export interface L1NetworkConfig {
 export interface L1DeployerConfig {
     owner: string;
     admin: string;
+    shardId: number;
 }
 
 export interface L1CommonContracts {

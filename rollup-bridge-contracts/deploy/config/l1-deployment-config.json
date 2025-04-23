@@ -3,7 +3,8 @@
     "geth": {
       "l1DeployerConfig": {
         "owner": "",
-        "admin": ""
+        "admin": "",
+        "shardId": 1
       },
       "l1CommonContracts": {
         "weth": ""

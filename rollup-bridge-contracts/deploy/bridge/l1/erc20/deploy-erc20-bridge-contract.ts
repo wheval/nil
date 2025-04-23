@@ -24,7 +24,8 @@ export async function deployL1ERC20BridgeContract(networkName: string): Promise<
                 config.l1DeployerConfig.admin, // _defaultAdmin
                 config.l1CommonContracts.weth,
                 config.l1BridgeMessenger.l1BridgeMessengerContracts.l1BridgeMessengerProxy,
-                config.nilGasPriceOracle.nilGasPriceOracleContracts.nilGasPriceOracleProxy
+                config.nilGasPriceOracle.nilGasPriceOracleContracts.nilGasPriceOracleProxy,
+                config.l1DeployerConfig.shardId
             ],
             { initializer: 'initialize' },
         );

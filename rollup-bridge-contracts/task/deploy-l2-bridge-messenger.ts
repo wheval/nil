@@ -98,6 +98,28 @@ task("deploy-l2-bridge-messenger", "Deploys L2BridgeMessenger contract on Nil Ch
         console.log("Waiting 5 seconds...");
         await new Promise((res) => setTimeout(res, 5000));
 
+
+        const getNilMessageTreeCallData = encodeFunctionData({
+            abi: L2BridgeMessengerJson.default.abi,
+            functionName: "nilMessageTree",
+            args: [],
+        });
+        const getNilMessageTreeCallResult = await deployerAccount.client.call({
+            to: addressProxy,
+            from: deployerAccount.address,
+            data: getNilMessageTreeCallData,
+        }, "latest");
+
+        console.log(`getNilMessageTreeCallResult is: ${JSON.stringify(getNilMessageTreeCallResult)}`);
+
+        const result = decodeFunctionResult({
+            abi: L2BridgeMessengerJson.default.abi,
+            functionName: "nilMessageTree",
+            data: getNilMessageTreeCallResult.data,
+        });
+        console.log("✅ NilMessageTree value in L2BridgeMessenger contract:", result);
+
+
         const getImplementationCallData = encodeFunctionData({
             abi: L2BridgeMessengerJson.default.abi,
             functionName: "getImplementation",
@@ -110,7 +132,7 @@ task("deploy-l2-bridge-messenger", "Deploys L2BridgeMessenger contract on Nil Ch
             from: deployerAccount.address,
         }, "latest");
 
-        console.log(`L2BridgeMessengerProxy has fetch-implementation-result: ${JSON.stringify(getImplementationResult)}`);
+        console.log(`L2BridgeMessengerProxy has get-implementation-result: ${JSON.stringify(getImplementationResult)}`);
 
         const proxyImplementationAddress = decodeFunctionResult({
             abi: L2BridgeMessengerJson.default.abi,
