@@ -1,16 +1,16 @@
 
 import type { CheckProps } from "../../src/features/tutorial-check/CheckProps";
-import runTutorialCheckOne from "../../src/features/tutorial-check/checks/tutorialOneCheck";
-import runTutorialCheckΤwo from "../../src/features/tutorial-check/checks/tutorialTwoCheck";
-import runTutorialCheckThree from "../../src/features/tutorial-check/checks/tutorialThreeCheck";
-import runTutorialCheckFour from "../../src/features/tutorial-check/checks/tutorialFourCheck";
+import { runTutorialCheckOne} from "../../src/features/tutorial-check/checks/tutorialOneCheck";
+import { runTutorialCheckTwo } from "../../src/features/tutorial-check/checks/tutorialTwoCheck";
+import { runTutorialCheckThree } from "../../src/features/tutorial-check/checks/tutorialThreeCheck";
+import { runTutorialCheckFour } from "../../src/features/tutorial-check/checks/tutorialFourCheck";
 import { deploymentEffect, RPC_ENDPOINT, setCompletedTutorialEvent, setTutorialChecksEvent, tutorialContractStepFailed, tutorialContractStepPassed } from "./globals";
 import { expect, describe, test } from "vitest";
 const solc = require("solc");
 import path from "node:path";
 import { createCompileInput } from "../../src/features/shared/utils/solidityCompiler/helper.ts";
 import type { App } from "../../src/features/code/types.ts";
-import runTutorialCheckFive from "../../src/features/tutorial-check/checks/tutorialFiveCheck.ts";
+import { runTutorialCheckFive } from "../../src/features/tutorial-check/checks/tutorialFiveCheck.ts";
 
 const TEST_PROPS: CheckProps = {
   rpcUrl: RPC_ENDPOINT,
@@ -66,7 +66,7 @@ describe("Tutorial Two tests", async () => {
     const testProps: CheckProps = { ...TEST_PROPS, contracts };
 
 
-    const testRes = await runTutorialCheckΤwo(testProps);
+    const testRes = await runTutorialCheckTwo(testProps);
     expect(testRes).toBe(true);
   })
 }, 45000);
