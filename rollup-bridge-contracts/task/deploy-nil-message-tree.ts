@@ -13,13 +13,16 @@ import {
 } from "@nilfoundation/niljs";
 import { loadNilSmartAccount } from "./nil-smart-account";
 import { L2NetworkConfig, loadNilNetworkConfig, saveNilNetworkConfig } from "../deploy/config/config-helper";
-import * as NilMessageTreeJson from "../artifacts/contracts/common/NilMessageTree.sol/NilMessageTree.json";
 
 // npx hardhat deploy-nil-message-tree --networkname local
 task("deploy-nil-message-tree", "Deploys NilMessageTree contract on Nil Chain")
     .addParam("networkname", "The network to use") // Mandatory parameter
     .setAction(async (taskArgs) => {
-        if (!NilMessageTreeJson || !NilMessageTreeJson.abi || !NilMessageTreeJson.bytecode) {
+
+        // Dynamically load artifacts
+        const NilMessageTreeJson = await import("../artifacts/contracts/common/NilMessageTree.sol/NilMessageTree.json");
+
+        if (!NilMessageTreeJson || !NilMessageTreeJson.default || !NilMessageTreeJson.default.abi || !NilMessageTreeJson.default.bytecode) {
             throw Error(`Invalid NilMessageTree ABI`);
         }
 
@@ -42,8 +45,8 @@ task("deploy-nil-message-tree", "Deploys NilMessageTree contract on Nil Chain")
 
         const { address: nilMessageTreeAddress, hash: nilMessageTreeDeploymentTxHash } = await deployerAccount.deployContract({
             shardId: 1,
-            bytecode: NilMessageTreeJson.bytecode,
-            abi: NilMessageTreeJson.abi,
+            bytecode: NilMessageTreeJson.default.bytecode,
+            abi: NilMessageTreeJson.default.abi,
             args: [deployerAccount.address],
             salt: BigInt(Math.floor(Math.random() * 10000)),
             feeCredit: BigInt("19340180000000"),
