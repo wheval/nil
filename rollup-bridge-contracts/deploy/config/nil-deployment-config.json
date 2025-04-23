@@ -25,19 +25,19 @@
           }
         ]
       },
-      "nilMessageTree": {
+      "nilMessageTreeConfig": {
         "nilMessageTreeContracts": {
-          "nilMessageTreeImplementationAddress": "0x0001fed53f7792eb88ea7e18ae6e3897e8788ea6"
+          "nilMessageTreeImplementationAddress": "0x00016b86bdaf60bf3d59616e4cbdce146bb4c2bc"
         }
       },
-      "l2ETHBridgeVault": {
-        "l2BridgeMessengerContracts": {
+      "l2ETHBridgeVaultConfig": {
+        "l2ETHBridgeVaultContracts": {
           "proxyAdmin": "",
           "l2ETHBridgeVaultProxy": "",
           "l2ETHBridgeVaultImplementation": ""
         }
       },
-      "l2BridgeMessenger": {
+      "l2BridgeMessengerConfig": {
         "l2BridgeMessengerContracts": {
           "proxyAdmin": "",
           "l2BridgeMessengerProxy": "",

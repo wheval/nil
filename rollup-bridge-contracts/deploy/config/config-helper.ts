@@ -267,11 +267,11 @@ export interface L2Config {
 }
 
 export interface L2NetworkConfig {
-    l2Common: L2CommonConfig;
-    nilMessageTree: NilMessageTreeConfig;
-    l2ETHBridgeVault: L2ETHBridgeVaultConfig;
-    l2BridgeMessenger: L2BridgeMessengerConfig;
-    l2EnshrinedTokenBridge: L2EnshrinedTokenBridgeConfig;
+    l2CommonConfig: L2CommonConfig;
+    nilMessageTreeConfig: NilMessageTreeConfig;
+    l2ETHBridgeVaultConfig: L2ETHBridgeVaultConfig;
+    l2BridgeMessengerConfig: L2BridgeMessengerConfig;
+    l2EnshrinedTokenBridgeConfig: L2EnshrinedTokenBridgeConfig;
     l2ETHBridgeConfig: L2ETHBridgeConfig;
 }
 
@@ -296,7 +296,7 @@ export interface NilMessageTreeConfig {
 }
 
 export interface L2ETHBridgeVaultConfig {
-    l2BridgeMessengerContracts: {
+    l2ETHBridgeVaultContracts: {
         proxyAdmin: string;
         l2ETHBridgeVaultProxy: string;
         l2ETHBridgeVaultImplementation: string;
@@ -316,15 +316,19 @@ export interface L2BridgeMessengerConfig {
 }
 
 export interface L2EnshrinedTokenBridgeConfig {
-    proxyAdmin: string;
-    l2EnshrinedTokenBridgeProxy: string;
-    l2EnshrinedTokenBridgeImplementation: string;
+    l2EnshrinedTokenBridgeContracts: {
+        proxyAdmin: string;
+        l2EnshrinedTokenBridgeProxy: string;
+        l2EnshrinedTokenBridgeImplementation: string;
+    }
 }
 
 export interface L2ETHBridgeConfig {
-    proxyAdmin: string;
-    l2ETHBridgeProxy: string;
-    l2ETHBridgeImplementation: string;
+    l2ETHBridgeContracts: {
+        proxyAdmin: string;
+        l2ETHBridgeProxy: string;
+        l2ETHBridgeImplementation: string;
+    }
 }
 
 const nilNetworkConfigFilePath = path.join(__dirname, 'nil-deployment-config.json');

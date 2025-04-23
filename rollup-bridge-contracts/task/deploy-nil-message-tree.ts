@@ -69,7 +69,7 @@ task("deploy-nil-message-tree", "Deploys NilMessageTree contract on Nil Chain")
         // save the nilMessageTree Address in the json config for l2
         const config: L2NetworkConfig = loadNilNetworkConfig(networkName);
 
-        config.nilMessageTree.nilMessageTreeContracts.nilMessageTreeImplementationAddress = nilMessageTreeAddress;
+        config.nilMessageTreeConfig.nilMessageTreeContracts.nilMessageTreeImplementationAddress = nilMessageTreeAddress;
 
         // Save the updated config
         saveNilNetworkConfig(networkName, config);
