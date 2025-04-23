@@ -12,12 +12,10 @@ import {
     waitTillCompleted,
 } from "@nilfoundation/niljs";
 import { loadNilSmartAccount } from "./nil-smart-account";
-import { L2NetworkConfig, loadNilNetworkConfig, saveNilNetworkConfig } from "../deploy/config/config-helper";
 import { decodeFunctionResult, encodeFunctionData } from "viem";
 
-// npx hardhat deploy-my-logic --networkname local
+// npx hardhat deploy-my-logic
 task("deploy-my-logic", "Deploys MyLogic contract on Nil Chain")
-    .addParam("networkname", "The network to use") // Mandatory parameter
     .setAction(async (taskArgs) => {
 
         // Dynamically load artifacts
@@ -26,11 +24,8 @@ task("deploy-my-logic", "Deploys MyLogic contract on Nil Chain")
         const ProxyAdmin = await import("../artifacts/node_modules/@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol/ProxyAdmin.json");
 
         if (!MyLogicJson || !MyLogicJson.default || !MyLogicJson.default.abi || !MyLogicJson.default.bytecode) {
-            throw Error(`Invalid L2ETHBridge ABI`);
+            throw Error(`Invalid myLogic ABI`);
         }
-
-        const networkName = taskArgs.networkname;
-        console.log(`Running task on network: ${networkName}`);
 
         const deployerAccount = await loadNilSmartAccount();
 
@@ -46,10 +41,7 @@ task("deploy-my-logic", "Deploys MyLogic contract on Nil Chain")
             throw Error(`Insufficient or Zero balance for smart-account: ${deployerAccount.address}`);
         }
 
-        // save the nilMessageTree Address in the json config for l2
-        const l2NetworkConfig: L2NetworkConfig = loadNilNetworkConfig(networkName);
-
-        const { address: l2EthBridgeImplementationAddress, hash: l2EthBridgeImplementationDeploymentTxHash } = await deployerAccount.deployContract({
+        const { address: myLogicImplementationAddress, hash: myLogicImplementationDeploymentTxHash } = await deployerAccount.deployContract({
             shardId: 1,
             bytecode: MyLogicJson.default.bytecode,
             abi: MyLogicJson.default.abi,
@@ -58,21 +50,20 @@ task("deploy-my-logic", "Deploys MyLogic contract on Nil Chain")
             feeCredit: BigInt("19340180000000"),
         });
 
-        console.log(`address from deployment is: ${l2EthBridgeImplementationAddress}`);
-        await waitTillCompleted(deployerAccount.client, l2EthBridgeImplementationDeploymentTxHash);
-        console.log("✅ Logic Contract deployed at:", l2EthBridgeImplementationDeploymentTxHash);
+        console.log(`address from deployment is: ${myLogicImplementationAddress}`);
+        await waitTillCompleted(deployerAccount.client, myLogicImplementationDeploymentTxHash);
+        console.log("✅ Logic Contract deployed at:", myLogicImplementationDeploymentTxHash);
 
-        if (!l2EthBridgeImplementationDeploymentTxHash) {
-            throw Error(`Invalid transaction output from deployContract call for L2ETHBridge Contract`);
+        if (!myLogicImplementationDeploymentTxHash) {
+            throw Error(`Invalid transaction output from deployContract call for myLogic Contract`);
         }
 
-        if (!l2EthBridgeImplementationAddress) {
-            throw Error(`Invalid address output from deployContract call for L2ETHBridge Contract`);
+        if (!myLogicImplementationAddress) {
+            throw Error(`Invalid address output from deployContract call for myLogic Contract`);
         }
 
-        console.log(`NilMessageTree contract deployed at address: ${l2EthBridgeImplementationAddress} and with transactionHash: ${l2EthBridgeImplementationDeploymentTxHash}`);
+        console.log(`NilMessageTree contract deployed at address: ${myLogicImplementationAddress} and with transactionHash: ${myLogicImplementationDeploymentTxHash}`);
 
-        l2NetworkConfig.l2ETHBridgeConfig.l2ETHBridgeContracts.l2ETHBridgeImplementation = l2EthBridgeImplementationAddress;
 
         const initData = encodeFunctionData({
             abi: MyLogicJson.default.abi,
@@ -84,16 +75,73 @@ task("deploy-my-logic", "Deploys MyLogic contract on Nil Chain")
             shardId: 1,
             bytecode: TransparentUpgradeableProxy.default.bytecode,
             abi: TransparentUpgradeableProxy.default.abi,
-            args: [l2EthBridgeImplementationAddress, deployerAccount.address, initData],
+            args: [myLogicImplementationAddress, deployerAccount.address, initData],
             salt: BigInt(Math.floor(Math.random() * 10000)),
             feeCredit: convertEthToWei(0.001),
         });
         await waitTillCompleted(deployerAccount.client, hashProxy);
         console.log("✅ Transparent Proxy Contract deployed at:", addressProxy);
 
-        l2NetworkConfig.l2ETHBridgeConfig.l2ETHBridgeContracts.l2ETHBridgeProxy = addressProxy;
-
         console.log("Waiting 5 seconds...");
-        await new Promise((res) => setTimeout(res, 5000));
+        await new Promise((res) => setTimeout(res, 10000));
 
+        const fetchAdminCall = encodeFunctionData({
+            abi: TransparentUpgradeableProxy.default.abi,
+            functionName: "fetchAdmin",
+            args: [],
+        });
+
+        const adminResult = await deployerAccount.client.call({
+            to: addressProxy,
+            data: fetchAdminCall,
+            from: deployerAccount.address,
+        }, "latest");
+
+        console.log(`adminResult queried is: ${JSON.stringify(adminResult)}`);
+
+        const proxyAdminAddress = decodeFunctionResult({
+            abi: TransparentUpgradeableProxy.default.abi,
+            functionName: "fetchAdmin",
+            data: adminResult.data,
+        }) as string;
+
+        console.log("✅ ProxyAdmin Address:", proxyAdminAddress);
+
+        const owner = encodeFunctionData({
+            abi: ProxyAdmin.default.abi,
+            functionName: "owner",
+            args: [],
+        })
+
+        const ownerResult = await deployerAccount.client.call({
+            to: proxyAdminAddress as `0x${string}`,
+            data: owner,
+            from: deployerAccount.address,
+        }, "latest");
+
+        const proxyAdminOwner = decodeFunctionResult({
+            abi: ProxyAdmin.default.abi,
+            functionName: "owner",
+            data: ownerResult.data,
+        }) as string;
+
+        console.log("✅ ProxyAdmin Owner:", proxyAdminOwner);
+
+        const getValueData = encodeFunctionData({
+            abi: MyLogicJson.default.abi,
+            functionName: "value",
+            args: [],
+        });
+        const getValueCall = await deployerAccount.client.call({
+            to: addressProxy,
+            from: deployerAccount.address,
+            data: getValueData,
+        }, "latest");
+
+        const getValue = decodeFunctionResult({
+            abi: MyLogicJson.default.abi,
+            functionName: "value",
+            data: getValueCall.data,
+        });
+        console.log("✅ Current value in Logic contract:", getValue);
     });
