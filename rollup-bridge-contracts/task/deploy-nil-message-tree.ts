@@ -15,16 +15,12 @@ import { loadNilSmartAccount } from "./nil-smart-account";
 import { L2NetworkConfig, loadNilNetworkConfig, saveNilNetworkConfig } from "../deploy/config/config-helper";
 import * as NilMessageTreeJson from "../artifacts/contracts/common/NilMessageTree.sol/NilMessageTree.json";
 
-// npx hardhat deploy-nil-message-tree  --networkname local
+// npx hardhat deploy-nil-message-tree
 task("deploy-nil-message-tree", "Deploys NilMessageTree contract on Nil Chain")
-    .addParam("networkname", "The network to use") // Mandatory parameter
     .setAction(async (taskArgs) => {
         if (!NilMessageTreeJson || !NilMessageTreeJson.abi || !NilMessageTreeJson.bytecode) {
             throw Error(`Invalid NilMessageTree ABI`);
         }
-
-        const networkName = taskArgs.networkname;
-        console.log(`Running task on network: ${networkName}`);
 
         const deployerAccount = await loadNilSmartAccount();
 
@@ -64,12 +60,4 @@ task("deploy-nil-message-tree", "Deploys NilMessageTree contract on Nil Chain")
         await waitTillCompleted(deployerAccount.client, transactionData.hash);
 
         console.log("NilMessageTree contract deployed at address: " + address);
-
-        // save the nilMessageTree Address in the json config for l2
-        const config: L2NetworkConfig = loadNilNetworkConfig(networkName);
-
-        config.nilMessageTree.nilMessageTreeContracts.nilMessageTreeImplementationAddress = address;
-
-        // Save the updated config
-        saveNilNetworkConfig(networkName, config);
     });
