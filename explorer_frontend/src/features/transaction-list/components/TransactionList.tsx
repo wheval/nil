@@ -1,6 +1,8 @@
 import {
+  BUTTON_SIZE,
   COLORS,
   CopyButton,
+  Pagination,
   SPACE,
   Skeleton,
   TAG_KIND,
@@ -33,7 +35,6 @@ import {
   showList,
 } from "../model";
 import { EmptyTransaction } from "./EmptyTransactionList";
-import { Paginate } from "./Pagination";
 import { TransactionsTable } from "./TransactionsTable";
 
 export const TransactionList = ({ type, identifier, view }: TransactionListProps) => {
@@ -258,10 +259,12 @@ export const TransactionList = ({ type, identifier, view }: TransactionListProps
             })}
           >
             {totalPages > 1 && (
-              <Paginate
+              <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={handlePageChange}
+                pageHandler={handlePageChange}
+                visiblePages={4}
+                buttonSize={BUTTON_SIZE.compact}
               />
             )}
           </div>

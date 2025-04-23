@@ -10,15 +10,14 @@ import {
 import { useStyletron } from "baseui";
 import type { TabsOverrides } from "baseui/tabs";
 import { type Store, combine } from "effector";
-import { useStore } from "effector-react";
+import { useStore, useUnit } from "effector-react";
 import { BlockInfo } from "../../features/block/components/BlockInfo";
-import { $block } from "../../features/block/models/model";
+import { $block, loadBlockFx } from "../../features/block/models/model";
 import { blockDetailsRoute, blockRoute } from "../../features/routing/routes/blockRoute";
 import { Meta, formatShard, useMobile } from "../../features/shared";
 import { InternalPageContainer } from "../../features/shared";
 import { Layout } from "../../features/shared";
 import { TransactionList } from "../../features/transaction-list";
-import { explorerContainer } from "../../styleHelpers";
 
 const secondary = TAB_KIND.secondary;
 
@@ -46,6 +45,7 @@ const $paramsStore: Store<[{ shard: string; id: string }, string]> = combine(
 
 export const BlockPage = () => {
   const [params, key] = useStore($paramsStore);
+  const [_, isPending] = useUnit([$block, loadBlockFx.pending]);
   const block = useStore($block);
   const [css] = useStyletron();
   const [isMobile] = useMobile();
@@ -54,70 +54,57 @@ export const BlockPage = () => {
     gap: "1ch",
     alignItems: "center",
   });
+
   return (
-    <div className={css(explorerContainer)}>
-      <Layout>
-        <Meta title="Block" description="zkSharding for Ethereum" />
-        <InternalPageContainer>
-          <div
+    <Layout>
+      <Meta title="Block" description="zkSharding for Ethereum" />
+      <InternalPageContainer>
+        <div
+          className={css({
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            justifyItems: "flex-start",
+            alignItems: "flex-start",
+          })}
+        >
+          <HeadingXLarge
             className={css({
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "space-between",
-              justifyItems: "flex-start",
-              alignItems: "flex-start",
+              marginBottom: isMobile ? SPACE[24] : SPACE[32],
             })}
           >
-            <HeadingXLarge className={css({ marginBottom: isMobile ? SPACE[24] : SPACE[32] })}>
-              Block {formatShard(params.shard || "", params.id || "")}
-            </HeadingXLarge>
-            <div
-              className={css({
-                display: isMobile ? "none" : "flex",
-                flexDirection: "row",
-                rowGap: SPACE[8],
-                alignItems: "flex-start",
-                justifyItems: "flex-start",
-              })}
-            >
-              {+params.id > 0 ? (
-                <Link
-                  to={key === "overview" ? blockRoute : blockDetailsRoute}
-                  params={{ shard: params.shard, id: (+params.id - 1).toString(), details: key }}
-                >
-                  <Button
-                    kind={BUTTON_KIND.tertiary}
-                    size={BUTTON_SIZE.default}
-                    startEnhancer={<ArrowLeft />}
-                  >
-                    Previous block
-                  </Button>
-                </Link>
-              ) : null}
-              <Link
-                to={key === "overview" ? blockRoute : blockDetailsRoute}
-                params={{ shard: params.shard, id: (+params.id + 1).toString(), details: key }}
-              >
-                <Button
-                  kind={BUTTON_KIND.tertiary}
-                  size={BUTTON_SIZE.default}
-                  endEnhancer={<ArrowRight />}
-                >
-                  Next block
-                </Button>
-              </Link>
-            </div>
-          </div>
+            Block {formatShard(params.shard || "", params.id || "")}
+          </HeadingXLarge>
+        </div>
+        <div
+          className={css({
+            marginBlockEnd: "3rem",
+          })}
+        >
+          <BlockInfo />
+        </div>
+        {!isPending && (block?.in_txn_num > 0 || block?.out_txn_num > 0) ? (
           <Tabs activeKey={key} overrides={tabsOverrides}>
             <Tab
-              key={"overview"}
+              key={"all"}
               kind={secondary}
-              title="Overview"
-              onClick={() =>
-                blockRoute.navigate({ params: { shard: params.shard, id: params.id }, query: {} })
-              }
+              title={`All ${isMobile ? "" : "transactions"}`}
+              onClick={() => {
+                blockDetailsRoute.navigate({
+                  params: {
+                    shard: params.shard,
+                    id: params.id,
+                    details: "all",
+                  },
+                  query: {},
+                });
+              }}
             >
-              <BlockInfo />
+              <TransactionList
+                type="block"
+                identifier={`${params.shard}:${params.id}`}
+                view="all"
+              />
             </Tab>
             <Tab
               key={"incoming"}
@@ -134,7 +121,11 @@ export const BlockPage = () => {
               }
               onClick={() => {
                 blockDetailsRoute.navigate({
-                  params: { shard: params.shard, id: params.id, details: "incoming" },
+                  params: {
+                    shard: params.shard,
+                    id: params.id,
+                    details: "incoming",
+                  },
                   query: {},
                 });
               }}
@@ -160,7 +151,11 @@ export const BlockPage = () => {
               }
               onClick={() => {
                 blockDetailsRoute.navigate({
-                  params: { shard: params.shard, id: params.id, details: "outgoing" },
+                  params: {
+                    shard: params.shard,
+                    id: params.id,
+                    details: "outgoing",
+                  },
                   query: {},
                 });
               }}
@@ -172,9 +167,11 @@ export const BlockPage = () => {
               />
             </Tab>
           </Tabs>
-        </InternalPageContainer>
-      </Layout>
-    </div>
+        ) : (
+          <></>
+        )}
+      </InternalPageContainer>
+    </Layout>
   );
 };
 

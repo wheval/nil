@@ -104,8 +104,8 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({ columns, d
           </tr>
         </thead>
         <tbody>
-          {data.map((row) => (
-            <TableRow key={`${row}-rowIndex`} rowData={row} view={view} />
+          {data.map((row, index) => (
+            <TableRow key={`${row.fee}-row${index}`} rowData={row} view={view} />
           ))}
         </tbody>
       </table>

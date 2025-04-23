@@ -9,6 +9,7 @@ import {
 } from "@nilfoundation/ui-kit";
 import { useStyletron } from "baseui";
 import { useUnit } from "effector-react";
+import { useMobile } from "../../shared";
 import { Info } from "../../shared/components/Info";
 import { InfoBlock } from "../../shared/components/InfoBlock";
 import { $block, loadBlockFx } from "../models/model";
@@ -16,12 +17,10 @@ import { BlockNavigation } from "./BlockNavigation";
 
 export const BlockInfo = ({ className }: { className?: string }) => {
   const [blockInfo, isPending] = useUnit([$block, loadBlockFx.pending]);
-  const [css] = useStyletron();
 
   if (isPending) {
     return (
       <div className={className}>
-        <HeadingXLarge className={css({ marginBottom: SPACE[32] })}>Block</HeadingXLarge>
         <Skeleton animation rows={6} width={"300px"} height={"400px"} />
       </div>
     );
@@ -51,12 +50,13 @@ export const BlockInfo = ({ className }: { className?: string }) => {
 
 const HashCopy = ({ hash }: { hash: string }) => {
   const [css] = useStyletron();
+  const [isMobile] = useMobile();
 
   return (
     <div
       className={css({
         display: "flex",
-        alignItems: "start",
+        alignItems: isMobile ? "start" : "center",
         gap: SPACE[8],
       })}
     >
