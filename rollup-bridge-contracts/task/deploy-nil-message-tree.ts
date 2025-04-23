@@ -15,12 +15,16 @@ import { loadNilSmartAccount } from "./nil-smart-account";
 import { L2NetworkConfig, loadNilNetworkConfig, saveNilNetworkConfig } from "../deploy/config/config-helper";
 import * as NilMessageTreeJson from "../artifacts/contracts/common/NilMessageTree.sol/NilMessageTree.json";
 
-// npx hardhat deploy-nil-message-tree
+// npx hardhat deploy-nil-message-tree --networkname local
 task("deploy-nil-message-tree", "Deploys NilMessageTree contract on Nil Chain")
+    .addParam("networkname", "The network to use") // Mandatory parameter
     .setAction(async (taskArgs) => {
         if (!NilMessageTreeJson || !NilMessageTreeJson.abi || !NilMessageTreeJson.bytecode) {
             throw Error(`Invalid NilMessageTree ABI`);
         }
+
+        const networkName = taskArgs.networkname;
+        console.log(`Running task on network: ${networkName}`);
 
         const deployerAccount = await loadNilSmartAccount();
 
@@ -36,7 +40,7 @@ task("deploy-nil-message-tree", "Deploys NilMessageTree contract on Nil Chain")
             throw Error(`Insufficient or Zero balance for smart-account: ${deployerAccount.address}`);
         }
 
-        const { tx, address } = await deployerAccount.deployContract({
+        const { address: nilMessageTreeAddress, hash: nilMessageTreeDeploymentTxHash } = await deployerAccount.deployContract({
             shardId: 1,
             bytecode: NilMessageTreeJson.bytecode,
             abi: NilMessageTreeJson.abi,
@@ -45,19 +49,25 @@ task("deploy-nil-message-tree", "Deploys NilMessageTree contract on Nil Chain")
             feeCredit: BigInt("19340180000000"),
         });
 
-        if (!tx) {
+        console.log(`address from deployment is: ${nilMessageTreeAddress}`);
+        await waitTillCompleted(deployerAccount.client, nilMessageTreeDeploymentTxHash);
+        console.log("✅ Logic Contract deployed at:", nilMessageTreeDeploymentTxHash);
+
+        if (!nilMessageTreeDeploymentTxHash) {
             throw Error(`Invalid transaction output from deployContract call for NilMessageTree Contract`);
         }
 
-        if (!address) {
+        if (!nilMessageTreeAddress) {
             throw Error(`Invalid address output from deployContract call for NilMessageTree Contract`);
         }
 
-        const transactionData: Transaction = tx;
+        console.log(`NilMessageTree contract deployed at address: ${nilMessageTreeAddress} and with transactionHash: ${nilMessageTreeDeploymentTxHash}`);
 
-        console.log(`tx from deployment is: ${JSON.stringify(transactionData)}`);
+        // save the nilMessageTree Address in the json config for l2
+        const config: L2NetworkConfig = loadNilNetworkConfig(networkName);
 
-        await waitTillCompleted(deployerAccount.client, transactionData.hash);
+        config.nilMessageTree.nilMessageTreeContracts.nilMessageTreeImplementationAddress = nilMessageTreeAddress;
 
-        console.log("NilMessageTree contract deployed at address: " + address);
+        // Save the updated config
+        saveNilNetworkConfig(networkName, config);
     });

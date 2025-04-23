@@ -1,24 +1,19 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "allowJs": false,
-    "checkJs": false,
-    "esModuleInterop": false,
-    "allowSyntheticDefaultImports": false,
+    "target": "es2020",
+    "module": "commonjs",
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "NodeNext",
-    "module": "NodeNext",
-    "target": "ES2021",
-    "lib": [
-      "ES2021",
-      "DOM"
-    ],
+    "strict": true,
     "skipLibCheck": true,
-    "noEmitOnError": true,
-    "types": [
-      "vitest/globals"
-    ],
-    "resolveJsonModule": true,
-    "useUnknownInCatchVariables": false
-  }
+    "resolveJsonModule": true
+  },
+  "include": [
+    "./scripts",
+    "./test",
+    "./deploy",
+    "./typechain",
+    "query-nilchain.ts",
+    "deploy-nilrollup.ts"
+  ]
 }

@@ -23,6 +23,7 @@ console.log("Remappings:", remappings);
 
 import "./task/generate-nil-smart-account";
 import "./task/deploy-nil-message-tree";
+import "./task/deploy-l2-bridge-messenger";
 
 const config: HardhatUserConfig = {
   ignition: {

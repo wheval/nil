@@ -27,7 +27,7 @@
       },
       "nilMessageTree": {
         "nilMessageTreeContracts": {
-          "nilMessageTreeImplementationAddress": ""
+          "nilMessageTreeImplementationAddress": "0x0001fed53f7792eb88ea7e18ae6e3897e8788ea6"
         }
       },
       "l2ETHBridgeVault": {
@@ -44,7 +44,7 @@
           "l2BridgeMessengerImplementation": ""
         },
         "l2BridgeMessengerDeployerConfig": {
-          "relayerAddress": "",
+          "relayerAddress": "0x00018026b25579652d9fe718acfb6bcb1bc0d331",
           "messageExpiryDeltaValue": 10000
         }
       },
