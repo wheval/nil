@@ -1,9 +1,9 @@
 {
   "networks": {
     "local": {
-      "l2Common": {
-        "owner": "0x00018026b25579652d9fe718acfb6bcb1bc0d331",
-        "admin": "0x00018026b25579652d9fe718acfb6bcb1bc0d331",
+      "l2CommonConfig": {
+        "owner": "0x0001d68c994b2b18fb72eb2b76e681351ddb8c9b",
+        "admin": "0x0001d68c994b2b18fb72eb2b76e681351ddb8c9b",
         "enshrined_tokens": [
           {
             "name": "USD Coin",

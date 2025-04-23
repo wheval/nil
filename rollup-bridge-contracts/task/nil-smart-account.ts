@@ -23,7 +23,8 @@ export async function loadNilSmartAccount(): Promise<SmartAccountV1> {
     });
 
     const privateKey = process.env.NIL_PRIVATE_KEY as `0x${string}`;
-    let smartAccountAddress = process.env.NIL_SMART_ACCOUNT_ADDRESS as `0x${string}`;
+    const config: L2NetworkConfig = loadNilNetworkConfig("local");
+    let smartAccountAddress = config.l2CommonConfig.owner;
 
     const signer = new LocalECDSAKeySigner({ privateKey });
     smartAccount = new SmartAccountV1({
@@ -92,8 +93,8 @@ export async function generateNilSmartAccount(networkName: string): Promise<Smar
     // update 
     const config: L2NetworkConfig = loadNilNetworkConfig(networkName);
 
-    config.l2Common.owner = smartAccountAddress;
-    config.l2Common.admin = smartAccountAddress;
+    config.l2CommonConfig.owner = smartAccountAddress;
+    config.l2CommonConfig.admin = smartAccountAddress;
 
     // Save the updated config
     saveNilNetworkConfig(networkName, config);

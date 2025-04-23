@@ -26,6 +26,7 @@ import "./task/deploy-nil-message-tree";
 import "./task/deploy-l2-bridge-messenger";
 import "./task/deploy-l2-eth-bridge";
 import "./task/deploy-l2-eth-bridge-vault";
+import "./task/deploy-l2-enshrined-token-bridge";
 
 const config: HardhatUserConfig = {
   ignition: {
