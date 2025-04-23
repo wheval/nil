@@ -88,6 +88,10 @@ const config: HardhatUserConfig = {
       accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
       gas: 1000000
     },
+    nil: {
+      url: process.env.NIL_RPC_ENDPOINT,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
   },
   namedAccounts: {
     deployer: {
