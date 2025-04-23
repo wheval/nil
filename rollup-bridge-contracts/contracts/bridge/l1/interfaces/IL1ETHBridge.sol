@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import { IL1Bridge } from "./IL1Bridge.sol";
-import { INilGasPriceOracle } from "./INilGasPriceOracle.sol";
+import { IRelayMessage } from "./IRelayMessage.sol";
 
 interface IL1ETHBridge is IL1Bridge {
   struct DepositMessageParams {
@@ -13,7 +13,7 @@ interface IL1ETHBridge is IL1Bridge {
     uint256 l2GasLimit;
     uint256 userMaxFeePerGas;
     uint256 userMaxPriorityFeePerGas;
-    INilGasPriceOracle.FeeCreditData feeCreditData;
+    IRelayMessage.FeeCreditData feeCreditData;
   }
 
   // Group related variables into a struct to reduce stack usage
@@ -22,7 +22,7 @@ interface IL1ETHBridge is IL1Bridge {
     uint256 depositAmount;
     address payable l2DepositRecipient;
     address l2FeeRefundAddress;
-    INilGasPriceOracle.FeeCreditData feeCreditData;
+    IRelayMessage.FeeCreditData feeCreditData;
     bytes depositMessage;
   }
 

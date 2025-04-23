@@ -14,6 +14,7 @@ import { StorageUtils } from "../../common/libraries/StorageUtils.sol";
 import { Queue } from "../libraries/Queue.sol";
 import { IBridgeMessenger } from "../interfaces/IBridgeMessenger.sol";
 import { IL1BridgeMessenger } from "./interfaces/IL1BridgeMessenger.sol";
+import { IRelayMessage } from "./interfaces/IRelayMessage.sol";
 import { IBridgeMessenger } from "../interfaces/IBridgeMessenger.sol";
 import { IL1Bridge } from "./interfaces/IL1Bridge.sol";
 import { INilRollup } from "../../interfaces/INilRollup.sol";
@@ -279,7 +280,7 @@ contract L1BridgeMessenger is
                              PUBLIC MUTATING FUNCTIONS   
     //////////////////////////////////////////////////////////////////////////*/
 
-  /// @inheritdoc IL1BridgeMessenger
+  /// @inheritdoc IRelayMessage
   function sendMessage(
     NilConstants.MessageType messageType,
     address messageTarget,
@@ -289,7 +290,7 @@ contract L1BridgeMessenger is
     uint256 depositAmount,
     address l1DepositRefundAddress,
     address l2FeeRefundAddress,
-    INilGasPriceOracle.FeeCreditData memory feeCreditData
+    FeeCreditData memory feeCreditData
   ) external payable override whenNotPaused onlyAuthorizedL1Bridge {
     _sendMessage(
       SendMessageParams({

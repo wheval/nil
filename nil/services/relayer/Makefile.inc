@@ -1,13 +1,18 @@
-root_services = nil/services
 root_relayer = nil/services/relayer
+root_contracts = rollup-bridge-contracts/contracts
+
+.PHONY: $(root_relayer)/compile_abi
+$(root_relayer)/compile_abi:
+	solc $(root_contracts)/bridge/l1/interfaces/IRelayMessage.sol --abi --overwrite -o $(root_relayer)/rollup-bridge-contracts-compiled-abi/contracts/bridge/l1/L1BridgeMessenger.sol --allow-paths .,$(root_contracts)/common/libraries --no-cbor-metadata --metadata-hash none --pretty-json
+	solc $(root_contracts)/bridge/l2/interfaces/IRelayMessage.sol --abi --overwrite -o $(root_relayer)/rollup-bridge-contracts-compiled-abi/contracts/bridge/l2/L2BridgeMessenger.sol --allow-paths .,$(root_contracts)/common/libraries --no-cbor-metadata --metadata-hash none --pretty-json
 
 .PHONY: $(root_relayer)/embed_l2_abi
 $(root_relayer)/embed_l2_abi:
-	@cat $(root_services)/rollup-bridge-contracts-compiled/contracts/bridge/l2/L2BridgeMessenger.sol/L2BridgeMessenger.json | jq .abi > $(root_relayer)/internal/l2/L2BridgeMessenger.json.abi
+	cp $(root_relayer)/rollup-bridge-contracts-compiled-abi/contracts/bridge/l2/L2BridgeMessenger.sol/IRelayMessage.abi $(root_relayer)/internal/l2/L2BridgeMessenger.json.abi
 
 .PHONY: $(root_relayer)/embed_l1_abi
 $(root_relayer)/embed_l1_abi:
-	@cat $(root_services)/rollup-bridge-contracts-compiled/contracts/bridge/l1/L1BridgeMessenger.sol/L1BridgeMessenger.json | jq .abi > $(root_relayer)/internal/l1/L1BridgeMessenger.json.abi
+	cp $(root_relayer)/rollup-bridge-contracts-compiled-abi/contracts/bridge/l1/L1BridgeMessenger.sol/IRelayMessage.abi $(root_relayer)/internal/l1/L1BridgeMessenger.json.abi
 
 .PHONY: $(root_relayer)/generate_l1_abi
 $(root_relayer)/generate_l1_abi: $(root_relayer)/embed_l1_abi
