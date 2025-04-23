@@ -71,7 +71,7 @@ export async function runTutorialCheckOne(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Caller.sendValue() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${hashCaller}.
+      To investigate, debug this transaction using the Cometa service: ${callerTx.hash}.
       `,
     );
     return false;
