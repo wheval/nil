@@ -59,7 +59,7 @@ func (s *ProposerTestSuite) SetupSuite() {
 	s.clock = testaide.NewTestClock()
 	s.storage = storage.NewBlockStorage(s.db, storage.DefaultBlockStorageConfig(), s.clock, metricsHandler, logger)
 	s.params = NewDefaultProposerConfig()
-	s.testData = testaide.NewProposalData(3, s.clock.Now())
+	s.testData = testaide.NewProposalData(s.clock.Now())
 
 	abi, err := rollupcontract.RollupcontractMetaData.GetAbi()
 	s.Require().NoError(err)
@@ -184,18 +184,12 @@ func (s *ProposerTestSuite) TestStorageProposalDataRemoved() {
 	s.callContractMock.AddExpectedCall("finalizedStateRoots", s.testData.OldProvedStateRoot)
 	s.callContractMock.AddExpectedCall("updateState", testaide.NoValue{})
 
-	subgraph, err := scTypes.NewSubgraph(
-		&scTypes.Block{
-			ShardId:    types.MainShardId,
-			Number:     123,
-			Hash:       common.HexToHash("123"),
-			ParentHash: s.testData.OldProvedStateRoot,
-		}, nil)
-	s.Require().NoError(err)
-	s.Require().NoError(s.storage.SetBlockBatch(
-		s.ctx,
-		&scTypes.BlockBatch{Id: s.testData.BatchId, Subgraphs: []scTypes.Subgraph{*subgraph}},
-	))
+	batch := testaide.NewBlockBatch(testaide.ShardsCount)
+	batch.Id = s.testData.BatchId
+	mainBlock := batch.Blocks[types.MainShardId].Latest()
+	mainBlock.ParentHash = s.testData.OldProvedStateRoot
+
+	s.Require().NoError(s.storage.SetBlockBatch(s.ctx, batch))
 	s.Require().NoError(s.storage.SetBatchAsProved(s.ctx, s.testData.BatchId))
 	s.Require().NoError(s.storage.SetProvedStateRoot(s.ctx, s.testData.OldProvedStateRoot))
 
@@ -222,18 +216,12 @@ func (s *ProposerTestSuite) TestProposerResetToL1State() {
 	s.callContractMock.AddExpectedCall("getLastFinalizedBatchIndex", "testingFinalizedBatchIndex")
 	s.callContractMock.AddExpectedCall("finalizedStateRoots", l1FinalizedStateRoot)
 
-	subgraph, err := scTypes.NewSubgraph(
-		&scTypes.Block{
-			ShardId:    types.MainShardId,
-			Number:     123,
-			Hash:       common.HexToHash("123"),
-			ParentHash: s.testData.OldProvedStateRoot,
-		}, nil)
+	batch := testaide.NewBlockBatch(testaide.ShardsCount)
+	batch.Blocks[types.MainShardId].Earliest().ParentHash = s.testData.OldProvedStateRoot
+	batch.Id = s.testData.BatchId
+
+	err := s.storage.SetBlockBatch(s.ctx, batch)
 	s.Require().NoError(err)
-	s.Require().NoError(s.storage.SetBlockBatch(
-		s.ctx,
-		&scTypes.BlockBatch{Id: s.testData.BatchId, Subgraphs: []scTypes.Subgraph{*subgraph}},
-	))
 	s.Require().NoError(s.storage.SetBatchAsProved(s.ctx, s.testData.BatchId))
 	s.Require().NoError(s.storage.SetProvedStateRoot(s.ctx, s.testData.OldProvedStateRoot))
 
