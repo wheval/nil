@@ -1,11 +1,18 @@
 package network
 
 import (
+	"errors"
+
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"gopkg.in/yaml.v3"
 )
 
 type AddrInfo peer.AddrInfo
+
+func (a AddrInfo) Empty() bool {
+	return errors.Is(a.ID.Validate(), peer.ErrEmptyPeerID)
+}
 
 func (a *AddrInfo) Set(value string) error {
 	addr, err := peer.AddrInfoFromString(value)
@@ -42,6 +49,14 @@ func (a AddrInfo) MarshalText() ([]byte, error) {
 
 func (a *AddrInfo) UnmarshalText(text []byte) error {
 	return a.Set(string(text))
+}
+
+func (a *AddrInfo) MarshalYAML() (any, error) {
+	return a.MarshalText()
+}
+
+func (a *AddrInfo) UnmarshalYAML(value *yaml.Node) error {
+	return a.UnmarshalText([]byte(value.Value))
 }
 
 type AddrInfoSlice = common.PValueSlice[*AddrInfo, AddrInfo]

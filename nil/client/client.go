@@ -14,6 +14,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
+	rpctypes "github.com/NilFoundation/nil/nil/services/rpc/types"
 	"github.com/NilFoundation/nil/nil/services/txnpool"
 )
 
@@ -132,6 +133,8 @@ type Client interface {
 
 	// GetDebugContract retrieves smart contract with its data, such as code, storage and proof
 	GetDebugContract(ctx context.Context, contractAddr types.Address, blockId any) (*jsonrpc.DebugRPCContract, error)
+
+	GetBootstrapConfig(ctx context.Context) (*rpctypes.BootstrapConfig, error)
 }
 
 func EstimateFeeExternal(

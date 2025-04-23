@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"os"
+	"time"
 
+	rpc_client "github.com/NilFoundation/nil/nil/client/rpc"
 	"github.com/NilFoundation/nil/nil/cmd/nild/nildconfig"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/concurrent"
@@ -32,7 +34,7 @@ var logFilter string
 func main() {
 	logger := logging.NewLogger("nild")
 
-	cfg := parseArgs()
+	cfg := parseArgs(logger)
 
 	logging.ApplyComponentsFilter(logFilter)
 
@@ -100,7 +102,43 @@ func addBasicFlags(fset *pflag.FlagSet, cfg *nildconfig.Config) {
 		&cfg.CollatorTickPeriodMs, "collator-tick-ms", cfg.CollatorTickPeriodMs, "collator tick period in milliseconds")
 }
 
-func parseArgs() *nildconfig.Config {
+func doBootstrapRequestAndPatchConfig(
+	ctx context.Context,
+	bootstrapUrl string,
+	cfg *nildconfig.Config,
+	logger logging.Logger,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	bootstrapConfig, err := rpc_client.NewClient(bootstrapUrl, logger).GetBootstrapConfig(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Patch config
+	cfg.NShards = bootstrapConfig.NShards
+
+	if cfg.ZeroState != nil {
+		logger.Warn().Msg("overriding zero state config")
+	}
+	cfg.ZeroState = bootstrapConfig.ZeroStateConfig
+
+	if cfg.Network.TcpPort == 0 {
+		tcpPort := 3000 // Some port to work through libp2p
+		logger.Info().Msgf("setting TCP port to %d", tcpPort)
+		cfg.Network.TcpPort = tcpPort
+	}
+
+	cfg.BootstrapPeers = append(cfg.BootstrapPeers, bootstrapConfig.BootstrapPeers...)
+
+	cfg.Network.DHTBootstrapPeers = append(cfg.Network.DHTBootstrapPeers, bootstrapConfig.DhtBootstrapPeers...)
+	cfg.Network.DHTEnabled = true
+
+	return nil
+}
+
+func parseArgs(logger logging.Logger) *nildconfig.Config {
 	cfg, err := loadConfig()
 	check.PanicIfErr(err)
 
@@ -179,17 +217,30 @@ func parseArgs() *nildconfig.Config {
 	replayCmd.Flags().Var(&cfg.Replay.BlockIdLast, "last-block", "last block id to replay")
 	replayCmd.Flags().Var(&cfg.Replay.ShardId, "shard-id", "shard id to replay block from")
 
+	var bootstrapUrl string
 	archiveCmd := &cobra.Command{
 		Use:   "archive",
 		Short: "Run nil archive node",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg.RunMode = nilservice.ArchiveRunMode
+
+			if bootstrapUrl != "" {
+				return doBootstrapRequestAndPatchConfig(cmd.Context(), bootstrapUrl, cfg, logger)
+			}
+
+			return nil
 		},
 	}
 
 	addBasicFlags(archiveCmd.Flags(), cfg)
 	cmdflags.AddNetwork(archiveCmd.Flags(), cfg.Network)
 	cmdflags.AddTelemetry(archiveCmd.Flags(), cfg.Telemetry)
+	// N.B. Despite the fact that we override the config with the loaded configuration,
+	// we still handle this flag in the usual way rather than resorting to a hack like GetConfigNameFromArgs.
+	// Network-supplied values should win by default, but because we merge only a small, well-defined
+	// subset of settings, any rare conflicts can be resolved explicitly and safely.
+	archiveCmd.Flags().StringVar(
+		&bootstrapUrl, "bootstrap-url", "", "url to fetch initial configuration from (genesis config etc.")
 
 	rpcCmd := &cobra.Command{
 		Use:   "rpc",

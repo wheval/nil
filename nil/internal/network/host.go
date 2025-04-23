@@ -14,6 +14,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
@@ -88,7 +89,11 @@ func newHost(ctx context.Context, conf *Config) (Host, logging.Logger, error) {
 	}
 
 	if conf.ServeRelay {
-		options = append(options, libp2p.EnableRelayService())
+		options = append(options, libp2p.EnableRelayService(
+			// We temporarily disable the limitation because proxying traffic through a relay is the simplest
+			// way to make the whole system work. Later we should study EnableAutoNATv2 and
+			// EnableHolePunching more carefully to move to direct peer-to-peer connections.
+			relay.WithInfiniteLimits()))
 
 		// todo: remove it after relay is tested
 		// this is to make sure that the relay is not disabled
