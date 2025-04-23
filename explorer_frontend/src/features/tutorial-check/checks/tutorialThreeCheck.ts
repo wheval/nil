@@ -71,7 +71,7 @@ export async function runTutorialCheckThree(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Requester.requestMultiplication() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${hashRequest}.
+      To investigate, debug this transaction using the Cometa service: ${requestTx.hash}.
       `,
     );
     return false;

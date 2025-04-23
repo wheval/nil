@@ -66,7 +66,7 @@ export async function runTutorialCheckFour(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Deployer.deploy() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${hashDeploy}.
+      To investigate, debug this transaction using the Cometa service: ${deployTx.hash}.
       `,
     );
     return false;
@@ -94,7 +94,7 @@ export async function runTutorialCheckFour(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Counter.increment() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${hashDeploy}.
+      To investigate, debug this transaction using the Cometa service: ${incrementTx.hash}.
       `,
     );
     return false;

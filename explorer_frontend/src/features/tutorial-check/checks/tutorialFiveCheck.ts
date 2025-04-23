@@ -71,7 +71,7 @@ export async function runTutorialCheckFive(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling NFT.mintNFT() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${mintRequest}.
+      To investigate, debug this transaction using the Cometa service: ${mintRequest.hash}.
       `,
     );
     return false;
@@ -122,7 +122,7 @@ export async function runTutorialCheckFive(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling NFT.sendNFT() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${sendRequest}.
+      To investigate, debug this transaction using the Cometa service: ${sendRequest.hash}.
       `,
     );
     return false;

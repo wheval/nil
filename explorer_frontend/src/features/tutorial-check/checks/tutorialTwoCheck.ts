@@ -71,7 +71,7 @@ export async function runTutorialCheckTwo(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Operator.checkMintToken() produced one or more failed receipts!
-      Debug this transaction using the Cometa service: ${hashMinting}.
+      Debug this transaction using the Cometa service: ${mintTx.hash}.
       `,
     );
     return false;
@@ -120,7 +120,7 @@ export async function runTutorialCheckTwo(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Operator.checkSendToken() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${hashSending}.
+      To investigate, debug this transaction using the Cometa service: ${sendTx.hash}.
       `,
     );
     return false;
