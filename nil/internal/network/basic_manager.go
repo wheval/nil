@@ -42,7 +42,7 @@ func connectToPeers(ctx context.Context, peers AddrInfoSlice, h Host, logger log
 			continue
 		}
 
-		if err := h.Connect(ctx, peer.AddrInfo(peerInfo)); err != nil {
+		if err := h.Connect(ctx, peerInfo); err != nil {
 			logger.Warn().Err(err).Msgf("Failed to connect to %s", peerInfo)
 		}
 

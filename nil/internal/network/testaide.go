@@ -88,7 +88,8 @@ func GenerateConfig(t *testing.T, port int) (*Config, AddrInfo) {
 	id, err := peer.IDFromPublicKey(key.GetPublic())
 	require.NoError(t, err)
 
-	address, err := peer.AddrInfoFromString(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/%s", port, id))
+	var address AddrInfo
+	err = address.Set(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/%s", port, id))
 	require.NoError(t, err)
 
 	return &Config{
@@ -96,7 +97,7 @@ func GenerateConfig(t *testing.T, port int) (*Config, AddrInfo) {
 		TcpPort:    port,
 		DHTEnabled: true,
 		Prefix:     topLevelTestName(t),
-	}, AddrInfo(*address)
+	}, address
 }
 
 func GenerateConfigs(t *testing.T, n uint32, port int) ([]*Config, AddrInfoSlice) {
@@ -105,7 +106,9 @@ func GenerateConfigs(t *testing.T, n uint32, port int) ([]*Config, AddrInfoSlice
 	configs := make([]*Config, n)
 	addresses := make(AddrInfoSlice, n)
 	for i := range int(n) {
-		configs[i], addresses[i] = GenerateConfig(t, port+i)
+		var addr AddrInfo
+		configs[i], addr = GenerateConfig(t, port+i)
+		addresses[i] = peer.AddrInfo(addr)
 		configs[i].DHTBootstrapPeers = addresses
 	}
 

@@ -37,7 +37,7 @@ type SyncerConfig struct {
 	Name            string
 	ShardId         types.ShardId
 	Timeout         time.Duration // pull blocks if no new blocks appear in the topic for this duration
-	BootstrapPeers  []network.AddrInfo
+	BootstrapPeers  network.AddrInfoSlice
 	ZeroStateConfig *execution.ZeroStateConfig
 }
 
@@ -130,7 +130,7 @@ func (s *Syncer) fetchRemoteVersion(ctx context.Context) (NodeVersion, error) {
 	var err error
 	for _, peer := range s.config.BootstrapPeers {
 		var peerId network.PeerID
-		peerId, err = s.networkManager.Connect(ctx, peer)
+		peerId, err = s.networkManager.Connect(ctx, network.AddrInfo(peer))
 		if err != nil {
 			continue
 		}
@@ -153,7 +153,7 @@ func (s *Syncer) fetchRemoteVersion(ctx context.Context) (NodeVersion, error) {
 func (s *Syncer) fetchSnapshot(ctx context.Context) error {
 	var err error
 	for _, peer := range s.config.BootstrapPeers {
-		err = fetchSnapshot(ctx, s.networkManager, peer, s.db, s.logger)
+		err = fetchSnapshot(ctx, s.networkManager, network.AddrInfo(peer), s.db, s.logger)
 		if err == nil {
 			return nil
 		}

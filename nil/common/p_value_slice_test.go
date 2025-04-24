@@ -61,7 +61,7 @@ func TestValueSlice_Type(t *testing.T) {
 	t.Parallel()
 
 	var vs PValueSlice[*MockValue, MockValue]
-	require.Equal(t, "PValueSlice[mock]", vs.Type())
+	require.Equal(t, "[]mock", vs.Type())
 }
 
 type TestConfig struct {

@@ -25,6 +25,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/NilFoundation/nil/nil/services/rpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/rs/zerolog"
 )
 
@@ -39,8 +40,8 @@ type Instance struct {
 	Config     *nilservice.Config
 }
 
-func getShardAddress(s Instance) network.AddrInfo {
-	return s.P2pAddress
+func getShardAddress(s Instance) peer.AddrInfo {
+	return peer.AddrInfo(s.P2pAddress)
 }
 
 type ShardedSuite struct {
@@ -219,7 +220,7 @@ func (s *ShardedSuite) start(
 		s.Instances[index] = Instance{
 			Db:         s.DbInit(),
 			RpcUrl:     url,
-			P2pAddress: p2pAddresses[index],
+			P2pAddress: network.AddrInfo(p2pAddresses[index]),
 			Client:     rpc_client.NewClient(url, logging.NewFromZerolog(zerolog.New(os.Stderr))),
 		}
 	}

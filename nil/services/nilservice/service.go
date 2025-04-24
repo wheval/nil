@@ -204,8 +204,8 @@ func makeBootstrapConfigIfNetworkEnabled(cfg *Config, networkManager network.Man
 	return &rpctypes.BootstrapConfig{
 		NShards:           cfg.NShards,
 		ZeroStateConfig:   cfg.ZeroState,
-		DhtBootstrapPeers: network.AddrInfoSlice{self},
-		BootstrapPeers:    network.AddrInfoSlice{self},
+		DhtBootstrapPeers: network.AsAddrInfoSlice(self),
+		BootstrapPeers:    network.AsAddrInfoSlice(self),
 	}
 }
 
