@@ -3,19 +3,22 @@
 pragma solidity ^0.8.0;
 
 import "@nilfoundation/smart-contracts/contracts/NilTokenBase.sol";
+import "@nilfoundation/smart-contracts/contracts/Nil.sol";
 
 contract Token is NilTokenBase {
-    bytes pubkey;
 
-    constructor(string memory _tokenName, bytes memory _pubkey) payable {
-        // Revert if the token name is an empty string
-        require(bytes(_tokenName).length > 0, "Token name must not be empty");
-        pubkey = _pubkey;
+    constructor(string memory _tokenName, uint256 initialSupply) {
         tokenName = _tokenName;
+        mintTokenInternal(initialSupply);
     }
-    receive() external payable {}
 
-    function verifyExternal(uint256 hash, bytes calldata signature) external view returns (bool) {
-        return Nil.validateSignature(pubkey, hash, signature);
+    function mintTokenPublic(uint256 amount) public {
+        mintTokenInternal(amount);
     }
+
+    function sendTokenPublic(address to, TokenId tokenId, uint256 amount) public {
+        sendTokenInternal(to, tokenId, amount);
+    }
+
+    receive() external payable {}
 }

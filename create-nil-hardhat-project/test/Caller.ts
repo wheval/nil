@@ -1,9 +1,8 @@
 import { expect } from "chai";
 import "@nomicfoundation/hardhat-ethers";
-import { deployNilContract } from "../src/deploy";
-import type { Abi } from "abitype";
-import { createSmartAccount } from "../src/smart-account";
+import hre from "hardhat";
 import { waitTillCompleted } from "@nilfoundation/niljs";
+import "@nilfoundation/hardhat-nil-plugin";
 
 
 describe("Caller and Incrementer contract interaction", () => {
@@ -12,42 +11,32 @@ describe("Caller and Incrementer contract interaction", () => {
 
   it("Should deploy Caller with shardId 2, deploy Incrementer with shardId 1, and call incrementer from caller", async () => {
 
+    const smartAccount = await hre.nil.createSmartAccount({topUp: true});
+    const client = await hre.nil.getPublicClient();
+
     // Deploy Caller contract
-    const smartAccount = await createSmartAccount({faucetDeposit: true});
-    const AwaitJson = require("../artifacts/contracts/Caller.sol/Caller.json");
+    const caller = await hre.nil.deployContract("Caller", [], {
+      smartAccount: smartAccount,
+      shardId: 2,
+      feeCredit: 100_000_000_000_000n,
+    })
 
-    const {contract: caller, address: callerAddr} =
-      await deployNilContract(
-        smartAccount,
-        AwaitJson.abi as Abi,
-        AwaitJson.bytecode,
-        [],
-        2,
-        [],
-      );
-
-    callerAddress = callerAddr;
+    callerAddress = caller.address;
     console.log("Caller deployed at:", callerAddress);
 
     // Deploy Incrementer contract
-    const IncrementerJson = require("../artifacts/contracts/Incrementer.sol/Incrementer.json");
-    const {contract: incrementer, address: incrementerAddr} =
-      await deployNilContract(
-        smartAccount,
-        IncrementerJson.abi as Abi,
-        IncrementerJson.bytecode,
-        [],
-        1,
-        [],
-      );
-    incrementerAddress = incrementerAddr;
+    const incrementer = await hre.nil.deployContract("Incrementer", [], {
+      shardId: 1,
+      smartAccount: smartAccount,
+    })
+    incrementerAddress = incrementer.address;
     console.log("Incrementer deployed at:", incrementerAddress);
 
     // Call the Caller contract's call method with the Incrementer address
     const tx = await caller.write.call([incrementerAddress]);
-    await waitTillCompleted(smartAccount.client, tx);
+    await waitTillCompleted(client, tx, {waitTillMainShard: true});
 
     // Check the value of Incrementer
-    expect(await incrementer.read.getValue([])).to.equal(1);
+    expect(await incrementer.read.getValue([])).to.equal(1n);
   });
 });

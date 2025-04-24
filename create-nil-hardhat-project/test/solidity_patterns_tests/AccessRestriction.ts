@@ -1,31 +1,40 @@
-import {deployNilContract} from "../../src/deployUtil";
+import hre from "hardhat";
+import "@nilfoundation/hardhat-nil-plugin";
 import {expect} from "chai";
 
 describe("Access Restriction test", () => {
   it("positive_scenario", async () => {
-    const {deployedContract: ar, contractAddress: address} = await deployNilContract("AccessRestriction");
 
-    expect(await ar.controlValue()).to.equal(0)
-    await ar.addAdmin(ar.owner())
-    await ar.accessRestrictionAction()
-    expect(await ar.controlValue()).to.equal(1)
+    const smartAccount = await hre.nil.createSmartAccount({topUp: true});
+
+    const ar = await hre.nil.deployContract("AccessRestriction", [], {smartAccount: smartAccount});
+
+    hre.nil.deployContract
+    const owner = (await ar.read.owner([])) as `0x${string}`;
+    expect(await ar.read.controlValue([])).to.equal(0)
+    await ar.write.addAdmin([owner])
+    await ar.write.accessRestrictionAction([])
+    expect(await ar.read.controlValue([])).to.equal(1)
   });
+
   it("access_restricted_scenario", async () => {
-    const {deployedContract: ar} = await deployNilContract("AccessRestriction");
+    const ar = await hre.nil.deployContract("AccessRestriction", []);
 
-    expect(await ar.controlValue()).to.equal(0)
-    await ar.accessRestrictionAction()
-    expect(await ar.controlValue()).to.equal(0)
+    expect(await ar.read.controlValue([])).to.equal(0)
+    await ar.write.accessRestrictionAction([])
+    expect(await ar.read.controlValue([])).to.equal(0)
   });
+
   it("admin_excluded_from_pool", async function () {
     this.timeout(60000);
 
-    const {deployedContract: ar} = await deployNilContract("AccessRestriction");
+    const ar = await hre.nil.deployContract("AccessRestriction", []);
+    const owner = (await ar.read.owner([])) as `0x${string}`;
 
-    await ar.addAdmin(ar.owner())
-    await ar.accessRestrictionAction()
-    await ar.removeAdmin(ar.owner())
-    await ar.accessRestrictionAction()
-    expect(await ar.controlValue()).to.equal(1)
+    await ar.write.addAdmin([owner])
+    await ar.write.accessRestrictionAction([])
+    await ar.write.removeAdmin([owner])
+    await ar.write.accessRestrictionAction([])
+    expect(await ar.read.controlValue([])).to.equal(1)
   });
 })

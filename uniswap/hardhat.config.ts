@@ -5,10 +5,6 @@ import "@nomicfoundation/hardhat-ignition-ethers";
 import "@nilfoundation/hardhat-nil-plugin";
 import "@typechain/hardhat";
 import * as dotenv from "dotenv";
-import type { HardhatUserConfig } from "hardhat/config";
-
-// Basic
-import "./tasks/basic/create-smart-account";
 
 // Token Tasks
 import "./tasks/token/info";
@@ -27,10 +23,11 @@ import "./tasks/uniswap/factory/deploy-factory";
 // Demo Tasks
 import "./tasks/uniswap/demo-router";
 import "./tasks/uniswap/demo-router-sync";
+import type { HardhatConfig } from "hardhat/types";
 
 dotenv.config();
 
-const config: HardhatUserConfig = {
+const config: HardhatConfig = {
   ignition: {
     requiredConfirmations: 1,
   },
@@ -52,6 +49,7 @@ const config: HardhatUserConfig = {
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
+  defaultShardId: 1,
 };
 
 export default config;

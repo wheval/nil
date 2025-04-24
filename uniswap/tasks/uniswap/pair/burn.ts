@@ -1,24 +1,15 @@
-import { getContract, waitTillCompleted } from "@nilfoundation/niljs";
+import { waitTillCompleted } from "@nilfoundation/niljs";
 import type { Address } from "abitype";
 import { task } from "hardhat/config";
-import { createClient } from "../../util/client";
 
 task("burn", "Burn liquidity tokens and print balances and reserves")
   .addParam("pair", "The address of the pair contract")
-  .setAction(async (taskArgs, _) => {
-    const { smartAccount, publicClient } = await createClient();
+  .setAction(async (taskArgs, hre) => {
+    const client = await hre.nil.getPublicClient();
+    const smartAccount = await hre.nil.getSmartAccount();
 
-    // Destructure parameters for clarity
     const pairAddress = taskArgs.pair as Address;
-
-    const PairJson = require("../../artifacts/contracts/UniswapV2Pair.sol/UniswapV2Pair.json");
-    // Attach to the Uniswap V2 Pair contract
-    const pair = getContract({
-      abi: PairJson.abi,
-      address: pairAddress,
-      client: smartAccount.client,
-      smartAccount: smartAccount,
-    });
+    const pair = await hre.nil.getContractAt("UniswapV2Pair", pairAddress, {});
 
     const token0 = (await pair.read.token0Id([])) as Address;
     console.log("Token0:", token0);
@@ -27,23 +18,12 @@ task("burn", "Burn liquidity tokens and print balances and reserves")
 
     const TokenJson = require("../../artifacts/contracts/Token.sol/Token.json");
     // Attach to the Token contracts
-    const token0Contract = getContract({
-      abi: TokenJson.abi,
-      address: token0,
-      client: smartAccount.client,
-      smartAccount: smartAccount,
-    });
-    const token1Contract = getContract({
-      abi: TokenJson.abi,
-      address: token1,
-      client: smartAccount.client,
-      smartAccount: smartAccount,
-    });
+    const token0Contract = await hre.nil.getContractAt("Token", token0, {});
+    const token1Contract = await hre.nil.getContractAt("Token", token1, {});
 
     const total = await pair.read.getTokenTotalSupply([]);
     console.log("Total supply:", total);
 
-    // Fetch and log pair balances before burn
     const pairBalanceToken0 = await token0Contract.read.getTokenBalanceOf([
       pairAddress,
     ]);
@@ -80,7 +60,7 @@ task("burn", "Burn liquidity tokens and print balances and reserves")
       ],
     });
 
-    await waitTillCompleted(publicClient, hash);
+    await waitTillCompleted(client, hash);
 
     console.log("Burn executed.");
 
