@@ -8,6 +8,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
+	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/mpt"
 	"github.com/NilFoundation/nil/nil/internal/types"
@@ -68,6 +69,9 @@ func (bt *BlocksTracer) PrintTransaction(txn *types.Transaction, hash common.Has
 			}
 		}
 		fmt.Fprintln(bt.file, "]")
+	}
+	if decoded, err := contracts.DecodeCallData(nil, txn.Data); err == nil {
+		bt.Printf("decoded: %s\n", decoded)
 	}
 	if len(txn.Data) < 1024 {
 		bt.Printf("data: %s\n", hexutil.Encode(txn.Data))
