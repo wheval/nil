@@ -69,7 +69,8 @@ contract L1ETHBridge is L1BaseBridge, IL1ETHBridge {
     address ownerAddress,
     address adminAddress,
     address messengerAddress,
-    address nilGasPriceOracleAddress
+    address nilGasPriceOracleAddress,
+    uint256 shardId
   ) public initializer {
     // Validate input parameters
     if (ownerAddress == address(0)) {
@@ -83,7 +84,7 @@ contract L1ETHBridge is L1BaseBridge, IL1ETHBridge {
     if (nilGasPriceOracleAddress == address(0)) {
       revert ErrorInvalidNilGasPriceOracle();
     }
-    L1BaseBridge.__L1BaseBridge_init(ownerAddress, adminAddress, messengerAddress, nilGasPriceOracleAddress);
+    L1BaseBridge.__L1BaseBridge_init(ownerAddress, adminAddress, messengerAddress, nilGasPriceOracleAddress, shardId);
   }
 
   /*//////////////////////////////////////////////////////////////////////////
@@ -136,9 +137,7 @@ contract L1ETHBridge is L1BaseBridge, IL1ETHBridge {
     address caller = _msgSender();
 
     // get DepositMessageDetails
-    IRelayMessage.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(
-      messageHash
-    );
+    IRelayMessage.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(messageHash);
 
     if (depositMessage.messageType != NilConstants.MessageType.DEPOSIT_ETH) {
       revert InvalidMessageType();
@@ -164,18 +163,17 @@ contract L1ETHBridge is L1BaseBridge, IL1ETHBridge {
   /// @inheritdoc IL1Bridge
   function claimFailedDeposit(
     bytes32 messageHash,
+    uint256 merkleTreeLeafIndex,
     bytes32[] memory claimProof
   ) public override nonReentrant whenNotPaused {
-    IRelayMessage.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(
-      messageHash
-    );
+    IRelayMessage.DepositMessage memory depositMessage = IL1BridgeMessenger(messenger).getDepositMessage(messageHash);
 
     if (depositMessage.messageType != NilConstants.MessageType.DEPOSIT_ETH) {
       revert InvalidMessageType();
     }
 
     // L1BridgeMessenger to verify if the deposit can be claimed
-    IL1BridgeMessenger(messenger).claimFailedDeposit(messageHash, claimProof);
+    IL1BridgeMessenger(messenger).claimFailedDeposit(messageHash, merkleTreeLeafIndex, claimProof);
 
     // Refund the deposited ETH to the refundAddress
     (bool success, ) = payable(depositMessage.depositorAddress).call{ value: depositMessage.depositAmount }("");
@@ -192,7 +190,23 @@ contract L1ETHBridge is L1BaseBridge, IL1ETHBridge {
     );
   }
 
-  function finaliseETHWithdrawal(address l1WithdrawalRecipient, uint256 withdrawalAmount) public payable {}
+  function finaliseETHWithdrawal(address l1WithdrawalRecipient, uint256 withdrawalAmount) public payable nonReentrant {
+    if (l1WithdrawalRecipient != address(0)) {
+      revert ErrorInvalidRecipientAddress();
+    }
+
+    if (withdrawalAmount == 0 || address(this).balance < withdrawalAmount) {
+      revert ErrorInvalidWithdrawalAmount();
+    }
+
+    (bool _success, ) = l1WithdrawalRecipient.call{ value: withdrawalAmount }("");
+
+    if (!_success) {
+      revert ErrorEthTransferFailed();
+    }
+
+    emit FinalisedETHWithdrawal(address(this), l1WithdrawalRecipient, withdrawalAmount);
+  }
 
   /*//////////////////////////////////////////////////////////////////////////
                              INTERNAL-FUNCTIONS   

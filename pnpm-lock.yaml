@@ -31,7 +31,7 @@ importers:
     dependencies:
       '@nilfoundation/niljs':
         specifier: 0.25.0
-        version: 0.25.0(rollup@4.40.0)(typescript@5.8.2)
+        version: 0.25.0(encoding@0.1.13)(rollup@4.40.0)(typescript@5.8.2)
       '@nilfoundation/smart-contracts':
         specifier: 0.7.0
         version: 0.7.0
@@ -59,7 +59,7 @@ importers:
     dependencies:
       '@nilfoundation/niljs':
         specifier: 0.25.0
-        version: 0.25.0(rollup@4.40.0)(typescript@5.8.2)
+        version: 0.25.0(encoding@0.1.13)(rollup@4.40.0)(typescript@5.8.2)
       '@nilfoundation/smart-contracts':
         specifier: 0.7.0
         version: 0.7.0
@@ -845,6 +845,12 @@ importers:
 
   rollup-bridge-contracts:
     dependencies:
+      '@nilfoundation/niljs':
+        specifier: 0.25.0
+        version: 0.25.0(encoding@0.1.13)(rollup@4.40.0)(typescript@5.8.2)
+      '@nilfoundation/smart-contracts':
+        specifier: 0.7.0
+        version: 0.7.0
       '@openzeppelin/contracts':
         specifier: ^5.1.0
         version: 5.2.0
@@ -854,6 +860,9 @@ importers:
       '@openzeppelin/hardhat-upgrades':
         specifier: ^3.8.0
         version: 3.9.0(@nomicfoundation/hardhat-ethers@3.0.8(ethers@6.13.5)(hardhat@2.22.19(ts-node@10.9.2(@types/node@22.13.14)(typescript@5.8.2))(typescript@5.8.2)))(@nomicfoundation/hardhat-verify@2.0.13(hardhat@2.22.19(ts-node@10.9.2(@types/node@22.13.14)(typescript@5.8.2))(typescript@5.8.2)))(encoding@0.1.13)(ethers@6.13.5)(hardhat@2.22.19(ts-node@10.9.2(@types/node@22.13.14)(typescript@5.8.2))(typescript@5.8.2))
+      abitype:
+        specifier: ^1.0.7
+        version: 1.0.8(typescript@5.8.2)(zod@3.24.2)
       dotenv:
         specifier: ^16.4.5
         version: 16.4.7
@@ -22708,7 +22717,7 @@ snapshots:
   '@next/swc-win32-x64-msvc@15.2.4':
     optional: true
 
-  '@nilfoundation/niljs@0.25.0(rollup@4.40.0)(typescript@5.8.2)':
+  '@nilfoundation/niljs@0.25.0(encoding@0.1.13)(rollup@4.40.0)(typescript@5.8.2)':
     dependencies:
       '@chainsafe/persistent-merkle-tree': 0.7.2
       '@chainsafe/ssz': 0.16.0

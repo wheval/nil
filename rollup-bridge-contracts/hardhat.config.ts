@@ -5,7 +5,7 @@ import "hardhat-preprocessor";
 import "hardhat-deploy";
 require('@openzeppelin/hardhat-upgrades');
 import { resolve } from "path";
-import fs from "fs";
+import * as fs from "fs";
 
 dotenv.config();
 
@@ -21,6 +21,13 @@ const remappings = getRemappings();
 
 console.log("Remappings:", remappings);
 
+import "./task/generate-nil-smart-account";
+import "./task/deploy-nil-message-tree";
+import "./task/deploy-l2-bridge-messenger";
+import "./task/deploy-l2-eth-bridge";
+import "./task/deploy-l2-eth-bridge-vault";
+import "./task/deploy-l2-enshrined-token-bridge";
+import "./task/deploy-my-logic";
 
 const config: HardhatUserConfig = {
   ignition: {
@@ -80,7 +87,11 @@ const config: HardhatUserConfig = {
       url: process.env.SEPOLIA_RPC_ENDPOINT,
       accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
       gas: 1000000
-    }
+    },
+    nil: {
+      url: process.env.NIL_RPC_ENDPOINT,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
   },
   namedAccounts: {
     deployer: {
