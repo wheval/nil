@@ -9,6 +9,7 @@ import (
 
 	"github.com/NilFoundation/nil/nil/common/hexutil"
 	"github.com/NilFoundation/nil/nil/internal/abi"
+	"github.com/NilFoundation/nil/nil/internal/contracts"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 )
 
@@ -170,32 +171,7 @@ func (c *Contract) DecodeCallData(calldata []byte) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("method not found in ABI: %s", methodName)
 	}
-	if len(calldata) < 4 {
-		return "", fmt.Errorf("too short calldata: %d", len(calldata))
-	}
-	args, err := method.Inputs.Unpack(calldata[4:])
-	if err != nil {
-		return "", fmt.Errorf("failed to unpack arguments: %w", err)
-	}
-	res := methodName + "("
-	adjustArg := func(arg any) string {
-		switch v := arg.(type) {
-		case []byte:
-			return hexutil.Encode(v)
-		default:
-			return fmt.Sprintf("%v", v)
-		}
-	}
-	for i, arg := range args {
-		if i > 0 {
-			res += fmt.Sprintf(", %v", adjustArg(arg))
-		} else {
-			res += adjustArg(arg)
-		}
-	}
-	res += ")"
-
-	return res, nil
+	return contracts.DecodeCallData(&method, calldata)
 }
 
 func (c *Contract) DecodeLog(log *jsonrpc.RPCLog) (string, error) {
