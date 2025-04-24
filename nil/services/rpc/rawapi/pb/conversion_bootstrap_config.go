@@ -2,9 +2,7 @@ package pb
 
 import (
 	"fmt"
-	"slices"
 
-	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/internal/network"
 	rpctypes "github.com/NilFoundation/nil/nil/services/rpc/types"
 	"gopkg.in/yaml.v3"
@@ -21,16 +19,22 @@ func (bc *BootstrapConfigResponse) PackProtoMessage(config *rpctypes.BootstrapCo
 		return err
 	}
 
+	dhtBootstrapPeers, err := config.DhtBootstrapPeers.Strings()
+	if err != nil {
+		return err
+	}
+
+	bootstrapPeers, err := config.BootstrapPeers.Strings()
+	if err != nil {
+		return err
+	}
+
 	bc.Result = &BootstrapConfigResponse_Data{
 		Data: &BootstrapConfig{
 			NShards:             config.NShards,
 			ZeroStateConfigYaml: string(zeroStateConfigYaml),
-			DhtBootstrapPeers: slices.Collect(common.Transform(
-				slices.Values(config.DhtBootstrapPeers),
-				func(peer network.AddrInfo) string { return peer.String() })),
-			BootstrapPeers: slices.Collect(common.Transform(
-				slices.Values(config.BootstrapPeers),
-				func(peer network.AddrInfo) string { return peer.String() })),
+			DhtBootstrapPeers:   dhtBootstrapPeers,
+			BootstrapPeers:      bootstrapPeers,
 		},
 	}
 
@@ -46,22 +50,16 @@ func (bc *BootstrapConfigResponse) UnpackProtoMessage() (*rpctypes.BootstrapConf
 		if err := yaml.Unmarshal([]byte(res.Data.GetZeroStateConfigYaml()), &config.ZeroStateConfig); err != nil {
 			return nil, err
 		}
-		config.DhtBootstrapPeers = make(network.AddrInfoSlice, len(res.Data.GetDhtBootstrapPeers()))
-		for i, peer := range res.Data.GetDhtBootstrapPeers() {
-			var addrInfo network.AddrInfo
-			if err := addrInfo.Set(peer); err != nil {
-				return nil, err
-			}
-			config.DhtBootstrapPeers[i] = addrInfo
+		config.DhtBootstrapPeers = make(network.AddrInfoSlice, 0)
+		if err := config.DhtBootstrapPeers.FromStrings(res.Data.GetDhtBootstrapPeers()); err != nil {
+			return nil, err
 		}
-		config.BootstrapPeers = make(network.AddrInfoSlice, len(res.Data.GetBootstrapPeers()))
-		for i, peer := range res.Data.GetBootstrapPeers() {
-			var addrInfo network.AddrInfo
-			if err := addrInfo.Set(peer); err != nil {
-				return nil, err
-			}
-			config.BootstrapPeers[i] = addrInfo
+
+		config.BootstrapPeers = make(network.AddrInfoSlice, 0)
+		if err := config.BootstrapPeers.FromStrings(res.Data.GetBootstrapPeers()); err != nil {
+			return nil, err
 		}
+
 		return config, nil
 
 	case *BootstrapConfigResponse_Error:

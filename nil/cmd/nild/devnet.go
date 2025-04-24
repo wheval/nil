@@ -18,6 +18,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -463,7 +464,7 @@ func getPeer(srv server) network.AddrInfo {
 func getPeers(servers []server, indices []int) network.AddrInfoSlice {
 	peers := make(network.AddrInfoSlice, len(indices))
 	for i, idx := range indices {
-		peers[i] = getPeer(servers[idx])
+		peers[i] = peer.AddrInfo(getPeer(servers[idx]))
 	}
 	return peers
 }

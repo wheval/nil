@@ -26,7 +26,7 @@ func (s *RelayTestSuite) TestRelay() {
 
 	// Forcing private reachability, otherwise the private node won't use the relay
 	private := s.newManagerWithBaseConfig(&Config{
-		Relays:       []AddrInfo{CalcAddress(relay)},
+		Relays:       AsAddrInfoSlice(CalcAddress(relay)),
 		Reachability: network.ReachabilityPrivate,
 	})
 	private.SetRequestHandler(s.context, "/hello", func(context.Context, []byte) ([]byte, error) {

@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/concurrent"
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/cobrax"
@@ -31,8 +32,9 @@ const (
 var logger = logging.NewLogger("relay")
 
 type config struct {
-	LogLevel  string `yaml:"logLevel,omitempty"`
-	PprofPort int    `yaml:"pprofPort,omitempty"`
+	LogLevel       string `yaml:"logLevel,omitempty"`
+	Libp2pLogLevel string `yaml:"libp2pLogLevel,omitempty"`
+	PprofPort      int    `yaml:"pprofPort,omitempty"`
 
 	Network   *network.Config   `yaml:"network,omitempty"`
 	Telemetry *telemetry.Config `yaml:"telemetry,omitempty"`
@@ -62,6 +64,7 @@ func runCommand() error {
 
 	cobrax.AddConfigFlag(rootCmd.PersistentFlags())
 	cobrax.AddLogLevelFlag(rootCmd.PersistentFlags(), &cfg.LogLevel)
+	cobrax.AddCustomLogLevelFlag(rootCmd.PersistentFlags(), "libp2p-log-level", "", &cfg.Libp2pLogLevel)
 	cobrax.AddPprofPortFlag(rootCmd.PersistentFlags(), &cfg.PprofPort)
 	cmdflags.AddNetwork(rootCmd.PersistentFlags(), cfg.Network)
 	cmdflags.AddTelemetry(rootCmd.PersistentFlags(), cfg.Telemetry)
@@ -118,6 +121,7 @@ func genConfig(cfg *config, fileName string) error {
 
 func run(ctx context.Context, cfg *config) error {
 	logging.SetupGlobalLogger(cfg.LogLevel)
+	check.PanicIfErr(logging.SetLibp2pLogLevel(cfg.Libp2pLogLevel))
 	profiling.Start(cfg.PprofPort)
 
 	if err := telemetry.Init(ctx, cfg.Telemetry); err != nil {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/csv"
-	"fmt"
 	"strings"
 
 	"github.com/spf13/pflag"
@@ -27,7 +26,7 @@ var (
 )
 
 func (s *PValueSlice[T, S]) Set(value string) error {
-	parts, err := readAsCSV(value)
+	parts, err := ReadAsCSV(value)
 	if err != nil {
 		return err
 	}
@@ -56,7 +55,7 @@ func (s *PValueSlice[T, S]) String() string {
 }
 
 func (s *PValueSlice[T, S]) Type() string {
-	return fmt.Sprintf("PValueSlice[%s]", T(new(S)).Type())
+	return "[]" + T(new(S)).Type()
 }
 
 func (s PValueSlice[T, S]) MarshalYAML() (any, error) {
@@ -85,7 +84,7 @@ func (s *PValueSlice[T, S]) UnmarshalYAML(value *yaml.Node) error {
 }
 
 // Copy of private functions from pflag used in stringSliceValue implementation.
-func readAsCSV(val string) ([]string, error) {
+func ReadAsCSV(val string) ([]string, error) {
 	if val == "" {
 		return []string{}, nil
 	}

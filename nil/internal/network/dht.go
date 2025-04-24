@@ -40,7 +40,7 @@ func NewDHT(ctx context.Context, h host.Host, conf *Config, database db.DB, logg
 
 	dhtOpts := []dht.Option{
 		dht.Mode(conf.DHTMode),
-		dht.BootstrapPeers(ToLibP2pAddrInfoSlice(conf.DHTBootstrapPeers)...),
+		dht.BootstrapPeers(conf.DHTBootstrapPeers...),
 		dht.RoutingTableRefreshPeriod(1 * time.Minute),
 		dht.V1ProtocolOverride(protocol),
 	}
