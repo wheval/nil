@@ -19,14 +19,14 @@ const (
 	DeleteMPTOperation
 )
 
-type ProofPath []Node
+type SimpleProof []Node
 
 type Proof struct {
 	operation MPTOperation
 	key       []byte
 	// path from root to the node with max matching to key prefix
 	// if key is presented in the MPT this'll be simply path to corresponding node
-	PathToNode ProofPath
+	PathToNode SimpleProof
 }
 
 // BuildProof constructs a proof for the given key in the MPT.
@@ -37,21 +37,11 @@ func BuildProof(tree *Reader, key []byte, op MPTOperation) (Proof, error) {
 	}
 	p := Proof{operation: op, key: key}
 
-	path, err := getMaxMatchingRoute(tree, key)
+	pathToNode, err := BuildSimpleProof(tree, key)
 	if err != nil {
 		return p, err
 	}
-	p.PathToNode = path
-
-	if len(p.PathToNode) == 0 && tree.root != nil {
-		if rootNode, err := tree.getNode(tree.root); err != nil {
-			if !errors.Is(err, db.ErrKeyNotFound) {
-				return p, err
-			}
-		} else {
-			p.PathToNode = []Node{rootNode}
-		}
-	}
+	p.PathToNode = pathToNode
 
 	return p, nil
 }
@@ -168,13 +158,19 @@ func unwrapSparseMpt(p *Proof) (*MerklePatriciaTrie, error) {
 	return mpt, nil
 }
 
-// PopulateMptWithProof sets the root of the `mpt` instance to the first node from the `p` proof
-// and populates it with nodes contained in the proof.
+// PopulateMptWithProofNodes populates it with nodes contained in the proof, setting the root of the `mpt` instance
+// to the first node from the `PathToNode` slice.
 func PopulateMptWithProof(mpt *MerklePatriciaTrie, p *Proof) error {
-	for i, node := range p.PathToNode {
+	return populateMptWithProofNodes(mpt, p.PathToNode, true)
+}
+
+// populateMptWithProofNodes populates it with nodes contained in the proof, if `setRoot` is true,
+// also sets the root of the `mpt` instance to the first node from the slice.
+func populateMptWithProofNodes(mpt *MerklePatriciaTrie, proofNodes SimpleProof, setRoot bool) error {
+	for i, node := range proofNodes {
 		if nodeRef, err := mpt.storeNode(node); err != nil {
 			return err
-		} else if i == 0 {
+		} else if i == 0 && setRoot {
 			mpt.root = nodeRef
 		}
 	}
@@ -218,15 +214,11 @@ func (p *Proof) Encode() ([]byte, error) {
 	buf = ssz.MarshalUint8(buf, uint8(len(p.key)))
 	buf = append(buf, p.key...)
 
-	buf = ssz.MarshalUint8(buf, uint8(len(p.PathToNode)))
-	for i := range p.PathToNode {
-		node, err := p.PathToNode[i].Encode()
-		if err != nil {
-			return nil, err
-		}
-		buf = ssz.MarshalUint32(buf, uint32(len(node)))
-		buf = append(buf, node...)
+	encodedPath, err := p.PathToNode.Encode()
+	if err != nil {
+		return nil, err
 	}
+	buf = append(buf, encodedPath...)
 
 	return buf, nil
 }
@@ -243,20 +235,112 @@ func DecodeProof(data []byte) (Proof, error) {
 	p.key = data[1 : 1+keyLen]
 	data = data[1+keyLen:]
 
-	pathLen := ssz.UnmarshallUint8(data)
+	sp, err := DecodeSimpleProof(data)
+	if err != nil {
+		return p, err
+	}
+	p.PathToNode = sp
+
+	return p, nil
+}
+
+// BuildSimpleProof constructs a `SimpleProof` for the given key in the MPT.
+// If no common path is found, the root node is included to prove that the key does not exist in the trie.
+func BuildSimpleProof(tree *Reader, key []byte) (SimpleProof, error) {
+	if len(key) > maxRawKeyLen {
+		key = crypto.Keccak256(key)
+	}
+
+	path, err := getMaxMatchingRoute(tree, key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(path) == 0 && tree.root != nil {
+		if rootNode, err := tree.getNode(tree.root); err != nil {
+			if !errors.Is(err, db.ErrKeyNotFound) {
+				return nil, err
+			}
+		} else {
+			path = []Node{rootNode}
+		}
+	}
+
+	return path, nil
+}
+
+func (sp *SimpleProof) Encode() ([]byte, error) {
+	buf := make([]byte, 0)
+	buf = ssz.MarshalUint8(buf, uint8(len(*sp)))
+	for i := range *sp {
+		node, err := (*sp)[i].Encode()
+		if err != nil {
+			return nil, err
+		}
+		buf = ssz.MarshalUint32(buf, uint32(len(node)))
+		buf = append(buf, node...)
+	}
+
+	return buf, nil
+}
+
+func DecodeSimpleProof(data []byte) (SimpleProof, error) {
+	// here we deserialize simple proof from the data piece by piece
+	// and each time advance the offset on correct amount of bytes
+	proofLen := ssz.UnmarshallUint8(data)
 	data = data[1:]
 
-	for range pathLen {
+	sp := make(SimpleProof, 0)
+	for range proofLen {
 		nodeLen := ssz.UnmarshallUint32(data)
 
 		node, err := DecodeNode(data[4 : 4+nodeLen])
 		if err != nil {
-			return p, err
+			return nil, err
 		}
 
-		p.PathToNode = append(p.PathToNode, node)
+		sp = append(sp, node)
 		data = data[4+nodeLen:]
 	}
 
-	return p, nil
+	return sp, nil
+}
+
+func (sp *SimpleProof) ToBytesSlice() ([][]byte, error) {
+	bytesSlice := make([][]byte, 0, len(*sp))
+	for i := range *sp {
+		sszEncodedNode, err := (*sp)[i].Encode()
+		if err != nil {
+			return nil, err
+		}
+		bytesSlice = append(bytesSlice, sszEncodedNode)
+	}
+
+	return bytesSlice, nil
+}
+
+func SimpleProofFromBytesSlice(data [][]byte) (SimpleProof, error) {
+	sp := make(SimpleProof, 0, len(data))
+	for _, sszEncodedNode := range data {
+		node, err := DecodeNode(sszEncodedNode)
+		if err != nil {
+			return nil, err
+		}
+		sp = append(sp, node)
+	}
+	return sp, nil
+}
+
+func (sp *SimpleProof) Verify(rootHash common.Hash, key []byte) ([]byte, error) {
+	trie := NewInMemMPT()
+	// populate without setting the root
+	if err := populateMptWithProofNodes(trie, *sp, false); err != nil {
+		return nil, err
+	}
+	trie.root = rootHash[:]
+	val, err := trie.Get(key)
+	if errors.Is(err, db.ErrKeyNotFound) {
+		return nil, nil
+	}
+	return val, err
 }

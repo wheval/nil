@@ -2,9 +2,15 @@ package jsonrpc
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
+	"github.com/NilFoundation/nil/nil/common"
 	"github.com/NilFoundation/nil/nil/common/check"
 	"github.com/NilFoundation/nil/nil/common/hexutil"
+	"github.com/NilFoundation/nil/nil/internal/db"
+	"github.com/NilFoundation/nil/nil/internal/execution"
+	"github.com/NilFoundation/nil/nil/internal/mpt"
 	"github.com/NilFoundation/nil/nil/internal/types"
 	rawapitypes "github.com/NilFoundation/nil/nil/services/rpc/rawapi/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
@@ -57,6 +63,147 @@ func (api *APIImplRo) GetCode(
 		return nil, err
 	}
 	return hexutil.Bytes(code), nil
+}
+
+// GetProof implements eth_getProof. For more info refer to `EthProof`.
+func (api *APIImplRo) GetProof(
+	ctx context.Context,
+	address types.Address,
+	storageKeys []common.Hash,
+	blockNrOrHash transport.BlockNumberOrHash,
+) (*EthProof, error) {
+	// Fetch the smart contract data
+	smartContract, err := api.rawapi.GetContract(ctx, address, toBlockReference(blockNrOrHash))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get contract: %w", err)
+	}
+
+	// Process account proof
+	accountProofBytes, err := extractAccountProofBytes(smartContract.ProofEncoded)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract account proof: %w", err)
+	}
+
+	// Prepare storage data for trie
+	keys, values := extractStorageKeyValues(smartContract.Storage)
+
+	// Build storage trie
+	trie, err := buildStorageTrie(keys, values)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build storage trie: %w", err)
+	}
+
+	// Generate storage proofs for each requested key
+	storageProofs, err := generateStorageProofs(trie.Reader, storageKeys)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate storage proofs: %w", err)
+	}
+
+	// Create the basic proof result
+	result := &EthProof{
+		AccountProof: hexutil.FromBytesSlice(accountProofBytes),
+		StorageProof: storageProofs,
+	}
+
+	// If contract data is available, add contract details
+	if len(smartContract.ContractSSZ) > 0 {
+		if err := addContractDetailsToProof(result, smartContract.ContractSSZ); err != nil {
+			return nil, fmt.Errorf("failed to add contract details: %w", err)
+		}
+	}
+
+	return result, nil
+}
+
+// extractAccountProofBytes decodes and extracts the account proof bytes
+func extractAccountProofBytes(proofEncoded []byte) ([][]byte, error) {
+	proof, err := mpt.DecodeProof(proofEncoded)
+	if err != nil {
+		return nil, err
+	}
+
+	return proof.PathToNode.ToBytesSlice()
+}
+
+// extractStorageKeyValues extracts keys and values from storage map
+func extractStorageKeyValues(storage map[common.Hash]types.Uint256) ([]common.Hash, []*types.Uint256) {
+	keys := make([]common.Hash, 0, len(storage))
+	values := make([]*types.Uint256, 0, len(storage))
+
+	for key, val := range storage {
+		localVal := val // Create a local copy to avoid pointer issues
+		keys = append(keys, key)
+		values = append(values, &localVal)
+	}
+
+	return keys, values
+}
+
+// buildStorageTrie creates and populates a storage trie with the given keys and values
+func buildStorageTrie(keys []common.Hash, values []*types.Uint256) (*mpt.MerklePatriciaTrie, error) {
+	trie := mpt.NewInMemMPT()
+	storageTrie := execution.NewStorageTrie(trie)
+
+	if err := storageTrie.UpdateBatch(keys, values); err != nil {
+		return nil, err
+	}
+
+	return trie, nil
+}
+
+// generateStorageProofs creates proofs for each requested storage key
+func generateStorageProofs(trie *mpt.Reader, storageKeys []common.Hash) ([]StorageProof, error) {
+	storageProofs := make([]StorageProof, 0, len(storageKeys))
+
+	for _, key := range storageKeys {
+		// Get value for the key
+		value, err := trie.Get(key.Bytes())
+		if err != nil && !errors.Is(err, db.ErrKeyNotFound) {
+			return nil, err
+		}
+
+		// Build proof for the key
+		proof, err := mpt.BuildSimpleProof(trie, key.Bytes())
+		if err != nil {
+			return nil, err
+		}
+
+		// Convert proof to bytes
+		proofBytesSlice, err := proof.ToBytesSlice()
+		if err != nil {
+			return nil, err
+		}
+
+		// Create storage proof for the key
+		storageProof := StorageProof{
+			Key:   hexutil.Big(*key.Big()),
+			Value: *hexutil.NewBig(common.BytesToHash(value).Big()),
+		}
+
+		// Add proof bytes if available
+		if len(proofBytesSlice) != 0 {
+			storageProof.Proof = hexutil.FromBytesSlice(proofBytesSlice)
+		}
+
+		storageProofs = append(storageProofs, storageProof)
+	}
+
+	return storageProofs, nil
+}
+
+// addContractDetailsToProof adds smart contract details to the proof result
+func addContractDetailsToProof(result *EthProof, contractSSZ []byte) error {
+	contract := new(types.SmartContract)
+	if err := contract.UnmarshalSSZ(contractSSZ); err != nil {
+		return err
+	}
+
+	result.Balance = contract.Balance
+	result.CodeHash = contract.CodeHash
+	result.Nonce = contract.Seqno
+	result.StorageHash = contract.StorageRoot
+
+	return nil
 }
 
 func blockNrToBlockReference(num transport.BlockNumber) rawapitypes.BlockReference {

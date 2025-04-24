@@ -484,3 +484,56 @@ func TestProofEncoding(t *testing.T) {
 		require.Equal(t, n, decoded.PathToNode[i])
 	}
 }
+
+func TestSimpleProof(t *testing.T) {
+	t.Parallel()
+
+	data := defaultMPTData
+	mpt, _ := mptFromData(t, data)
+
+	t.Run("Prove existing keys", func(t *testing.T) {
+		t.Parallel()
+
+		for k, v := range data {
+			key := []byte(k)
+			p, err := BuildSimpleProof(mpt.Reader, key)
+			require.NoError(t, err)
+
+			valFromProof, err := p.Verify(mpt.RootHash(), key)
+			require.NoError(t, err)
+			require.Equal(t, []byte(v), valFromProof)
+		}
+	})
+
+	t.Run("Prove missing keys", func(t *testing.T) {
+		t.Parallel()
+
+		verify := func(key []byte) {
+			t.Helper()
+			p, err := BuildSimpleProof(mpt.Reader, key)
+			require.NoError(t, err)
+
+			valFromProof, err := p.Verify(mpt.RootHash(), key)
+			require.NoError(t, err)
+			require.Nil(t, valFromProof)
+		}
+
+		verify([]byte{0xf, 0xf, 0xc})
+
+		verify([]byte{0xa})
+	})
+
+	t.Run("Prove empty mpt", func(t *testing.T) {
+		t.Parallel()
+
+		tree := NewInMemMPT()
+		key := []byte{0x1}
+
+		p, err := BuildSimpleProof(tree.Reader, key)
+		require.NoError(t, err)
+
+		valFromProof, err := p.Verify(tree.RootHash(), key)
+		require.NoError(t, err)
+		require.Nil(t, valFromProof)
+	})
+}

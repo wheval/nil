@@ -77,6 +77,7 @@ const (
 	Eth_getNumShards                     = "eth_getNumShards"
 	Eth_gasPrice                         = "eth_gasPrice"
 	Eth_chainId                          = "eth_chainId"
+	Eth_getProof                         = "eth_getProof"
 	Debug_getBlockByHash                 = "debug_getBlockByHash"
 	Debug_getBlockByNumber               = "debug_getBlockByNumber"
 	Debug_getContract                    = "debug_getContract"
