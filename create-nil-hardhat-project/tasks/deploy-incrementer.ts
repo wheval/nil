@@ -1,23 +1,9 @@
-import type { Abi } from "abitype";
 import { task } from "hardhat/config";
-import { createSmartAccount } from "../src/smart-account";
-import { deployNilContract } from "../src/deploy";
 
-task("deploy-incrementer").setAction(async (taskArgs, _) => {
-  const smartAccount = await createSmartAccount();
+task("deploy-incrementer").setAction(async (taskArgs, hre) => {
+  const contract = await hre.nil.deployContract("Incrementer", []);
 
-  const IncrementerJson = require("../artifacts/contracts/Incrementer.sol/Incrementer.json");
-
-  const { contract, address } = await deployNilContract(
-    smartAccount,
-    IncrementerJson.abi as Abi,
-    IncrementerJson.bytecode,
-    [],
-    smartAccount.shardId,
-    [],
-  );
-
-  console.log("Incrementer contract deployed at address: " + address);
+  console.log("Incrementer contract deployed at address: " + contract.address);
 
   await contract.write.increment([]);
 

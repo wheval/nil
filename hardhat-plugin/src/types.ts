@@ -4,14 +4,28 @@ import type {
   IAddress,
   ISigner,
   PublicClient,
+  SmartAccountInterface,
 } from "@nilfoundation/niljs";
-import type { SmartAccountInterface } from "@nilfoundation/niljs";
 
 export type GetContractAtConfig = {
   publicClient?: PublicClient;
   smartAccount?: SmartAccountInterface;
   signer?: ISigner;
   externalMethods?: string[];
+};
+
+export type DeployContractConfig = {
+  shardId?: number;
+  value?: bigint;
+  feeCredit?: bigint;
+} & GetContractAtConfig;
+
+export type CreateSmartAccountConfig = {
+  topUp?: boolean;
+};
+
+export type GetContractAtConfigWithSigner = GetContractAtConfig & {
+  signer: ISigner;
 };
 
 export declare function getContractAt(
@@ -23,11 +37,27 @@ export declare function getContractAt(
   write: CommonWriteContractMethods;
 }>;
 
+export declare function deployContract(
+  contractName: string,
+  args: unknown[],
+  config?: DeployContractConfig,
+): Promise<{
+  address: IAddress;
+  read: CommonReadContractMethods;
+  write: CommonWriteContractMethods;
+}>;
+
+export declare function createSmartAccount(
+  config: CreateSmartAccountConfig,
+): Promise<SmartAccountInterface>;
+
 export type NilHelper = {
   provider: PublicClient;
   getPublicClient: () => PublicClient;
   getSmartAccount: () => Promise<SmartAccountInterface>;
   getContractAt: typeof getContractAt;
+  deployContract: typeof deployContract;
+  createSmartAccount: typeof createSmartAccount;
 };
 
 declare module "hardhat/types/runtime" {

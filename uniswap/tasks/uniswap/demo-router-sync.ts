@@ -1,111 +1,69 @@
-import {
-  bytesToHex,
-  getContract,
-  waitTillCompleted,
-} from "@nilfoundation/niljs";
-import type { Abi } from "abitype";
+import { topUpSmartAccount } from "@nilfoundation/hardhat-nil-plugin/src";
+import { waitTillCompleted } from "@nilfoundation/niljs";
 import { task } from "hardhat/config";
-import { createSmartAccount, topUpSmartAccount } from "../basic/basic";
-import { deployNilContract } from "../util/deploy";
+import type { HttpNetworkConfig } from "hardhat/src/types/config";
 import { calculateOutputAmount } from "../util/math";
 import { mintAndSendToken } from "../util/token-utils";
 
 task(
   "demo-router-sync",
   "Run demo with Uniswap Router with Sync methods",
-).setAction(async (taskArgs, _) => {
+).setAction(async (taskArgs, hre) => {
   const shardId = 1;
   const mintAmount = BigInt(100000);
   const mintToken0Amount = 10000;
   const mintToken1Amount = 10000;
   const swapAmount = 1000;
 
-  const smartAccount = await createSmartAccount();
+  const smartAccount = await hre.nil.getSmartAccount();
+  const client = await hre.nil.getPublicClient();
+  const rpc = (hre.network.config as HttpNetworkConfig).url;
 
-  const TokenJson = require("../../artifacts/contracts/Token.sol/Token.json");
-  const FactoryJson = require("../../artifacts/contracts/UniswapV2Factory.sol/UniswapV2Factory.json");
-  const PairJson = require("../../artifacts/contracts/UniswapV2Pair.sol/UniswapV2Pair.json");
-  const RouterJson = require("../../artifacts/contracts/UniswapV2Router01.sol/UniswapV2Router01.json");
+  const factory = await hre.nil.deployContract("UniswapV2Factory", [
+    smartAccount.address,
+  ]);
+  const token0 = await hre.nil.deployContract("Token", [
+    "Token0",
+    100000000000n,
+  ]);
+  await topUpSmartAccount(token0.address, rpc);
+  const token1 = await hre.nil.deployContract("Token", [
+    "Token1",
+    100000000000n,
+  ]);
+  await topUpSmartAccount(token1.address, rpc);
 
-  const { contract: factory, address: factoryAddress } =
-    await deployNilContract(
-      smartAccount,
-      FactoryJson.abi as Abi,
-      FactoryJson.bytecode,
-      [smartAccount.address],
-      smartAccount.shardId,
-      [],
-    );
+  console.log("Factory deployed " + factory.address);
+  console.log("Token0 deployed " + token0.address);
+  console.log("Token1 deployed " + token1.address);
 
-  const { contract: token0, address: token0Address } = await deployNilContract(
-    smartAccount,
-    TokenJson.abi as Abi,
-    TokenJson.bytecode,
-    ["Token", bytesToHex(smartAccount.signer.getPublicKey())],
-    smartAccount.shardId,
-    ["mintToken", "sendToken"],
-  );
-  console.log("Token contract deployed at address: " + token0Address);
-
-  await topUpSmartAccount(token0Address);
-
-  const TokenJsonAbi = TokenJson.abi as Abi;
-
-  const { contract: token1, address: token1Address } = await deployNilContract(
-    smartAccount,
-    TokenJsonAbi,
-    TokenJson.bytecode,
-    ["Token", bytesToHex(smartAccount.signer.getPublicKey())],
-    smartAccount.shardId,
-    ["mintToken", "sendToken"],
-  );
-  console.log("Token contract deployed at address: " + token1Address);
-
-  await topUpSmartAccount(token1Address);
-
-  console.log("Factory deployed " + factoryAddress);
-  console.log("Token0 deployed " + token0Address);
-  console.log("Token1 deployed " + token1Address);
-
-  const { contract: router, address: routerAddress } = await deployNilContract(
-    smartAccount,
-    RouterJson.abi as Abi,
-    RouterJson.bytecode,
-    [],
-    smartAccount.shardId,
-    [],
-  );
-
-  console.log("Router deployed " + routerAddress);
+  const router = await hre.nil.deployContract("UniswapV2Router01", []);
+  console.log("Router deployed " + router.address);
 
   // 1. CREATE PAIR
   const pairTxHash = await factory.write.createPair([
-    token0Address,
-    token1Address,
+    token0.address,
+    token1.address,
     Math.floor(Math.random() * 10000000),
     shardId,
   ]);
 
-  await waitTillCompleted(smartAccount.client, pairTxHash);
+  await waitTillCompleted(client, pairTxHash);
 
-  const pairAddress = await factory.read.getTokenPair([
-    token0Address,
-    token1Address,
-  ]);
+  const pairAddress = (await factory.read.getTokenPair([
+    token0.address,
+    token1.address,
+  ])) as `0x${string}`;
 
   // Log the pair address
   console.log(`Pair created successfully at address: ${pairAddress}`);
 
   // Attach to the newly created Uniswap V2 Pair contract
-  const pair = getContract({
-    abi: PairJson.abi,
-    address: pairAddress,
-    client: smartAccount.client,
-    smartAccount: smartAccount,
-  });
+  const pair = await hre.nil.getContractAt("UniswapV2Pair", pairAddress);
 
   // Initialize the pair with token addresses and IDs
-  await pair.write.initialize([token0Address, token1Address]);
+  const initTx = await pair.write.initialize([token0.address, token1.address]);
+  await waitTillCompleted(client, initTx, { waitTillMainShard: true });
 
   console.log(`Pair initialized successfully at address: ${pairAddress}`);
 
@@ -114,9 +72,9 @@ task(
     `Minting ${mintAmount} Token0 to smart account ${smartAccount.address}...`,
   );
   await mintAndSendToken({
-    smartAccount,
-    contractAddress: token0Address,
-    smartAccountAddress: smartAccount.address,
+    hre,
+    contractAddress: token0.address,
+    recipientAddress: smartAccount.address,
     mintAmount,
   });
 
@@ -125,9 +83,9 @@ task(
     `Minting ${mintAmount} Token1 to smart account ${smartAccount.address}...`,
   );
   await mintAndSendToken({
-    smartAccount,
-    contractAddress: token1Address,
-    smartAccountAddress: smartAccount.address,
+    hre,
+    contractAddress: token1.address,
+    recipientAddress: smartAccount.address,
     mintAmount,
   });
 
@@ -159,18 +117,19 @@ task(
     {
       tokens: [
         {
-          id: token0Address,
+          id: token0.address,
           amount: BigInt(mintToken0Amount),
         },
         {
-          id: token1Address,
+          id: token1.address,
           amount: BigInt(mintToken1Amount),
         },
       ],
     },
   );
 
-  await waitTillCompleted(smartAccount.client, hash);
+  await waitTillCompleted(client, hash, { waitTillMainShard: true });
+  console.log("Liquidity added to the pair contract. Tx - ", hash);
 
   // Log balances in the pair contract
   const pairToken0Balance = (await token0.read.getTokenBalanceOf([
@@ -238,14 +197,14 @@ task(
     {
       tokens: [
         {
-          id: token0Address,
+          id: token0.address,
           amount: BigInt(swapAmount),
         },
       ],
     },
   );
 
-  await waitTillCompleted(smartAccount.client, hash2);
+  await waitTillCompleted(client, hash2);
 
   console.log(
     `Sent ${swapAmount.toString()} of token0 to the pair contract. Tx - ${hash2}`,
@@ -315,7 +274,7 @@ task(
     },
   );
 
-  await waitTillCompleted(smartAccount.client, hash3);
+  await waitTillCompleted(client, hash3);
 
   console.log("Burn executed.");
 
@@ -335,12 +294,12 @@ task(
     balanceToken1.toString(),
   );
 
-  userBalanceToken0 = await token0.read.getTokenBalanceOf([
+  userBalanceToken0 = (await token0.read.getTokenBalanceOf([
     smartAccount.address,
-  ]);
-  userBalanceToken1 = await token1.read.getTokenBalanceOf([
+  ])) as bigint;
+  userBalanceToken1 = (await token1.read.getTokenBalanceOf([
     smartAccount.address,
-  ]);
+  ])) as bigint;
   console.log(
     "REMOVELIQUIDITY RESULT: User Balance token0 after burn:",
     userBalanceToken0.toString(),
