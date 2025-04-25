@@ -1,21 +1,32 @@
-import { EditorView } from "@codemirror/view";
-import { CodeField, ParagraphSmall, TAG_KIND, TAG_SIZE, Tag } from "@nilfoundation/ui-kit";
-import { Alert } from "baseui/icon";
-import type { OnChangeHandler } from "baseui/tabs";
-import { ethers } from "ethers";
-import type { FC } from "react";
-import { useEffect, useState } from "react";
-import type { Key } from "react";
-import { useStyletron } from "styletron-react";
-import { addressRoute, blockRoute } from "../../routing";
-import { Divider, Info, InfoBlock, Link, addHexPrefix, formatShard, measure } from "../../shared";
-import { TokenDisplay } from "../../shared/components/Token";
-import type { Transaction } from "../types/Transaction";
-import { InlineCopyButton } from "./InlineCopyButton";
-import { useState, useEffect } from "react";
-import type { Key } from "react";
-import type { OnChangeHandler } from "baseui/tabs";
-import {ethers} from "ethers";
+import { EditorView } from '@codemirror/view';
+import {
+  CodeField,
+  ParagraphSmall,
+  TAB_KIND,
+  TAG_KIND,
+  TAG_SIZE,
+  Tab,
+  Tabs,
+  Tag,
+} from '@nilfoundation/ui-kit';
+import { Alert } from 'baseui/icon';
+import { Key, useState, type FC } from 'react';
+import { useStyletron } from 'styletron-react';
+import { addressRoute, blockRoute } from '../../routing';
+import {
+  Divider,
+  Info,
+  InfoBlock,
+  Link,
+  addHexPrefix,
+  formatShard,
+  measure,
+} from '../../shared';
+import { TokenDisplay } from '../../shared/components/Token';
+import type { Transaction } from '../types/Transaction';
+import { InlineCopyButton } from './InlineCopyButton';
+import InputDataDisplay from './InputDataDisplay';
+import { OnChangeHandler, TabsOverrides } from 'baseui/tabs';
 
 type OverviewProps = {
   transaction: Transaction;
@@ -23,24 +34,39 @@ type OverviewProps = {
 
 const styles = {
   infoContainer: {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: "1ch",
-    height: "1lh",
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: '1ch',
+    height: '1lh',
   },
 } as const;
+
+const Bytecode: FC<{ tx: Transaction }> = ({ tx }) => {
+  const [css] = useStyletron();
+  return tx.method && tx.method.length > 0 ? (
+    <CodeField
+      extensions={[EditorView.lineWrapping]}
+      code={addHexPrefix(tx.method)}
+      className={css({ marginTop: '0ch', borderRadius: '16px', padding: '24px' })}
+      codeMirrorClassName={css({
+        maxHeight: '240px',
+        overflowY: 'auto',
+        scrollbarWidth: 'thin',
+        scrollbarGutter: 'stable',
+      })}
+    />
+  ) : (
+    <ParagraphSmall className={css({ margin: '8px'})}>No input data</ParagraphSmall>
+  );
+};
 
 export const Overview: FC<OverviewProps> = ({ transaction: tx }) => {
   const [css] = useStyletron();
   const [activeKey, setActiveKey] = useState<Key>("0");
-  const onChangeHandler: OnChangeHandler = (currentKey) => {
-    setActiveKey(currentKey.activeKey);
-  };
-  const [activeKey, setActiveKey] = useState<Key>("0");
-  const onChangeHandler: OnChangeHandler = (currentKey) => {
-    setActiveKey(currentKey.activeKey);
-  };
+    const onChangeHandler: OnChangeHandler = (currentKey) => {
+      setActiveKey(currentKey.activeKey);
+    };
 
   return (
     <InfoBlock>
@@ -60,12 +86,7 @@ export const Overview: FC<OverviewProps> = ({ transaction: tx }) => {
         label="Hash:"
         value={
           <div className={css(styles.infoContainer)}>
-            <ParagraphSmall
-              className={css({
-                wordBreak: "break-all",
-                overflowWrap: "anywhere",
-              })}
-            >
+            <ParagraphSmall className={css({ wordBreak: 'break-all', overflowWrap: 'anywhere' })}>
               {addHexPrefix(tx.hash)}
               <InlineCopyButton textToCopy={addHexPrefix(tx.hash)} />
             </ParagraphSmall>
@@ -86,14 +107,14 @@ export const Overview: FC<OverviewProps> = ({ transaction: tx }) => {
           <div className={css(styles.infoContainer)}>
             <ParagraphSmall>
               {tx.success ? (
-                "Success"
+                'Success'
               ) : (
                 <div
                   className={css({
-                    display: "flex",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: "0.5ch",
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: '0.5ch',
                   })}
                 >
                   Failed
@@ -111,12 +132,7 @@ export const Overview: FC<OverviewProps> = ({ transaction: tx }) => {
         label="From:"
         value={
           <div className={css(styles.infoContainer)}>
-            <ParagraphSmall
-              className={css({
-                wordBreak: "break-all",
-                overflowWrap: "anywhere",
-              })}
-            >
+            <ParagraphSmall className={css({ wordBreak: 'break-all', overflowWrap: 'anywhere' })}>
               <Link to={addressRoute} params={{ address: addHexPrefix(tx.from.toLowerCase()) }}>
                 {addHexPrefix(tx.from.toLowerCase())}
               </Link>
@@ -129,12 +145,7 @@ export const Overview: FC<OverviewProps> = ({ transaction: tx }) => {
         label="To:"
         value={
           <div className={css(styles.infoContainer)}>
-            <ParagraphSmall
-              className={css({
-                wordBreak: "break-all",
-                overflowWrap: "anywhere",
-              })}
-            >
+            <ParagraphSmall className={css({ wordBreak: 'break-all', overflowWrap: 'anywhere' })}>
               <Link to={addressRoute} params={{ address: addHexPrefix(tx.to).toLowerCase() }}>
                 {addHexPrefix(tx.to).toLowerCase()}
               </Link>
@@ -171,252 +182,35 @@ export const Overview: FC<OverviewProps> = ({ transaction: tx }) => {
         }
       />
       <Divider />
-      <Info label="Transaction payload (bytecode):" value={<Bytecode tx={tx} />} />
+      <Info
+        label="Input Data:"
+        value={
+          <Tabs activeKey={activeKey} onChange={onChangeHandler} overrides={tabsOverrides}>
+            <Tab title="Decoded Input"  kind={TAB_KIND.secondary}>
+              <InputDataDisplay />
+            </Tab>
+            <Tab title="Bytecode" kind={TAB_KIND.secondary}>
+              <Bytecode tx={tx} />
+            </Tab>
+          </Tabs>
+        }
+      />
     </InfoBlock>
   );
 };
 
-const Default = ({ tx }: { tx: Transaction }) => {
-  const [signature, setSignature] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Check if there is no input data
-  if (!tx.method || tx.method.length === 0) {
-    return <ParagraphSmall>No input data</ParagraphSmall>;
-  }
-
-  const inputData = addHexPrefix(tx.method);
-
-  if (!ethers.isHexString(inputData)) {
-    return <ParagraphSmall>Invalid hex string</ParagraphSmall>;
-  }
-
-  if (inputData.length < 10) {
-    return <ParagraphSmall>Input data too short for function call</ParagraphSmall>;
-  }
-
-  const selector = inputData.slice(0, 10);
-
-  // Define known function signatures (selector -> signature)
-  const knownSignatures: { [key: string]: string } = {
-    "0xa9059cbb": "transfer(address to, uint256 value)",
-    "0x23b872dd": "transferFrom(address from, address to, uint256 value)",
-    "0x095ea7b3": "approve(address spender, uint256 value)",
-  };
-
-  useEffect(() => {
-    const fetchSignature = async () => {
-      if (knownSignatures[selector]) {
-        setSignature(knownSignatures[selector]);
-      } else {
-        setIsLoading(true);
-        try {
-          const response = await fetch(
-            `https://www.4byte.directory/api/v1/signatures/?hex_signature=${selector}`,
-          );
-          const data = await response.json();
-          if (data.results && data.results.length > 0) {
-            setSignature(data.results[0].text_signature);
-          } else {
-            setSignature(null);
-          }
-        } catch (error) {
-          console.error("Error fetching signature:", error);
-          setSignature(null);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchSignature();
-  }, [selector]);
-
-  if (isLoading) {
-    return <ParagraphSmall>Fetching signature...</ParagraphSmall>;
-  }
-
-  if (!signature) {
-    return <ParagraphSmall>Unknown function: {selector}</ParagraphSmall>;
-  }
-
-  try {
-    const iface = new ethers.Interface([`function ${signature}`]);
-    const functionName = signature.split("(")[0];
-    const decoded = iface.decodeFunctionData(functionName, inputData);
-    const func = iface.getFunction(functionName)!;
-
-    const params = func.inputs.map((input: ethers.ParamType, index: number) => {
-      const value = decoded[index];
-      let formattedValue: string;
-      if (input.type === "address") {
-        formattedValue = addHexPrefix(value.toLowerCase());
-      } else if (input.type.startsWith("uint") || input.type.startsWith("int")) {
-        formattedValue = value.toString();
-      } else {
-        formattedValue = value.toString();
-      }
-      const paramName = input.name || `[${index}]`;
-      return `${paramName}: ${formattedValue}`;
-    });
-
-    return (
-      <div>
-        <ParagraphSmall>
-          <strong>Function:</strong> {signature}
-        </ParagraphSmall>
-        <ParagraphSmall>
-          <strong>Method ID:</strong> {selector}
-        </ParagraphSmall>
-        <ParagraphSmall>
-          <strong>Parameters:</strong>
-        </ParagraphSmall>
-        {params.map((param: string, index: number) => (
-          <ParagraphSmall
-            key={`param-${param}-${
-              // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-              index
-            }`}
-          >
-            {param}
-          </ParagraphSmall>
-        ))}
-      </div>
-    );
-  } catch (error) {
-    console.error("Error decoding input data:", error);
-    return <ParagraphSmall>Error decoding input data</ParagraphSmall>;
-  }
-};
-
-const Bytecode = ({ tx }: { tx: Transaction }) => {
-  const [css] = useStyletron();
-  return tx.method && tx.method.length > 0 ? (
-    <CodeField
-      extensions={[EditorView.lineWrapping]}
-      code={tx.method}
-      className={css({ marginTop: "0ch" })}
-      codeMirrorClassName={css({ maxHeight: "300px", overflow: "scroll" })}
-    />
-  ) : (
-    <ParagraphSmall>No bytecode</ParagraphSmall>
-  );
-};
-
-const Default = ({ tx }: { tx: Transaction }) => {
-  const [signature, setSignature] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Check if there is no input data
-  if (!tx.method || tx.method.length === 0) {
-    return <ParagraphSmall>No input data</ParagraphSmall>;
-  }
-
-  const inputData = addHexPrefix(tx.method);
-
-  if (!ethers.isHexString(inputData)) {
-    return <ParagraphSmall>Invalid hex string</ParagraphSmall>;
-  }
-
-  if (inputData.length < 10) {
-    return <ParagraphSmall>Input data too short for function call</ParagraphSmall>;
-  }
-
-  const selector = inputData.slice(0, 10);
-
-  // Define known function signatures (selector -> signature)
-  const knownSignatures: { [key: string]: string } = {
-    "0xa9059cbb": "transfer(address to, uint256 value)",
-    "0x23b872dd": "transferFrom(address from, address to, uint256 value)",
-    "0x095ea7b3": "approve(address spender, uint256 value)",
-  };
-
-  useEffect(() => {
-    const fetchSignature = async () => {
-      if (knownSignatures[selector]) {
-        setSignature(knownSignatures[selector]);
-      } else {
-        setIsLoading(true);
-        try {
-          const response = await fetch(`https://www.4byte.directory/api/v1/signatures/?hex_signature=${selector}`);
-          const data = await response.json();
-          if (data.results && data.results.length > 0) {
-            setSignature(data.results[0].text_signature);
-          } else {
-            setSignature(null);
-          }
-        } catch (error) {
-          console.error("Error fetching signature:", error);
-          setSignature(null);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchSignature();
-  }, [selector]);
-
-  if (isLoading) {
-    return <ParagraphSmall>Fetching signature...</ParagraphSmall>;
-  }
-
-  if (!signature) {
-    return <ParagraphSmall>Unknown function: {selector}</ParagraphSmall>;
-  }
-
-  try {
-    const iface = new ethers.Interface([`function ${signature}`]);
-    const functionName = signature.split("(")[0];
-    const decoded = iface.decodeFunctionData(functionName, inputData);
-    const func = iface.getFunction(functionName)!;
-
-    const params = func.inputs.map((input: ethers.ParamType, index: number) => {
-      const value = decoded[index];
-      let formattedValue: string;
-      if (input.type === "address") {
-        formattedValue = addHexPrefix(value.toLowerCase());
-      } else if (input.type.startsWith("uint") || input.type.startsWith("int")) {
-        formattedValue = value.toString();
-      } else {
-        formattedValue = value.toString();
-      }
-      const paramName = input.name || `[${index}]`;
-      return `${paramName}: ${formattedValue}`;
-    });
-
-    return (
-      <div>
-        <ParagraphSmall>
-          <strong>Function:</strong> {signature}
-        </ParagraphSmall>
-        <ParagraphSmall>
-          <strong>Method ID:</strong> {selector}
-        </ParagraphSmall>
-        <ParagraphSmall>
-          <strong>Parameters:</strong>
-        </ParagraphSmall>
-        {params.map((param: string, index: number) => (
-          <ParagraphSmall key={`param-${param}-${index}`}>{param}</ParagraphSmall>
-        ))}
-      </div>
-    );
-  } catch (error) {
-    console.error("Error decoding input data:", error);
-    return <ParagraphSmall>Error decoding input data</ParagraphSmall>;
-  }
-};
-
-const Bytecode = ({ tx }: { tx: Transaction }) => {
-  const [css] = useStyletron();
-  return tx.method && tx.method.length > 0 ? (
-    <CodeField
-      extensions={[EditorView.lineWrapping]}
-      code={tx.method}
-      className={css({ marginTop: "0ch" })}
-      codeMirrorClassName={css({ maxHeight: "300px", overflow: "scroll" })}
-    />
-  ) : (
-    <ParagraphSmall>No bytecode</ParagraphSmall>
-  );
+const tabsOverrides: TabsOverrides = {
+  TabContent: {
+    style: {
+      paddingLeft: 0,
+      paddingTop: '8px',
+      paddingRight: 0,
+    },
+  },
+  TabBar: {
+    style: {
+      paddingLeft: 0,
+      paddingRight: 0,
+    },
+  },
 };
