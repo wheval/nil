@@ -186,7 +186,7 @@ export const Overview: FC<OverviewProps> = ({ transaction: tx }) => {
         label="Input Data:"
         value={
           <Tabs activeKey={activeKey} onChange={onChangeHandler} overrides={tabsOverrides}>
-            <Tab title="Decoded Input"  kind={TAB_KIND.secondary}>
+            <Tab title="Default"  kind={TAB_KIND.secondary}>
               <InputDataDisplay />
             </Tab>
             <Tab title="Bytecode" kind={TAB_KIND.secondary}>
