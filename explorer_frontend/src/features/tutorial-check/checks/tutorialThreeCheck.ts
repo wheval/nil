@@ -3,7 +3,7 @@ import { TutorialChecksStatus } from "../../../pages/tutorials/model";
 import { deploySmartContractFx } from "../../contracts/models/base";
 import type { CheckProps } from "../CheckProps";
 
-async function runTutorialCheckThree(props: CheckProps) {
+export async function runTutorialCheckThree(props: CheckProps) {
   const client = new PublicClient({
     transport: new HttpTransport({
       endpoint: props.rpcUrl,
@@ -71,7 +71,7 @@ async function runTutorialCheckThree(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Requester.requestMultiplication() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${hashRequest}.
+      To investigate, debug this transaction using the Cometa service: ${requestTx.hash}.
       `,
     );
     return false;
@@ -106,5 +106,3 @@ async function runTutorialCheckThree(props: CheckProps) {
 
   return true;
 }
-
-export default runTutorialCheckThree;

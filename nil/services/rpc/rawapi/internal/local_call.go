@@ -16,7 +16,9 @@ import (
 	rpctypes "github.com/NilFoundation/nil/nil/services/rpc/types"
 )
 
-func calculateStateChange(newEs, oldEs *execution.ExecutionState) (rpctypes.StateOverrides, error) {
+func calculateStateChange(
+	newEs, oldEs *execution.ExecutionState, prevOverrides *rpctypes.StateOverrides,
+) (rpctypes.StateOverrides, error) {
 	stateOverrides := make(rpctypes.StateOverrides)
 
 	for addr, as := range newEs.Accounts {
@@ -82,8 +84,7 @@ func calculateStateChange(newEs, oldEs *execution.ExecutionState) (rpctypes.Stat
 						asyncContextHasUpdates = true
 						break
 					}
-					if !bytes.Equal(value.Data, oldVal.Data) ||
-						(value.ResponseProcessingGas != oldVal.ResponseProcessingGas) {
+					if value.ResponseProcessingGas != oldVal.ResponseProcessingGas {
 						asyncContextHasUpdates = true
 						break
 					}
@@ -100,6 +101,16 @@ func calculateStateChange(newEs, oldEs *execution.ExecutionState) (rpctypes.Stat
 			stateOverrides[addr] = contract
 		}
 	}
+
+	if prevOverrides != nil {
+		for addr, override := range *prevOverrides {
+			if addr.ShardId() == newEs.ShardId {
+				continue
+			}
+			stateOverrides[addr] = override
+		}
+	}
+
 	return stateOverrides, nil
 }
 
@@ -279,7 +290,7 @@ func (api *localShardApiRo) Call(
 	if err != nil {
 		return nil, err
 	}
-	stateOverrides, err := calculateStateChange(es, esOld)
+	stateOverrides, err := calculateStateChange(es, esOld, overrides)
 	if err != nil {
 		return nil, err
 	}

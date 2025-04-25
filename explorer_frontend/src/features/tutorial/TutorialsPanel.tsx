@@ -9,9 +9,10 @@ import {
 import { getMobileStyles } from "../../styleHelpers";
 import { tutorialWithUrlStringRoute } from "../routing/routes/tutorialRoute";
 import { useMobile } from "../shared/hooks/useMobile";
-import { $completedTutorials, type Tutorial, TutorialLevel } from "./model";
+import { TutorialLevel } from "./const";
+import { $completedTutorials, type Tutorial } from "./model";
 
-const TutorialContainer = ({ tutorial }) => {
+const TutorialContainer = ({ tutorial }: { tutorial: Tutorial }) => {
   const [isMobile] = useMobile();
   const [css] = useStyletron();
 
@@ -30,7 +31,6 @@ const TutorialContainer = ({ tutorial }) => {
     }
   })();
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: <explanation>
     <div
       className={css({
         display: "flex",
@@ -115,7 +115,7 @@ const TutorialContainer = ({ tutorial }) => {
   );
 };
 
-export const TutorialsPanel = ({ tutorials }) => {
+export const TutorialsPanel = ({ tutorials }: { tutorials: Tutorial[] }) => {
   const completedTutorials = useUnit($completedTutorials);
   const [css] = useStyletron();
   const [isMobile] = useMobile();

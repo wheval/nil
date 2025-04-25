@@ -30,7 +30,7 @@ func (s *SuiteRpcNode) SetupTest() {
 	})
 	s.DefaultClient, _ = s.StartRPCNode(&tests.RpcNodeConfig{
 		WithDhtBootstrapByValidators: false,
-		ArchiveNodes:                 network.AddrInfoSlice{archiveNodeAddr},
+		ArchiveNodes:                 network.AsAddrInfoSlice(archiveNodeAddr),
 	})
 }
 

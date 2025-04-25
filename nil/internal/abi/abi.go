@@ -30,6 +30,12 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+const (
+	fallback    = "fallback"
+	receive     = "receive"
+	constructor = "constructor"
+)
+
 // The ABI holds information about a contract's context and available
 // invocable methods. It will allow you to type check function calls and
 // packs data accordingly.
@@ -164,7 +170,7 @@ func (abi *ABI) UnmarshalJSON(data []byte) error {
 	abi.Errors = make(map[string]Error)
 	for _, field := range fields {
 		switch field.Type {
-		case "constructor":
+		case constructor:
 			abi.Constructor = NewMethod(
 				"",
 				"",
@@ -185,14 +191,14 @@ func (abi *ABI) UnmarshalJSON(data []byte) error {
 				field.Payable,
 				field.Inputs,
 				field.Outputs)
-		case "fallback": //nolint:goconst
+		case fallback:
 			// New introduced function type in v0.6.0, check more detail
 			// here https://solidity.readthedocs.io/en/v0.6.0/contracts.html#fallback-function
 			if abi.HasFallback() {
 				return errors.New("only single fallback is allowed")
 			}
 			abi.Fallback = NewMethod("", "", Fallback, field.StateMutability, field.Constant, field.Payable, nil, nil)
-		case "receive": //nolint:goconst
+		case receive:
 			// New introduced function type in v0.6.0, check more detail
 			// here https://solidity.readthedocs.io/en/v0.6.0/contracts.html#fallback-function
 			if abi.HasReceive() {

@@ -149,42 +149,42 @@ func TestPaddedBigBytes(t *testing.T) {
 
 func BenchmarkPaddedBigBytesLargePadding(b *testing.B) {
 	bigint := MustParseBig256("123456789123456789123456789123456789")
-	for range b.N {
+	for b.Loop() {
 		PaddedBigBytes(bigint, 200)
 	}
 }
 
 func BenchmarkPaddedBigBytesSmallPadding(b *testing.B) {
 	bigint := MustParseBig256("0x18F8F8F1000111000110011100222004330052300000000000000000FEFCF3CC")
-	for range b.N {
+	for b.Loop() {
 		PaddedBigBytes(bigint, 5)
 	}
 }
 
 func BenchmarkPaddedBigBytesSmallOnePadding(b *testing.B) {
 	bigint := MustParseBig256("0x18F8F8F1000111000110011100222004330052300000000000000000FEFCF3CC")
-	for range b.N {
+	for b.Loop() {
 		PaddedBigBytes(bigint, 32)
 	}
 }
 
 func BenchmarkByteAtBrandNew(b *testing.B) {
 	bigint := MustParseBig256("0x18F8F8F1000111000110011100222004330052300000000000000000FEFCF3CC")
-	for range b.N {
+	for b.Loop() {
 		bigEndianByteAt(bigint, 15)
 	}
 }
 
 func BenchmarkByteAt(b *testing.B) {
 	bigint := MustParseBig256("0x18F8F8F1000111000110011100222004330052300000000000000000FEFCF3CC")
-	for range b.N {
+	for b.Loop() {
 		bigEndianByteAt(bigint, 15)
 	}
 }
 
 func BenchmarkByteAtOld(b *testing.B) {
 	bigint := MustParseBig256("0x18F8F8F1000111000110011100222004330052300000000000000000FEFCF3CC")
-	for range b.N {
+	for b.Loop() {
 		PaddedBigBytes(bigint, 32)
 	}
 }

@@ -1,5 +1,4 @@
 import { extendEnvironment } from "hardhat/config";
-import "./tasks/cometa";
 import "./tasks/wallet";
 import {
   HttpTransport,
@@ -7,32 +6,59 @@ import {
   PublicClient,
   SmartAccountV1,
 } from "@nilfoundation/niljs";
-import { fetchConfigIni } from "./config/config";
+import "./tasks/subtasks";
+import { createSmartAccount } from "./core/wallet";
+import { deployContract, getContractAt } from "./internal/contracts";
 
 extendEnvironment((hre) => {
-  (hre as any).smartAccount = async (): Promise<SmartAccountV1> => {
-    const config = fetchConfigIni();
-    const signer = new LocalECDSAKeySigner({
-      // @ts-ignore
-      privateKey: config.privateKey,
+  if ("nil" in hre.network.config && hre.network.config.nil) {
+    if (!("url" in hre.network.config)) {
+      throw new Error("Nil network config is missing url");
+    }
+    const url = hre.network.config.url;
+    const nilProvider = new HttpTransport({
+      endpoint: url,
     });
-    const pubkey = signer.getPublicKey();
-
     const publicClient = new PublicClient({
-      transport: new HttpTransport({
-        endpoint: config.rpcEndpoint,
-      }),
-      shardId: 1,
+      transport: nilProvider,
     });
 
-    return new SmartAccountV1({
-      // @ts-ignore
-      address: config.address,
-      client: publicClient,
-      signer: signer,
-      shardId: 1,
+    const pk = <`0x${string}`>`0x${process.env.PRIVATE_KEY}`;
+    const signer = new LocalECDSAKeySigner({
+      privateKey: pk,
     });
-  };
+
+    hre.nil = {
+      provider: publicClient,
+      getPublicClient: () => {
+        return publicClient;
+      },
+      getSmartAccount: async () => {
+        if (!process.env.SMART_ACCOUNT_ADDR) {
+          throw new Error(
+            "SMART_ACCOUNT_ADDR is missing. Run 'npx run create-smart-account' to create a new one",
+          );
+        }
+        const address = <`0x${string}`>process.env.SMART_ACCOUNT_ADDR;
+        return new SmartAccountV1({
+          client: publicClient,
+          pubkey: signer.getPublicKey(),
+          signer: signer,
+          address: address,
+        });
+      },
+      getContractAt: async (contractName, address, config) => {
+        return getContractAt(hre, contractName, address, config);
+      },
+      deployContract: async (contractName, args, config) => {
+        return deployContract(hre, contractName, args, config);
+      },
+      createSmartAccount: async (config) => {
+        return createSmartAccount(hre, config);
+      },
+    };
+  }
 });
 
-export * from "./config/config";
+export type * from "./types";
+export { topUpSmartAccount } from "./core/wallet";

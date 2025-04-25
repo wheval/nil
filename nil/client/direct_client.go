@@ -15,6 +15,7 @@ import (
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/rawapi"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
+	rpctypes "github.com/NilFoundation/nil/nil/services/rpc/types"
 )
 
 // DirectClient is a client that interacts with the end api directly, without using the rpc server.
@@ -437,4 +438,8 @@ func (c *DirectClient) GetTxpoolStatus(ctx context.Context, shardId types.ShardI
 
 func (c *DirectClient) GetTxpoolContent(ctx context.Context, shardId types.ShardId) (jsonrpc.TxPoolContent, error) {
 	return c.txPoolApi.GetTxpoolContent(ctx, shardId)
+}
+
+func (c *DirectClient) GetBootstrapConfig(ctx context.Context) (*rpctypes.BootstrapConfig, error) {
+	return c.debugApi.GetBootstrapConfig(ctx)
 }

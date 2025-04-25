@@ -1,13 +1,7 @@
 import { createDomain } from "effector";
-import type { App } from "../../types";
-import loadTutorials from "./spec";
-
-export enum TutorialLevel {
-  Easy = "Easy",
-  Medium = "Medium",
-  Hard = "Hard",
-  VeryHard = "Very hard",
-}
+import type { App } from "../code/types";
+import { TutorialLevel } from "./const";
+import { loadTutorials } from "./spec";
 
 export type Tutorial = {
   stage: number;

@@ -141,11 +141,11 @@ func NewMethod(
 	identity := fmt.Sprintf("function %v", rawName)
 	switch funType { //nolint:exhaustive
 	case Fallback:
-		identity = "fallback"
+		identity = fallback
 	case Receive:
-		identity = "receive"
+		identity = receive
 	case Constructor:
-		identity = "constructor"
+		identity = constructor
 	}
 	str := fmt.Sprintf(
 		"%v(%v) %sreturns(%v)", identity, strings.Join(inputNames, ", "), state, strings.Join(outputNames, ", "))

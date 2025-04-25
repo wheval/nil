@@ -1,0 +1,15 @@
+{
+  "bin": "clijs",
+  "dirname": "nil",
+  "commands": "./dist/src/commands",
+  "plugins": [],
+  "topicSeparator": " ",
+  "topics": {
+    "hello": {
+      "description": "Say hello to the world and others"
+    }
+  },
+  "macos": {
+    "identifier": "com.nilfoundation.clijs"
+  }
+}

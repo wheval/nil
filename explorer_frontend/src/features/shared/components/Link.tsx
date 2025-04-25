@@ -8,7 +8,6 @@ import type { StylesObject } from "..";
 import type { ExtendedRoute } from "../../routing";
 
 export type LinkProps = {
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   to: string | ExtendedRoute<any>;
   params: RouteParams;
   children: React.ReactNode;

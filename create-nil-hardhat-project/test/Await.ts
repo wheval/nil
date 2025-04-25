@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { deployNilContract } from "../src/deploy";
-import type { Abi } from "abitype";
-import { createSmartAccount } from "../src/smart-account";
+import hre from "hardhat";
+import { waitTillCompleted } from "@nilfoundation/niljs";
+import "@nilfoundation/hardhat-nil-plugin";
 
 describe("Caller and Incrementer contract interaction", () => {
   let callerAddress: string;
@@ -11,51 +11,42 @@ describe("Caller and Incrementer contract interaction", () => {
     this.timeout(120000);
 
     // Deploy Caller contract
-    const smartAccount = await createSmartAccount({ faucetDeposit: true });
+    const smartAccount = await hre.nil.createSmartAccount({topUp: true});
+    const client = await hre.nil.getPublicClient();
 
-    const AwaitJson = require("../artifacts/contracts/Await.sol/Await.json");
+    const awaiter = await hre.nil.deployContract("Await", [], {
+      shardId: 2,
+      smartAccount: smartAccount,
+      feeCredit: 100_000_000_000_000n,
+    })
 
-    const { contract: awaiter, address: callerAddr } =
-      await deployNilContract(
-        smartAccount,
-        AwaitJson.abi as Abi,
-        AwaitJson.bytecode,
-        [],
-        2,
-        [],
-      );
-
-    callerAddress = callerAddr;
+    callerAddress = awaiter.address;
     console.log("Caller deployed at:", callerAddress);
 
     // Deploy Incrementer contract
-    const IncrementerJson = require("../artifacts/contracts/Incrementer.sol/Incrementer.json");
-    const { contract: incrementer, address: incrementerAddr } =
-      await deployNilContract(
-        smartAccount,
-        IncrementerJson.abi as Abi,
-        IncrementerJson.bytecode,
-        [],
-        1,
-        [],
-      );
-    incrementerAddress = incrementerAddr;
+    const incrementer = await hre.nil.deployContract("Incrementer", [], {
+      shardId: 1,
+      smartAccount: smartAccount,
+    })
+    incrementerAddress = incrementer.address;
     console.log("Incrementer deployed at:", incrementerAddress);
+
     // Increment the value
     const tx = await incrementer.write.increment([]);
-    await tx.wait();
+    await waitTillCompleted(client, tx, {waitTillMainShard: true})
+
     // Check the value of Incrementer
-    expect(await incrementer.read.getValue([])).to.equal(1);
+    expect(await incrementer.read.getValue([])).to.equal(1n);
 
     // Call the Caller contract's call method with the Incrementer address
     const tx2 = await awaiter.write.call([incrementerAddress]);
-    await tx2.wait();
+    await waitTillCompleted(client, tx2, {waitTillMainShard: true})
 
     let value = await awaiter.read.result([]);
     console.log("returned value: ", value)
 
     // New value should be 1
-    expect(value).to.equal(1);
+    expect(value).to.equal(1n);
   });
 });
 

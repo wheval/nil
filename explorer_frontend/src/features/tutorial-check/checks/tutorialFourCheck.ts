@@ -2,7 +2,7 @@ import { HttpTransport, PublicClient, generateSmartAccount } from "@nilfoundatio
 import { TutorialChecksStatus } from "../../../pages/tutorials/model";
 import type { CheckProps } from "../CheckProps";
 
-async function runTutorialCheckFour(props: CheckProps) {
+export async function runTutorialCheckFour(props: CheckProps) {
   const client = new PublicClient({
     transport: new HttpTransport({
       endpoint: props.rpcUrl,
@@ -66,7 +66,7 @@ async function runTutorialCheckFour(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Deployer.deploy() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${hashDeploy}.
+      To investigate, debug this transaction using the Cometa service: ${deployTx.hash}.
       `,
     );
     return false;
@@ -94,7 +94,7 @@ async function runTutorialCheckFour(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Counter.increment() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${hashDeploy}.
+      To investigate, debug this transaction using the Cometa service: ${incrementTx.hash}.
       `,
     );
     return false;
@@ -110,5 +110,3 @@ async function runTutorialCheckFour(props: CheckProps) {
 
   return true;
 }
-
-export default runTutorialCheckFour;

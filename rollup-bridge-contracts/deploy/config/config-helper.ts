@@ -1,7 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import { ethers } from 'ethers';
-
+import * as fs from 'fs';
+import * as path from 'path';
+import * as ethers from 'ethers';
 
 /**
  * L1 CONFIG SCHEMA
@@ -27,6 +26,7 @@ export interface L1NetworkConfig {
 export interface L1DeployerConfig {
     owner: string;
     admin: string;
+    shardId: number;
 }
 
 export interface L1CommonContracts {
@@ -266,11 +266,20 @@ export interface L2Config {
     };
 }
 
+export interface L2NetworkConfig {
+    l2CommonConfig: L2CommonConfig;
+    nilMessageTreeConfig: NilMessageTreeConfig;
+    l2ETHBridgeVaultConfig: L2ETHBridgeVaultConfig;
+    l2BridgeMessengerConfig: L2BridgeMessengerConfig;
+    l2EnshrinedTokenBridgeConfig: L2EnshrinedTokenBridgeConfig;
+    l2ETHBridgeConfig: L2ETHBridgeConfig;
+}
+
 export interface L2CommonConfig {
     owner: string;
     admin: string;
     tokens: EnshrinedToken[];
-    mockL1Bridge: string;
+    mockL1Bridge?: string; // Optional field to retain backward compatibility
 }
 
 export interface EnshrinedToken {
@@ -280,36 +289,46 @@ export interface EnshrinedToken {
     address: string;
 }
 
-export interface L2NetworkConfig {
-    l2Common: L2CommonConfig;
-    l2BridgeRouterConfig: L2BridgeRouterConfig;
-    l2BridgeMessengerConfig: L2BridgeMessengerConfig;
-    l2EnshrinedTokenBridge: L2EnshrinedTokenBridgeConfig;
-    l2ETHBridgeConfig: L2ETHBridgeConfig;
+export interface NilMessageTreeConfig {
+    nilMessageTreeContracts: {
+        nilMessageTreeImplementationAddress: string;
+    };
 }
 
-export interface L2EnshrinedTokenBridgeConfig {
-    proxyAdmin: string;
-    l2EnshrinedTokenBridgeProxy: string;
-    l2EnsrhinedTokenBridgeImplementation: string;
-}
-
-export interface L2ETHBridgeConfig {
-    proxyAdmin: string;
-    l2ETHBridgeProxy: string;
-    l2ETHBridgeImplementation: string;
+export interface L2ETHBridgeVaultConfig {
+    l2ETHBridgeVaultContracts: {
+        proxyAdmin: string;
+        l2ETHBridgeVaultProxy: string;
+        l2ETHBridgeVaultImplementation: string;
+    };
 }
 
 export interface L2BridgeMessengerConfig {
-    proxyAdmin: string;
-    l2BridgeMessengerProxy: string;
-    l2ridgeMessengerImplementation: string;
+    l2BridgeMessengerContracts: {
+        proxyAdmin: string;
+        l2BridgeMessengerProxy: string;
+        l2BridgeMessengerImplementation: string;
+    };
+    l2BridgeMessengerDeployerConfig: {
+        relayerAddress: string;
+        messageExpiryDeltaValue: number;
+    };
 }
 
-export interface L2BridgeRouterConfig {
-    proxyAdmin: string;
-    l2BridgeRouterProxy: string;
-    l2BridgeRouterImplementation: string;
+export interface L2EnshrinedTokenBridgeConfig {
+    l2EnshrinedTokenBridgeContracts: {
+        proxyAdmin: string;
+        l2EnshrinedTokenBridgeProxy: string;
+        l2EnshrinedTokenBridgeImplementation: string;
+    }
+}
+
+export interface L2ETHBridgeConfig {
+    l2ETHBridgeContracts: {
+        proxyAdmin: string;
+        l2ETHBridgeProxy: string;
+        l2ETHBridgeImplementation: string;
+    }
 }
 
 const nilNetworkConfigFilePath = path.join(__dirname, 'nil-deployment-config.json');

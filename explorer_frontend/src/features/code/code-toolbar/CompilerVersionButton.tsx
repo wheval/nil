@@ -12,7 +12,7 @@ import { useStyletron } from "baseui";
 import { Button } from "baseui/button";
 import type { MenuOverrides } from "baseui/menu";
 import { type FC, useState } from "react";
-import { StatefulPopover } from "../../shared";
+import { StatefulPopover } from "../../shared/components/Popover";
 import { $availableSolidityVersions, changeSolidityVersion } from "../model";
 
 type CompilerVersionButtonProps = {

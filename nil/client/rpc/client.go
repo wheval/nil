@@ -25,6 +25,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/types"
 	"github.com/NilFoundation/nil/nil/services/rpc/jsonrpc"
 	"github.com/NilFoundation/nil/nil/services/rpc/transport"
+	rpctypes "github.com/NilFoundation/nil/nil/services/rpc/types"
 )
 
 // CallError represents an error that occurs during a remote procedure call,
@@ -76,9 +77,11 @@ const (
 	Eth_getNumShards                     = "eth_getNumShards"
 	Eth_gasPrice                         = "eth_gasPrice"
 	Eth_chainId                          = "eth_chainId"
+	Eth_getProof                         = "eth_getProof"
 	Debug_getBlockByHash                 = "debug_getBlockByHash"
 	Debug_getBlockByNumber               = "debug_getBlockByNumber"
 	Debug_getContract                    = "debug_getContract"
+	Debug_getBootstrapConfig             = "debug_getBootstrapConfig"
 	Web3_clientVersion                   = "web3_clientVersion"
 	Dev_doPanicOnShard                   = "dev_doPanicOnShard"
 	Txpool_getTxpoolStatus               = "txpool_getTxpoolStatus"
@@ -951,6 +954,18 @@ func (c *Client) DoPanicOnShard(ctx context.Context, shardId types.ShardId) (uin
 	return 0, err
 }
 
+func (c *Client) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (jsonrpc.TxPoolStatus, error) {
+	return simpleCall[jsonrpc.TxPoolStatus](ctx, c, Txpool_getTxpoolStatus, shardId)
+}
+
+func (c *Client) GetTxpoolContent(ctx context.Context, shardId types.ShardId) (jsonrpc.TxPoolContent, error) {
+	return simpleCall[jsonrpc.TxPoolContent](ctx, c, Txpool_getTxpoolContent, shardId)
+}
+
+func (c *Client) GetBootstrapConfig(ctx context.Context) (*rpctypes.BootstrapConfig, error) {
+	return simpleCall[*rpctypes.BootstrapConfig](ctx, c, Debug_getBootstrapConfig)
+}
+
 func simpleCall[ReturnType any](ctx context.Context, c *Client, method string, params ...any) (ReturnType, error) {
 	res, err := c.call(ctx, method, params...)
 	var result ReturnType
@@ -976,12 +991,4 @@ func simpleCallUint64[ReturnType ~uint64](
 		return 0, err
 	}
 	return ReturnType(result), err
-}
-
-func (c *Client) GetTxpoolStatus(ctx context.Context, shardId types.ShardId) (jsonrpc.TxPoolStatus, error) {
-	return simpleCall[jsonrpc.TxPoolStatus](ctx, c, Txpool_getTxpoolStatus, shardId)
-}
-
-func (c *Client) GetTxpoolContent(ctx context.Context, shardId types.ShardId) (jsonrpc.TxPoolContent, error) {
-	return simpleCall[jsonrpc.TxPoolContent](ctx, c, Txpool_getTxpoolContent, shardId)
 }

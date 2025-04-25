@@ -2,14 +2,14 @@
 pragma solidity 0.8.28;
 
 import { IBridgeMessenger } from "../../interfaces/IBridgeMessenger.sol";
-import { INilGasPriceOracle } from "./INilGasPriceOracle.sol";
 import { NilConstants } from "../../../common/libraries/NilConstants.sol";
+import { IRelayMessage } from "./IRelayMessage.sol";
 
 /// @title IL1BridgeMessenger
 /// @notice Interface for the L1BridgeMessenger contract which handles cross-chain messaging between L1 and L2.
 /// @dev This interface defines the functions and events for managing deposit messages, sending messages, and canceling
 /// deposits.
-interface IL1BridgeMessenger is IBridgeMessenger {
+interface IL1BridgeMessenger is IBridgeMessenger, IRelayMessage {
   /*//////////////////////////////////////////////////////////////////////////
                              ERRORS
     //////////////////////////////////////////////////////////////////////////*/
@@ -59,38 +59,31 @@ interface IL1BridgeMessenger is IBridgeMessenger {
   /// executed on L2.
   error DepositMessageStillInQueue();
 
+  error ErrorInvalidMessageSender();
+
+  error ErrorInvalidMessageTarget();
+
+  error ErrorDuplicateWithdrawalClaim();
+
+  error ErrorInvalidMessageHash();
+
+  error ErrorFailedWithdrawalClaim();
+
+  error ErrorInvalidMessageType();
+
   /*//////////////////////////////////////////////////////////////////////////
                              EVENTS
     //////////////////////////////////////////////////////////////////////////*/
 
-  /// @notice Emitted when a message is sent.
-  /// @param messageSender The address of the message sender.
-  /// @param messageTarget The address of the message recipient which can be an account/smartcontract.
-  /// @param messageNonce The nonce of the message.
-  /// @param message The encoded message data.
-  /// @param messageHash The hash of the message.
-  /// @param messageType The type of the deposit.
-  /// @param messageCreatedAt The time at which message was recorded.
-  /// @param messageExpiryTime The expiry time of the message.
-  /// @param l2FeeRefundAddress The address of the fee-refund recipient on L2.
-  /// @param feeCreditData The feeCreditData struct with feeParameters snapshot from GasOracle and feeCredit captured
-  /// from depositor
-  event MessageSent(
-    address indexed messageSender,
-    address indexed messageTarget,
-    uint256 indexed messageNonce,
-    bytes message,
-    bytes32 messageHash,
-    NilConstants.MessageType messageType,
-    uint256 messageCreatedAt,
-    uint256 messageExpiryTime,
-    address l2FeeRefundAddress,
-    INilGasPriceOracle.FeeCreditData feeCreditData
-  );
-
   /// @notice Emitted when a deposit message is cancelled.
   /// @param messageHash The hash of the deposit message that was cancelled.
   event DepositMessageCancelled(bytes32 messageHash);
+
+  event WithdrawalClaimed(
+    bytes32 indexed withdrawalMessageHash,
+    uint256 withdrawalMessageNonce,
+    uint256 merkleLeafIndex
+  );
 
   /*//////////////////////////////////////////////////////////////////////////
                              MESSAGE STRUCTS   
@@ -100,36 +93,15 @@ interface IL1BridgeMessenger is IBridgeMessenger {
     address value;
   }
 
-  struct SendMessageParams {
+  struct WithdrawalRequestParams {
     NilConstants.MessageType messageType;
+    address messageSender;
     address messageTarget;
+    uint256 messageNonce;
+    uint256 merkleLeafIndex;
     bytes message;
-    address tokenAddress;
-    address depositorAddress;
-    uint256 depositAmount;
-    address l1DepositRefundAddress;
-    address l2FeeRefundAddress;
-    INilGasPriceOracle.FeeCreditData feeCreditData;
-  }
-
-  /**
-   * @notice Represents a deposit message.
-   */
-  struct DepositMessage {
-    address sender; // The address of the sender
-    address target; // The target address on the destination chain
-    uint256 nonce; // The nonce for the deposit
-    uint256 creationTime; // The creation-time in epochSeconds
-    uint256 expiryTime; // The expiry time for the deposit
-    bool isCancelled; // Indicates if the deposit is cancelled
-    bool isClaimed; // Indicates if the failed deposit is claimed
-    address l1DepositRefundAddress; // The address to refund if the deposit is cancelled
-    address l2FeeRefundAddress; // The address of the fee-refund recipient on NilChain
-    NilConstants.MessageType messageType; // The type of the message
-    address tokenAddress;
-    address depositorAddress;
-    uint256 depositAmount;
-    INilGasPriceOracle.FeeCreditData feeCreditData;
+    bytes32 messageHash;
+    bytes32[] withdrawalProof;
   }
 
   /// @notice Gets the current deposit nonce.
@@ -154,41 +126,33 @@ interface IL1BridgeMessenger is IBridgeMessenger {
   /// @return The list of authorized bridge addresses.
   function getAuthorizedBridges() external view returns (address[] memory);
 
-  function computeMessageHash(
+  function computeWithdrawalMessageHash(
+    NilConstants.MessageType messageType,
     address messageSender,
     address messageTarget,
     uint256 messageNonce,
     bytes memory message
-  ) external pure returns (bytes32);
+  ) external view returns (bytes32);
+
+  function computeDepositMessageHash(
+    NilConstants.MessageType messageType,
+    address messageSender,
+    address messageTarget,
+    uint256 messageNonce,
+    bytes memory message
+  ) external view returns (bytes32);
 
   /*//////////////////////////////////////////////////////////////////////////
                            PUBLIC MUTATING FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*/
 
-  /// @notice Send cross chain message from L1 to L2 or L2 to L1.
-  /// @param messageType The messageType enum value
-  /// @param messageTarget The address of contract/account who receive the message.
-  /// @param message The content of the message.
-  /// @param l1DepositRefundAddress The address of recipient for the deposit-cancellation or claim failed deposit
-  /// @param l2FeeRefundAddress The address of the feeRefundRecipient on L2.
-  /// @param feeCreditData The feeCreditData for l2-Transaction-fee
-  function sendMessage(
-    NilConstants.MessageType messageType,
-    address messageTarget,
-    bytes calldata message,
-    address tokenAddress,
-    address depositorAddress,
-    uint256 depositAmount,
-    address l1DepositRefundAddress,
-    address l2FeeRefundAddress,
-    INilGasPriceOracle.FeeCreditData memory feeCreditData
-  ) external payable;
-
   /// @notice Cancels a deposit message.
   /// @param messageHash The hash of the deposit message to cancel.
   function cancelDeposit(bytes32 messageHash) external;
 
-  function claimFailedDeposit(bytes32 messageHash, bytes32[] calldata claimProof) external;
+  function claimFailedDeposit(bytes32 messageHash, uint256 merkleTreeLeafNonce, bytes32[] memory claimProof) external;
+
+  function claimWithdrawal(WithdrawalRequestParams calldata withdrawalRequestParams) external;
 
   /*//////////////////////////////////////////////////////////////////////////
                            RESTRICTED FUNCTIONS

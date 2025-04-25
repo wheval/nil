@@ -38,7 +38,6 @@ export const useRepeatedGetTxByHash = (
           clearInterval(intervalId);
         }
       } catch (err) {
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
         if ((err as any).name === "AbortError") {
           return;
         }

@@ -49,6 +49,7 @@ stdenv.mkDerivation rec {
 
     (cd smart-contracts; pnpm run build)
     (cd niljs; pnpm run build)
+    (cd hardhat-plugin; pnpm run build)
   '';
 
   doCheck = enableTesting;

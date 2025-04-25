@@ -1,4 +1,4 @@
-{ pkgs, lib, stdenv, biome, callPackage, pnpm_10, nil, enableTesting ? false }:
+{ pkgs, lib, stdenv, biome, jq, moreutils, callPackage, pnpm_10, nil, enableTesting ? false }:
 
 let
   sigtool = callPackage ./sigtool.nix { };
@@ -9,6 +9,7 @@ stdenv.mkDerivation rec {
   name = "clijs";
   pname = "clijs";
   src = lib.sourceByRegex ./.. [
+    ".oclifrc.json"
     "package.json"
     "pnpm-workspace.yaml"
     "pnpm-lock.yaml"
@@ -23,7 +24,7 @@ stdenv.mkDerivation rec {
 
   NODE_PATH = "$npmDeps";
 
-  nativeBuildInputs = [ nodejs_static pnpm_static.configHook biome ]
+  nativeBuildInputs = [ nodejs_static pnpm_static.configHook biome jq moreutils ]
     ++ lib.optionals stdenv.buildPlatform.isDarwin [ sigtool ]
     ++ (if enableTesting then [ nil ] else [ ]);
 
@@ -56,11 +57,24 @@ stdenv.mkDerivation rec {
 
     pnpm run lint
 
-    ./dist/clijs | grep -q "The CLI tool for interacting with the =nil; cluster" || {
-      echo "Error: Output does not contain the expected substring!" >&2
+    env NODE_NO_WARNINGS=1 ./dist/clijs util list-commands > bundled_cli_commands
+
+    pnpm run build-to dist-tmp
+    jq '.commands = "./dist-tmp/src/commands"' .oclifrc.json | sponge .oclifrc.json
+    node ./bin/run.js util list-commands > non_bundled_cli_commands
+
+    diff bundled_cli_commands non_bundled_cli_commands > /dev/null || {
+      echo "have you added new command to the `sea.ts` file?"
+      echo "bundlied cli command list:"
+      cat bundled_cli_commands
+      echo "non-bundlied cli command list:"
+      cat non_bundled_cli_commands
+      rm bundled_cli_commands non_bundled_cli_commands
       exit 1
     }
+
     echo "smoke check passed"
+
 
     nohup nild run --http-port 8529 --collator-tick-ms=100 > nild.log 2>&1 & echo $! > nild_pid &
 

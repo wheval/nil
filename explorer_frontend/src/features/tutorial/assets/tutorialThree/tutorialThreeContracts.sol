@@ -3,13 +3,14 @@
 pragma solidity ^0.8.21;
 
 import "@nilfoundation/smart-contracts/contracts/Nil.sol";
+import "@nilfoundation/smart-contracts/contracts/NilAwaitable.sol";
 
 /**
  * @title Requester
  * @author =nil; Foundation
  * @notice A contract for requesting the multiplication of two numbers.
  */
-contract Requester is NilBase {
+contract Requester is NilBase, NilAwaitable {
   using Nil for address;
   uint256 private num1 = 5;
   uint256 private num2 = 10;
@@ -20,17 +21,18 @@ contract Requester is NilBase {
     bytes memory context = ;
     bytes memory callData = ;
 
-    Nil.sendRequest(
+    sendRequest(
       dst,
       0,
       Nil.ASYNC_REQUEST_MIN_GAS,
       context,
-      callData
+      callData,
+      checkResult
     );
   }
 
-  function checkResult(bool success, bytes memory returnData, bytes memory context) 
-    public 
+  function checkResult(bool success, bytes memory returnData, bytes memory context)
+    public
     payable
     onlyResponse
     {

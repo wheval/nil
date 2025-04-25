@@ -18,6 +18,7 @@ import (
 	"github.com/NilFoundation/nil/nil/internal/telemetry"
 	"github.com/NilFoundation/nil/nil/services/nilservice"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -32,31 +33,33 @@ type nodeSpec struct {
 }
 
 type clusterSpec struct {
-	NilServerName          string   `yaml:"nil_server_name"`
-	NilCertEmail           string   `yaml:"nil_cert_email"`
-	NildConfigDir          string   `yaml:"nild_config_dir"`
-	NildCredentialsDir     string   `yaml:"nild_credentials_dir"`
-	NildPromBasePort       int      `yaml:"nild_prom_base_port"`
-	NildP2PBaseTCPPort     int      `yaml:"nild_p2p_base_tcp_port"`
-	PprofBaseTCPPort       int      `yaml:"pprof_base_tcp_port"`
-	NilWipeOnUpdate        bool     `yaml:"nil_wipe_on_update"`
-	NShards                uint32   `yaml:"nShards"`
-	NilRPCHost             string   `yaml:"nil_rpc_host"`
-	NilRPCPort             int      `yaml:"nil_rpc_port"`
-	EnableRPCOnValidators  bool     `yaml:"nil_rpc_enable_on_validators"`
-	ClickhouseHost         string   `yaml:"clickhouse_host"`
-	ClickhousePort         int      `yaml:"clickhouse_port"`
-	ClickhouseLogin        string   `yaml:"clickhouse_login"`
-	ClickhouseDatabase     string   `yaml:"clickhouse_database"`
-	CometaRPCHost          string   `yaml:"cometa_rpc_host"`
-	CometaPort             int      `yaml:"cometa_port"`
-	FaucetRPCHost          string   `yaml:"faucet_rpc_host"`
-	FaucetPort             int      `yaml:"faucet_port"`
-	NilLoadgenHost         string   `yaml:"nil_loadgen_host"`
-	NilLoadgenPort         int      `yaml:"nil_loadgen_port"`
-	NilUpdateRetryInterval int      `yaml:"nil_update_retry_interval_sec"`
-	InstanceEnv            string   `yaml:"instance_env"`
-	SignozJournaldLogs     []string `yaml:"signoz_journald_logs"`
+	NilServerName          string                `yaml:"nil_server_name"`
+	NilCertEmail           string                `yaml:"nil_cert_email"`
+	NildConfigDir          string                `yaml:"nild_config_dir"`
+	NildCredentialsDir     string                `yaml:"nild_credentials_dir"`
+	NildPromBasePort       int                   `yaml:"nild_prom_base_port"`
+	NildP2PBaseTCPPort     int                   `yaml:"nild_p2p_base_tcp_port"`
+	PprofBaseTCPPort       int                   `yaml:"pprof_base_tcp_port"`
+	NilWipeOnUpdate        bool                  `yaml:"nil_wipe_on_update"`
+	NShards                uint32                `yaml:"nShards"`
+	NilRPCHost             string                `yaml:"nil_rpc_host"`
+	NilRPCPort             int                   `yaml:"nil_rpc_port"`
+	EnableRPCOnValidators  bool                  `yaml:"nil_rpc_enable_on_validators"`
+	Relays                 network.AddrInfoSlice `yaml:"nil_relays"`
+	RelayPublicAddress     network.AddrInfo      `yaml:"nil_relay_public_address"`
+	ClickhouseHost         string                `yaml:"clickhouse_host"`
+	ClickhousePort         int                   `yaml:"clickhouse_port"`
+	ClickhouseLogin        string                `yaml:"clickhouse_login"`
+	ClickhouseDatabase     string                `yaml:"clickhouse_database"`
+	CometaRPCHost          string                `yaml:"cometa_rpc_host"`
+	CometaPort             int                   `yaml:"cometa_port"`
+	FaucetRPCHost          string                `yaml:"faucet_rpc_host"`
+	FaucetPort             int                   `yaml:"faucet_port"`
+	NilLoadgenHost         string                `yaml:"nil_loadgen_host"`
+	NilLoadgenPort         int                   `yaml:"nil_loadgen_port"`
+	NilUpdateRetryInterval int                   `yaml:"nil_update_retry_interval_sec"`
+	InstanceEnv            string                `yaml:"instance_env"`
+	SignozJournaldLogs     []string              `yaml:"signoz_journald_logs"`
 
 	NilConfig        []nodeSpec `yaml:"nil_config"`
 	NilArchiveConfig []nodeSpec `yaml:"nil_archive_config"`
@@ -66,18 +69,20 @@ type clusterSpec struct {
 }
 
 type server struct {
-	service         string
-	name            string
-	identity        string
-	p2pPort         int
-	promPort        int
-	pprofPort       int
-	rpcPort         int
-	credsDir        string
-	workDir         string
-	nodeSpec        nodeSpec
-	logClientEvents bool
-	vkm             *keys.ValidatorKeysManager
+	service            string
+	name               string
+	identity           string
+	relays             network.AddrInfoSlice
+	relayPublicAddress network.AddrInfo
+	p2pPort            int
+	promPort           int
+	pprofPort          int
+	rpcPort            int
+	credsDir           string
+	workDir            string
+	nodeSpec           nodeSpec
+	logClientEvents    bool
+	vkm                *keys.ValidatorKeysManager
 }
 
 type cluster struct {
@@ -194,9 +199,17 @@ func genDevnet(cmd *cobra.Command, args []string) error {
 	if spec.EnableRPCOnValidators {
 		validatorRPCBasePort = spec.NilRPCPort + len(spec.NilRPCConfig)
 	}
-	validators, err := spec.makeServers(spec.NilConfig,
-		spec.NildP2PBaseTCPPort, spec.NildPromBasePort, spec.PprofBaseTCPPort, validatorRPCBasePort,
-		"nil", baseDir, false)
+	validators, err := spec.makeServers(
+		spec.NilConfig,
+		spec.NildP2PBaseTCPPort,
+		spec.NildPromBasePort,
+		spec.PprofBaseTCPPort,
+		validatorRPCBasePort,
+		spec.Relays,
+		spec.RelayPublicAddress,
+		"nil",
+		baseDir,
+		false)
 	if err != nil {
 		return fmt.Errorf("failed to setup validator nodes: %w", err)
 	}
@@ -216,18 +229,34 @@ func genDevnet(cmd *cobra.Command, args []string) error {
 		archiveBasePprof = spec.PprofBaseTCPPort + len(validators)
 	}
 
-	c.archivers, err = spec.makeServers(spec.NilArchiveConfig,
-		archiveBaseP2P, archiveBaseProm, archiveBasePprof, 0,
-		"nil-archive", baseDir, false)
+	c.archivers, err = spec.makeServers(
+		spec.NilArchiveConfig,
+		archiveBaseP2P,
+		archiveBaseProm,
+		archiveBasePprof,
+		0,
+		spec.Relays,
+		spec.RelayPublicAddress,
+		"nil-archive",
+		baseDir,
+		false)
 	if err != nil {
 		return fmt.Errorf("failed to setup archive nodes: %w", err)
 	}
 
 	rpcBasePprof := spec.PprofBaseTCPPort + len(validators) + len(c.archivers)
 
-	c.rpcNodes, err = spec.makeServers(spec.NilRPCConfig,
-		0, 0, rpcBasePprof, spec.NilRPCPort,
-		"nil-rpc", baseDir, true)
+	c.rpcNodes, err = spec.makeServers(
+		spec.NilRPCConfig,
+		0,
+		0,
+		rpcBasePprof,
+		spec.NilRPCPort,
+		nil,
+		network.AddrInfo{},
+		"nil-rpc",
+		baseDir,
+		true)
 	if err != nil {
 		return fmt.Errorf("failed to setup rpc nodes: %w", err)
 	}
@@ -277,6 +306,8 @@ func (spec *clusterSpec) makeServers(
 	basePromPort int,
 	basePprofPort int,
 	baseHTTPPort int,
+	relays network.AddrInfoSlice,
+	relayPublicAddress network.AddrInfo,
 	service string,
 	baseDir string,
 	logClientEvents bool,
@@ -286,6 +317,8 @@ func (spec *clusterSpec) makeServers(
 		servers[i].service = service
 		servers[i].name = fmt.Sprintf("%s-%d", service, i)
 		servers[i].nodeSpec = nodeSpec
+		servers[i].relays = relays
+		servers[i].relayPublicAddress = relayPublicAddress
 		servers[i].logClientEvents = logClientEvents
 		if baseP2pPort != 0 {
 			servers[i].p2pPort = baseP2pPort + i
@@ -333,7 +366,10 @@ func (spec *clusterSpec) EnsureIdentity(srv server) (string, error) {
 		return "", fmt.Errorf("failed to load or generate keys: %w", err)
 	}
 	_, _, identity, err := network.SerializeKeys(privKey)
-	return identity.String(), err
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize keys: %w", err)
+	}
+	return identity.String(), nil
 }
 
 func (c *cluster) writeServerConfig(instanceId int, srv server, only string) error {
@@ -363,8 +399,10 @@ func (c *cluster) writeServerConfig(instanceId int, srv server, only string) err
 			Network: &network.Config{
 				TcpPort: srv.p2pPort,
 
-				DHTEnabled:        true,
-				DHTBootstrapPeers: getPeers(c.validators, inst.DHTBootstrapPeersIdx),
+				DHTEnabled:         true,
+				DHTBootstrapPeers:  getPeers(c.validators, inst.DHTBootstrapPeersIdx),
+				Relays:             srv.relays,
+				RelayPublicAddress: srv.relayPublicAddress,
 			},
 			Telemetry: &telemetry.Config{
 				ExportMetrics:  true,
@@ -426,7 +464,7 @@ func getPeer(srv server) network.AddrInfo {
 func getPeers(servers []server, indices []int) network.AddrInfoSlice {
 	peers := make(network.AddrInfoSlice, len(indices))
 	for i, idx := range indices {
-		peers[i] = getPeer(servers[idx])
+		peers[i] = peer.AddrInfo(getPeer(servers[idx]))
 	}
 	return peers
 }

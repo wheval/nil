@@ -3,12 +3,13 @@ pragma solidity 0.8.28;
 
 import { IBridgeMessenger } from "../../interfaces/IBridgeMessenger.sol";
 import { NilConstants } from "../../../common/libraries/NilConstants.sol";
+import { IRelayMessage } from "./IRelayMessage.sol";
 
 /// @title IL2BridgeMessenger
 /// @notice Interface for the L2BridgeMessenger contract which handles cross-chain messaging between L1 and L2.
 /// @dev This interface defines the functions and events for finalizing deposit messages, sending messages to L1, and
 /// initiating withdrawals
-interface IL2BridgeMessenger is IBridgeMessenger {
+interface IL2BridgeMessenger is IBridgeMessenger, IRelayMessage {
   /*//////////////////////////////////////////////////////////////////////////
                              ERRORS
     //////////////////////////////////////////////////////////////////////////*/
@@ -69,6 +70,7 @@ interface IL2BridgeMessenger is IBridgeMessenger {
   /// @param messageSender The address of the message sender.
   /// @param messageTarget The address of the message recipient which can be an account/smartcontract.
   /// @param messageNonce The nonce of the message.
+  /// @param merkleTreeLeafIndex The index of the leaf in the merkleTree.
   /// @param message The encoded message data.
   /// @param messageHash The hash of the message.
   /// @param messageType The type of the withdrawalMessage.
@@ -78,6 +80,7 @@ interface IL2BridgeMessenger is IBridgeMessenger {
     address indexed messageSender,
     address indexed messageTarget,
     uint256 indexed messageNonce,
+    uint256 merkleTreeLeafIndex,
     bytes message,
     bytes32 messageHash,
     NilConstants.MessageType messageType,
@@ -96,7 +99,16 @@ interface IL2BridgeMessenger is IBridgeMessenger {
 
   function isFullyInitialised() external view returns (bool);
 
-  function computeMessageHash(
+  function computeDepositMessageHash(
+    NilConstants.MessageType messageType,
+    address messageSender,
+    address messageTarget,
+    uint256 messageNonce,
+    bytes memory message
+  ) external pure returns (bytes32);
+
+  function computeWithdrawalMessageHash(
+    NilConstants.MessageType messageType,
     address messageSender,
     address messageTarget,
     uint256 messageNonce,
@@ -107,39 +119,17 @@ interface IL2BridgeMessenger is IBridgeMessenger {
   /// @return The current withdrawal nonce.
   function withdrawalNonce() external view returns (uint256);
 
-  /// @notice Gets the next withdrawal nonce.
-  /// @return The next withdrawal nonce.
-  function getNextWithdrawalNonce() external view returns (uint256);
+  function counterpartyBridgeMessenger() external view returns (address);
 
-  /// @notice Gets the withdrawal MessageType for a given message hash.
-  /// @param msgHash The hash of the withdrawal message.
-  /// @return messageType The type of the withdrawal message.
-  function getMessageType(bytes32 msgHash) external view returns (NilConstants.MessageType messageType);
+  function nilMessageTree() external view returns (address);
 
-  /// @notice Gets the withdrawal message for a given message hash.
-  /// @param msgHash The hash of the withdrawal message.
-  /// @return withdrawalMessage The withdrawal message details.
-  function getWithdrawalMessage(bytes32 msgHash) external view returns (WithdrawalMessage memory withdrawalMessage);
+  function messageExpiryDelta() external view returns (uint256);
+
+  function l1MessageHash() external view returns (bytes32);
 
   /*//////////////////////////////////////////////////////////////////////////
                          PUBLIC MUTATION FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*/
-
-  /// @notice receive realyedMessage originated from L1BridgeMessenger via Relayer
-  /// @dev only authorized smart-account on nil-shard can relayMessage to Bridge on NilShard
-  /// @param messageSender The address of the sender of the message.
-  /// @param messageTarget The address of the recipient of the message.
-  /// @param messageNonce The nonce of the message to avoid replay attack.
-  /// @param message The content of the message.
-  /// @param messageExpiryTime The expiryTime of message queued on L1.
-  function relayMessage(
-    address messageSender,
-    address messageTarget,
-    NilConstants.MessageType messageType,
-    uint256 messageNonce,
-    bytes calldata message,
-    uint256 messageExpiryTime
-  ) external;
 
   /// @notice Send cross chain message Nil to L1.
   /// @param messageType The type of withdrawalMessage.

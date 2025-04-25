@@ -4,6 +4,7 @@
 pragma solidity ^0.8.9;
 
 import "@nilfoundation/smart-contracts/contracts/Nil.sol";
+import "@nilfoundation/smart-contracts/contracts/NilAwaitable.sol";
 
 contract GuardCheck {
     uint256 successfulCallsCounter = 0;
@@ -23,7 +24,7 @@ contract GuardCheck {
 //endBadGuardCheck
 //startGoodGuardCheck
 
-contract GoodGuardCheck is NilBase {
+contract GoodGuardCheck is NilBase, NilAwaitable {
     uint256 successfulCallsCounter = 0;
     address guardCheckerIntermediaryAddress;
 
@@ -36,14 +37,14 @@ contract GoodGuardCheck is NilBase {
         require(msg.value != 0);
         require(msg.value > amount);
         uint balanceBeforeAsyncCall = address(this).balance;
-        bytes memory context = abi.encodeWithSelector(this.callback.selector);
         bytes memory callData = abi.encodeWithSignature("receive()");
-        Nil.sendRequest(
+        sendRequest(
             dst,
             Nil.ASYNC_REQUEST_MIN_GAS,
             amount,
-            context,
-            callData
+            "",
+            callData,
+            callback
         );
         assert(address(this).balance == balanceBeforeAsyncCall - amount);
     }

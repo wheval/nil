@@ -3,6 +3,7 @@
 pragma solidity ^0.8.9;
 
 import "@nilfoundation/smart-contracts/contracts/Nil.sol";
+import "@nilfoundation/smart-contracts/contracts/NilAwaitable.sol";
 
 // Caller contract is a simple proxy
 // It demonstrates how to interact with another contract (Counter)
@@ -16,7 +17,7 @@ import "@nilfoundation/smart-contracts/contracts/Nil.sol";
 // https://docs.nil.foundation/nil/key-principles/async-execution
 // https://docs.nil.foundation/nil/smart-contracts/handling-async-execution/#retreiving-values
 
-contract Caller {
+contract Caller is NilAwaitable {
     using Nil for address;
 
     uint256 public result;
@@ -33,13 +34,13 @@ contract Caller {
     // Sends an async request to the Counter contract to invoke the increment method
     // It's guaranteed by the system that either response or error will be returned
     function call(address dst) public {
-        bytes memory context = abi.encodeWithSelector(this.callback.selector);
-        Nil.sendRequest(
+        sendRequest(
             dst, // Address of the destination contract (Counter)
             0, // Amount of value to send
             Nil.ASYNC_REQUEST_MIN_GAS, // Amount of gas reserved to process the response
-            context, // Context for the callback function
-            abi.encodeWithSignature("increment()") // Encoded signature of the increment function
+            "", // Context for the callback function
+            abi.encodeWithSignature("increment()"), // Encoded signature of the increment function
+            callback
         );
     }
 }

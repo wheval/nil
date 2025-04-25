@@ -1,5 +1,7 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
+import 'vitest-canvas-mock';
+
 
 Object.defineProperty(window, "RUNTIME_CONFIG", {
   value: {

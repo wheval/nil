@@ -65,11 +65,14 @@ contract UniswapV2Router01 is IUniswapV2Router01, NilTokenBase {
         tokensToSend[0].amount = amountA;
         tokensToSend[1].id = tokens[1].id;
         tokensToSend[1].amount = amountA;
-        smartCall(
+        (bool result, bytes memory __) = smartCall(
             pair,
             tokensToSend,
             abi.encodeWithSignature("mint(address)", to)
         );
+        if (!result) {
+            revert("UniswapV2Router: pair minting failed");
+        }
     }
 
     function _addLiquiditySync(

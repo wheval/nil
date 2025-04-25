@@ -4,7 +4,7 @@ import type { CheckProps } from "../CheckProps";
 
 const CUSTOM_TOKEN_AMOUNT = 30_000n;
 
-async function runTutorialCheckTwo(props: CheckProps) {
+export async function runTutorialCheckTwo(props: CheckProps) {
   const client = new PublicClient({
     transport: new HttpTransport({
       endpoint: props.rpcUrl,
@@ -71,7 +71,7 @@ async function runTutorialCheckTwo(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Operator.checkMintToken() produced one or more failed receipts!
-      Debug this transaction using the Cometa service: ${hashMinting}.
+      Debug this transaction using the Cometa service: ${mintTx.hash}.
       `,
     );
     return false;
@@ -120,7 +120,7 @@ async function runTutorialCheckTwo(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Operator.checkSendToken() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${hashSending}.
+      To investigate, debug this transaction using the Cometa service: ${sendTx.hash}.
       `,
     );
     return false;
@@ -134,5 +134,3 @@ async function runTutorialCheckTwo(props: CheckProps) {
 
   return true;
 }
-
-export default runTutorialCheckTwo;

@@ -50,6 +50,7 @@ import {
   setTopupInput,
   topUpEvent,
   topUpSmartAccountBalanceFx,
+  topupPanelOpen,
   topupSmartAccountTokenFx,
   topupTokenEvent,
 } from "./model";
@@ -381,6 +382,13 @@ $latestActivity.on(addActivity, (_, payload) => {
   }, 10000);
 
   return payload;
+});
+
+$topupInput.on(topupPanelOpen, ({ token }) => {
+  return {
+    token,
+    amount: "",
+  };
 });
 
 $latestActivity.on(clearLatestActivity, () => null);

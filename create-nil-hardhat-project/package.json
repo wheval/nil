@@ -18,6 +18,13 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "dependencies": {
+    "@nilfoundation/niljs": "workspace:*",
+    "@nilfoundation/smart-contracts": "workspace:*",
+    "@nilfoundation/hardhat-nil-plugin": "workspace:*",
+    "abitype": "^1.0.7",
+    "dotenv": "^16.4.5"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "dotenv": "^16.4.5",

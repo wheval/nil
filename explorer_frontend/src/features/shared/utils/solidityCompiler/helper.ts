@@ -2,10 +2,10 @@ import { processImports } from "./processImports";
 
 import FaucetSol from "@nilfoundation/smart-contracts/contracts/Faucet.sol?raw";
 import NilSol from "@nilfoundation/smart-contracts/contracts/Nil.sol?raw";
+import NilAwaitableSol from "@nilfoundation/smart-contracts/contracts/NilAwaitable.sol?raw";
 import NilTokBaseSol from "@nilfoundation/smart-contracts/contracts/NilTokenBase.sol?raw";
 import SmartAccountSol from "@nilfoundation/smart-contracts/contracts/SmartAccount.sol?raw";
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export const createCompileInput = async (
   contractBody: string,
   options: any = {},
@@ -27,6 +27,9 @@ export const createCompileInput = async (
     "SmartAccount.sol": { content: SmartAccountSol },
     "@nilfoundation/smart-contracts/contracts/SmartAccount.sol": {
       content: SmartAccountSol,
+    },
+    "@nilfoundation/smart-contracts/contracts/NilAwaitable.sol": {
+      content: NilAwaitableSol,
     },
   };
 

@@ -75,7 +75,7 @@ compile-bins:
 $(BIN_FILES): | compile-bins
 
 # Solidity debug console
-CONSOLE_SOL := nil/contracts/solidity/lib/console.sol
+CONSOLE_SOL := nil/contracts/solidity/system/console.sol
 CONSOLE_GO  := nil/internal/vm/console/console_generated.go
 $(CONSOLE_SOL) $(CONSOLE_GO): nil/contracts/genlog.py
 	python3 nil/contracts/genlog.py $(CONSOLE_SOL) $(CONSOLE_GO)

@@ -1,7 +1,7 @@
 import { COLORS, SPACE } from "@nilfoundation/ui-kit";
 import { expandProperty } from "inline-style-expand-shorthand";
 import type { StyleObject } from "styletron-react";
-import { getMobileStyles } from "../../../../styleHelpers";
+import { getTabletStyles } from "../../../../styleHelpers";
 
 const linkOutlineStyles = {
   borderRadius: "4px",
@@ -14,6 +14,7 @@ const linkOutlineStyles = {
 
 const container: StyleObject = {
   width: "100%",
+  maxWidth: "84rem",
   color: COLORS.gray50,
   display: "flex",
   flexDirection: "column",
@@ -26,7 +27,7 @@ const container: StyleObject = {
 const content = {
   display: "grid",
   gridTemplateColumns: "180px 9fr 1fr",
-  ...getMobileStyles({ gridTemplateColumns: "1fr 6fr" }),
+  ...getTabletStyles({ gridTemplateColumns: "1fr 6fr" }),
   paddingTop: SPACE[48],
   gap: SPACE[32],
   width: "100%",
@@ -35,6 +36,8 @@ const content = {
 const navbar = {
   width: "100%",
   display: "grid",
+  gap: "8px",
+  gridTemplateColumns: "calc(66% + 8px) 33%", // 8px - width of resize handle
   gridTemplateRows: "1fr",
   height: "auto",
   ...expandProperty("padding", "16px 0"),
@@ -45,6 +48,7 @@ const logo = {
   alignItems: "start",
   marginRight: "auto",
   ...linkOutlineStyles,
+  marginLeft: "32px",
   flexDirection: "column",
 };
 
@@ -91,14 +95,13 @@ export const styles = {
   navItem,
   content,
   navLink,
-  tutorialText,
   playgroundText,
+  tutorialText,
 };
 
 export const mobileContainerStyle: StyleObject = {
   padding: "16px",
   display: "flex",
-  width: "100%",
   flexDirection: "column",
 };
 

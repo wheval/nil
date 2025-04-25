@@ -1,11 +1,11 @@
-import type { FC, ReactNode } from "react";
 import { useStyletron } from "styletron-react";
+import { useMobile } from "../hooks/useMobile";
 
 type InternalPageContainerProps = {
-  children: ReactNode;
+  children: JSX.Element | JSX.Element[];
 };
 
-export const InternalPageContainer: FC<InternalPageContainerProps> = ({ children }) => {
+export const InternalPageContainer = ({ children }: InternalPageContainerProps) => {
   const [css] = useStyletron();
   const [isMobile] = useMobile();
 
@@ -13,8 +13,8 @@ export const InternalPageContainer: FC<InternalPageContainerProps> = ({ children
     <div
       className={css({
         gridColumn: "1 / 4",
-        paddingLeft: isMobile ? "0" : "32px",
-        paddingRight: isMobile ? "0" : "32px",
+        paddingInlineStart: isMobile ? "0" : "32px",
+        paddingInlineEnd: isMobile ? "0" : "32px",
       })}
     >
       {children}

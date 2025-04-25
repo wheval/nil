@@ -50,8 +50,6 @@ type AccountState struct {
 	TokenTree   *TokenTrie
 	// AsyncContextTree is a trie that stores the context for each request sent from this account.
 	AsyncContextTree *AsyncContextTrie
-	// requestId is a current request id. It is used to generate unique number for each request.
-	requestId uint64
 
 	State               Storage
 	AsyncContext        map[types.TransactionIndex]*types.AsyncContext
@@ -71,12 +69,6 @@ type AccountState struct {
 	NewContract bool
 
 	logger logging.Logger
-}
-
-// FetchRequestId returns unique request id.
-func (as *AccountState) FetchRequestId() uint64 {
-	as.requestId++
-	return as.requestId
 }
 
 func NewAccountStateReader(account *AccountState) *AccountStateReader {
@@ -120,7 +112,6 @@ func NewAccountState(
 		}
 		accountState.ExtSeqno = account.ExtSeqno
 		accountState.Seqno = account.Seqno
-		accountState.requestId = account.RequestId
 	}
 
 	return accountState, nil
@@ -272,10 +263,8 @@ func (as *AccountState) GetAsyncContext(index types.TransactionIndex) (*types.As
 }
 
 func (as *AccountState) GetAndRemoveAsyncContext(index types.TransactionIndex) (*types.AsyncContext, error) {
-	ctx, exists := as.AsyncContext[index]
-	if exists {
-		return ctx, nil
-	}
+	_, exists := as.AsyncContext[index]
+	check.PanicIff(exists, "AsyncContext %d already exists", index)
 	as.AsyncContextRemoved = append(as.AsyncContextRemoved, index)
 	return as.AsyncContextTree.Fetch(index)
 }
@@ -391,7 +380,6 @@ func (as *AccountState) Commit() (*types.SmartContract, error) {
 		CodeHash:         as.CodeHash,
 		ExtSeqno:         as.ExtSeqno,
 		Seqno:            as.Seqno,
-		RequestId:        as.requestId,
 	}
 
 	if err := db.WriteCode(as.db.GetRwTx(), as.address.ShardId(), as.CodeHash, as.Code); err != nil {

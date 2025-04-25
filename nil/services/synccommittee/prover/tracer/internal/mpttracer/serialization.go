@@ -170,7 +170,6 @@ func smartContractFromProto(pbSmartContract *pb.SmartContract) *types.SmartContr
 		AsyncContextRoot: common.HexToHash(pbSmartContract.GetAsyncContextRoot()),
 		Seqno:            types.Seqno(pbSmartContract.GetSeqno()),
 		ExtSeqno:         types.Seqno(pbSmartContract.GetExtSeqno()),
-		RequestId:        pbSmartContract.GetRequestId(),
 	}
 }
 
@@ -193,11 +192,10 @@ func smartContractToProto(smartContract *types.SmartContract) *pb.SmartContract 
 		AsyncContextRoot: smartContract.AsyncContextRoot.Hex(),
 		Seqno:            uint64(smartContract.Seqno),
 		ExtSeqno:         uint64(smartContract.ExtSeqno),
-		RequestId:        smartContract.RequestId,
 	}
 }
 
-func proofPathToProto(pathToNode mpt.ProofPath) (*pb.HumanReadableProof, error) {
+func proofPathToProto(pathToNode mpt.SimpleProof) (*pb.HumanReadableProof, error) {
 	nodes := make([]*pb.Node, len(pathToNode))
 	for i, node := range pathToNode {
 		pbNode, err := nodeToProto(node)

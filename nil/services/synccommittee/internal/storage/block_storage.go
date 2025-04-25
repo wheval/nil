@@ -102,17 +102,41 @@ func (bs *BlockStorage) SetProvedStateRoot(ctx context.Context, stateRoot common
 	return bs.commit(tx)
 }
 
-// TryGetLatestBatchId retrieves the ID of the latest created batch
+// TryGetLatestBatch retrieves the latest created batch
 // or returns nil if:
 // a) No batches have been created yet, or
 // b) A full storage reset (starting from the first batch) has been triggered.
-func (bs *BlockStorage) TryGetLatestBatchId(ctx context.Context) (*scTypes.BatchId, error) {
+func (bs *BlockStorage) TryGetLatestBatch(ctx context.Context) (*scTypes.BlockBatch, error) {
 	tx, err := bs.database.CreateRoTx(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
-	return bs.ops.getLatestBatchId(tx)
+
+	batchId, err := bs.ops.getLatestBatchId(tx)
+	if err != nil {
+		return nil, err
+	}
+	if batchId == nil {
+		return nil, nil
+	}
+
+	entry, err := bs.ops.getBatchEntry(tx, *batchId)
+	if err != nil {
+		return nil, err
+	}
+
+	return bs.reconstructBatch(tx, entry)
+}
+
+func (bs *BlockStorage) reconstructBatch(tx db.RoTx, entry *batchEntry) (*scTypes.BlockBatch, error) {
+	segments, err := bs.ops.getBlocksAsSegments(tx, entry.BlockIds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to recreate chain segments, batchId=%s: %w", entry.Id, err)
+	}
+
+	batch := scTypes.ReconstructExistingBlockBatch(entry.Id, entry.ParentId, segments, entry.DataProofs)
+	return batch, nil
 }
 
 func (bs *BlockStorage) BatchExists(ctx context.Context, batchId scTypes.BatchId) (bool, error) {
@@ -122,7 +146,7 @@ func (bs *BlockStorage) BatchExists(ctx context.Context, batchId scTypes.BatchId
 	}
 	defer tx.Rollback()
 
-	_, err = bs.ops.getBatch(tx, batchId)
+	_, err = bs.ops.getBatchEntry(tx, batchId)
 	switch {
 	case err == nil:
 		return true, nil
@@ -247,7 +271,7 @@ func (bs *BlockStorage) setBatchAsProvedImpl(ctx context.Context, batchId scType
 	}
 	defer tx.Rollback()
 
-	entry, err := bs.ops.getBatch(tx, batchId)
+	entry, err := bs.ops.getBatchEntry(tx, batchId)
 	if err != nil {
 		return false, err
 	}
@@ -342,7 +366,7 @@ func (bs *BlockStorage) setBatchAsProposedImpl(ctx context.Context, id scTypes.B
 	}
 	defer tx.Rollback()
 
-	batch, err := bs.ops.getBatch(tx, id)
+	batch, err := bs.ops.getBatchEntry(tx, id)
 	if err != nil {
 		return err
 	}
@@ -405,7 +429,7 @@ func (bs *BlockStorage) resetBatchesPartialImpl(
 	}
 	defer tx.Rollback()
 
-	if _, err := bs.ops.getBatch(tx, firstBatchToPurge); err != nil {
+	if _, err := bs.ops.getBatchEntry(tx, firstBatchToPurge); err != nil {
 		return nil, err
 	}
 
@@ -463,18 +487,18 @@ func (bs *BlockStorage) unsetBlockBatch(tx db.RwTx, batch *batchEntry) error {
 	return bs.ops.putLatestBatchId(tx, batch.ParentId)
 }
 
-// ResetBatchesNotProved resets the block storage state:
+// ResetAllBatches resets the block storage state:
 //
 //  1. Sets the latest fetched block reference to nil.
 //
-//  2. Deletes all main not yet proved blocks from the storage.
-func (bs *BlockStorage) ResetBatchesNotProved(ctx context.Context) error {
+//  2. Deletes all main blocks from the storage.
+func (bs *BlockStorage) ResetAllBatches(ctx context.Context) error {
 	return bs.retryRunner.Do(ctx, func(ctx context.Context) error {
-		return bs.resetBatchesNotProvedImpl(ctx)
+		return bs.resetAllBatchesImpl(ctx)
 	})
 }
 
-func (bs *BlockStorage) resetBatchesNotProvedImpl(ctx context.Context) error {
+func (bs *BlockStorage) resetAllBatchesImpl(ctx context.Context) error {
 	tx, err := bs.database.CreateRwTx(ctx)
 	if err != nil {
 		return err
@@ -485,11 +509,19 @@ func (bs *BlockStorage) resetBatchesNotProvedImpl(ctx context.Context) error {
 		return fmt.Errorf("failed to reset latest fetched block: %w", err)
 	}
 
+	if err := bs.deleteBatches(tx, func(batch *batchEntry) bool { return false }); err != nil {
+		return fmt.Errorf("failed to delete all batches: %w", err)
+	}
+
+	return bs.commit(tx)
+}
+
+func (bs *BlockStorage) deleteBatches(tx db.RwTx, skipFilter func(batch *batchEntry) bool) error {
 	for batch, err := range bs.ops.getStoredBatchesSeq(tx) {
 		if err != nil {
 			return err
 		}
-		if batch.IsProved {
+		if skipFilter(batch) {
 			continue
 		}
 
@@ -497,8 +529,7 @@ func (bs *BlockStorage) resetBatchesNotProvedImpl(ctx context.Context) error {
 			return err
 		}
 	}
-
-	return bs.commit(tx)
+	return nil
 }
 
 func (bs *BlockStorage) putBatchWithBlocks(tx db.RwTx, batch *scTypes.BlockBatch) error {

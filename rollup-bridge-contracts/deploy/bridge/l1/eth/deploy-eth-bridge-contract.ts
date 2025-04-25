@@ -20,7 +20,8 @@ export async function deployL1ETHBridgeContract(networkName: string): Promise<bo
                 config.l1DeployerConfig.owner, // _owner
                 config.l1DeployerConfig.admin, // _defaultAdmin
                 config.l1BridgeMessenger.l1BridgeMessengerContracts.l1BridgeMessengerProxy,
-                config.nilGasPriceOracle.nilGasPriceOracleContracts.nilGasPriceOracleProxy
+                config.nilGasPriceOracle.nilGasPriceOracleContracts.nilGasPriceOracleProxy,
+                config.l1DeployerConfig.shardId
             ],
             { initializer: 'initialize' },
         );

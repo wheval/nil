@@ -1,10 +1,10 @@
 package network
 
 import (
+	"context"
 	"testing"
 
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -26,8 +26,11 @@ func (s *RelayTestSuite) TestRelay() {
 
 	// Forcing private reachability, otherwise the private node won't use the relay
 	private := s.newManagerWithBaseConfig(&Config{
-		Relays:       []AddrInfo{CalcAddress(relay)},
+		Relays:       AsAddrInfoSlice(CalcAddress(relay)),
 		Reachability: network.ReachabilityPrivate,
+	})
+	private.SetRequestHandler(s.context, "/hello", func(context.Context, []byte) ([]byte, error) {
+		return []byte("world"), nil
 	})
 	defer private.Close()
 
@@ -38,12 +41,15 @@ func (s *RelayTestSuite) TestRelay() {
 	client := s.newManager()
 	defer client.Close()
 
-	relayedAddr, err := peer.AddrInfoFromString(hostAddress(relay) + "/p2p-circuit/p2p/" + private.host.ID().String())
-	s.Require().NoError(err)
-
-	id, err := client.Connect(s.context, AddrInfo(*relayedAddr))
+	relayedAddr := RelayedAddress(private.host.ID(), CalcAddress(relay))
+	id, err := client.Connect(s.context, relayedAddr)
 	s.Require().NoError(err)
 	s.Require().Equal(private.host.ID(), id)
+
+	resp, err := client.SendRequestAndGetResponse(
+		network.WithAllowLimitedConn(s.context, "relay"), id, "/hello", []byte("hello"))
+	s.Require().NoError(err)
+	s.Require().Equal("world", string(resp))
 }
 
 func TestRelay(t *testing.T) {

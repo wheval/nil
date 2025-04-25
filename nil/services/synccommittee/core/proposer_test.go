@@ -10,6 +10,7 @@ import (
 	"github.com/NilFoundation/nil/nil/common/logging"
 	"github.com/NilFoundation/nil/nil/internal/db"
 	"github.com/NilFoundation/nil/nil/internal/types"
+	"github.com/NilFoundation/nil/nil/services/synccommittee/core/reset"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/core/rollupcontract"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/metrics"
 	"github.com/NilFoundation/nil/nil/services/synccommittee/internal/storage"
@@ -34,10 +35,10 @@ type ProposerTestSuite struct {
 	clock            clockwork.Clock
 	storage          *storage.BlockStorage
 	ethClient        *rollupcontract.EthClientMock
-	rpcClientMock    *client.ClientMock
 	proposer         *proposer
 	testData         *scTypes.ProposalData
 	callContractMock *testaide.CallContractMock
+	rpcClientMock    *client.ClientMock
 }
 
 func TestProposerSuite(t *testing.T) {
@@ -58,7 +59,7 @@ func (s *ProposerTestSuite) SetupSuite() {
 	s.clock = testaide.NewTestClock()
 	s.storage = storage.NewBlockStorage(s.db, storage.DefaultBlockStorageConfig(), s.clock, metricsHandler, logger)
 	s.params = NewDefaultProposerConfig()
-	s.testData = testaide.NewProposalData(3, s.clock.Now())
+	s.testData = testaide.NewProposalData(s.clock.Now())
 
 	abi, err := rollupcontract.RollupcontractMetaData.GetAbi()
 	s.Require().NoError(err)
@@ -100,12 +101,24 @@ func (s *ProposerTestSuite) SetupSuite() {
 			return txInTest, false, nil
 		},
 	}
-	s.rpcClientMock = &client.ClientMock{}
 	contractWrapper, err := rollupcontract.NewWrapperWithEthClient(
 		s.ctx, rollupcontract.NewDefaultWrapperConfig(), s.ethClient, logger,
 	)
 	s.Require().NoError(err)
-	s.proposer, err = NewProposer(s.params, s.storage, contractWrapper, s.rpcClientMock, metricsHandler, logger)
+
+	stateResetter := reset.NewStateResetter(logger, s.storage, contractWrapper)
+	resetLauncher := reset.NewResetLauncher(stateResetter, nil, logger)
+
+	s.rpcClientMock = &client.ClientMock{}
+
+	s.proposer, err = NewProposer(
+		s.params,
+		s.storage,
+		contractWrapper,
+		resetLauncher,
+		metricsHandler,
+		logger,
+	)
 	s.Require().NoError(err)
 }
 
@@ -127,6 +140,7 @@ func (s *ProposerTestSuite) TestSendProofCommittedBatch() {
 	s.callContractMock.AddExpectedCall("isBatchCommitted", true)
 	s.callContractMock.AddExpectedCall("getLastFinalizedBatchIndex", "testingFinalizedBatchIndex")
 	s.callContractMock.AddExpectedCall("finalizedStateRoots", s.testData.OldProvedStateRoot)
+	s.callContractMock.AddExpectedCall("updateState", testaide.NoValue{})
 
 	err := s.proposer.updateState(s.ctx, s.testData)
 	s.Require().NoError(err, "failed to send proof")
@@ -168,19 +182,14 @@ func (s *ProposerTestSuite) TestStorageProposalDataRemoved() {
 	s.callContractMock.AddExpectedCall("isBatchCommitted", true)
 	s.callContractMock.AddExpectedCall("getLastFinalizedBatchIndex", "testingFinalizedBatchIndex")
 	s.callContractMock.AddExpectedCall("finalizedStateRoots", s.testData.OldProvedStateRoot)
+	s.callContractMock.AddExpectedCall("updateState", testaide.NoValue{})
 
-	subgraph, err := scTypes.NewSubgraph(
-		&scTypes.Block{
-			ShardId:    types.MainShardId,
-			Number:     123,
-			Hash:       common.HexToHash("123"),
-			ParentHash: s.testData.OldProvedStateRoot,
-		}, nil)
-	s.Require().NoError(err)
-	s.Require().NoError(s.storage.SetBlockBatch(
-		s.ctx,
-		&scTypes.BlockBatch{Id: s.testData.BatchId, Subgraphs: []scTypes.Subgraph{*subgraph}},
-	))
+	batch := testaide.NewBlockBatch(testaide.ShardsCount)
+	batch.Id = s.testData.BatchId
+	mainBlock := batch.Blocks[types.MainShardId].Latest()
+	mainBlock.ParentHash = s.testData.OldProvedStateRoot
+
+	s.Require().NoError(s.storage.SetBlockBatch(s.ctx, batch))
 	s.Require().NoError(s.storage.SetBatchAsProved(s.ctx, s.testData.BatchId))
 	s.Require().NoError(s.storage.SetProvedStateRoot(s.ctx, s.testData.OldProvedStateRoot))
 
@@ -198,17 +207,39 @@ func (s *ProposerTestSuite) TestStorageProposalDataRemoved() {
 	s.Require().Len(s.ethClient.SendTransactionCalls(), 1)
 }
 
-// Test if storage proved state root is updated from L1
-func (s *ProposerTestSuite) TestStorageProvedRootUpdate() {
-	// Calls inside FinalizedBatchIndex
-	s.callContractMock.AddExpectedCall("finalizedStateRoots", s.testData.OldProvedStateRoot)
+// Test if proposal data is removed from the storage on success
+func (s *ProposerTestSuite) TestProposerResetToL1State() {
+	l1FinalizedStateRoot := common.HexToHash("0x3456")
+	// Calls inside UpdateState
+	s.callContractMock.AddExpectedCall("isBatchCommitted", true)
+	s.callContractMock.AddExpectedCall("isBatchFinalized", true)
 	s.callContractMock.AddExpectedCall("getLastFinalizedBatchIndex", "testingFinalizedBatchIndex")
-	err := s.proposer.updateStoredStateRootFromContract(s.ctx)
-	s.Require().NoError(err)
+	s.callContractMock.AddExpectedCall("finalizedStateRoots", l1FinalizedStateRoot)
 
-	storageProvedStateRoot, err := s.storage.TryGetProvedStateRoot(s.ctx)
+	batch := testaide.NewBlockBatch(testaide.ShardsCount)
+	batch.Blocks[types.MainShardId].Earliest().ParentHash = s.testData.OldProvedStateRoot
+	batch.Id = s.testData.BatchId
+
+	err := s.storage.SetBlockBatch(s.ctx, batch)
 	s.Require().NoError(err)
-	s.Require().Equal(s.testData.OldProvedStateRoot, *storageProvedStateRoot)
+	s.Require().NoError(s.storage.SetBatchAsProved(s.ctx, s.testData.BatchId))
+	s.Require().NoError(s.storage.SetProvedStateRoot(s.ctx, s.testData.OldProvedStateRoot))
+
+	data, err := s.storage.TryGetNextProposalData(s.ctx)
+	s.Require().NoError(err)
+	s.Require().NotNil(data)
+	s.Require().NoError(s.proposer.updateStateIfReady(s.ctx))
+
+	// after `SetBatchAsProposed` call inside `updateStateIfReady` there should be no new proposal data
+	data, err = s.storage.TryGetNextProposalData(s.ctx)
+	s.Require().NoError(err)
+	// no batches were inserted, thus, no new proposal data
+	s.Require().Nil(data)
+
+	provedStateRoot, err := s.storage.TryGetProvedStateRoot(s.ctx)
+	s.Require().NoError(err)
+	// latest proved state root should have been fetched from L1
+	s.Require().Equal(l1FinalizedStateRoot, *provedStateRoot)
 
 	s.Require().NoError(s.callContractMock.EverythingCalled())
 	s.Require().Empty(s.ethClient.SendTransactionCalls())

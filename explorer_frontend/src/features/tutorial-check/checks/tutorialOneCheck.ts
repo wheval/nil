@@ -3,7 +3,7 @@ import { TutorialChecksStatus } from "../../../pages/tutorials/model";
 import type { CheckProps } from "../CheckProps";
 import {} from "../model";
 
-async function runTutorialCheckOne(props: CheckProps) {
+export async function runTutorialCheckOne(props: CheckProps) {
   const client = new PublicClient({
     transport: new HttpTransport({
       endpoint: props.rpcUrl,
@@ -71,7 +71,7 @@ async function runTutorialCheckOne(props: CheckProps) {
     props.tutorialContractStepFailed(
       `
       Calling Caller.sendValue() produced one or more failed receipts!
-      To investigate, debug this transaction using the Cometa service: ${hashCaller}.
+      To investigate, debug this transaction using the Cometa service: ${callerTx.hash}.
       `,
     );
     return false;
@@ -93,5 +93,3 @@ async function runTutorialCheckOne(props: CheckProps) {
 
   return true;
 }
-
-export default runTutorialCheckOne;

@@ -2,12 +2,13 @@
 pragma solidity ^0.8.28;
 
 import "@nilfoundation/smart-contracts/contracts/Nil.sol";
+import "@nilfoundation/smart-contracts/contracts/NilAwaitable.sol";
 import "@nilfoundation/smart-contracts/contracts/NilTokenBase.sol";
 
 /// @title LendingPool
 /// @dev The LendingPool contract facilitates lending and borrowing of tokens and handles collateral management.
 /// It interacts with other contracts such as GlobalLedger, InterestManager, and Oracle for tracking deposits, calculating interest, and fetching token prices.
-contract LendingPool is NilBase, NilTokenBase {
+contract LendingPool is NilBase, NilTokenBase, NilAwaitable {
     address public globalLedger;
     address public interestManager;
     address public oracle;
@@ -86,8 +87,7 @@ contract LendingPool is NilBase, NilTokenBase {
 
         /// @notice Encoding the context to process the loan after the price is fetched
         /// @dev The context contains the borrower’s details, loan amount, borrow token, and collateral token.
-        bytes memory context = abi.encodeWithSelector(
-            this.processLoan.selector,
+        bytes memory context = abi.encode(
             msg.sender,
             amount,
             borrowToken,
@@ -96,7 +96,7 @@ contract LendingPool is NilBase, NilTokenBase {
 
         /// @notice Send a request to the Oracle to get the price of the borrow token.
         /// @dev This request is processed with a fee for the transaction, allowing the system to fetch the token price.
-        Nil.sendRequest(oracle, 0, 9_000_000, context, callData);
+        sendRequest(oracle, 0, 9_000_000, context, callData, processLoan);
     }
 
     /// @notice Callback function to process the loan after the price data is retrieved from Oracle.
@@ -142,8 +142,7 @@ contract LendingPool is NilBase, NilTokenBase {
 
         /// @notice Encoding the context to finalize the loan once the collateral is validated
         /// @dev Once the collateral balance is validated, the loan is finalized and processed.
-        bytes memory ledgerContext = abi.encodeWithSelector(
-            this.finalizeLoan.selector,
+        bytes memory ledgerContext = abi.encode(
             borrower,
             amount,
             borrowToken,
@@ -152,12 +151,13 @@ contract LendingPool is NilBase, NilTokenBase {
 
         /// @notice Send request to GlobalLedger to get the user's collateral
         /// @dev The fee for this request is retained for processing the collateral validation response.
-        Nil.sendRequest(
+        sendRequest(
             globalLedger,
             0,
             6_000_000,
             ledgerContext,
-            ledgerCallData
+            ledgerCallData,
+            finalizeLoan
         );
     }
 
@@ -226,15 +226,14 @@ contract LendingPool is NilBase, NilTokenBase {
 
         /// @notice Encoding the context to handle repayment after loan details are fetched
         /// @dev Once the loan details are retrieved, the repayment amount is processed.
-        bytes memory context = abi.encodeWithSelector(
-            this.handleRepayment.selector,
+        bytes memory context = abi.encode(
             msg.sender,
             tokens[0].amount
         );
 
         /// @notice Send request to GlobalLedger to fetch loan details
         /// @dev Retrieves the borrower’s loan details before proceeding with the repayment.
-        Nil.sendRequest(globalLedger, 0, 11_000_000, context, callData);
+        sendRequest(globalLedger, 0, 11_000_000, context, callData, handleRepayment);
     }
 
     /// @notice Handle the loan repayment, calculate the interest, and update GlobalLedger.
@@ -271,8 +270,7 @@ contract LendingPool is NilBase, NilTokenBase {
         bytes memory interestCallData = abi.encodeWithSignature(
             "getInterestRate()"
         );
-        bytes memory interestContext = abi.encodeWithSelector(
-            this.processRepayment.selector,
+        bytes memory interestContext = abi.encode(
             borrower,
             amount,
             token,
@@ -281,12 +279,13 @@ contract LendingPool is NilBase, NilTokenBase {
 
         /// @notice Send request to InterestManager to fetch interest rate
         /// @dev This request fetches the interest rate that will be used to calculate the total repayment.
-        Nil.sendRequest(
+        sendRequest(
             interestManager,
             0,
             8_000_000,
             interestContext,
-            interestCallData
+            interestCallData,
+            processRepayment
         );
     }
 
@@ -332,20 +331,20 @@ contract LendingPool is NilBase, NilTokenBase {
             token,
             0 // Mark the loan as repaid
         );
-        bytes memory releaseCollateralContext = abi.encodeWithSelector(
-            this.releaseCollateral.selector,
+        bytes memory releaseCollateralContext = abi.encode(
             borrower,
             token
         );
 
         /// @notice Send request to GlobalLedger to update the loan status
         /// @dev Updates the loan status to indicate repayment completion in the GlobalLedger.
-        Nil.sendRequest(
+        sendRequest(
             globalLedger,
             0,
             6_000_000,
             releaseCollateralContext,
-            clearLoanCallData
+            clearLoanCallData,
+            releaseCollateral
         );
     }
 
@@ -388,20 +387,20 @@ contract LendingPool is NilBase, NilTokenBase {
 
         /// @notice Context to send collateral to the borrower
         /// @dev After confirming the collateral balance, it is returned to the borrower.
-        bytes memory sendCollateralContext = abi.encodeWithSelector(
-            this.sendCollateral.selector,
+        bytes memory sendCollateralContext = abi.encode(
             borrower,
             collateralToken
         );
 
         /// @notice Send request to GlobalLedger to retrieve the collateral
         /// @dev This request ensures that the correct collateral is available for release.
-        Nil.sendRequest(
+        sendRequest(
             globalLedger,
             0,
             3_50_000,
             sendCollateralContext,
-            getCollateralCallData
+            getCollateralCallData,
+            sendCollateral
         );
     }
 
